@@ -1,0 +1,112 @@
+
+--------------------------------------------------------------------------------
+::  Dependent JavaScript  ::  Ravi Chugh (rkc) (rchugh@cs.ucsd.edu)           ::
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Licenses
+
+  1) LICENSE.DJS   : System !D + DJS
+  2) LICENSE.LamJS : LambdaJS by Arjun Guha and Claudiu Saftoiu (in src/LamJS)
+  3) LICENSE.Z3    : Z3 by Microsoft Research
+
+--------------------------------------------------------------------------------
+Requirements
+
+  1) Microsoft Z3 Theorem Prover (v2.16)
+
+     Subsequent releases have different stdin/stdout behavior, and our
+     type checker relies on the behavior of v2.16.
+
+     This older version Linux binary should be available at:
+     http://research.microsoft.com/projects/z3/z3-x64-2.16.tar.gz
+
+  // In case it is not, we've included a 64-bit z3 v2.16 binary in this folder.
+
+  2) ocamlbuild
+
+--------------------------------------------------------------------------------
+Building System D
+
+  1) # make
+
+  2) Either leave the z3 executable in this directory or move it somewhere
+     that is accessible by PATH.
+
+--------------------------------------------------------------------------------
+Examples
+
+  A quick way to run the type checker on the examples from the ECOOP paper:
+
+  # scripts/ecoop.sh
+
+  Take a look at the script to see the basic flags for running the tool.
+  Some other sets of test cases (some of which don't work yet), can be run by:
+
+  # scripts/djsLite.sh
+  # scripts/djs.sh
+
+  And tests cases written directly in System !D (as opposed to DJS):
+
+  # scripts/all-core.sh
+  # scripts/all-refs.sh
+  # scripts/all-obj.sh
+
+--------------------------------------------------------------------------------
+Standard Prelude
+
+  A standard prelude of built-in primitive functions and some common library
+  functions can be found in prims/prims.ml and prims/pervasives.ml, and is
+  loaded every time the type checker is run.
+
+--------------------------------------------------------------------------------
+NOTE: rest of README is unchanged from original System D implementation.
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Running System D
+
+  # ./system-d tests/simple/map01.ml
+  ...
+  Type checking succeeded! Made 1991 queries.
+
+--------------------------------------------------------------------------------
+Debugging an ill-typed System D program
+
+  When type checking fails, there are several places that are useful to look.
+  The type checker logs several output files in the out/ directory.
+
+  Since the compiler converts source-level programs into A-normal form, it
+  is help to actually to see the ANF version of your program, which is
+  stored in out/anfExp.ml.
+
+  By default, the type checker prints (to stdout) types for top-level
+  definitions that have successfully type checked. When debugging a type
+  error, it is helpful to see the types of _all_ bindings, enabled with
+  the following flag:
+
+  # ./system-d -printAllTypes tests/simple/map01.ml
+
+  If desired, the ANF version of the program can be tweaked and sent
+  back through the type checker. Since the ANFed output already contains
+  the standard prelude, and is already in ANF, the following flag
+  must be used when running on an ANF source file:
+
+  # ./system-d -raw out/anfExp.ml
+
+  When debugging, it might be useful to see what the type system can prove
+  at a particular program point. This is simple, since you can just write
+  the property p you want to check in a type annotation:
+
+    let sanity_check :: {p} = 0 in ...
+
+  If you suspect there is a bug in the type-checker, then you might want
+  to play directly with the SMT queries it is making. All of the queries
+  are saved in out/queries.lisp in the SMT-LIB2 format, and can be
+  run directly through z3:
+
+  # z3 -smt2 out/queries.lisp | cat -n 
+
+  The line numbers help match up queries with the query numbers (in comments)
+  in queries.lisp.
+
