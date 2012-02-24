@@ -30,7 +30,6 @@
          (null)
          (undefined) ; added for DJS
   )
-  ;(TypeTerm  (Box (BoxSel BoxId)))
 ))
 
 
@@ -38,10 +37,11 @@
 ;;;;; uninterpreted System D symbols
 ;;;;;
 
-;(declare-preds ((hastyp DVal TypeTerm)))
 (declare-preds ((hastyp DVal BoxId)))
 (declare-preds ((heaphas HeapId LocId DVal)))
 (declare-fun heapsel (HeapId LocId DVal) DVal)
+(declare-preds ((packed DVal)))
+(declare-fun len (DVal) DVal)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -64,7 +64,6 @@
 
 ; no source-level value can be bot
 (assert (= (tag bot) TagBot))
-;(assert (forall (u TypeTerm) (not (hastyp bot u))))
 (assert (forall (u BoxId) (not (hastyp bot u))))
 
 ; (assert (forall (v DVal) (= (tag (tag v)) TagStr)))
@@ -92,14 +91,14 @@
 
 ; TODO 9/24 added wrappers around arithmetic operators
 ; TODO once these symbols aren't even mentioned when not using integer
-;   theory, then move these definitions to theory-int.lisp
+;   theory, then move these definitions to logicalmodel-integers.lisp
 (declare-fun my_plus (DVal DVal) DVal)
 (declare-fun my_minus (DVal DVal) DVal)
 (declare-fun my_uminus (DVal) DVal)
 (declare-preds
    ((my_lt DVal DVal) (my_le DVal DVal) (my_ge DVal DVal) (my_gt DVal DVal)))
 
-;;;;; NOTE: theory-int.lisp is conditionally loaded
+;;;;; NOTE: logicalmodel-int.lisp is conditionally loaded
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

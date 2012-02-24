@@ -12,44 +12,28 @@ val eq :: x:Top -> y:Top -> {Bool|(iff (= v True) (= x y))}
 
 (***** operations on base values **********************************************)
 
-(* TODO will have to modify var elim to remove these! *)
-(*
 val plus :: x:Int -> y:Int -> {Int|(= v (+ x y))}
-*)
-(*
-*)
-val plus :: _:Int -> _:Int -> Int
-
-(*
 val minus :: x:Int -> y:Int -> {Int|(= v (- x y))}
-*)
-(*
-*)
-val minus :: x:Int -> y:Int -> Int
-
 val mult :: x:Int -> y:Int -> Int
-
 val lt :: x:Int -> y:Int -> {Bool|(iff (= v True) (< x y))}
-
 val le :: x:Int -> y:Int -> {Bool|(iff (= v True) (<= x y))}
-
 val gt :: x:Int -> y:Int -> {Bool|(iff (= v True) (> x y))}
-
 val ge :: x:Int -> y:Int -> {Bool|(iff (= v True) (>= x y))}
 
 val neg :: b:Bool -> {Bool|(iff (= v True) (= b False))}
-
+val l_and :: x:Bool -> y:Bool -> {(ite (= x True) (= v y) (= v False))}
+val l_or :: x:Bool -> y:Bool ->
+  {(ite (or (= x True) (= y True)) (= v True) (= v False))}
+(*
 val l_and :: b0:Bool -> b1:Bool ->
                  {Bool | (and (implies (= b0 True) (= v b1))
                               (implies (= b0 False) (= v False)))}
-
 val l_or :: b0:Bool -> b1:Bool ->
                 {Bool | (iff (= v True) (or (= b0 True) (= b1 True)))}
+*)
 
 val strlen :: s:Str -> Int
-
 val strcat :: s0:Str -> s1:Str -> Str
-
 val strOfInt :: x:Int -> Str
 
 
@@ -82,6 +66,47 @@ type List[+A] {
 }
 
 val keys :: x:Dict -> List[{(and (= (tag v) "Str") (has x v))}]
+*)
+
+(*
+
+(***** "functional arrays" ****************************************************)
+
+val length :: [A] a:Arr(A) -> {Int | (implies (packed a) (= v (len a)))}
+
+val geti :: [A] a:Arr(A) -> i:{Int|(>= v 0)} ->
+  {(ite (packed a)
+        (ite (< i (len a)) (and (v::A) (= v (sel a i))) (= v undefined))
+        (or (v::A) (= v undefined)))}
+
+val seti :: [A] a:Arr(A) -> i:{Int|(>= v 0)} -> x:A ->
+  {(and (v::Arr(A))
+        (= (sel a i) x)
+        (ite (and (packed a) (< i (len a)))
+             (and (packed v) (= (len v) (len a))) true)
+        (ite (and (packed a) (= i (len a)))
+             (and (packed v) (= (len v) (+ 1 (len a)))) true))}
+
+val push :: [A] a:Arr(A) -> x:A ->
+  {(and (v::Arr(A)) 
+        (implies (packed a) (and (packed v)
+                                 (= (len v) (+ 1 (len a)))
+                                 (= (sel a (len a)) x))))}
+
+val top :: [A] a:Arr(A) -> {(ite (packed a)
+                                 (and (v::A) (= v (sel a (- (len a) 1))))
+                                 (or (v::A) (= v undefined)))}
+
+(*
+val pop :: [A] a:Arr(A) ->
+  [_:Int,
+   _:{(and (v::Arr(A)) )}]
+*)
+
+(*
+  didn't fail means packed(a) => len(a) > 0
+*)
+
 *)
 
 

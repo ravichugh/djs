@@ -2,7 +2,7 @@
 let pr = Printf.printf
 let fpr = Printf.fprintf
 
-let oc_log = open_out "out/log.lisp"
+let oc_log = open_out (Settings.out_dir ^ "log.lisp")
 
 let bigTitle s =
   fpr oc_log "%s\n" (String.make 80 ';');

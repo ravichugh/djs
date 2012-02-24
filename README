@@ -33,6 +33,12 @@ Building System D
   2) Either leave the z3 executable in this directory or move it somewhere
      that is accessible by PATH.
 
+  3) export DJS_DIR=/path/to/djs/
+
+     Set and export this variable to the root of the DJS directory.
+     Use the absolute path, not the path relative from your home directory (~).
+     You'll probably want to add this to your shell startup script.
+
 --------------------------------------------------------------------------------
 Examples
 

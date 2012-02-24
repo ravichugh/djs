@@ -87,6 +87,7 @@ val pOr : formula list -> formula
 val pImp : formula -> formula -> formula
 val pIff : formula -> formula -> formula
 val pNot : formula -> formula
+val pIte : formula -> formula -> formula -> formula
 
 val ty : formula -> typ
 val tyAny : typ

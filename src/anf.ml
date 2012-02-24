@@ -113,6 +113,7 @@ let rec anf = function
   | ENewObj(l1,l2,e) ->
       let (l,e) = anfAndTmp e in
       finish (l, ENewObj (l1, l2, e))
+  | ELoadedSrc(s,e) -> ([], ELoadedSrc (s, anfExp e))
 
 and anfAndTmp e =
   let (l1,e) = anf e in
@@ -241,6 +242,8 @@ and strExp k exp = match exp with
       spr "%s%s %s(%s)" (tab k) (clip s1) sl (clip s2)
 *)
   | ELet(x,ao,e1,e2) ->
+(*
+      (* TODO remove these and use abstract syntax for separators *)
       let sep =
         if x = "end_of_prims" ||
            x = "end_of_pervasives" ||
@@ -249,6 +252,8 @@ and strExp k exp = match exp with
         else if k = 0 then "\n\n"
         else "\n"
       in
+*)
+      let sep = if k = 0 then "\n\n" else "\n" in
       let sao =
         match ao with
           | None -> ""
@@ -321,9 +326,13 @@ and strExp k exp = match exp with
   | EIf _          -> badAnf "EIf"
   | EApp _         -> badAnf "EApp"
   | ENewObj _      -> badAnf "ENewObj"
+  | ELoadedSrc(s,e) ->
+      let n = max 0 (70 - String.length s) in
+      let sep = spr "(***** %s %s*)" s (String.make n '*') in
+      spr "%s%s\n\n%s" (tab k) sep (strExp k e)
 
 let printAnfExp e =
-  let oc = open_out "out/anfExp.ml" in
+  let oc = open_out (Settings.out_dir ^ "anfExp.ml") in
   setPretty true;
   fpr oc "%s\n" (strExp 0 e);
   flush oc;

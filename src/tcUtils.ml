@@ -136,7 +136,7 @@ let rec elimLocalTyp x t s =
 
 (** wrapped version that logs each call **)
 
-let oc_elim = open_out "out/elim.txt"
+let oc_elim = open_out (Settings.out_dir ^ "elim.txt")
 let count_all = ref 0
 let count_elim = ref 0
 

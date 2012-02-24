@@ -279,7 +279,7 @@ let ensureSafeWeakRef cap g t =
 
 (***** TC helpers *************************************************************)
 
-let oc_wrap_goal = open_out "out/wrap_goal.txt"
+let oc_wrap_goal = open_out (Settings.out_dir ^ "wrap_goal.txt")
 
 (* 9/27 switching this to world instead of annot *)
 let wrapWithGoal cap x e w =
@@ -914,6 +914,10 @@ and tsExp_ g h = function
   | ETryFinally _ -> failwith "ETryFinally"
 
   | ENewObj _ -> failwith "ts ENewObj: should've been typed with a let binding"
+
+  | ELoadedSrc(_,e) -> tsExp g h e
+  | ELoadSrc(s,_) ->
+      failwith (spr "ts ELoadSrc [%s]: should've been expanded" s)
 
   (* the remaining cases should not make it to type checking, so they indicate
      some failure of parsing or ANFing *)

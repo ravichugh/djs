@@ -110,7 +110,7 @@ let sameCell l =
   EOF TAG (* TRUE FALSE *) LET REC EQ IN FUN ARROW IF THEN ELSE
   LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK (* ALL *) DOT COMMA
   SEMI DCOLON COLON AS GT (* GTGT *) EXTERN FAIL (* VTRUE VFALSE *) PIPE
-  OR IMP IFF NOT AND HAS SEL UPD EQMOD DOM WBOT EMPTY
+  OR IMP IFF NOT AND ITE HAS SEL UPD EQMOD DOM WBOT EMPTY
   TYPE NULL NULLBOX NEW (* LIST *) BANG QMARK
   (* TODO get rid of the sugar tokens *)
   SUGAR_INT SUGAR_BOOL SUGAR_TOP SUGAR_DICT SUGAR_BOT
@@ -119,6 +119,7 @@ let sameCell l =
   PLUS MINUS MUL DIV LT LE GE (* NE EQEQ AMPAMP PIPEPIPE *) PLUSPLUS
   ASSGN (* LOCALL *) NEWREF REFTYPE (* AT *) MAPSTO SAME HEAP
   (* FOLD UNFOLD *) FREEZE
+  ARRTYPE PACKED LEN
   BREAK THROW TRY CATCH FINALLY
   UNDEF
   UNDERSCORE TCOLON
@@ -190,6 +191,13 @@ exp :
    LBRACE exp RBRACE                     { ETryCatch($3,$7,$10) }
  | TRY LBRACE exp RBRACE
    FINALLY LBRACE exp RBRACE             { ETryFinally($3,$7) }
+ (* TODO these should only be allowed at the top-level and at the
+    beginning, but not checking that right now.
+    Main.parseProgAndExpand makes these assumptions. so, better
+    to make prog production return (directives, exp) *)
+ | x=LBL s=STR e=exp                     { if x = "use" then ELoadSrc(s,e)
+                                           else printParseErr
+                                             (spr "unknown directive [%s]" x) }
 
 exp1 :
  | exp2                          { $1 }
@@ -312,6 +320,7 @@ typ_term :
  | NULLBOX                               { UNull }
  | REFTYPE LPAREN l=loc RPAREN           { URef(l) }
  | u=arrow_typ                           { u }
+ | ARRTYPE LPAREN t=typ RPAREN           { UArray(t) }
 
 
 arrow_typ :
@@ -430,13 +439,15 @@ formula :
  | LPAREN w=walue DCOLON u=typ_term RPAREN      { PUn(HasTyp(w,u)) }
  | LPAREN w=walue DCOLON u=typ_term BANG RPAREN { pIsBang w u }
  | HEAPHAS LPAREN h=heap COMMA l=loc COMMA k=walue RPAREN { PHeapHas(h,l,k) }
+ | LPAREN PACKED w=walue RPAREN                 { PPacked(w) }
  (***** logical connectives *****)
  | b=BOOL                                       { if b then PTru else PFls }
- | LPAREN OR ps=formulas RPAREN                 { PConn("or",ps) }
- | LPAREN AND ps=formulas RPAREN                { PConn("and",ps) }
- | LPAREN IMP p=formula q=formula RPAREN        { PConn("implies",[p;q]) }
- | LPAREN IFF p=formula q=formula RPAREN        { PConn("iff",[p;q]) }
- | LPAREN NOT p=formula RPAREN                  { PConn("not",[p]) }
+ | LPAREN OR ps=formulas RPAREN                 { pOr ps }
+ | LPAREN AND ps=formulas RPAREN                { pAnd ps }
+ | LPAREN IMP p=formula q=formula RPAREN        { pImp p q }
+ | LPAREN IFF p=formula q=formula RPAREN        { pIff p q }
+ | LPAREN NOT p=formula RPAREN                  { pNot p }
+ | LPAREN ITE p=formula q=formula r=formula RPAREN { pIte p q r }
  (***** delayed macros *****)
  | LPAREN HAS x=walue ys=walueset RPAREN        { PHas(x,ys) }
  | LPAREN HAS x=walue y=walue RPAREN            { PHas(x,[y]) }
@@ -475,6 +486,7 @@ walue :
  | LPAREN PLUS x=walue y=walue RPAREN        { plus x y }
  | LPAREN MINUS x=walue y=walue RPAREN       { minus x y }
  | LPAREN UPD x=walue y=walue z=walue RPAREN { upd x y z }
+ | LPAREN LEN x=walue RPAREN                 { WApp("len",[x]) }
  | OBJSEL LPAREN d=walue COMMA k=walue COMMA h=heap COMMA l=loc RPAREN
      { WObjSel([d],k,h,l) }
  | OBJSEL LPAREN ds=waluelist COMMA k=walue COMMA h=heap COMMA l=loc RPAREN

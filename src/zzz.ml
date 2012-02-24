@@ -6,7 +6,7 @@ let doingExtract = ref false
 
 let z3read, z3write =
   let zin, zout = Unix.open_process "z3 -smt2 -in" in
-  let zlog      = open_out "out/queries.lisp" in
+  let zlog      = open_out (Settings.out_dir ^ "queries.lisp") in
   let reader () = input_line zin in
   let writer s  = fpr zlog "%s" s; flush zlog; fpr zout "%s" s; flush zout in
     (reader, writer)
@@ -16,8 +16,9 @@ let emitPreamble () =
     try z3write (input_line ic ^ "\n"); f ic
     with End_of_file -> ()
   in
-  f (open_in "theory.lisp");
-  if !Settings.useTheoryLA then f (open_in "theory-int.lisp");
+  (* TODO move these files to the prims/ directory, use Settings.prim_dir *)
+  f (open_in (Settings.djs_dir ^ "src/theory.lisp"));
+  if !Settings.useTheoryLA then f (open_in (Settings.djs_dir ^ "src/theory-int.lisp"));
   ()
 
 (* let _ = emitPreamble () *)

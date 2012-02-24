@@ -41,6 +41,7 @@ rule token = parse
   | "heap"         { HEAP }
   | "ref"          { NEWREF }
   | "Ref"          { REFTYPE }
+  | "Arr"          { ARRTYPE }
   | "same"         { SAME }
   (* | "fold"         { FOLD } *)
   (* | "unfold"       { UNFOLD } *)
@@ -64,6 +65,7 @@ rule token = parse
   | "or"           { OR }
   | "implies"      { IMP }
   | "iff"          { IFF }
+  | "ite"          { ITE }
   | "="            { EQ }
   | "in"           { IN }
   | "as"           { AS }
@@ -88,6 +90,8 @@ rule token = parse
   | "HeapSel"      { HEAPSEL }
   | "ObjHas"       { OBJHAS }
   | "ObjSel"       { OBJSEL }
+  | "packed"       { PACKED }
+  | "len"          { LEN }
   (* | "All"          { ALL } *)
   (* | "all"          { LOCALL } *)
   | "new"          { NEW }

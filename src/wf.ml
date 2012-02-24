@@ -104,6 +104,7 @@ and checkFormula errList g h p =
     | PHas(w,ws)
     | PDomEq(w,ws)        -> List.iter (checkWalue errList g h) (w::ws)
     | PEqMod(w1,w2,ws)    -> List.iter (checkWalue errList g h) (w1::w2::ws)
+    | PPacked(w)          -> checkWalue errList g h w
     | PUn(HasTyp(w,u))    -> (checkWalue errList g h w;
                               checkTypeTerm errList g h u)
     | PHeapHas(h',l,w)    -> (checkHeap errList g h'; (* h not used *)
@@ -140,6 +141,7 @@ and checkTypeTerm errList g h u =
   match u with
     | UNull   -> ()
     | URef(l) -> checkLoc errList g h l
+    | UArray(t) -> checkType errList g h t
     | UVar(x) ->
         if List.exists (function TVar(y) -> x = y | _ -> false) g then ()
         else err (errList @ [spr "unbound type variable: [%s]" x])

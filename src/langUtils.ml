@@ -84,6 +84,7 @@ let mapTyp ?fForm:(fForm=(fun x -> x))
     | PApp(s,ws)         -> fForm (PApp (s, List.map fooWal ws))
     | PTru               -> fForm PTru
     | PFls               -> fForm PFls
+    | PPacked(w)         -> fForm (PPacked (fooWal w))
     | PUn(HasTyp(w,u))   -> let u = if onlyTopForm then u else fooTT u in
                             fForm (PUn (HasTyp (fooWal w, u)))
     | PHeapHas(h,l,w)    -> let h = if onlyTopForm then h else fooHeap h in
@@ -103,6 +104,7 @@ let mapTyp ?fForm:(fForm=(fun x -> x))
     | UVar(x)       -> fTT (UVar x)
     | UNull         -> fTT UNull
     | URef(al)      -> fTT (URef al)
+    | UArray(t)     -> fTT (UArray t)
     | UArr(l,x,t1,h1,t2,h2) ->
         let (t1,h1) = fooTyp t1, fooHeap h1 in
         let (t2,h2) = fooTyp t2, fooHeap h2 in
@@ -175,6 +177,8 @@ let foldTyp (fForm: 'a -> formula -> 'a)
                             fForm acc (PApp (s, ws))
     | PTru               -> fForm acc PTru
     | PFls               -> fForm acc PFls
+    | PPacked(w)         -> let acc = fooWal acc w in
+                            fForm acc (PPacked w)
     | PUn(HasTyp(w,u))   -> let acc = fooWal acc w in
                             let acc = fooTT acc u in
                             fForm acc (PUn (HasTyp (w, u)))
@@ -197,6 +201,9 @@ let foldTyp (fForm: 'a -> formula -> 'a)
     | UVar(x)       -> fTT acc (UVar x)
     | URef(al)      -> fTT acc (URef al)
     | UNull         -> fTT acc UNull
+    | UArray(t) ->
+        let acc = fooTyp acc t in
+        fTT acc (UArray t)
     | UArr(l,x,t1,h1,t2,h2) ->
         let acc = fooTyp acc t1 in
         let acc = fooHeap acc h1 in
@@ -293,6 +300,7 @@ let pOr ps        = PConn ("or", ps)
 let pImp p q      = PConn ("implies", [p; q])
 let pIff p q      = PConn ("iff", [p; q])
 let pNot p        = PConn ("not", [p])
+let pIte p q r    = pAnd [pImp p q; pImp (pNot p) r]
 
 let ty p          = TRefinement ("v", p)
 let tyAny         = TTop (* ty PTru *)
@@ -327,7 +335,7 @@ let tyIsBang a u  = ty (pIsBang a u)
 
 (***** Id Tables **************************************************************)
 
-let oc_boxes = open_out "out/boxes.txt"
+let oc_boxes = open_out (Settings.out_dir ^ "boxes.txt")
 
 (***** Strings *****)
 
@@ -512,6 +520,7 @@ and strTyp = function
 and strTT = function
   | UVar(x) -> x
   | URef(l) -> spr "Ref(%s)" (strLoc l)
+  | UArray(t) -> spr "Arr(%s)" (strTyp t)
   | UNull   -> "Null"
 
   | UArr(([],[],[]),x,t1,h1,t2,h2) ->
@@ -583,6 +592,7 @@ and strForm = function
   | PConn("or",[])  -> spr "(false)"
   | PConn(s,l)      -> strFormExpanded s l
   | PAll(x,p)       -> spr "(forall (%s DVal) %s)" x (strForm p)
+  | PPacked(w)      -> spr "(packed %s)" (strWalue w)
   (* TODO make the call to registerBox somewhere more appropriate *)
   | PUn(HasTyp(w,u)) ->
       if !printFullUT
@@ -826,6 +836,7 @@ and freeVarsTT env = function
   | UNull   -> Quad.empty
   | UVar(x) -> if Quad.memT x env then Quad.empty else Quad.addT x Quad.empty
   | URef(l) -> freeVarsLoc env l
+  | UArray(t) -> freeVarsTyp env t
   | UArr((ts,ls,hs),x,t1,h1,t2,h2) ->
       let env = List.fold_left (fun env t -> Quad.addT t env) env ts in
       let env = List.fold_left (fun env l -> Quad.addL l env) env ls in
@@ -945,6 +956,7 @@ and masterSubstForm subst = function
   | PTru        -> PTru
   | PFls        -> PFls
   | PConn(s,ps) -> PConn (s, List.map (masterSubstForm subst) ps)
+  | PPacked(w)  -> PPacked (masterSubstWal subst w)
   | PUn(HasTyp(w,UVar(x))) -> (* type variable instantiation *)
       let w = masterSubstWal subst w in
       let (_,sub,_,_) = subst in
@@ -998,6 +1010,7 @@ and masterSubstTT subst = function
   | UNull   -> UNull
   | UVar(x) -> UVar x (* note: type instantiation happens at w::A, not here *)
   | URef(l) -> URef (masterSubstLoc subst l)
+  | UArray(t) -> UArray (masterSubstTyp subst t)
   (* binding form *)
   | UArr((ts,ls,hs),x,t1,h1,t2,h2) ->
       let xs = VVars.elements (heapBinders (snd h1)) in
@@ -1146,7 +1159,7 @@ let substVarInExp z x e =
 
 (***** Expanding pre-formulas *************************************************)
 
-let oc_unroll = open_out "out/unroll.txt"
+let oc_unroll = open_out (Settings.out_dir ^ "unroll.txt")
 
 let printUnroll cap p q =
   fpr oc_unroll "%s\n%s %s\n\n%s\n\n" (String.make 80 '-') cap

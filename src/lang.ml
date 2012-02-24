@@ -79,6 +79,9 @@ type exp =
   | ETryFinally of exp * exp
   (***** proto-based object operations *****)
   | ENewObj of loc * loc * exp
+  (***** helpers for parsing *****)
+  | ELoadSrc of string * exp         (* inserted/eliminated by parsing *)
+  | ELoadedSrc of string * exp       (* placeholder to indicate source file *)
 
 and value =
   | VBase of basevalue
@@ -113,6 +116,7 @@ and formula =
   (***** uninterpreted predicates *****)
   | PUn of unpred
   | PHeapHas of heap * loc * walue
+  | PPacked of walue
   (***** logical connectives *****)
   | PConn of string * formula list
   (***** quantifiers for dictionary expanding macros *****)
@@ -123,6 +127,7 @@ and formula =
   | PEqMod of walue * walue * walue list
   | PObjHas of walue list * walue * heap * loc
 
+(* TODO inline this into above type *)
 and unpred = (* uninterpreted System D predicates *)
   | HasTyp of walue * typterm
 
@@ -149,6 +154,7 @@ and typterm =
   | UVar  of tvar
   | URef  of loc
   | UNull
+  | UArray of typ
 
 and heapconstraint =
   (* | HAbs  of loc * typ                (* [l |-> S]   *) *)

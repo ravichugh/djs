@@ -7,7 +7,7 @@ let checkConversion = ref true
 
 type clause = formula * formula list
 
-let oc_cnf = open_out "out/cnf.lisp"
+let oc_cnf = open_out (Settings.out_dir ^ "cnf.lisp")
 
 (* can set flag to true to output each step of translation *)
 let debugForm f =

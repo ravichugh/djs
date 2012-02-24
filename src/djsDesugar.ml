@@ -198,7 +198,7 @@ let freshenLabels e = foo e
 
 (***** DJS macros *************************************************************)
 
-let oc_macros = open_out "out/macros.txt"
+let oc_macros = open_out (Settings.out_dir ^ "macros.txt")
 let debugMacros = true
 
 let macroTable = Hashtbl.create 17
@@ -281,7 +281,7 @@ let maybeParseTcFail s  = maybeParseWith LangParser.jsFail s
 
 (***** Desugaring types *******************************************************)
 
-let oc_desugar_hint = open_out "out/desugar_hint.txt"
+let oc_desugar_hint = open_out (Settings.out_dir ^ "desugar_hint.txt")
 
 (*
 let expandAwayTyp t =

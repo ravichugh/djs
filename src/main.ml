@@ -9,12 +9,12 @@ let spr = Printf.sprintf
 (***** Command-line options ***************************************************)
 
 let parseOnly = ref false
-let primsPath = ref "prims/prims.ml"
-let pervsPath = ref "prims/pervasives.ml"
+let primsPath = ref (Settings.prim_dir ^ "prims.ml")
+let pervsPath = ref (Settings.prim_dir ^ "pervasives.ml")
 let doRaw     = ref false
 let noPrelude = ref false
 let srcFiles  = ref []
-let djsPreludePath = ref "prims/djs.ml"
+let djsPreludePath = ref (Settings.prim_dir ^ "djs.ml")
 
 let usage = "\n./system-d [options] [src_file]\n"
 
@@ -67,7 +67,7 @@ let checkSuffix s =
   else ()
 
 
-(***** Parsing ****************************************************************)
+(***** Parse System D and !D **************************************************)
 
 let string_of_position (p, e) = 
   Format.sprintf "%s:%d:%d-%d" p.pos_fname p.pos_lnum (p.pos_cnum - p.pos_bol)
@@ -96,6 +96,11 @@ let doParse start_production name =
           LangUtils.printParseErr
             (spr "unexpected token [%s]\n\nat %s" (lexeme lexbuf) (strPos ()))
 
+let parsePrelude f =
+  fun e ->
+    let prelude = doParse LangParser.prelude f in
+    Lang.ELoadedSrc (f, prelude e)
+
 let anfAndAddPrelude e =
   if !doRaw then
     Anf.coerce e
@@ -104,11 +109,11 @@ let anfAndAddPrelude e =
     let _ = Anf.printAnfExp e in
     e
   else
-    let prims = doParse LangParser.prelude !primsPath in
-    let pervs = doParse LangParser.prelude !pervsPath in
+    let prims = parsePrelude !primsPath in
+    let pervs = parsePrelude !pervsPath in
     let e =
       if !S.djsMode then
-        let pre = doParse LangParser.prelude !djsPreludePath in
+        let pre = parsePrelude !djsPreludePath in
         prims (pervs (pre e))
       else
         prims (pervs e)
@@ -117,11 +122,19 @@ let anfAndAddPrelude e =
     let _ = Anf.printAnfExp e in
     e
 
+let rec expandProg originalF = function
+  | Lang.ELoadSrc(f',e) ->
+      let prelude = parsePrelude (Settings.djs_dir ^ f') in
+      prelude (expandProg originalF e)
+  | e ->
+      Lang.ELoadedSrc (originalF, e)
+
 let parseSystemD () =
   let e =
     match !srcFiles with
       | []  -> Lang.EVal (LangUtils.vStr "no source file")
-      | [f] -> (checkSuffix f; doParse LangParser.prog f)
+      | [f] -> let f = Unix.getcwd () ^ "/" ^ f in
+               (checkSuffix f; expandProg f (doParse LangParser.prog f))
       | _   -> (pr "%s" usage; LangUtils.terminate ())
   in
   anfAndAddPrelude e
