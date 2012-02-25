@@ -6,12 +6,12 @@ PARSE=-use-menhir -yaccflag --explain # set to empty for ocamlyacc
 all:
 	([ -d out ] && echo "out/ exists") || (mkdir out && echo "out/ created")
 	ocamlbuild $(LIBS) $(PARSE) $(LAM) -no-links main.native
-	ln --force -s _build/main.native system-d
+	ln -f -s _build/main.native system-d
 
 ## bytecode version with debugging
 ##all:
 ##	ocamlbuild $(LIBS) $(PARSE) $(LAM) -no-links main.d.byte
-##	ln --force -s _build/main.d.byte system-d
+##	ln -f -s _build/main.d.byte system-d
 
 loc:
 	wc -l lang.ml langUtils.ml zzz.ml                 \

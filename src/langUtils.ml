@@ -591,7 +591,7 @@ and strForm = function
   | PConn("and",[]) -> spr "(true)"
   | PConn("or",[])  -> spr "(false)"
   | PConn(s,l)      -> strFormExpanded s l
-  | PAll(x,p)       -> spr "(forall (%s DVal) %s)" x (strForm p)
+  | PAll(x,p)       -> spr "(forall ((%s DVal)) %s)" x (strForm p)
   | PPacked(w)      -> spr "(packed %s)" (strWalue w)
   (* TODO make the call to registerBox somewhere more appropriate *)
   | PUn(HasTyp(w,u)) ->

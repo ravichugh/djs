@@ -8,18 +8,16 @@
 ;;;;; Begin Background Theory
 
 
-(define-sorts (
-  (VarId Int)
-  (BaseId Int)
-  (StrId Int)
-  (FunId Int)
-  (BoxId Int)
-  (HeapId Int)
-  (LocId Int)
-))
+(define-sort VarId () Int)
+(define-sort BaseId () Int)
+(define-sort StrId () Int)
+(define-sort FunId () Int)
+(define-sort BoxId () Int)
+(define-sort HeapId () Int)
+(define-sort LocId () Int)
 
-(declare-datatypes (
-  (DVal  (True)
+(declare-datatypes ()
+  ((DVal (True)
          (False)
          (VInt (VIntSel Int))
          (VStr (VStrSel StrId))
@@ -29,18 +27,17 @@
          (bot)
          (null)
          (undefined) ; added for DJS
-  )
-))
+)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;; uninterpreted System D symbols
 ;;;;;
 
-(declare-preds ((hastyp DVal BoxId)))
-(declare-preds ((heaphas HeapId LocId DVal)))
+(declare-fun hastyp (DVal BoxId) Bool)
+(declare-fun heaphas (HeapId LocId DVal) Bool)
 (declare-fun heapsel (HeapId LocId DVal) DVal)
-(declare-preds ((packed DVal)))
+(declare-fun packed (DVal) Bool)
 (declare-fun len (DVal) DVal)
 
 
@@ -49,10 +46,12 @@
 ;;;;;
 
 (declare-fun tag (DVal) DVal)
-(declare-funs
-  ((TagInt DVal) (TagBool DVal) (TagStr DVal) (TagDict DVal)
-   (TagFun DVal)
-   (TagBot DVal)))
+(declare-fun TagInt () DVal)
+(declare-fun TagBool () DVal)
+(declare-fun TagStr () DVal)
+(declare-fun TagDict () DVal)
+(declare-fun TagFun () DVal)
+(declare-fun TagBot () DVal)
 
 ; these ids have to match idStrings table in langUtils.ml
 (assert (= TagInt  (VStr 1)))
@@ -64,7 +63,7 @@
 
 ; no source-level value can be bot
 (assert (= (tag bot) TagBot))
-(assert (forall (u BoxId) (not (hastyp bot u))))
+(assert (forall ((u BoxId)) (not (hastyp bot u))))
 
 ; (assert (forall (v DVal) (= (tag (tag v)) TagStr)))
 
@@ -78,7 +77,7 @@
 (assert (= (tag True) TagBool))
 (assert (= (tag False) TagBool))
 
-(assert (forall (v DVal)
+(assert (forall ((v DVal))
                 (implies (= (tag v) TagBool)
                          (or (= v True) (= v False)))))
 
@@ -87,7 +86,7 @@
 ;;;;; source-level integers
 ;;;;;
 
-(assert (forall (i Int) (= (tag (VInt i)) TagInt)))
+(assert (forall ((i Int)) (= (tag (VInt i)) TagInt)))
 
 ; TODO 9/24 added wrappers around arithmetic operators
 ; TODO once these symbols aren't even mentioned when not using integer
@@ -95,8 +94,10 @@
 (declare-fun my_plus (DVal DVal) DVal)
 (declare-fun my_minus (DVal DVal) DVal)
 (declare-fun my_uminus (DVal) DVal)
-(declare-preds
-   ((my_lt DVal DVal) (my_le DVal DVal) (my_ge DVal DVal) (my_gt DVal DVal)))
+(declare-fun my_lt (DVal DVal) Bool)
+(declare-fun my_le (DVal DVal) Bool)
+(declare-fun my_ge (DVal DVal) Bool)
+(declare-fun my_gt (DVal DVal) Bool)
 
 ;;;;; NOTE: logicalmodel-int.lisp is conditionally loaded
 
@@ -105,7 +106,7 @@
 ;;;;; source-level strings
 ;;;;;
 
-(assert (forall (i StrId) (= (tag (VStr i)) TagStr)))
+(assert (forall ((i StrId)) (= (tag (VStr i)) TagStr)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -120,16 +121,16 @@
 (declare-fun sel (DVal DVal) DVal)
 
 (assert (= (tag empty) TagDict))
-(assert (forall (w1 DVal) (w2 DVal) (w3 DVal)
+(assert (forall ((w1 DVal) (w2 DVal) (w3 DVal))
                 (= (tag (upd w1 w2 w3)) TagDict)))
 
 ; McCarthy axioms
-(assert (forall (d DVal) (f DVal) (x DVal) (= (sel (upd d f x) f) x)))
-(assert (forall (d DVal) (f DVal) (x DVal) (g DVal)
+(assert (forall ((d DVal) (f DVal) (x DVal)) (= (sel (upd d f x) f) x)))
+(assert (forall ((d DVal) (f DVal) (x DVal) (g DVal))
                 (implies (not (= f g)) (= (sel (upd d f x) g) (sel d g)))))
 
 ; default element
-(assert (forall (f DVal) (= (sel empty f) bot)))
+(assert (forall ((f DVal)) (= (sel empty f) bot)))
 
 
 ;;;;; End Background Theory

@@ -86,7 +86,8 @@ let curScope = ref []
 let addBinding ?isNew:(isNew=true) x f =
   let sort = "DVal" in
   if isNew then begin
-    dump (spr "(declare-funs ((%s %s))) ; depth %d" x sort !depth);
+    (* dump (spr "(declare-funs ((%s %s))) ; depth %d" x sort !depth); *)
+    dump (spr "(declare-fun %s () %s) ; depth %d" x sort !depth);
     if List.mem x !curScope then
       Log.warn (spr "already in scope in logic: %s\n" x);
     curScope := x::!curScope;
@@ -102,7 +103,8 @@ let removeBinding () =
   with Failure("tl") -> Log.warn "why is curScope empty?\n"
 
 let addTypeVar x =
-  dump (spr "(declare-preds ((%s DVal))) ; %d" x !depth);
+  (* dump (spr "(declare-preds ((%s DVal))) ; %d" x !depth); *)
+  dump (spr "(declare-fun %s (DVal) Bool) ; %d" x !depth);
   curScope := x::!curScope;
   ()
 
