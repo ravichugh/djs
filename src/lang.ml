@@ -57,6 +57,7 @@ type exp =
   | EBase of basevalue
   | EVar of vvar
   | EDict of (exp * exp) list
+  | EArray of typ * exp list
   | EFun of (tvars * lvars * hvars) * vvar * (typ * heap) option * exp
   | EIf of exp * exp * exp
   | EApp of (typs * locs * heaps) * exp * exp
@@ -88,6 +89,7 @@ and value =
   | VVar of vvar
   | VEmpty
   | VExtend of value * value * value
+  | VArray of typ * value list (* TODO okay to drop typ? *)
   | VFun of (tvars * lvars * hvars) * vvar * (typ * heap) option * exp
 
 and basevalue =

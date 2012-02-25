@@ -250,6 +250,8 @@ let hastyp w ut   = PUn (HasTyp (w, ut))
 let plus w1 w2    = WApp ("my_plus", [w1; w2])
 let minus w1 w2   = WApp ("my_minus", [w1; w2])
 
+let arrlen x      = WApp ("len", [x])
+
 let lt w1 w2      = PApp ("my_lt", [w1; w2])
 let le w1 w2      = PApp ("my_le", [w1; w2])
 let gt w1 w2      = PApp ("my_gt", [w1; w2])
@@ -449,6 +451,16 @@ let rec strValue = function
         spr "(%s with %s = %s)" (strValue v1) (strValue v2) (strValue v3)
       else
         spr "(upd %s %s %s)" (strValue v1) (strValue v2) (strValue v3)
+  (* TODO *)
+  | VArray(_,vs) ->
+      if !prettyConst then
+        spr "<%s> as Arr(_)" (String.concat " " (List.map strValue vs))
+      else failwith "strVal VArray"
+(*
+      let n = List.length vs in
+      if n > 3 then err ["need to handle arbitrary arrays in theory"]
+      else spr "(arr%d %s)" n (String.concat " " (List.map strValue vs))
+*)
 
 let strFunSym s =
   if !prettyConst = false then s

@@ -54,6 +54,8 @@ val hastyp : walue -> typterm -> formula
 val plus : walue -> walue -> walue
 val minus : walue -> walue -> walue
 
+val arrlen : walue -> walue
+
 val lt : walue -> walue -> formula
 val le : walue -> walue -> formula
 val gt : walue -> walue -> formula

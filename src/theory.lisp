@@ -26,6 +26,10 @@
          (VFun (FunSel FunId))
          (empty)                                          ; (VEmpty)
          (upd (ExtBase DVal) (ExtKey DVal) (ExtVal DVal)) ; (VExtend ...)
+         ; (arr0)
+         ; (arr1 (arr1_0 DVal))
+         ; (arr2 (arr2_0 DVal) (arr2_1 DVal))
+         ; (arr3 (arr3_0 DVal) (arr3_1 DVal) (arr3_2 DVal))
          (bot)
          (null)
          (undefined) ; added for DJS

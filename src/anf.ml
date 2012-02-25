@@ -62,6 +62,12 @@ let rec anf = function
       let (l1,e1) = anfAndTmp e1 in
       finish (l1, EIf (e1, anfExp e2, anfExp e3))
 *)
+  | EArray(t,el) ->
+      let (ll,vl) = el |> List.map anfAndTmp |> List.split in
+      let vl =
+        List.map
+          (function EVal(v) -> v | _ -> failwith "anf: expr in arr?") vl in
+      finish (List.concat ll, EVal (VArray (t, vl)))
   | EIf(e1,e2,e3) ->
       let (l1,e1') = anf e1 in
       let z1 = freshTmp () in
@@ -180,6 +186,10 @@ let rec strVal k = function
                 ELet (x3, None, mkApp (eVar x2) [eVar y3],
                   eVar x3)))))))
 *)
+  | VArray(t,vs) ->
+      let st = if t = tyAny then "" else spr " as Arr(%s)" (strTyp t) in
+      let svs = List.map (fun s -> clip (strVal k s)) vs in
+      spr "%s<%s>%s" (tab k) (String.concat ", " svs) st 
 
 (*
 and strLam k sarg e =

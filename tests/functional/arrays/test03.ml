@@ -1,5 +1,5 @@
 
-#use "tests/functional/arrays/arrays.ml"
+#use "tests/functional/arrays/__arrays.ml"
 
 val tup4 :: {(and (v::Arr({(or (v:Int) (v:Bool) (v:Str))}))
                   (packed v) (= (len v) 4)

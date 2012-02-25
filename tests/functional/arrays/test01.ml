@@ -1,5 +1,5 @@
 
-#use "tests/functional/arrays/arrays.ml"
+#use "tests/functional/arrays/__arrays.ml"
 
 val tup0 :: {(and (v::Arr(Int)) (packed v) (= (len v) 0))}
 

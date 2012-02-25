@@ -224,6 +224,14 @@ exp2 :
  | LPAREN e=exp RPAREN AS f=frame            { EAs("source program",e,f) }
  | LBRACE RBRACE                             { EDict([]) }
  | LBRACE fieldexps RBRACE                   { EDict($2) }
+ | LT GT                                     { EArray(tyAny,[]) }
+ | LT es=exps GT                             { EArray(tyAny,es) }
+ | LT GT AS u=typ_term           { match u with
+                                     | UArray(t) -> EArray(t,[])
+                                     | _ -> printParseErr "bad array ann" }
+ | LT es=exps GT AS u=typ_term   { match u with
+                                     | UArray(t) -> EArray(t,es)
+                                     | _ -> printParseErr "bad array ann" }
 
 lambda : (* requiring parens around body to avoid conflicts *)
 
@@ -486,7 +494,7 @@ walue :
  | LPAREN PLUS x=walue y=walue RPAREN        { plus x y }
  | LPAREN MINUS x=walue y=walue RPAREN       { minus x y }
  | LPAREN UPD x=walue y=walue z=walue RPAREN { upd x y z }
- | LPAREN LEN x=walue RPAREN                 { WApp("len",[x]) }
+ | LPAREN LEN x=walue RPAREN                 { arrlen x }
  | OBJSEL LPAREN d=walue COMMA k=walue COMMA h=heap COMMA l=loc RPAREN
      { WObjSel([d],k,h,l) }
  | OBJSEL LPAREN ds=waluelist COMMA k=walue COMMA h=heap COMMA l=loc RPAREN

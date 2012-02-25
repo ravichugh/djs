@@ -1,5 +1,5 @@
 
-#use "tests/functional/arrays/arrays.ml"
+#use "tests/functional/arrays/__arrays.ml"
 
 val tup3 :: {(and (v::Arr({(not (= v undefined))}))
                   (packed v) (= (len v) 3)
