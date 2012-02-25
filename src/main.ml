@@ -66,6 +66,9 @@ let checkSuffix s =
   else if check ".js" && !S.djsMode = false then warn ".js" "DJS"
   else ()
 
+let makeAbsolute f =
+  if f.[0] = '/' then f else Unix.getcwd () ^ "/" ^ f
+
 
 (***** Parse System D and !D **************************************************)
 
@@ -133,7 +136,7 @@ let parseSystemD () =
   let e =
     match !srcFiles with
       | []  -> Lang.EVal (LangUtils.vStr "no source file")
-      | [f] -> let f = Unix.getcwd () ^ "/" ^ f in
+      | [f] -> let f = makeAbsolute f in
                (checkSuffix f; expandProg f (doParse LangParser.prog f))
       | _   -> (pr "%s" usage; LangUtils.terminate ())
   in

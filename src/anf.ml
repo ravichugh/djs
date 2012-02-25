@@ -327,6 +327,7 @@ and strExp k exp = match exp with
   | EApp _         -> badAnf "EApp"
   | ENewObj _      -> badAnf "ENewObj"
   | ELoadedSrc(s,e) ->
+      let s = Str.replace_first (Str.regexp Settings.djs_dir) "DJS_DIR/" s in
       let n = max 0 (70 - String.length s) in
       let sep = spr "(***** %s %s*)" s (String.make n '*') in
       spr "%s%s\n\n%s" (tab k) sep (strExp k e)

@@ -14,7 +14,7 @@ let prim_dir = djs_dir ^ "src/prims/"
 let strictWarn = ref false
 let printAllTypes = ref false
 let tryElimLocals = ref true
-let useTheoryLA = ref false
+let useTheoryLA = ref true
 
 (* DJS options *)
 let djsMode = ref false
