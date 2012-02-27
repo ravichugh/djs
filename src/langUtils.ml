@@ -832,6 +832,7 @@ and freeVarsForm env = function
   | PApp(_,ws)       -> Quad.combineList (List.map (freeVarsWal env) ws)
   | PTru | PFls      -> Quad.empty
   | PUn(HasTyp(w,u)) -> Quad.combine (freeVarsWal env w) (freeVarsTT env u)
+  | PPacked(w)       -> freeVarsWal env w
   | PConn(_,ps)      -> Quad.combineList (List.map (freeVarsForm env) ps)
   | PHas(w,ws)       -> Quad.combineList (List.map (freeVarsWal env) (w::ws))
   | PDomEq(w,ws)     -> Quad.combineList (List.map (freeVarsWal env) (w::ws))

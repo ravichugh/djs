@@ -446,6 +446,9 @@ let objSet l1 l2 x k y    = objOp l1 l2 "objSet" [x; k; y]
 let objHas l1 l2 x k      = objOp l1 l2 "objHas" [x; k]
 let objHasOwn l1 l2 x k   = objOp l1 l2 "objHasOwn" [x; k]
 
+let arrOp t l fn args =
+  EApp (([t],[l],[]), eVar fn, ParseUtils.mkTupleExp args)
+
 let rec ds env = function
 
   | E.HintExpr (_, s, E.ConstExpr (_, J.CString "#define")) ->
@@ -459,10 +462,6 @@ let rec ds env = function
       else convertConst (J.CString s)
 
   | E.ConstExpr (_, c) -> convertConst c
-
-(*
-  | ArrayExpr (p, es) -> mk_array (p, map (ds_expr env) es)
-*)
 
   | E.HintExpr (_, h, E.ObjectExpr (p, fields)) when !Settings.fullObjects ->
 (*
@@ -486,6 +485,14 @@ let rec ds env = function
 
   | E.ObjectExpr (p, fields) -> 
       ENewref (LocConst (freshVar "objLit"), mkEDict env fields)
+
+  | E.ArrayExpr _ when !Settings.fullObjects -> failwith "arrayexpr"
+
+  | E.HintExpr (_, h, E.ArrayExpr (_, es)) ->
+      ENewref (parseLoc h, mkEArray tyAny env es)
+
+  | E.ArrayExpr (_, es) ->
+      ENewref (LocConst (freshVar "arrLit"), mkEArray tyAny env es)
 
   | E.ThisExpr p -> 
       (* In JavaScript, 'this' is a reserved word.  Hence, we are certain that
@@ -513,6 +520,24 @@ let rec ds env = function
   | E.BracketExpr (_, E.HintExpr (_, h, e1), e2) when !Settings.fullObjects ->
       let (l1,l2) = parseObjLocs h in
       objGet l1 l2 (ds env e1) (ds env e2)
+
+  | E.BracketExpr (_, E.HintExpr (_, h, e1), e2) -> begin
+      let (ts,ls,_) = parseAppArgs h in
+      let t = match ts with
+        | []  -> tyAny
+        | [t] -> t
+        | _   -> failwith "too many type args to getIdx" in
+      let l = match ls with
+        | [l] -> l
+        | _   -> failwith "need exactly one loc arg for getIdx" in
+      match e2 with
+        | E.ConstExpr (_, J.CInt i) ->
+            arrOp t l "getIdxLite" [ds env e1; EVal (vInt i)]
+        | E.ConstExpr (_, J.CString "length") ->
+            arrOp t l "getPropLite" [ds env e1; EVal (vStr "length")]
+        | _ ->
+            arrOp t l "getPropLite" [ds env e1; ds env e2]
+    end
 
   (* TODO this should be UnsafeGetField. what is difference? *)
   | E.BracketExpr (_, e1, e2) ->
@@ -882,12 +907,14 @@ let rec ds env = function
   | E.TryFinallyExpr _ -> failwith "try finally"
   | E.TryCatchExpr _ -> failwith "try catch"
   | E.ForInExpr _ -> failwith "forin"
-  | E.ArrayExpr _ -> failwith "arrayexpr"
 
   | E.VarDeclExpr _ -> failwith "ds vardecl: shouldn't get here"
 
 and mkEDict env fields =
   EDict (List.map (fun (_, x, e) -> (eStr x, ds env e)) fields)
+
+and mkEArray t env es =
+  EArray (t, List.map (ds env) es)
 
 (* rkc: based on LamJS E.FuncExpr case *)
 and dsFunc isCtor env p args body =
