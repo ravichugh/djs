@@ -14,30 +14,59 @@ let jsTagDict :: {(= "Dict" "object")} = 0
 
 val getPropLite ::
   {(and (v :: [; L; H]
-              _:[x:Ref(L), k:Str] / [H ++ L |-> d:{Dict|(has v k)}]
+              _:[_:Ref(L), k:Str] / [H ++ L |-> d:{Dict|(has v k)}]
            -> {(= v (sel d k))} / same)
         (v :: [A; L; H]
-              _:[x:Ref(L), i:{Str|(= v "length")}] / [H ++ L |-> a:Arr(A)]
+              _:[_:Ref(L), i:{Str|(= v "length")}] / [H ++ L |-> a:Arr(A)]
            -> {Int|(implies (packed a) (= v (len a)))} / same))}
 
-val getIdxLite :: [A;L] _:[x:Ref(L), i:Int] / [L |-> a:Arr(A)] ->
+val getIdxLite :: [A;L] _:[_:Ref(L), i:Int] / [L |-> a:Arr(A)] ->
   {(ite (and (packed a) (>= i 0))
         (ite (< i (len a)) (and (v::A) (= v (sel a i))) (= v undefined))
         (or (v::A) (= v undefined)))} / same
 
 val getElemLite :: (* combines getPropLite and getIdxLite *)
   {(and (v :: [; L; H]
-              _:[x:Ref(L), k:Str] / [H ++ L |-> d:{Dict|(has v k)}]
+              _:[_:Ref(L), k:Str] / [H ++ L |-> d:{Dict|(has v k)}]
            -> {(= v (sel d k))} / same)
         (v :: [A; L; H]
-              _:[x:Ref(L), i:{Str|(= v "length")}] / [H ++ L |-> a:Arr(A)]
+              _:[_:Ref(L), i:{Str|(= v "length")}] / [H ++ L |-> a:Arr(A)]
            -> {Int|(implies (packed a) (= v (len a)))} / same)
-        (v :: [A;L] _:[x:Ref(L), i:Int] / [L |-> a:Arr(A)]
+        (v :: [A;L] _:[_:Ref(L), i:Int] / [L |-> a:Arr(A)]
            -> {(ite (and (packed a) (>= i 0))
                     (ite (< i (len a))
                               (and (v::A) (= v (sel a i)))
                               (= v undefined))
                     (or (v::A) (= v undefined)))} / same))}
+
+val setPropLite ::
+  {(and (v :: [;L]
+              _:[_:Ref(L), k:Str, y:Top] / [L |-> d:Dict]
+           -> {(= v y)} / [L |-> d':{(= v (upd d k y))}])
+        true (* TODO length property *))}
+
+val setIdxLite :: [A;L] _:[_:Ref(L), i:Int, y:A] / [L |-> a:Arr(A)] ->
+  {(= v y)} /
+  [L |-> a':{(and (v::Arr(A))
+                  (= (sel a i) y)
+                  (implies (and (packed a) (>= i 0) (< i (len a)))
+                           (and (packed v) (= (len v) (len a))))
+                  (implies (and (packed a) (= i (len a)))
+                           (and (packed v) (= (len v) (+ 1 (len a))))))}]
+
+val setElemLite :: (* combines setPropLite and setIdxLite *)
+  {(and (v :: [;L]
+              _:[_:Ref(L), k:Str, y:Top] / [L |-> d:Dict]
+           -> {(= v y)} / [L |-> d':{(= v (upd d k y))}])
+        true (* TODO length property *)
+        (v :: [A;L] _:[_:Ref(L), i:Int, y:A] / [L |-> a:Arr(A)] ->
+          {(= v y)} /
+          [L |-> a':{(and (v::Arr(A))
+                          (= (sel a i) y)
+                          (implies (and (packed a) (>= i 0) (< i (len a)))
+                                   (and (packed v) (= (len v) (len a))))
+                          (implies (and (packed a) (= i (len a)))
+                                   (and (packed v) (= (len v) (+ 1 (len a))))))}]))}
 
 
 (******************************************************************************)

@@ -503,12 +503,14 @@ and tsVal_ g h = function
   | VFun(l,x,None,e) -> failwith "ts bare VFun"
       (* tsVal g h (VFun(l,x,Some(tyAny,[]),e)) *)
 
-  | VArray(t,vs) ->
+  | VArray(t,vs) -> begin
+      List.iter (tcVal g h t) vs;
       let n = List.length vs in
       ty (pAnd (
         hastyp theV (UArray t)
         :: PPacked theV :: PEq (arrlen theV, wInt n)
         :: (Utils.map_i (fun vi i -> PEq (sel theV (wInt i), WVal vi)) vs)))
+    end
 
 
 (***** Expression type synthesis **********************************************)

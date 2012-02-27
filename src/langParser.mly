@@ -137,11 +137,12 @@ let sameCell l =
 %type <Lang.heap * Lang.typ * Lang.heap> jsWhile
 %type <Lang.uarr> jsCtor
 %type <(Lang.typs * Lang.locs * Lang.heaps) * Lang.loc> jsNew
+%type <Lang.loc * Lang.typ> jsArrLit
 %type <string> jsFail
 
 
 %start prog prelude
-%start jsTyp jsPolyArgs jsLoc jsObjLocs jsWhile jsFail jsCtor jsNew
+%start jsTyp jsPolyArgs jsLoc jsObjLocs jsWhile jsFail jsCtor jsNew jsArrLit
 
 
 %%
@@ -672,5 +673,9 @@ jsCtor: NEW u=arrow_typ EOF { match u with
                                 | _ -> printParseErr "jsCtor: impossible"  }
 
 jsNew : x=poly_actuals y=loc EOF  { (x,y) }
+
+jsArrLit :
+ | l=loc EOF                           { (l, tyAny) }
+ | l=loc ARRTYPE LPAREN t=typ RPAREN   { (l, t) }
 
 %%

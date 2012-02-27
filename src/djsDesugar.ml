@@ -266,6 +266,7 @@ let parseWhile s   = parseWith LangParser.jsWhile "while annot" s
 let parseLoc s     = parseWith LangParser.jsLoc "loc annot" s
 let parseCtorTyp s = parseWith LangParser.jsCtor "ctor annot" s
 let parseNew s     = parseWith LangParser.jsNew "new annot" s
+let parseArrLit s  = parseWith LangParser.jsArrLit "array literal annot" s
 let parseObjLocs s =
   match parseWith LangParser.jsObjLocs "obj loc annot" s with
     | l1, Some(l2) -> (l1, l2)
@@ -489,7 +490,8 @@ let rec ds env = function
   | E.ArrayExpr _ when !Settings.fullObjects -> failwith "arrayexpr"
 
   | E.HintExpr (_, h, E.ArrayExpr (_, es)) ->
-      ENewref (parseLoc h, mkEArray tyAny env es)
+      let (l,t) = parseArrLit h in
+      ENewref (l, mkEArray t env es)
 
   | E.ArrayExpr (_, es) ->
       ENewref (LocConst (freshVar "arrLit"), mkEArray tyAny env es)
@@ -536,7 +538,7 @@ let rec ds env = function
         | E.ConstExpr (_, J.CString "length") ->
             arrOp t l "getPropLite" [ds env e1; EVal (vStr "length")]
         | _ ->
-            arrOp t l "getPropLite" [ds env e1; ds env e2]
+            arrOp t l "getElemLite" [ds env e1; ds env e2]
     end
 
   (* TODO this should be UnsafeGetField. what is difference? *)
@@ -612,6 +614,24 @@ let rec ds env = function
     when !Settings.fullObjects -> 
       let (l1,l2) = parseObjLocs h in
       objSet l1 l2 (ds env e1) (ds env e2) (ds env e3)
+
+  | E.AssignExpr (_, E.PropLValue (_, E.HintExpr (_, h, e1), e2), e3) -> begin
+      let (ts,ls,_) = parseAppArgs h in
+      let t = match ts with
+        | []  -> tyAny
+        | [t] -> t
+        | _   -> failwith "too many type args to getIdx" in
+      let l = match ls with
+        | [l] -> l
+        | _   -> failwith "need exactly one loc arg for getIdx" in
+      match e2 with
+        | E.ConstExpr (_, J.CInt i) ->
+            arrOp t l "setIdxLite" [ds env e1; EVal (vInt i); ds env e3]
+        | E.ConstExpr (_, J.CString "length") ->
+            arrOp t l "setPropLite" [ds env e1; EVal (vStr "length"); ds env e3]
+        | _ ->
+            arrOp t l "setElemLite" [ds env e1; ds env e2; ds env e3]
+    end
 
   | E.AssignExpr (_, E.PropLValue (_, e1, e2), e3) -> 
       let x = freshVar "obj" in
