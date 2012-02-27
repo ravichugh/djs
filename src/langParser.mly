@@ -470,6 +470,7 @@ formula :
      { PObjHas([d],k,h,l) }
  | OBJHAS LPAREN ds=waluelist COMMA k=walue COMMA h=heap COMMA l=loc RPAREN
      { PObjHas(ds,k,h,l) }
+ | LPAREN TYPE x=VAR RPAREN  { ParseUtils.doIntersectionHack x }
 
 (*
  | LPAREN SUGAR_EXTEND a1=atom a2=atom a3=atom a4=atom RPAREN

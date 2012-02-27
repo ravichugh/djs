@@ -29,3 +29,7 @@ val mkLetRecMono :
   vvar -> (locs * vvar * typ * heap * typ * heap) -> exp -> exp -> exp
 *)
 
+val doIntersectionHack : vvar -> formula
+
+val undoIntersectionHack : env -> typ -> typ 
+

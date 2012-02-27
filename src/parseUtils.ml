@@ -232,3 +232,27 @@ let rec mkLetRec f s e1 e2 =
         parse_err "mkLetRec: ?"
 *)
 
+
+(***** Hack for Primitive Intersections ***************************************)
+
+let doIntersectionHack x = pNot (PEq (wStr "type hack", wStr x))
+
+let undoIntersectionHack g t =
+  let fForm = function
+    | PConn("not",[PEq(WVal(VBase(Str("type hack"))),WVal(VBase(Str(x))))]) ->
+      begin
+        try begin
+          match List.find (function Var(y,_) -> x = y | _ -> false) g with
+            | Var(_,s) ->
+                (match s with
+                   | TRefinement("v",_)
+                   | THasTyp(_) -> applyTyp s theV
+                   | _ -> printTcErr [spr "can't expand type hack [%s]" x])
+            | _ -> kill "undoIntersectionHack: impossible"
+        end with Not_found ->
+          printTcErr [spr "can't expand type hack [%s]" x]
+      end
+    | p -> p
+  in
+  mapTyp ~fForm t
+
