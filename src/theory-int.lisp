@@ -23,14 +23,17 @@
            (iff (my_ge w1 w2) (or (my_gt w1 w2) (= w1 w2)))
         )))
 
-(assert (forall (i Int) (j Int) (k Int)
-        (iff (= i (+ j k)) (= (VInt i) (my_plus (VInt j) (VInt k))))))
+(assert (forall (w1 DVal) (w2 DVal) (w3 DVal)
+        (iff (= w1 (my_plus w2 w3))
+             (= (VIntSel w1) (+ (VIntSel w2) (VIntSel w3))))))
 
-(assert (forall (i Int) (j Int) (k Int)
-        (iff (= i (- j k)) (= (VInt i) (my_minus (VInt j) (VInt k))))))
+(assert (forall (w1 DVal) (w2 DVal) (w3 DVal)
+        (iff (= w1 (my_minus w2 w3))
+             (= (VIntSel w1) (- (VIntSel w2) (VIntSel w3))))))
 
-(assert (forall (i Int) (j Int)
-        (iff (= i (~j)) (= (VInt i) (my_uminus (VInt j))))))
+(assert (forall (w1 DVal) (w2 DVal)
+        (iff (= w1 (my_uminus w2))
+             (= (VIntSel w1) (~ (VIntSel w2))))))
 
 
 ;;;;; End Integer Wrapper Axioms
