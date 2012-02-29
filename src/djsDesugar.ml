@@ -459,7 +459,9 @@ let undoDotExp = function
 let objOp ts ls fn args =
   EApp ((ts,ls,[]), eVar fn, ParseUtils.mkTupleExp args)
 
+(*
 let objGet l1 l2 x k      = objOp [] [l1;l2] "objGet" [x; k]
+*)
 let objSet l1 l2 x k y    = objOp [] [l1;l2] "objSet" [x; k; y]
 let objHas l1 l2 x k      = objOp [] [l1;l2] "objHas" [x; k]
 let objHasOwn l1 l2 x k   = objOp [] [l1;l2] "objHasOwn" [x; k]
@@ -503,7 +505,8 @@ let rec ds env = function
 
   | E.HintExpr (_, h, E.ArrayExpr (_, es)) when !Settings.fullObjects ->
       let (l,t) = parseArrLit h in
-      ENewObj (mkEArray t env es, l, eVar "__ArrayProto", LocConst "lArrayProto")
+      ENewObj (mkEArray t env es, l,
+               EDeref (eVar (dsVar ("__ArrayProto"))), LocConst "lArrayProto")
 
   | E.ArrayExpr _ when !Settings.fullObjects -> failwith "arrayexpr"
 
@@ -711,6 +714,13 @@ let rec ds env = function
     end
 *)
 
+  | E.SeqExpr (_,
+      E.VarDeclExpr (_, x,
+        E.HintExpr (_, s, E.ConstExpr (_, J.CString "#extern"))), e2) -> begin
+      let x = dsVar x in
+      EExtern (x, desugarTypHint s, ds (IdMap.add x false env) e2)
+    end
+
   | E.SeqExpr (_, E.VarDeclExpr (_, x, e), e2) -> begin
       let (lo,e) =
         match e with
@@ -864,6 +874,7 @@ let rec ds env = function
                     mk_array (p, map (ds_expr env) args) ]))
 *)
 
+(*
   | E.AppExpr (p, E.HintExpr (_, s, E.BracketExpr (p', obj, prop)), args)
     when !Settings.fullObjects ->
       let (ts,ls,hs) = parseAppArgs s in
@@ -877,6 +888,23 @@ let rec ds env = function
       let func = objGet l1 l2 obj (ds env prop) in
       EApp ((ts, ls @ [locArgs], hs), func, 
             ParseUtils.mkTupleExp [obj; argsArray])
+*)
+  | E.AppExpr (p, E.HintExpr (_, s, E.BracketExpr (p', obj, prop)), args)
+    when !Settings.fullObjects -> begin
+      let (ts,ls,hs) = parseAppArgs s in
+      if hs <> [] then failwith "method call hs params TODO";
+      let obj = ds env obj in
+      match prop with
+        | E.ConstExpr (_, J.CString s) ->
+            let (b,s) = undoDotStr s in
+            let f = if b then "getProp" else "getElem" in
+            let func = objOp ts ls f [obj; EVal (vStr s)] in
+            let (locArgs,argsArray) = mkArgsArray (List.map (ds env) args) in
+            (* for now, just passing the same poly args... *)
+            EApp ((ts, ls @ [locArgs], []), func,
+                  ParseUtils.mkTupleExp [obj; argsArray])
+        | _ -> failwith "method call getelem"
+    end
 
   | E.AppExpr (p, E.BracketExpr (p', obj, prop), args) ->
       if !Settings.fullObjects
@@ -1142,4 +1170,19 @@ let desugar e =
   collectMacros e;
   ds Prelude.IdMap.empty e
 
+
+(***** Sequencing EJS expressions *********************************************)
+
+(* The JS parser doesn't have a "prelude" production, so this fakes it by
+   stitching together e1 and e2 as if e1 were a prelude. Assumes that e1 is
+   a sequence terminated by undefined. This is better than SeqExpr(e1,e2),
+   which is no longer a flat top-level sequence. *)
+
+let makeFlatSeq e1 e2 =
+  let rec foo = function
+    | E.SeqExpr (p, e, E.ConstExpr (_, J.CUndefined)) -> E.SeqExpr (p, e, e2)
+    | E.SeqExpr (p, e1, e2) -> E.SeqExpr (p, e1, foo e2)
+    | _ -> failwith "makeFlatSeq"
+  in
+  foo e1
 

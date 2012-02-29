@@ -10,30 +10,6 @@ let jsTagStr  :: {(= "Str"  "string")} = 0
 let jsTagDict :: {(= "Dict" "object")} = 0
 
 
-(***** Object.prototype *******************************************************)
-
-(* in lang.ml and tcDref.ml right now. *)
-
-
-(***** Array.prototype ********************************************************)
-
-val __ArrayProto_push :: {(= v "push")}
-
-val __ArrayProto_pop :: Top
-
-let __ArrayProtoDict =
-  { "push" = __ArrayProto_push
-  ; "pop"  = __ArrayProto_pop
-  }
-
-let __ArrayProto = new (__ArrayProtoDict, lArrayProto, __Object, lObject)
-
-(*
-(* use __Function? *)
-let __Array = new ({"prototype" = __ArrayProto}, lArray, __Object, lObject)
-*)
-
-
 (***** Full Objects / Arrays **************************************************)
 
 (**  [[ x.f  ]] = getProp ([[x]],   f  )                                     **)
@@ -69,6 +45,7 @@ val getProp :: {(and (type getPropObj) (type getPropArr))}
 val getElem :: {(and (type getPropObj) (type getPropArrLen) (type getIdx))}
   (* note that the non-"length" part of getPropArr is _not_ included
      in this intersection *)
+
 
 (******************************************************************************)
 

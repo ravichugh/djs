@@ -148,9 +148,12 @@ let parseSystemD () =
 
 let doParseDJS f =
   try
-    let js  = JavaScript.parse_javascript_from_channel (open_in f) f in
-    let ejs = Exprjs_syntax.from_javascript js in
-      DjsDesugar.desugar ejs
+    let f'   = S.prim_dir ^ "djsPrelude.js" in
+    let js'  = JavaScript.parse_javascript_from_channel (open_in f') f' in
+    let ejs' = Exprjs_syntax.from_javascript js' in
+    let js   = JavaScript.parse_javascript_from_channel (open_in f) f in
+    let ejs  = Exprjs_syntax.from_javascript js in
+      DjsDesugar.desugar (DjsDesugar.makeFlatSeq ejs' ejs)
   with Failure(s) ->
     if Utils.strPrefix s "parse error" || Utils.strPrefix s "lexical error"
     then LangUtils.printParseErr s
