@@ -204,13 +204,11 @@ exp1 :
  | exp2                          { $1 }
  | e1=exp1 e2=exp2               { EApp(([],[],[]),e1,e2) }
  | LPAREN l=poly_actuals e1=exp1 RPAREN e2=exp2 { EApp(l,e1,e2) }
-(* TODO TODO TODO
- | e1=exp1 LT ls=locs GT e2=exp2          { EApp($1,$3,$5) }
-*)
  | BANG e=exp2                   { EDeref(e) }
  | e1=exp1 ASSGN e2=exp2         { ESetref(e1,e2) }
  | NEWREF l=loc e=exp2           { ENewref(l,e) }
- | NEW LPAREN l1=loc l2=loc e=exp RPAREN   { ENewObj(l1,l2,e) }
+ | NEW LPAREN e1=exp COMMA l1=loc COMMA e2=exp COMMA l2=loc RPAREN
+     { ENewObj(e1,l1,e2,l2) }
 (*
  | FREEZE VAR                    { EFreeze($2,None) }
  | FREEZE VAR typ                { EFreeze($2,Some($3)) }
@@ -497,6 +495,8 @@ walue :
  | LPAREN MINUS x=walue y=walue RPAREN       { minus x y }
  | LPAREN UPD x=walue y=walue z=walue RPAREN { upd x y z }
  | LPAREN LEN x=walue RPAREN                 { arrlen x }
+ | HEAPSEL LPAREN h=heap COMMA l=loc COMMA k=walue RPAREN
+     { WHeapSel(h,l,k) }
  | OBJSEL LPAREN d=walue COMMA k=walue COMMA h=heap COMMA l=loc RPAREN
      { WObjSel([d],k,h,l) }
  | OBJSEL LPAREN ds=waluelist COMMA k=walue COMMA h=heap COMMA l=loc RPAREN

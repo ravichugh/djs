@@ -78,8 +78,8 @@ type exp =
   | EThrow of exp
   | ETryCatch of exp * vvar * exp
   | ETryFinally of exp * exp
-  (***** proto-based object operations *****)
-  | ENewObj of loc * loc * exp
+  (***** create a proto-based object or array *****)
+  | ENewObj of exp * loc * exp * loc
   (***** helpers for parsing *****)
   | ELoadSrc of string * exp         (* inserted/eliminated by parsing *)
   | ELoadedSrc of string * exp       (* placeholder to indicate source file *)

@@ -116,9 +116,10 @@ let rec anf = function
   | EThrow(e) ->
       let (l,e) = anfAndTmp e in
       finish (l, EThrow e)
-  | ENewObj(l1,l2,e) ->
-      let (l,e) = anfAndTmp e in
-      finish (l, ENewObj (l1, l2, e))
+  | ENewObj(e1,loc1,e2,loc2) ->
+      let (l1,e1) = anfAndTmp e1 in
+      let (l2,e2) = anfAndTmp e2 in
+      finish (l1 @ l2, ENewObj (e1, loc1, e2, loc2))
   | ELoadedSrc(s,e) -> ([], ELoadedSrc (s, anfExp e))
 
 and anfAndTmp e =
@@ -326,9 +327,11 @@ and strExp k exp = match exp with
   | ETryFinally(e1,e2) ->
       let (s1,s2) = strExp (succ k) e1, strExp (succ k) e2 in
       spr "%stry {\n%s\n%s} finally {\n%s\n%s}" (tab k) s1 (tab k) s2 (tab k)
-  | ENewObj(l1,l2,EVal(v)) ->
-      let s = strVal (succ k) v in
-      spr "%snew (%s %s %s)" (tab k) (strLoc l1) (strLoc l2) (clip s)
+  | ENewObj(EVal(v1),l1,EVal(v2),l2) ->
+      let s1 = strVal (succ k) v1 in
+      let s2 = strVal (succ k) v2 in
+      spr "%snew (%s, %s, %s, %s)"
+        (tab k) (clip s1) (strLoc l1) (clip s2) (strLoc l2)
   | EBase _        -> badAnf "EBase"
   | EVar _         -> badAnf "EVar"
   | EFun _         -> badAnf "EFun"
@@ -393,5 +396,6 @@ and coerce = function
   | EThrow(e) -> EThrow (coerceEVal "throw" e)
   | ETryCatch(e1,x,e2) -> ETryCatch (coerce e1, x, coerce e2)
   | ETryFinally(e1,e2) -> ETryFinally (coerce e1, coerce e2)
-  | ENewObj(l1,l2,e) -> ENewObj (l1, l2, coerceEVal "newobj" e)
+  | ENewObj(e1,l1,e2,l2) ->
+      ENewObj (coerceEVal "NewObj" e1, l1, coerceEVal "NewObj" e2, l2)
 

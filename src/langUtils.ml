@@ -492,6 +492,11 @@ let rec strWalue = function
         let ih = registerHeap (h,[]) in
         let il = registerLoc l in
         spr "(heapsel %d %d %s)" ih il (strWalue k)
+  | WHeapSel((hs,cs),l,k) ->
+      if !prettyConst then
+        spr "HeapSel(%s, %s, %s)" (strHeap (hs,cs)) (strLoc l) (strWalue k)
+      else
+        failwith "strWalue HeapSel: constraints not expanded"
   | WObjSel(ds,k,(h,[]),l) ->
       spr "ObjSel(%s,%s,%s,%s)"
         (strWalueList ds) (strWalue k) (strHeap (h,[])) (strLoc l)
@@ -1217,9 +1222,20 @@ let expandOH ds k (hs,cs) l =
 
 (***** expand WHeapSel *****)
 
-(* TODO *)
-let expandHS p (hs,cs) l k =
-  failwith "expandHS"
+(* trick to expand HeapSel in place, without computing formula contexts
+   and applying them: convert to an ObjSel macro! *)
+let expandHS (hs,cs) l k =
+  let rec foo ds l =
+    if not (List.mem_assoc l cs) then WObjSel (ds, k, (hs,[]), l)
+    else begin
+      match List.assoc l cs with
+        | HConcObj(d,_,l') -> foo (ds @ [wVar d]) l'
+        | _ -> failwith "expandHS: not conc constraint"
+    end
+  in
+  let w = foo [] l in
+  printUnrollWal "expand" (WHeapSel((hs,cs),l,k)) w;
+  w
 
 (***** expand WObjSel *****)
 
@@ -1244,9 +1260,7 @@ let expandPredSymbols = function
   | p                 -> p
 
 let expandFunSymbols = function
-(* TODO TODO
   | WHeapSel(e,l,k)   -> expandHS e l k
-*)
   | WObjSel(ds,k,e,l) -> expandOS ds k e l
   | w                 -> w
 

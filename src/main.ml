@@ -14,7 +14,6 @@ let pervsPath = ref (Settings.prim_dir ^ "pervasives.ml")
 let doRaw     = ref false
 let noPrelude = ref false
 let srcFiles  = ref []
-let djsPreludePath = ref (Settings.prim_dir ^ "djs.ml")
 
 let usage = "\n./system-d [options] [src_file]\n"
 
@@ -116,7 +115,9 @@ let anfAndAddPrelude e =
     let pervs = parsePrelude !pervsPath in
     let e =
       if !S.djsMode then
-        let pre = parsePrelude !djsPreludePath in
+        let pre =
+          parsePrelude (S.prim_dir ^
+                       (if !S.fullObjects then "djs.ml" else "djsLite.ml")) in
         prims (pervs (pre e))
       else
         prims (pervs e)
