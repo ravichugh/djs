@@ -11,7 +11,7 @@ var a = /*: lA Arr(Int) */ [0,1,2];
 
 /*: Int */ (/*: [Int;lA,lArrayProto;] */ a[3]);
 
-(/*: [Int;lA,lArrayProto;] */ (a["pop"]))(3);
+(/*: [Int;lA,lArrayProto;] */ (a["pop"]))();
 
 /*: {(= v undefined)} */ (/*: [Int;lA,lArrayProto;] */ a[3]);
 

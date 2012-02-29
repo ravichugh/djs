@@ -913,16 +913,20 @@ let rec ds env = function
       let (ts,ls,hs) = parseAppArgs s in
       if hs <> [] then failwith "method call hs params TODO";
       let obj = ds env obj in
-      match prop with
-        | E.ConstExpr (_, J.CString s) ->
-            let (b,s) = undoDotStr s in
-            let f = if b then "getProp" else "getElem" in
-            let func = objOp ts ls f [obj; EVal (vStr s)] in
-            let (locArgs,argsArray) = mkArgsArray (List.map (ds env) args) in
-            (* for now, just passing the same poly args... *)
-            EApp ((ts, ls @ [locArgs], []), func,
-                  ParseUtils.mkTupleExp [obj; argsArray])
-        | _ -> failwith "method call getelem"
+      let func =
+        match prop with
+          | E.ConstExpr (_, J.CString s) ->
+              let (b,s) = undoDotStr s in
+              let f = if b then "getProp" else "getElem" in
+              objOp ts ls f [obj; EVal (vStr s)]
+          | _ ->
+              let prop = undoDotExp prop in
+              objOp ts ls "getElem" [obj; ds env prop]
+      in
+      let (locArgs,argsArray) = mkArgsArray (List.map (ds env) args) in
+      (* for now, just passing the same poly args... *)
+      EApp ((ts, ls @ [locArgs], hs), func,
+            ParseUtils.mkTupleExp [obj; argsArray])
     end
 
   | E.AppExpr (p, E.BracketExpr (p', obj, prop), args) ->

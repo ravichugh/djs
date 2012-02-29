@@ -54,13 +54,24 @@ val setPropObj :: [; L1,L2; H]
      _:[x:Ref(L1), y:Str, z:Top] / [H ++ L1 |-> (d:Dict, L2)]
   -> {(= v z)} / [H ++ L1 |-> (d':{(= v (upd d y z))}, L2)]
 
-val setPropArr :: {true}
+val setPropArrLen :: [A; L1,L2]
+     _:[_:Ref(L1), k:{(= v "length")}, n:Int] / [L1 |-> (a:Arr(A), L2)]
+  -> {(= v n)}
+   / [L1 |-> (a':{(and (v::Arr(A))
+                       (implies (and (packed a) (<= n (len a)))
+                                (and (packed v) (= (len v) n))))}, L2)]
 
-val setPropArrLen :: {true}
+val setIdx :: [A; L1,L2]
+     _:[_:Ref(L1), i:Int, y:A] / [L1 |-> (a:Arr(A), L2)]
+  -> {(= v y)}
+   / [L1 |-> (a':{(and (v::Arr(A))
+                  (= (sel a i) y)
+                  (implies (and (packed a) (>= i 0) (< i (len a)))
+                           (and (packed v) (= (len v) (len a))))
+                  (implies (and (packed a) (= i (len a)))
+                           (and (packed v) (= (len v) (+ 1 (len a))))))}, L2)]
 
-val setIdx :: {true}
-
-val setProp :: {(and (type setPropObj) (type setPropArr))}
+val setProp :: {(and (type setPropObj) (type setPropArrLen))}
 
 val setElem :: {(and (type setPropObj) (type setPropArrLen) (type setIdx))}
 
