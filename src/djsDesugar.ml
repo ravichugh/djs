@@ -437,18 +437,32 @@ let undoDsVar x =
   String.sub x 2 (String.length x - 2)
 
 
+(***** Prop/Bracket ***********************************************************)
+
+(* rkc: hacked LamJS/exprjs_syntax.ml to distinguish between prop/bracket,
+   even though the abstract syntax doesn't. so, need to make sure to undo
+   the hack whenever using BracketExpr or PropLValue *)
+
+let undoDotStr s =
+  if Str.string_match (Str.regexp "^__dot__\\(.*\\)$") s 0
+  then (true, Str.matched_group 1 s)
+  else (false, s)
+
+let undoDotExp = function
+  | E.ConstExpr (p, J.CString s) ->
+      E.ConstExpr (p, J.CString (snd (undoDotStr s)))
+  | e -> e
+
+
 (***** Desugaring expressions *************************************************)
 
-let objOp l1 l2 fn args =
-  EApp (([],[l1;l2],[]), eVar fn, ParseUtils.mkTupleExp args)
+let objOp ts ls fn args =
+  EApp ((ts,ls,[]), eVar fn, ParseUtils.mkTupleExp args)
 
-let objGet l1 l2 x k      = objOp l1 l2 "objGet" [x; k]
-let objSet l1 l2 x k y    = objOp l1 l2 "objSet" [x; k; y]
-let objHas l1 l2 x k      = objOp l1 l2 "objHas" [x; k]
-let objHasOwn l1 l2 x k   = objOp l1 l2 "objHasOwn" [x; k]
-
-let arrOp t l fn args =
-  EApp (([t],[l],[]), eVar fn, ParseUtils.mkTupleExp args)
+let objGet l1 l2 x k      = objOp [] [l1;l2] "objGet" [x; k]
+let objSet l1 l2 x k y    = objOp [] [l1;l2] "objSet" [x; k; y]
+let objHas l1 l2 x k      = objOp [] [l1;l2] "objHas" [x; k]
+let objHasOwn l1 l2 x k   = objOp [] [l1;l2] "objHasOwn" [x; k]
 
 let rec ds env = function
 
@@ -475,7 +489,7 @@ let rec ds env = function
           (fun (_,k,v) -> objSet l1 lObject (eVar obj) (eStr k) (ds env v))
           fields
       in
-      ELet (obj, None, ENewObj (l1, lObject, eObject),
+      ELet (obj, None, ENewObj (EVal VEmpty, l1, eObject, lObject),
             eSeq (setFields @ [eVar obj]))
 
   | E.ObjectExpr (p, fields) when !Settings.fullObjects ->
@@ -486,6 +500,10 @@ let rec ds env = function
 
   | E.ObjectExpr (p, fields) -> 
       ENewref (LocConst (freshVar "objLit"), mkEDict env fields)
+
+  | E.HintExpr (_, h, E.ArrayExpr (_, es)) when !Settings.fullObjects ->
+      let (l,t) = parseArrLit h in
+      ENewObj (mkEArray t env es, l, eVar "__ArrayProto", LocConst "lArrayProto")
 
   | E.ArrayExpr _ when !Settings.fullObjects -> failwith "arrayexpr"
 
@@ -519,30 +537,59 @@ let rec ds env = function
         mkApp (eVar "get") [EDeref (EVar "global"); eStr x]
     end
 
+(*
   | E.BracketExpr (_, E.HintExpr (_, h, e1), e2) when !Settings.fullObjects ->
       let (l1,l2) = parseObjLocs h in
       objGet l1 l2 (ds env e1) (ds env e2)
+*)
+
+  | E.BracketExpr (_, E.HintExpr (_, h, e1), e2) when !Settings.fullObjects ->
+    begin
+      let (ts,ls,_) = parseAppArgs h in
+      (* not doing any type/loc parameter inference prop/elem cases, since
+         don't know if e1 is an object or array *)
+      match e2 with
+        | E.ConstExpr (_, J.CInt i) ->
+            let t = match ts with
+              | []  -> tyAny
+              | [t] -> t
+              | _   -> failwith "too many type args to getIdx" in
+            let (l1,l2) = match ls with
+              | [l1;l2] -> (l1, l2)
+              | [l]     -> (l, LocConst "lArrayProto")
+              | _       -> failwith "need 1 or 2 loc args for getIdx" in
+            objOp [t] [l1;l2] "getIdx" [ds env e1; EVal (vInt i)]
+        | E.ConstExpr (_, J.CString s) ->
+            let (b,s) = undoDotStr s in
+            let f = if b then "getProp" else "getElem" in
+            objOp ts ls f [ds env e1; EVal (vStr s)]
+        | _ ->
+            let e2 = undoDotExp e2 in
+            objOp ts ls "getElem" [ds env e1; ds env e2]
+    end
 
   | E.BracketExpr (_, E.HintExpr (_, h, e1), e2) -> begin
+      let e2 = undoDotExp e2 in
       let (ts,ls,_) = parseAppArgs h in
       let t = match ts with
         | []  -> tyAny
         | [t] -> t
-        | _   -> failwith "too many type args to getIdx" in
+        | _   -> failwith "too many type args to get prop/elem lite" in
       let l = match ls with
         | [l] -> l
-        | _   -> failwith "need exactly one loc arg for getIdx" in
+        | _   -> failwith "need exactly one loc arg for get prop/elem lite" in
       match e2 with
         | E.ConstExpr (_, J.CInt i) ->
-            arrOp t l "getIdxLite" [ds env e1; EVal (vInt i)]
-        | E.ConstExpr (_, J.CString "length") ->
-            arrOp t l "getPropLite" [ds env e1; EVal (vStr "length")]
+            objOp [t] [l] "getIdxLite" [ds env e1; EVal (vInt i)]
+        | E.ConstExpr (_, J.CString s) ->
+            objOp [t] [l] "getPropLite" [ds env e1; EVal (vStr s)]
         | _ ->
-            arrOp t l "getElemLite" [ds env e1; ds env e2]
+            objOp [t] [l] "getElemLite" [ds env e1; ds env e2]
     end
 
   (* TODO this should be UnsafeGetField. what is difference? *)
   | E.BracketExpr (_, e1, e2) ->
+      let e2 = undoDotExp e2 in
       mkApp (eVar "get") [EDeref (ds env e1); ds env e2]
 
   | E.PrefixExpr (_, "prefix:delete", e) -> begin
@@ -550,6 +597,7 @@ let rec ds env = function
         if !Settings.fullObjects then
           printParseErr "full: delete"
         else
+          let ek = undoDotExp ek in
           let x = freshVar "del" in
           ELet (x, None, ds env ed,
                 ESetref (eVar x,
@@ -612,10 +660,12 @@ let rec ds env = function
 
   | E.AssignExpr (_, E.PropLValue (_, E.HintExpr (_, h, e1), e2), e3)
     when !Settings.fullObjects -> 
+      (* TODO dot string *)
       let (l1,l2) = parseObjLocs h in
       objSet l1 l2 (ds env e1) (ds env e2) (ds env e3)
 
   | E.AssignExpr (_, E.PropLValue (_, E.HintExpr (_, h, e1), e2), e3) -> begin
+      let e2 = undoDotExp e2 in
       let (ts,ls,_) = parseAppArgs h in
       let t = match ts with
         | []  -> tyAny
@@ -626,14 +676,15 @@ let rec ds env = function
         | _   -> failwith "need exactly one loc arg for getIdx" in
       match e2 with
         | E.ConstExpr (_, J.CInt i) ->
-            arrOp t l "setIdxLite" [ds env e1; EVal (vInt i); ds env e3]
-        | E.ConstExpr (_, J.CString "length") ->
-            arrOp t l "setPropLite" [ds env e1; EVal (vStr "length"); ds env e3]
+            objOp [t] [l] "setIdxLite" [ds env e1; EVal (vInt i); ds env e3]
+        | E.ConstExpr (_, J.CString s) ->
+            objOp [t] [l] "setPropLite" [ds env e1; EVal (vStr s); ds env e3]
         | _ ->
-            arrOp t l "setElemLite" [ds env e1; ds env e2; ds env e3]
+            objOp [t] [l] "setElemLite" [ds env e1; ds env e2; ds env e3]
     end
 
   | E.AssignExpr (_, E.PropLValue (_, e1, e2), e3) -> 
+      let e2 = undoDotExp e2 in
       let x = freshVar "obj" in
       ELet (x, None, ds env e1,
             ESetref (eVar x, mkApp (eVar "set") [EDeref (eVar x);
@@ -688,7 +739,8 @@ let rec ds env = function
              dsFunc true env p args body,
              s |> desugarCtorHint |> ParseUtils.typToFrame) in
       let proto =
-        ENewObj (LocConst (spr "&%s_proto" fOrig), lObject, eObject) in
+        ENewObj (EVal VEmpty, LocConst (spr "&%s_proto" fOrig),
+                 eObject, lObject) in
       let obj =
         ENewref (LocConst (spr "&%s_obj" fOrig),
                  EDict [(eStr "code", code);
@@ -873,7 +925,7 @@ let rec ds env = function
           | lObj::_ -> lObj
           | _ -> printParseErr "new annot: must have at least 1 loc arg"
       in
-      let obj = ENewObj (lObj, lProto, proto) in
+      let obj = ENewObj (EVal VEmpty, lObj, proto, lProto) in
       let (locArgs,argsArray) = mkArgsArray (List.map (ds env) args) in
       EApp ((ts, ls @ [locArgs], hs), ctor,
             ParseUtils.mkTupleExp [obj; argsArray])

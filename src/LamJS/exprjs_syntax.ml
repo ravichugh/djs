@@ -62,13 +62,18 @@ let rec seq a e1 e2 = match e1 with
   | SeqExpr (a', e11, e12) -> SeqExpr (a, e11, seq a' e12 e2)
   | _ -> SeqExpr (a, e1, e2)
 
+(* rkc: DJS likes to distinguish between dot/bracket getprop operations.
+   instead of adding DotExpr to EJS and separating PropLValue into
+   DotLValue and BracketLValue, munging the strings for dot operations. *)
+let djsMungeDot s = sprintf "__dot__%s" s
+
 let rec expr (e : S.expr) = match e with
   | S.ConstExpr (p, c) -> ConstExpr (p, c)
   | S.ArrayExpr (a,es) -> ArrayExpr (a,map expr es)
   | S.ObjectExpr (a,ps) -> ObjectExpr (a,map prop ps)
   | S.ThisExpr a -> ThisExpr a
   | S.VarExpr (a,x) -> VarExpr (a,x)
-  | S.DotExpr (a,e,x) -> BracketExpr (a, expr e, ConstExpr (a, S.CString x))
+  | S.DotExpr (a,e,x) -> BracketExpr (a, expr e, ConstExpr (a, S.CString (djsMungeDot x)))
   | S.BracketExpr (a,e1,e2) -> BracketExpr (a,expr e1,expr e2)
   | S.NewExpr (a,e,es) -> NewExpr (a,expr e,map expr es)
   | S.PrefixExpr (a,op,e) -> 
@@ -129,7 +134,7 @@ let rec expr (e : S.expr) = match e with
                         
 and lvalue (lv : S.lvalue) = match lv with
     S.VarLValue (a,x) -> VarLValue (a,x)
-  | S.DotLValue (a,e,x) -> PropLValue (a, expr e, ConstExpr (a, S.CString x))
+  | S.DotLValue (a,e,x) -> PropLValue (a, expr e, ConstExpr (a, S.CString (djsMungeDot x)))
   | S.BracketLValue (a,e1,e2) -> PropLValue (a,expr e1,expr e2)
 
 and stmt (s : S.stmt) = match s with 
@@ -281,6 +286,7 @@ and eval_lvalue (lv :  S.lvalue) (body_fn : lvalue * expr -> expr) =
   match lv with
     | S.VarLValue (p, x) -> body_fn (VarLValue (p, x), VarExpr (p, x))
   | S.DotLValue (a, e, x) -> 
+      let x = djsMungeDot x in
       LetExpr (a,"%lhs",expr e,
         body_fn
           (PropLValue (a, IdExpr (a,"%lhs"), ConstExpr (a, S.CString x)),

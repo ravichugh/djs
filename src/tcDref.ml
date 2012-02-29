@@ -234,8 +234,10 @@ let rec mkExists s = function
   | []       -> s
 
 let finishLet cap g y l (s,h) =
-  (* TODO: 11/26 hack so that EHeap works w/o change *)
+  (* TODO: 11/26 hack so that EHeap works w/o change
+           2/27 also special casing djs_prelude *)
   if y = "end_of_pervasives" then checkWfHeap := false;
+  if y = "end_of_djs_prelude" then checkWfHeap := false;
 
   if not !Settings.tryElimLocals then (s, h)
   else begin
@@ -706,14 +708,15 @@ and tsExp_ g h = function
     end
 *)
 
-  | ELet(x,None,ENewObj(l1,l2,EVal(v)),e) -> begin
+  | ELet(x,None,ENewObj(EVal(v1),l1,EVal(v),l2),e) -> begin
       let cap = spr "TS-LetNewObj: new %s %s" (strLoc l1) (strLoc l2) in
       match findHeapCell l1 h, findHeapCell l2 h with
         | Some _, _ -> err [cap; spr "loc [%s] already bound" (strLoc l1)]
         | None, Some(HConcObj _) -> begin
             tcVal g h (tyRef l2) v;
             let y = freshVar "newobj" in
-            let t = ty (PEq (theV, WVal VEmpty)) in
+            (* let t = ty (PEq (theV, WVal VEmpty)) in *)
+            let t = tsVal g h v1 in
             let s = tyRef l1 in
             let h1 = (fst h, snd h @ [l1, HConcObj (y, t, l2)]) in
             let (n,g) = tcAddBinding ~printHeap:false g h1 y t in
@@ -1351,10 +1354,10 @@ and tcExp_ g h goal = function
 *)
     end
 
-  | ELet(x,None,ENewObj(l1,l2,EVal(v)),e) -> begin
+  | ELet(x,None,ENewObj(EVal(v1),l1,EVal(v),l2),e) -> begin
       let cap = spr "TC-NewObj: let %s = ..." x in
       let e = EAsW (cap, e, goal) in
-      let w = tsExp g h (ELet(x,None,ENewObj(l1,l2,EVal(v)),e)) in
+      let w = tsExp g h (ELet(x,None,ENewObj(EVal(v1),l1,EVal(v),l2),e)) in
       ignore (Sub.worlds cap g w goal)
     end
 
@@ -1471,11 +1474,11 @@ and tcExp_ g h goal = function
 
   (* 11/26: going through a let-binding, since that's the only
      synthesis rule for new obj *)
-  | ENewObj(l1,l2,EVal(v)) -> begin
+  | ENewObj(EVal(v1),l1,EVal(v),l2) -> begin
       (* failwith "tc ENewObj: should've been checked with let-binding" *)
 
       let x = freshVar "_tc_newobj" in
-      let w = tsExp g h (ELet(x,None,ENewObj(l1,l2,EVal(v)),eVar(x))) in
+      let w = tsExp g h (ELet(x,None,ENewObj(EVal(v1),l1,EVal(v),l2),eVar(x))) in
       let cap = spr "TC-NewObj: %s %s" (strLoc l1) (strLoc l2) in
       ignore (Sub.worlds cap g w goal)
 (*

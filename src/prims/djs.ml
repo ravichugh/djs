@@ -10,45 +10,65 @@ let jsTagStr  :: {(= "Str"  "string")} = 0
 let jsTagDict :: {(= "Dict" "object")} = 0
 
 
-(***** Lite Objects / Arrays **************************************************)
+(***** Object.prototype *******************************************************)
 
-val getPropLite ::
-  {(and (v :: [; L; H]
-              _:[_:Ref(L), k:Str] / [H ++ L |-> d:{Dict|(has v k)}]
-           -> {(= v (sel d k))} / same)
-        (v :: [A; L; H]
-              _:[_:Ref(L), i:{Str|(= v "length")}] / [H ++ L |-> a:Arr(A)]
-           -> {Int|(implies (packed a) (= v (len a)))} / same))}
+(* in lang.ml and tcDref.ml right now. *)
 
-val getIdxLite :: [A;L] _:[_:Ref(L), i:Int] / [L |-> a:Arr(A)] ->
-  {(ite (and (packed a) (>= i 0))
-        (ite (< i (len a)) (and (v::A) (= v (sel a i))) (= v undefined))
-        (or (v::A) (= v undefined)))} / same
 
-val getElemLite :: {(and (type getPropLite) (type getIdxLite))}
+(***** Array.prototype ********************************************************)
 
-val setPropLite ::
-  {(and (v :: [;L]
-              _:[_:Ref(L), k:Str, y:Top] / [L |-> d:Dict]
-           -> {(= v y)} / [L |-> d':{(= v (upd d k y))}])
-        (v :: [A;L]
-              _:[_:Ref(L), k:{(= v "length")}, n:Int] / [L |-> a:Arr(A)]
-           -> {(= v n)}
-            / [L |-> a':{(and (v::Arr(A))
-                              (implies (and (packed a) (<= n (len a)))
-                                       (and (packed v) (= (len v) n))))}]))}
+val __ArrayProto_push :: {(= v "push")}
 
-val setIdxLite :: [A;L] _:[_:Ref(L), i:Int, y:A] / [L |-> a:Arr(A)] ->
-  {(= v y)} /
-  [L |-> a':{(and (v::Arr(A))
-                  (= (sel a i) y)
-                  (implies (and (packed a) (>= i 0) (< i (len a)))
-                           (and (packed v) (= (len v) (len a))))
-                  (implies (and (packed a) (= i (len a)))
-                           (and (packed v) (= (len v) (+ 1 (len a))))))}]
+val __ArrayProto_pop :: Top
 
-val setElemLite :: {(and (type setPropLite) (type setIdxLite))}
+let __ArrayProtoDict =
+  { "push" = __ArrayProto_push
+  ; "pop"  = __ArrayProto_pop
+  }
 
+let __ArrayProto = new (__ArrayProtoDict, lArrayProto, __Object, lObject)
+
+(*
+(* use __Function? *)
+let __Array = new ({"prototype" = __ArrayProto}, lArray, __Object, lObject)
+*)
+
+
+(***** Full Objects / Arrays **************************************************)
+
+(**  [[ x.f  ]] = getProp ([[x]],   f  )                                     **)
+(**  [[ x[i] ]] = getIdx  ([[x]],   i  )                                     **)
+(**  [[ x[k] ]] = getElem ([[x]], [[k]])                                     **)
+(**                                                                          **)
+(**     where i is an integer literal, k is not an integer literal           **)
+
+val getPropObj :: [; L1,L2; H]
+     _:[x:Ref(L1), k:Str] / [H ++ L1 |-> (d:{Dict|ObjHas([v],k,H,L2)}, L2)]
+  -> {(= v ObjSel([d],k,H,L2))} / same
+
+(* tempting to write down getPropArr for "length" and non-"length" separately
+   and then use an intersection, but that's no good for the type checker. *)
+val getPropArr :: [A; L1,L2; H]
+     _:[x:Ref(L1), k:Str] / [H ++ L1 |-> (a:Arr(A), L2)]
+  -> {(ite (= k "length")
+           (and (v:Int) (implies (packed a) (= v (len a))))
+           (= v HeapSel(H,L2,k)))} / same
+
+val getPropArrLen :: [A; L1,L2; H]
+     _:[x:Ref(L1), k:{(= v "length")}] / [H ++ L1 |-> (a:Arr(A), L2)]
+  -> {Int|(implies (packed a) (= v (len a)))} / same
+
+val getIdx :: [A; L1,L2; H]
+     _:[x:Ref(L1), i:Int] / [H ++ L1 |-> (a:Arr(A), L2)]
+  -> {(ite (and (packed a) (>= i 0))
+           (ite (< i (len a)) (and (v::A) (= v (sel a i))) (= v undefined))
+           (or (v::A) (= v undefined)))} / same
+
+val getProp :: {(and (type getPropObj) (type getPropArr))}
+
+val getElem :: {(and (type getPropObj) (type getPropArrLen) (type getIdx))}
+  (* note that the non-"length" part of getPropArr is _not_ included
+     in this intersection *)
 
 (******************************************************************************)
 
