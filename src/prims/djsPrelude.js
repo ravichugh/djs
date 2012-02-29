@@ -18,6 +18,8 @@ __ObjectProto.hasOwnProperty = __ObjectProto_hasOwnProperty;
 
 var Object = /*: lObject */ { prototype: __ObjectProto };
 
+/*: [;lObjectProto,lROOT;] */ __ObjectProto.constructor = Object;
+
 
 ////////////////////////////////////////////////////////////////////////////////
 ///// Array.prototype
@@ -51,7 +53,7 @@ var __ArrayProto = /*: lArrayProto */ {
 
 var Array = /*: lArray */ { prototype: __ArrayProto };
 
-/*: [;lArray,lObjectProto;] */ Array.constructor = Array;
+/*: [;lArrayProto,lObjectProto;] */ __ArrayProto.constructor = Array;
 
 
 "**********************************************************************";
