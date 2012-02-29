@@ -71,6 +71,7 @@ val keys :: x:Dict -> List[{(and (= (tag v) "Str") (has x v))}]
 
 (***** imperative, prototype-backed object operations *************************)
 
+(*
 val objHas :: [; L1,L2; H]
      _:[x:Ref(L1), y:Str] / [H ++ L1 |-> (d:Top, L2)]
   -> {Bool|(iff (= v True) ObjHas([d],y,H,L2))} / same
@@ -79,7 +80,6 @@ val objHasOwn :: [; L1,L2; H]
      _:[x:Ref(L1), y:Str] / [H ++ L1 |-> (d:Top, L2)]
   -> {Bool|(iff (= v True) (has d {y}))} / same
 
-(*
 val objGet :: [; L1,L2; H]
      _:[x:Ref(L1), y:Str] / [H ++ L1 |-> (d:{ObjHas([v],y,H,L2)}, L2)]
   -> {(= v ObjSel([d],y,H,L2))} / same

@@ -460,10 +460,10 @@ let objOp ts ls fn args =
 (*
 let objGet l1 l2 x k      = objOp [] [l1;l2] "objGet" [x; k]
 let objSet l1 l2 x k y    = objOp [] [l1;l2] "objSet" [x; k; y]
-*)
 let objSet l1 l2 x k y    = objOp [] [l1;l2] "setPropObj" [x; k; y]
 let objHas l1 l2 x k      = objOp [] [l1;l2] "objHas" [x; k]
 let objHasOwn l1 l2 x k   = objOp [] [l1;l2] "objHasOwn" [x; k]
+*)
 
 let eObjectPro = eVar (dsVar "__ObjectProto")
 let eArrayPro  = eVar (dsVar "__ArrayProto")
@@ -492,8 +492,9 @@ let rec ds env = function
       let obj = freshVar "newObj" in
       let setFields =
         List.map
-          (fun (_,k,v) -> objSet l1 lObjectPro (eVar obj) (eStr k) (ds env v))
-          fields
+          (fun (_,k,v) ->
+             objOp [] [l1; lObjectPro] "setPropObj"
+               [eVar obj; eStr k; ds env v]) fields
       in
       ELet (obj, None, ENewObj (EVal VEmpty, l1, eObjectPro, lObjectPro),
             eSeq (setFields @ [eVar obj]))
@@ -623,15 +624,23 @@ let rec ds env = function
       in
       mkApp (eVar e0) [ds env e]
 
+  | E.InfixExpr (_, "in", ek, E.HintExpr (_, s, ed))
+    when !Settings.fullObjects -> begin
+      let (ts,ls,hs) = parseAppArgs s in
+      if hs <> [] then failwith "membership tests hs params TODO";
+      match ek with
+        | E.ConstExpr (_, J.CInt i) ->
+            objOp ts ls "hasIdx" [ds env ed; EVal (vInt i)]
+        | _ ->
+            objOp ts ls "hasElem" [ds env ed; ds env ek]
+    end
+
+  | E.InfixExpr (_, "in", ek, ed) when !Settings.fullObjects ->
+      printParseErr "key membership requires loc annotations"
+
   | E.InfixExpr (_, "in", ek, ed) ->
-      if !Settings.fullObjects then begin
-        match ed with
-          | E.HintExpr (_, s, ed) ->
-              let (l1,l2) = parseObjLocs s in
-              objHas l1 l2 (ds env ed) (ds env ek)
-          | _ -> printParseErr "key membership requires loc annotations"
-      end else
-        mkApp (eVar "mem") [EDeref (ds env ed); ds env ek]
+      (* mkApp (eVar "mem") [EDeref (ds env ed); ds env ek] *)
+      failwith "djsLite.ml needs primitives for has"
 
   | E.InfixExpr (_, op, e1, e2) ->
       let e0 =

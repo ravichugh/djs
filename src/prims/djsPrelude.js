@@ -4,8 +4,12 @@
 
 var __ObjectProto_hasOwnProperty =
 /*: {(and (v :: [; L1,L2] _:[this:Ref(L1), k:Str] / [L1 |-> (d:Dict, L2)]
-                       -> {Bool|(iff (= v True) (has d {k}))} / same)
-          true)} */ // TODO add case for arrays
+             -> {Bool|(iff (= v True) (has d {k}))} / same)
+          (v :: [A; L1,L2] _:[this:Ref(L1), k:Str] / [L1 |-> (a:Arr(A), L2)]
+             -> {Bool|(iff (= v True) (= v "length"))} / same)
+          (v :: [A; L1,L2] _:[this:Ref(L1), i:Int] / [L1 |-> (a:Arr(A), L2)]
+             -> {Bool|(implies (and (packed a) (>= i 0))
+                               (iff (= v True) (< i (len a))))} / same))} */
 "#extern";
 
 var __ObjectProto = /*: Ref(lObjectProto) */ "#extern";

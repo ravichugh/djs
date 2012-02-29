@@ -12,11 +12,10 @@ let jsTagDict :: {(= "Dict" "object")} = 0
 
 (***** Full Objects / Arrays **************************************************)
 
-(**  [[ x.f  ]] = getProp ([[x]],   f  )                                     **)
-(**  [[ x[i] ]] = getIdx  ([[x]],   i  )                                     **)
-(**  [[ x[k] ]] = getElem ([[x]], [[k]])                                     **)
-(**                                                                          **)
-(**     where i is an integer literal, k is not an integer literal           **)
+(**    [[ x.f  ]] = getProp ([[x]],   f  )                                   **)
+(**    [[ x[i] ]] = getIdx  ([[x]],   i  )                                   **)
+(**    [[ x[k] ]] = getElem ([[x]], [[k]])                                   **)
+(**       where i is an integer literal, k is not an integer literal         **)
 
 val getPropObj :: [; L1,L2; H]
      _:[x:Ref(L1), k:Str] / [H ++ L1 |-> (d:{Dict|ObjHas([v],k,H,L2)}, L2)]
@@ -46,9 +45,9 @@ val getElem :: {(and (type getPropObj) (type getPropArrLen) (type getIdx))}
   (* note that the non-"length" part of getPropArr is _not_ included
      in this intersection *)
 
-(**  [[ x.f  = y ]] = setProp ([[x]],   f  , [[y]])                          **)
-(**  [[ x[i] = y ]] = setIdx  ([[x]],   i  , [[y]])                          **)
-(**  [[ x[k] = y ]] = setElem ([[x]], [[k]], [[y]])                          **)
+(**    [[ x.f  = y ]] = setProp ([[x]],   f  , [[y]])                        **)
+(**    [[ x[i] = y ]] = setIdx  ([[x]],   i  , [[y]])                        **)
+(**    [[ x[k] = y ]] = setElem ([[x]], [[k]], [[y]])                        **)
 
 val setPropObj :: [; L1,L2; H]
      _:[x:Ref(L1), y:Str, z:Top] / [H ++ L1 |-> (d:Dict, L2)]
@@ -74,6 +73,25 @@ val setIdx :: [A; L1,L2]
 val setProp :: {(and (type setPropObj) (type setPropArrLen))}
 
 val setElem :: {(and (type setPropObj) (type setPropArrLen) (type setIdx))}
+
+(**    [[ i in x ]] = hasIdx  ([[x]],   i  )                                 **)
+(**    [[ k in x ]] = hasElem ([[x]], [[k]])                                 **)
+(**       note: syntactically, there is no "hasProp" analog                  **)
+
+val hasElemObj :: [; L1,L2; H]
+     _:[x:Ref(L1), k:Str] / [H ++ L1 |-> (d:{Dict|ObjHas([v],k,H,L2)}, L2)]
+  -> {Bool|(iff (= v True) ObjHas([d],k,H,L2))} / same
+
+val hasElemArrLen :: [A; L1,L2; H]
+     _:[x:Ref(L1), k:{(= v "length")}] / [H ++ L1 |-> (a:Arr(A), L2)]
+  -> {(= v True)} / same
+
+val hasIdx :: [A; L1,L2]
+     _:[_:Ref(L1), i:Int] / [L1 |-> (a:Arr(A), L2)]
+  -> {Bool|(implies (and (packed a) (>= i 0))
+                    (iff (= v True) (< i (len a))))} / same
+
+val hasElem :: {(and (type hasElemObj) (type hasElemArrLen) (type hasIdx))}
 
 
 (******************************************************************************)
