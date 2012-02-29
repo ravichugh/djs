@@ -1505,11 +1505,13 @@ and tcExp_ g h goal = function
 let typecheck e =
   let g = [] in
   let (_,g) = tcAddBinding ~printHeap:false g ([],[]) "v" tyAny in
-  let (_,g) = tcAddBinding ~printHeap:false g ([],[]) "dObject" tyEmpty in
+  let (_,g) = tcAddBinding ~printHeap:false g ([],[]) "dObjectProto" tyEmpty in
   (* TODO *)
+(*
   let (_,g) =
-    tcAddBinding ~printHeap:false g ([],[]) "__Object" (tyRef lObject) in
-  let h = ([], [(lObject, HConcObj ("dObject", tyAny, lRoot))]) in
+    tcAddBinding ~printHeap:false g ([],[]) xObjectPro (tyRef lObjectPro) in
+*)
+  let h = ([], [(lObjectPro, HConcObj ("dObjectProto", tyEmpty, lRoot))]) in
   try begin
     ignore (tsExp g h e);
     let s = spr "OK! %d queries." !Zzz.queryCount in

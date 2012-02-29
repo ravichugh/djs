@@ -148,7 +148,9 @@ let parseSystemD () =
 
 let doParseDJS f =
   try
-    let f'   = S.prim_dir ^ "djsPrelude.js" in
+    let f' =
+      S.prim_dir ^
+      if !Settings.fullObjects then "djsPrelude.js" else "djsLitePrelude.js" in
     let js'  = JavaScript.parse_javascript_from_channel (open_in f') f' in
     let ejs' = Exprjs_syntax.from_javascript js' in
     let js   = JavaScript.parse_javascript_from_channel (open_in f) f in

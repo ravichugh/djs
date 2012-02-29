@@ -2,8 +2,21 @@
 ////////////////////////////////////////////////////////////////////////////////
 //// Object.prototype
 
-// TODO move stuff out of lang.ml/tcDref.ml. rename to __ObjectProto like
-// below, and change djsDesugar.ml.
+var __ObjectProto_hasOwnProperty =
+/*: {(and (v :: [; L1,L2] _:[this:Ref(L1), k:Str] / [L1 |-> (d:Dict, L2)]
+                       -> {Bool|(iff (= v True) (has d {k}))} / same)
+          true)} */ // TODO add case for arrays
+"#extern";
+
+var __ObjectProto = /*: Ref(lObjectProto) */ "#extern";
+  // the Object.prototype dictionary is initialized in tcDref.ml at location
+  // lObjectProto. can't define it here, since needs to set its __proto__ link
+  // to the special root location lROOT.
+
+/*: [;lObjectProto,lROOT] */
+__ObjectProto.hasOwnProperty = __ObjectProto_hasOwnProperty;
+
+var Object = /*: lObject */ { prototype: __ObjectProto };
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -38,8 +51,7 @@ var __ArrayProto = /*: lArrayProto */ {
 
 var Array = /*: lArray */ { prototype: __ArrayProto };
 
-// TODO set this once i update setProp
-// /*: [;lArray,lObject;] */ Array.constructor = Array;
+/*: [;lArray,lObjectProto;] */ Array.constructor = Array;
 
 
 "**********************************************************************";

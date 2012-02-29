@@ -270,7 +270,7 @@ let parseArrLit s  = parseWith LangParser.jsArrLit "array literal annot" s
 let parseObjLocs s =
   match parseWith LangParser.jsObjLocs "obj loc annot" s with
     | l1, Some(l2) -> (l1, l2)
-    | l1, None     -> (l1, lObject)
+    | l1, None     -> (l1, lObjectPro)
 
 let maybeParseWith production s =
   let s = expandMacros s in
@@ -430,11 +430,9 @@ let mkArgsArray es =
    set to the initial value passed in. so that i can still use the JS
    formals inside types, using a different name for the corresponding
    local variable. *)
-let dsVar x =
-  spr "__%s" x
+let dsVar x = spr "__%s" x
 
-let undoDsVar x =
-  String.sub x 2 (String.length x - 2)
+let undoDsVar x = String.sub x 2 (String.length x - 2)
 
 
 (***** Prop/Bracket ***********************************************************)
@@ -461,10 +459,16 @@ let objOp ts ls fn args =
 
 (*
 let objGet l1 l2 x k      = objOp [] [l1;l2] "objGet" [x; k]
-*)
 let objSet l1 l2 x k y    = objOp [] [l1;l2] "objSet" [x; k; y]
+*)
+let objSet l1 l2 x k y    = objOp [] [l1;l2] "setPropObj" [x; k; y]
 let objHas l1 l2 x k      = objOp [] [l1;l2] "objHas" [x; k]
 let objHasOwn l1 l2 x k   = objOp [] [l1;l2] "objHasOwn" [x; k]
+
+let eObjectPro = eVar (dsVar "__ObjectProto")
+let eArrayPro  = eVar (dsVar "__ArrayProto")
+let lArrayPro  = LocConst "lArrayProto"
+let lObjectPro = lObjectPro (* defined in lang.ml *)
 
 let rec ds env = function
 
@@ -488,10 +492,10 @@ let rec ds env = function
       let obj = freshVar "newObj" in
       let setFields =
         List.map
-          (fun (_,k,v) -> objSet l1 lObject (eVar obj) (eStr k) (ds env v))
+          (fun (_,k,v) -> objSet l1 lObjectPro (eVar obj) (eStr k) (ds env v))
           fields
       in
-      ELet (obj, None, ENewObj (EVal VEmpty, l1, eObject, lObject),
+      ELet (obj, None, ENewObj (EVal VEmpty, l1, eObjectPro, lObjectPro),
             eSeq (setFields @ [eVar obj]))
 
   | E.ObjectExpr (p, fields) when !Settings.fullObjects ->
@@ -505,8 +509,7 @@ let rec ds env = function
 
   | E.HintExpr (_, h, E.ArrayExpr (_, es)) when !Settings.fullObjects ->
       let (l,t) = parseArrLit h in
-      ENewObj (mkEArray t env es, l,
-               EDeref (eVar (dsVar ("__ArrayProto"))), LocConst "lArrayProto")
+      ENewObj (mkEArray t env es, l, EDeref eArrayPro, lArrayPro)
 
   | E.ArrayExpr _ when !Settings.fullObjects -> failwith "arrayexpr"
 
@@ -574,6 +577,7 @@ let rec ds env = function
   | E.BracketExpr (_, E.HintExpr (_, h, e1), e2) -> begin
       let e2 = undoDotExp e2 in
       let (ts,ls,_) = parseAppArgs h in
+      (* TODO *)
       let t = match ts with
         | []  -> tyAny
         | [t] -> t
@@ -661,29 +665,44 @@ let rec ds env = function
                                                     eStr x;
                                                     ds env e])
 
+(*
   | E.AssignExpr (_, E.PropLValue (_, E.HintExpr (_, h, e1), e2), e3)
     when !Settings.fullObjects -> 
-      (* TODO dot string *)
       let (l1,l2) = parseObjLocs h in
       objSet l1 l2 (ds env e1) (ds env e2) (ds env e3)
+*)
+  | E.AssignExpr (_, E.PropLValue (_, E.HintExpr (_, h, e1), e2), e3)
+    when !Settings.fullObjects ->  begin
+      let (ts,ls,_) = parseAppArgs h in
+      match e2 with
+        | E.ConstExpr (_, J.CInt i) ->
+            objOp ts ls "setIdx" [ds env e1; EVal (vInt i); ds env e3]
+        | E.ConstExpr (_, J.CString s) ->
+            let (b,s) = undoDotStr s in
+            let f = if b then "setProp" else "setElem" in
+            objOp ts ls f [ds env e1; EVal (vStr s); ds env e3]
+        | _ ->
+            let e2 = undoDotExp e2 in
+            objOp ts ls "setElem" [ds env e1; ds env e2; ds env e3]
+    end
 
   | E.AssignExpr (_, E.PropLValue (_, E.HintExpr (_, h, e1), e2), e3) -> begin
       let e2 = undoDotExp e2 in
       let (ts,ls,_) = parseAppArgs h in
-      let t = match ts with
-        | []  -> tyAny
-        | [t] -> t
-        | _   -> failwith "too many type args to getIdx" in
-      let l = match ls with
-        | [l] -> l
-        | _   -> failwith "need exactly one loc arg for getIdx" in
       match e2 with
         | E.ConstExpr (_, J.CInt i) ->
+            let t = match ts with
+              | []  -> tyAny
+              | [t] -> t
+              | _   -> failwith "too many type args to getIdx" in
+            let l = match ls with
+              | [l] -> l
+              | _   -> failwith "need exactly one loc arg for getIdx" in
             objOp [t] [l] "setIdxLite" [ds env e1; EVal (vInt i); ds env e3]
         | E.ConstExpr (_, J.CString s) ->
-            objOp [t] [l] "setPropLite" [ds env e1; EVal (vStr s); ds env e3]
+            objOp ts ls "setPropLite" [ds env e1; EVal (vStr s); ds env e3]
         | _ ->
-            objOp [t] [l] "setElemLite" [ds env e1; ds env e2; ds env e3]
+            objOp ts ls "setElemLite" [ds env e1; ds env e2; ds env e3]
     end
 
   | E.AssignExpr (_, E.PropLValue (_, e1, e2), e3) -> 
@@ -750,7 +769,7 @@ let rec ds env = function
              s |> desugarCtorHint |> ParseUtils.typToFrame) in
       let proto =
         ENewObj (EVal VEmpty, LocConst (spr "&%s_proto" fOrig),
-                 eObject, lObject) in
+                 eObjectPro, lObjectPro) in
       let obj =
         ENewref (LocConst (spr "&%s_obj" fOrig),
                  EDict [(eStr "code", code);

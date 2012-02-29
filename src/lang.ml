@@ -198,6 +198,5 @@ let botHeap = ([], botHeapConstraints)
 let botSubst = [("dummySubst", WVal (VVar "blah"))]
 
 let lRoot = LocConst "lROOT"
-let lObject = LocConst "lObject"
-let eObject = EVal (VVar "__Object")
+let lObjectPro = LocConst "lObjectProto"
 

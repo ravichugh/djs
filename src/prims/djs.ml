@@ -46,6 +46,24 @@ val getElem :: {(and (type getPropObj) (type getPropArrLen) (type getIdx))}
   (* note that the non-"length" part of getPropArr is _not_ included
      in this intersection *)
 
+(**  [[ x.f  = y ]] = setProp ([[x]],   f  , [[y]])                          **)
+(**  [[ x[i] = y ]] = setIdx  ([[x]],   i  , [[y]])                          **)
+(**  [[ x[k] = y ]] = setElem ([[x]], [[k]], [[y]])                          **)
+
+val setPropObj :: [; L1,L2; H]
+     _:[x:Ref(L1), y:Str, z:Top] / [H ++ L1 |-> (d:Dict, L2)]
+  -> {(= v z)} / [H ++ L1 |-> (d':{(= v (upd d y z))}, L2)]
+
+val setPropArr :: {true}
+
+val setPropArrLen :: {true}
+
+val setIdx :: {true}
+
+val setProp :: {(and (type setPropObj) (type setPropArr))}
+
+val setElem :: {(and (type setPropObj) (type setPropArrLen) (type setIdx))}
+
 
 (******************************************************************************)
 

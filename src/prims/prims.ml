@@ -79,6 +79,7 @@ val objHasOwn :: [; L1,L2; H]
      _:[x:Ref(L1), y:Str] / [H ++ L1 |-> (d:Top, L2)]
   -> {Bool|(iff (= v True) (has d {y}))} / same
 
+(*
 val objGet :: [; L1,L2; H]
      _:[x:Ref(L1), y:Str] / [H ++ L1 |-> (d:{ObjHas([v],y,H,L2)}, L2)]
   -> {(= v ObjSel([d],y,H,L2))} / same
@@ -86,6 +87,7 @@ val objGet :: [; L1,L2; H]
 val objSet :: [; L1,L2; H]
      _:[x:Ref(L1), y:Str, z:Top] / [H ++ L1 |-> (d:Top, L2)]
   -> {(= v z)} / [H ++ L1 |-> (d':{(= v (upd d y z))}, L2)]
+*)
 
 
 (******************************************************************************)
