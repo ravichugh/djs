@@ -146,16 +146,22 @@ let parseSystemD () =
 
 (***** Parsing DJS ************************************************************)
 
-let doParseDJS f =
+let parseJStoEJS f =
+  Exprjs_syntax.from_javascript
+    (JavaScript.parse_javascript_from_channel (open_in f) f)
+
+let dummyEJS =
+  Exprjs_syntax.ConstExpr
+    (LangUtils.pos0, JavaScript_syntax.CString "no source file")
+
+let doParseDJS fo =
   try
-    let f' =
+    let f_pre =
       S.prim_dir ^
       if !Settings.fullObjects then "djsPrelude.js" else "djsLitePrelude.js" in
-    let js'  = JavaScript.parse_javascript_from_channel (open_in f') f' in
-    let ejs' = Exprjs_syntax.from_javascript js' in
-    let js   = JavaScript.parse_javascript_from_channel (open_in f) f in
-    let ejs  = Exprjs_syntax.from_javascript js in
-      DjsDesugar.desugar (DjsDesugar.makeFlatSeq ejs' ejs)
+    let ejs_pre = parseJStoEJS f_pre in
+    let ejs = match fo with Some(f) -> parseJStoEJS f | None -> dummyEJS in
+    DjsDesugar.desugar (DjsDesugar.makeFlatSeq ejs_pre ejs)
   with Failure(s) ->
     if Utils.strPrefix s "parse error" || Utils.strPrefix s "lexical error"
     then LangUtils.printParseErr s
@@ -164,8 +170,8 @@ let doParseDJS f =
 let parseDJS () =
   let e =
     match !srcFiles with
-      | []  -> Lang.EVal (LangUtils.vStr "no source file")
-      | [f] -> (checkSuffix f; doParseDJS f)
+      | []  -> doParseDJS None
+      | [f] -> (checkSuffix f; doParseDJS (Some f))
       | _   -> (pr "%s" usage; LangUtils.terminate ())
   in
   anfAndAddPrelude e

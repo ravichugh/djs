@@ -5,6 +5,8 @@ open Lang
 
 (******************************************************************************)
 
+val pos0 : Lexing.position * Lexing.position
+
 val freshVar : vvar -> vvar
 val freshHVar : unit -> hvar
 val isTag : string -> bool
