@@ -1,5 +1,5 @@
 
-var x = /*: lx */ {f:0, g:"hi"};
+var x = {f:0, g:"hi"};
 
 /*: {(= v "hi")} */
 (x.g); // Look, ma, no location params!  

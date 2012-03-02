@@ -1,5 +1,5 @@
 
-var a = /*: lA */ [0,"hi",true];
+var a = [0,"hi",true];
 
 /*: {(= v 0)} */ (a[0]);
 

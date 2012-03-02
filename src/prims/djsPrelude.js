@@ -17,12 +17,11 @@ var __ObjectProto = /*: Ref(lObjectProto) */ "#extern";
   // lObjectProto. can't define it here, since needs to set its __proto__ link
   // to the special root location lROOT.
 
-/*: [;lObjectProto,lROOT] */
 __ObjectProto.hasOwnProperty = __ObjectProto_hasOwnProperty;
 
 var Object = /*: lObject */ { prototype: __ObjectProto };
 
-/*: [;lObjectProto,lROOT;] */ __ObjectProto.constructor = Object;
+__ObjectProto.constructor = Object;
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -57,7 +56,7 @@ var __ArrayProto = /*: lArrayProto */ {
 
 var Array = /*: lArray */ { prototype: __ArrayProto };
 
-/*: [;lArrayProto,lObjectProto;] */ __ArrayProto.constructor = Array;
+__ArrayProto.constructor = Array;
 
 
 "**********************************************************************";

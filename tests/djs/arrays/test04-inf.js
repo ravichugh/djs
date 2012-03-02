@@ -1,5 +1,5 @@
 
-var a = /*: lA Arr(Int) */ [0,1,2];
+var a = [0,1,2];
 
 /*: {(= v True)} */ (0 in a);
 

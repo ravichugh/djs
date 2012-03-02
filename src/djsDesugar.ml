@@ -487,9 +487,7 @@ let rec ds env = function
   | E.ConstExpr (_, c) -> convertConst c
 
   | E.HintExpr (_, h, E.ObjectExpr (p, fields)) when !Settings.fullObjects ->
-(*
-      let (l1,l2) = parseObjLocs h in
-*)
+      (* let (l1,l2) = parseObjLocs h in *)
       let l1 = parseLoc h in
       let obj = freshVar "newObj" in
       let setFields =
@@ -502,7 +500,8 @@ let rec ds env = function
             eSeq (setFields @ [eVar obj]))
 
   | E.ObjectExpr (p, fields) when !Settings.fullObjects ->
-      failwith "objlit: need annotation"
+      let s = freshVar "objLit" in
+      ds env (E.HintExpr (p, s, E.ObjectExpr (p, fields)))
 
   | E.HintExpr (_, h, E.ObjectExpr (p, fields)) -> 
       ENewref (parseLoc h, mkEDict env fields)
@@ -514,7 +513,9 @@ let rec ds env = function
       let (l,t) = parseArrLit h in
       ENewObj (mkEArray t env es, l, EDeref eArrayPro, lArrayPro)
 
-  | E.ArrayExpr _ when !Settings.fullObjects -> failwith "arrayexpr"
+  | E.ArrayExpr (_, es) when !Settings.fullObjects ->
+      ENewObj (mkEArray tyAny env es, LocConst (freshVar "arrLit"),
+               EDeref eArrayPro, lArrayPro)
 
   | E.HintExpr (_, h, E.ArrayExpr (_, es)) ->
       let (l,t) = parseArrLit h in
