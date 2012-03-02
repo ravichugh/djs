@@ -452,6 +452,9 @@ let undoDotExp = function
       E.ConstExpr (p, J.CString (snd (undoDotStr s)))
   | e -> e
 
+let notAnIntStr s =
+  try let _ = int_of_string s in false with Failure _ -> true
+
 
 (***** Desugaring expressions *************************************************)
 
@@ -578,7 +581,7 @@ let rec ds env = function
             objOp ts ls "getIdx" [ds env e1; EVal (vInt i)]
         | E.ConstExpr (_, J.CString s) ->
             let (b,s) = undoDotStr s in
-            let f = if b then "getProp" else "getElem" in
+            let f = if b || notAnIntStr s then "getProp" else "getElem" in
             objOp ts ls f [ds env e1; EVal (vStr s)]
         | _ ->
             let e2 = undoDotExp e2 in
@@ -684,7 +687,7 @@ let rec ds env = function
             objOp ts ls "setIdx" [ds env e1; EVal (vInt i); ds env e3]
         | E.ConstExpr (_, J.CString s) ->
             let (b,s) = undoDotStr s in
-            let f = if b then "setProp" else "setElem" in
+            let f = if b || notAnIntStr s then "setProp" else "setElem" in
             objOp ts ls f [ds env e1; EVal (vStr s); ds env e3]
         | _ ->
             let e2 = undoDotExp e2 in
@@ -993,7 +996,7 @@ and dsMethCall env ts ls obj prop args =
     match prop with
       | E.ConstExpr (_, J.CString s) ->
           let (b,s) = undoDotStr s in
-          let f = if b then "getProp" else "getElem" in
+          let f = if b || notAnIntStr s then "getProp" else "getElem" in
           objOp ts ls f [obj; EVal (vStr s)]
       | _ ->
           let prop = undoDotExp prop in

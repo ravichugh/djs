@@ -283,7 +283,6 @@ let arrayTermsOf g t =
   TypeTerms.elements (Sub.mustFlow g t ~filter)
 
 
-
 (***** TC helpers *************************************************************)
 
 let oc_wrap_goal = open_out (Settings.out_dir ^ "wrap_goal.txt")
@@ -855,7 +854,7 @@ and tsExp_ g h = function
       let boxes = TypeTerms.elements (Sub.mustFlow g t1) in
       let (s1,s2) = (prettyStrVal v1, prettyStrVal v2) in
       let cap = spr "TS-LetApp: let %s = [...] (%s) (%s)" x s1 s2 in
-      tsELetAppTryBoxes cap g h x l v2 e boxes
+      tsELetAppTryBoxes cap g h x l v1 v2 e boxes
 (*
       let ruleName = "TS-LetApp" in
       let strE = spr "  let %s = (%s) <%s> (%s) in ..." x
@@ -1138,7 +1137,7 @@ and tsExp_ g h = function
   | EBreak _   -> Anf.badAnf "ts EBreak"
   | EThrow _   -> Anf.badAnf "ts EThrow"
 
-and tsELetAppTryBoxes cap g curHeap x (tActs,lActs,hActs) v2 e boxes =
+and tsELetAppTryBoxes cap g curHeap x (tActs,lActs,hActs) v1 v2 e boxes =
 
   let checkLength s l1 l2 s2 =
     let (n1,n2) = (List.length l1, List.length l2) in
@@ -1343,6 +1342,50 @@ and tsELetAppTryBoxes cap g curHeap x (tActs,lActs,hActs) v2 e boxes =
         printTcErr (cap :: s :: errors)
         (* the buck stops here, instead of raising Tc_error, since otherwise
            get lots of cascading let-bindings *)
+
+(*
+    | AppFail(errors) -> begin
+        try (* one last shot at checking the call. if none of the boxes
+               succeeded, try the special syntactic rule for array ops. *)
+          tsELetAppArrayOperation g curHeap x (tActs,lActs,hActs) v1 v2 e
+        with Tc_error(errors') ->
+          let n = List.length boxes in
+          let s = spr "%d boxes but none type check the call" n in
+          let s' = "\n*** Also tried TS-GetElem, but that didn't work\n" in
+          printTcErr (cap :: s :: errors @ [s'] @ errors')
+          (* the buck stops here, instead of raising Tc_error, since otherwise
+             get lots of cascading let-bindings *)
+      end
+*)
+
+(*
+(* the error messages from the previous tryOnes don't get threaded
+   through when trying this special rule. TODO add this. *)
+and tsELetAppArrayOperation g h x polyargs v1 v2 e =
+  match v1, v2 with
+    | VVar("getElem"),
+      VExtend(VExtend(VEmpty,VBase(Str"0"),d), VBase(Str"1"),k) ->
+      begin
+        match refTermsOf g (ty (PEq (theV, WVal d))) with [URef(l)] -> begin
+        match findHeapCell l h with Some(HConcObj(a,_,_)) -> begin
+        match arrayTermsOf g (ty (PEq (theV, wVar a))) with [UArray(t)] -> begin
+          if notAnIntString k then
+            let e1 = eVar "getProp" in
+            tsExp g h (ELet(x,None,EApp(polyargs,e1,EVal(v2)),e))
+          else
+            let sk = prettyStrVal k in
+            err [spr "TS-GetElem: can't prove that [%s] is not an IntString" sk]
+        end
+        | []  -> err ["TS-GetElem: 0 array terms"]
+        | _   -> err ["TS-GetElem: >1 array terms"]
+        end
+        | _  -> err ["TS-GetElem: heap constraint not found"]
+        end
+        | [] -> err ["TS-GetElem: 0 ref terms"]
+        | _  -> err ["TS-GetElem: >1 ref terms"]
+      end
+    |  _ -> err ["function is not getElem"]
+*)
 
 
 (***** Value type conversion **************************************************)
