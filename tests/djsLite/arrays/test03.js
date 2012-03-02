@@ -7,5 +7,5 @@ var a = /*: lA */ [0,1,2];
 
 /*: {(= v 2)} */ (/*: [Top;lA;] */ a.length);
 
-/*: {(= v undefined)} */ (/*: [;lA;] */ a[2]);
+/*: {(= v undefined)} */ (/*: [Top;lA;] */ a[2]);
 

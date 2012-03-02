@@ -329,7 +329,8 @@ let dsArrow arr =
   let (tyThis,tIn) =
     match tIn with
       | TTuple(("this",THasTyp(URef(lThis)))::tup) ->
-          ([("this", tyRef lThis)], TTuple tup)
+          (* ([("this", tyRef lThis)], TTuple tup) *)
+          ([("this", THasTyp (URef lThis))], TTuple tup)
       | _ ->
           ([], tIn) in
 
@@ -455,6 +456,7 @@ let undoDotExp = function
 (***** Desugaring expressions *************************************************)
 
 let objOp ts ls fn args =
+  let fn = if !Settings.fullObjects then fn else fn ^ "Lite" in
   EApp ((ts,ls,[]), eVar fn, ParseUtils.mkTupleExp args)
 
 (*
@@ -544,28 +546,35 @@ let rec ds env = function
         mkApp (eVar "get") [EDeref (EVar "global"); eStr x]
     end
 
-(*
+(** these were the get cases from v0
   | E.BracketExpr (_, E.HintExpr (_, h, e1), e2) when !Settings.fullObjects ->
       let (l1,l2) = parseObjLocs h in
       objGet l1 l2 (ds env e1) (ds env e2)
-*)
+  | E.BracketExpr (_, e1, e2) ->
+      let e2 = undoDotExp e2 in
+      mkApp (eVar "get") [EDeref (ds env e1); ds env e2]
+**)
 
-  | E.BracketExpr (_, E.HintExpr (_, h, e1), e2) when !Settings.fullObjects ->
-    begin
-      let (ts,ls,_) = parseAppArgs h in
-      (* not doing any type/loc parameter inference prop/elem cases, since
-         don't know if e1 is an object or array *)
+  (** for get/set/has, merging the cases for djs and djsLite modes.
+      too clever for the djsLite case, but i'm not concerned with
+      readability for djsLite desugaring. in particular, the tricky part
+      when in djsLite mode is that e2 is undotted right away, so the
+      undoDotStr in the CString case will always produce false, so getElem
+      will be produced, which is good because there isn't a getProp in
+      djsLite.ml. the getProp distinction only becomes necessary and
+      useful with prototype-backed arrays. furthermore, objOp appends
+      "Lite" when in lite mode. *)
+
+  | E.BracketExpr (_, e1, e2) -> begin
+      let e2 = if !Settings.fullObjects then e2 else undoDotExp e2 in
+      let ((ts,ls,hs),e1) =
+        match e1 with
+          | E.HintExpr (_, h, e1) -> (parseAppArgs h, e1)
+          | _                     -> (([],[],[]), e1) in
+      if hs <> [] then failwith "x[k] shouldn't have heap args";
       match e2 with
         | E.ConstExpr (_, J.CInt i) ->
-            let t = match ts with
-              | []  -> tyAny
-              | [t] -> t
-              | _   -> failwith "too many type args to getIdx" in
-            let (l1,l2) = match ls with
-              | [l1;l2] -> (l1, l2)
-              | [l]     -> (l, LocConst "lArrayProto")
-              | _       -> failwith "need 1 or 2 loc args for getIdx" in
-            objOp [t] [l1;l2] "getIdx" [ds env e1; EVal (vInt i)]
+            objOp ts ls "getIdx" [ds env e1; EVal (vInt i)]
         | E.ConstExpr (_, J.CString s) ->
             let (b,s) = undoDotStr s in
             let f = if b then "getProp" else "getElem" in
@@ -574,31 +583,6 @@ let rec ds env = function
             let e2 = undoDotExp e2 in
             objOp ts ls "getElem" [ds env e1; ds env e2]
     end
-
-  | E.BracketExpr (_, E.HintExpr (_, h, e1), e2) -> begin
-      let e2 = undoDotExp e2 in
-      let (ts,ls,_) = parseAppArgs h in
-      (* TODO *)
-      let t = match ts with
-        | []  -> tyAny
-        | [t] -> t
-        | _   -> failwith "too many type args to get prop/elem lite" in
-      let l = match ls with
-        | [l] -> l
-        | _   -> failwith "need exactly one loc arg for get prop/elem lite" in
-      match e2 with
-        | E.ConstExpr (_, J.CInt i) ->
-            objOp [t] [l] "getIdxLite" [ds env e1; EVal (vInt i)]
-        | E.ConstExpr (_, J.CString s) ->
-            objOp [t] [l] "getPropLite" [ds env e1; EVal (vStr s)]
-        | _ ->
-            objOp [t] [l] "getElemLite" [ds env e1; ds env e2]
-    end
-
-  (* TODO this should be UnsafeGetField. what is difference? *)
-  | E.BracketExpr (_, e1, e2) ->
-      let e2 = undoDotExp e2 in
-      mkApp (eVar "get") [EDeref (ds env e1); ds env e2]
 
   | E.PrefixExpr (_, "prefix:delete", e) -> begin
       match e with E.BracketExpr (_, ed, ek) -> begin
@@ -624,10 +608,12 @@ let rec ds env = function
       in
       mkApp (eVar e0) [ds env e]
 
-  | E.InfixExpr (_, "in", ek, E.HintExpr (_, s, ed))
-    when !Settings.fullObjects -> begin
-      let (ts,ls,hs) = parseAppArgs s in
-      if hs <> [] then failwith "membership tests hs params TODO";
+  | E.InfixExpr (_, "in", ek, ed) -> begin
+      let ((ts,ls,hs),ed) =
+        match ed with
+          | E.HintExpr (_, s, ed) -> (parseAppArgs s, ed)
+          | _                     -> (([],[],[]), ed) in
+      if hs <> [] then failwith "(k in d) shouldn't have heap args";
       match ek with
         | E.ConstExpr (_, J.CInt i) ->
             objOp ts ls "hasIdx" [ds env ed; EVal (vInt i)]
@@ -635,12 +621,10 @@ let rec ds env = function
             objOp ts ls "hasElem" [ds env ed; ds env ek]
     end
 
-  | E.InfixExpr (_, "in", ek, ed) when !Settings.fullObjects ->
-      printParseErr "key membership requires loc annotations"
-
+(** this was the lite case from v0
   | E.InfixExpr (_, "in", ek, ed) ->
-      (* mkApp (eVar "mem") [EDeref (ds env ed); ds env ek] *)
-      failwith "djsLite.ml needs primitives for has"
+      mkApp (eVar "mem") [EDeref (ds env ed); ds env ek]
+**)
 
   | E.InfixExpr (_, op, e1, e2) ->
       let e0 =
@@ -674,15 +658,26 @@ let rec ds env = function
                                                     eStr x;
                                                     ds env e])
 
-(*
+(** these were the get cases from v0
   | E.AssignExpr (_, E.PropLValue (_, E.HintExpr (_, h, e1), e2), e3)
     when !Settings.fullObjects -> 
       let (l1,l2) = parseObjLocs h in
       objSet l1 l2 (ds env e1) (ds env e2) (ds env e3)
-*)
-  | E.AssignExpr (_, E.PropLValue (_, E.HintExpr (_, h, e1), e2), e3)
-    when !Settings.fullObjects ->  begin
-      let (ts,ls,_) = parseAppArgs h in
+  | E.AssignExpr (_, E.PropLValue (_, e1, e2), e3) -> 
+      let e2 = undoDotExp e2 in
+      let x = freshVar "obj" in
+      ELet (x, None, ds env e1,
+            ESetref (eVar x, mkApp (eVar "set") [EDeref (eVar x);
+                                                 ds env e2; 
+**)
+
+  | E.AssignExpr (_, E.PropLValue (_, e1, e2), e3) -> begin
+      let e2 = if !Settings.fullObjects then e2 else undoDotExp e2 in
+      let ((ts,ls,hs),e1) =
+        match e1 with
+          | E.HintExpr (_, h, e1) -> (parseAppArgs h, e1)
+          | _                     -> (([],[],[]), e1) in
+      if hs <> [] then failwith "x[k] = y shouldn't have heap args";
       match e2 with
         | E.ConstExpr (_, J.CInt i) ->
             objOp ts ls "setIdx" [ds env e1; EVal (vInt i); ds env e3]
@@ -694,33 +689,6 @@ let rec ds env = function
             let e2 = undoDotExp e2 in
             objOp ts ls "setElem" [ds env e1; ds env e2; ds env e3]
     end
-
-  | E.AssignExpr (_, E.PropLValue (_, E.HintExpr (_, h, e1), e2), e3) -> begin
-      let e2 = undoDotExp e2 in
-      let (ts,ls,_) = parseAppArgs h in
-      match e2 with
-        | E.ConstExpr (_, J.CInt i) ->
-            let t = match ts with
-              | []  -> tyAny
-              | [t] -> t
-              | _   -> failwith "too many type args to getIdx" in
-            let l = match ls with
-              | [l] -> l
-              | _   -> failwith "need exactly one loc arg for getIdx" in
-            objOp [t] [l] "setIdxLite" [ds env e1; EVal (vInt i); ds env e3]
-        | E.ConstExpr (_, J.CString s) ->
-            objOp ts ls "setPropLite" [ds env e1; EVal (vStr s); ds env e3]
-        | _ ->
-            objOp ts ls "setElemLite" [ds env e1; ds env e2; ds env e3]
-    end
-
-  | E.AssignExpr (_, E.PropLValue (_, e1, e2), e3) -> 
-      let e2 = undoDotExp e2 in
-      let x = freshVar "obj" in
-      ELet (x, None, ds env e1,
-            ESetref (eVar x, mkApp (eVar "set") [EDeref (eVar x);
-                                                 ds env e2; 
-                                                 ds env e3]))
 
   | E.LetExpr (_, x, e1, e2) ->
       let x = dsVar x in
@@ -893,16 +861,9 @@ let rec ds env = function
   | TryFinallyExpr (p, e1, e2) -> 
       ETryFinally (p, ds_expr env e1, ds_expr env e2)
   | ThrowExpr (p, e) -> EThrow (p, ds_expr env e)
-  | AppExpr (p, BracketExpr (p', obj, prop), args) ->
-      ELet (p, "%obj", ds_expr env obj,
-            EApp (p, EOp2 (p', UnsafeGetField,
-                           EOp1 (p', Deref, EId (p, "%obj")),
-                                ds_expr env prop),
-                  [ EId (p, "%obj"); 
-                    mk_array (p, map (ds_expr env) args) ]))
 *)
 
-(*
+(** these were the get cases from v0
   | E.AppExpr (p, E.HintExpr (_, s, E.BracketExpr (p', obj, prop)), args)
     when !Settings.fullObjects ->
       let (ts,ls,hs) = parseAppArgs s in
@@ -916,32 +877,28 @@ let rec ds env = function
       let func = objGet l1 l2 obj (ds env prop) in
       EApp ((ts, ls @ [locArgs], hs), func, 
             ParseUtils.mkTupleExp [obj; argsArray])
-*)
-  | E.AppExpr (p, E.HintExpr (_, s, E.BracketExpr (p', obj, prop)), args)
-    when !Settings.fullObjects -> begin
-      let (ts,ls,hs) = parseAppArgs s in
-      if hs <> [] then failwith "method call hs params TODO";
-      let obj = ds env obj in
-      let func =
-        match prop with
-          | E.ConstExpr (_, J.CString s) ->
-              let (b,s) = undoDotStr s in
-              let f = if b then "getProp" else "getElem" in
-              objOp ts ls f [obj; EVal (vStr s)]
-          | _ ->
-              let prop = undoDotExp prop in
-              objOp ts ls "getElem" [obj; ds env prop]
-      in
-      let (locArgs,argsArray) = mkArgsArray (List.map (ds env) args) in
-      (* for now, just passing the same poly args... *)
-      EApp ((ts, ls @ [locArgs], hs), func,
-            ParseUtils.mkTupleExp [obj; argsArray])
-    end
-
   | E.AppExpr (p, E.BracketExpr (p', obj, prop), args) ->
       if !Settings.fullObjects
       then printParseErr "method call must be annotated"
       else printParseErr "method call not allowed in djsLite mode"
+**)
+
+  | E.AppExpr (_, E.HintExpr (_, _, E.BracketExpr _), _)
+    when not !Settings.fullObjects ->
+      printParseErr "method call not allowed in djsLite mode"
+
+  | E.AppExpr (p, E.HintExpr (_, s, E.BracketExpr (p', obj, prop)), args) ->
+    begin
+      let (ts,ls,hs) = parseAppArgs s in
+      if hs <> [] then failwith "x[k] shouldn't have heap args";
+      dsMethCall env [] [] obj prop args 
+    end
+
+  | E.AppExpr (p, E.BracketExpr (p', obj, prop), args) ->
+      dsMethCall env [] [] obj prop args 
+
+  | E.AppExpr (_, E.BracketExpr _, _) when not !Settings.fullObjects ->
+      printParseErr "method call not allowed in djsLite mode"
 
   | E.AppExpr (p, f, args) ->
       let (f,(ts,ls,hs)) =
@@ -952,25 +909,6 @@ let rec ds env = function
       EApp ((ts, ls @ [(*"locGlobal";*) locArgs], hs),
             ds env f,
             ParseUtils.mkTupleExp [(*eVar "global";*) argsArray])
-
-(*
-  | E.HintExpr (_, s1, E.NewExpr (_, E.HintExpr (_, s2, constr), args)) -> begin
-      if !Settings.fullObjects = false then
-        printParseErr "new not allowed in djsLite mode";
-      let funcObj = ds env constr in
-      let ctor = mkApp (eVar "get") [EDeref funcObj; EVal (vStr "code")] in
-      (* TODO need exp/typing rule for newobj to check that proto link is
-         indeed the right one
-      let proto = mkApp funcObj_ [EVal (vStr "prototype")] in
-      *)
-      let lObj = parseLoc s1 in
-      let (ts,ls,hs) = parseAppArgs s2 in
-      let obj = ENewObj (lObj, LocConst "&Fo_proto") in
-      let (locArgs,argsArray) = mkArgsArray (List.map (ds env) args) in
-      EApp ((ts, ls @ [locArgs], hs), ctor,
-            ParseUtils.mkTupleExp [obj; argsArray])
-    end
-*)
 
   | E.NewExpr (_, E.HintExpr (_, s, constr), args)-> begin
       if !Settings.fullObjects = false then
@@ -1047,6 +985,24 @@ and mkEDict env fields =
 
 and mkEArray t env es =
   EArray (t, List.map (ds env) es)
+
+and dsMethCall env ts ls obj prop args =
+  let obj = ds env obj in
+  let func =
+    match prop with
+      | E.ConstExpr (_, J.CString s) ->
+          let (b,s) = undoDotStr s in
+          let f = if b then "getProp" else "getElem" in
+          objOp ts ls f [obj; EVal (vStr s)]
+      | _ ->
+          let prop = undoDotExp prop in
+          objOp ts ls "getElem" [obj; ds env prop]
+  in
+  let (locArgs,argsArray) = mkArgsArray (List.map (ds env) args) in
+  (* TODO for now, just passing the same poly args, but this probably
+     will not work in general *)
+  EApp ((ts, ls @ [locArgs], []), func,
+        ParseUtils.mkTupleExp [obj; argsArray])
 
 (* rkc: based on LamJS E.FuncExpr case *)
 and dsFunc isCtor env p args body =

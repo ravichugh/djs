@@ -278,6 +278,11 @@ let ensureSafeWeakRef cap g t =
   Sub.checkTypes cap g TypeTerms.empty t safe
 *)
 
+let arrayTermsOf g t =
+  let filter = function UArray _ -> true | _ -> false in
+  TypeTerms.elements (Sub.mustFlow g t ~filter)
+
+
 
 (***** TC helpers *************************************************************)
 
@@ -349,46 +354,6 @@ type app_rule_result =
   | AppOk   of (vvar * typ) list * world
   | AppFail of string list
 
-let maybeInferHeapParam cap curHeap hActs hForms e11 =
-  match hActs, hForms, e11 with
-
-    | [], [x], _ when e11 = ([x],[]) -> Some curHeap
-
-    (* more general than the previous case. the inferred heap arg is
-       all of curHeap except the location constraint corresponding to
-       the formal heap location constraints. *)
-    | [], [x], ([x'],cs1) when x = x' ->
-        let (hs,cs) = curHeap in
-        Some (hs, List.filter (fun (l,_) -> not (List.mem_assoc l cs1)) cs)
-
-    | _ -> None
-
-(* TODO
-
-    | [x], ([x'],_), ([x''],_) when x = x' && x = x'' ->
-        err [cap;
-             "ts eletapp: TODO heap instantiation";
-             spr "hForms = %s" (String.concat "," hForms);
-             spr "e11 = %s" (prettyStrHeap e11);
-             spr "e12 = %s" (prettyStrHeap e12)]
-    | _ ->
-        let s = "[...; ...; H] x:T1 / [H ++ ...] -> T2 / [H ++ ...]" in
-        err [cap; spr "arrow not of the form %s" s;
-                  prettyStrHeap e11;
-                  prettyStrHeap e12]
-*)
-
-let maybeInferHeapParam cap curHeap hActs hForm e11 =
-  let eo = maybeInferHeapParam cap curHeap hActs hForm e11 in
-(*
-  begin match eo with
-    | None -> ()
-    | Some(e) -> pr "inferred heap act: %s\n\n for input heap: %s"
-                   (prettyStrHeap e) (prettyStrHeap e11)
-  end;
-*)
-  eo
-
 (* for each dep tuple binder x in t, adding a mapping from x to w.path,
    where path is the path to the x binder *)
 let depTupleSubst t w =
@@ -425,6 +390,227 @@ let heapDepTupleSubst (_,cs) =
 List.iter (fun (x,w) -> pr "ravi %s |-> %s\n" x (prettyStrWal w)) subst;
 *)
   subst
+
+
+(***** Heap parameter inference ***********************************************)
+
+let inferHeapParam cap curHeap hActs hForms e11 =
+  match hActs, hForms, e11 with
+
+    | [], [x], _ when e11 = ([x],[]) -> Some curHeap
+
+    (* more general than the previous case. the inferred heap arg is
+       all of curHeap except the location constraint corresponding to
+       the formal heap location constraints. *)
+    | [], [x], ([x'],cs1) when x = x' ->
+        let (hs,cs) = curHeap in
+        Some (hs, List.filter (fun (l,_) -> not (List.mem_assoc l cs1)) cs)
+
+    | _ -> None
+
+(* TODO
+
+    | [x], ([x'],_), ([x''],_) when x = x' && x = x'' ->
+        err [cap;
+             "ts eletapp: TODO heap instantiation";
+             spr "hForms = %s" (String.concat "," hForms);
+             spr "e11 = %s" (prettyStrHeap e11);
+             spr "e12 = %s" (prettyStrHeap e12)]
+    | _ ->
+        let s = "[...; ...; H] x:T1 / [H ++ ...] -> T2 / [H ++ ...]" in
+        err [cap; spr "arrow not of the form %s" s;
+                  prettyStrHeap e11;
+                  prettyStrHeap e12]
+*)
+
+let inferHeapParam cap curHeap hActs hForm e11 =
+  let eo = inferHeapParam cap curHeap hActs hForm e11 in
+(*
+  begin match eo with
+    | None -> ()
+    | Some(e) -> pr "inferred heap act: %s\n\n for input heap: %s"
+                   (prettyStrHeap e) (prettyStrHeap e11)
+  end;
+*)
+  eo
+
+
+(***** Type/loc parameter inference *******************************************)
+
+(** This is tailored to inferring location parameters and type variables for
+    object and array primitive operations. Both the Ref and Array type term
+    constructors are invariant in their parameter, so the greedy choice
+    (e.g. unification) is guaranteed to be good.
+
+    The entry point is
+
+      inferTypLocParams g tForms lForms tForm hForm vAct hAct
+
+ ** Step 0: Check for type and value tuples
+
+      Ensure that the value actual vAct is a tuple value of the
+      form {"0"=v0; "1"=v1, ... "n"=vn} up to some n, built up in
+      increasing order with dictionary extend operations and with
+      no duplicates. Let vTup[i] denote the ith value component.
+
+      Ensure that the type argument is a tuple of types tTup.
+      Let tTup[i] denote the ith type component.
+
+ ** Step 1: Inferring location parameters for location formals lForms
+
+      Process lForms in increasing order.
+
+      For each Li:
+
+      - if    there is some tTup[j] = Ref(Li)
+        and   G => vTup[j] :: Ref(l)
+        then  add Li |-> l to the location substitution
+
+      - if    there is some (L |-> (_:_, Li)) in the heap formal
+        and   L |-> l is part of location substitution
+        and   (l |-> (_:_, l')) is in the heap actual
+        then  add Li |-> l' to the location substitution
+
+      Notice that for a function that takes a reference to L1, and the
+      heap constraint for L1 links to L2, then the location parameter L1
+      must appear in lForms before L2. This is how all the primitives
+      are written anyway, since it's intuitive.
+
+ ** Step 2: Inferring type parameters for type formals tForms
+
+      For each Ai:
+
+      - if    there is some Lj s.t. (Lj |-> (_:Arr(A), _))
+        and   the location substitution maps Lj to l
+        and   (l |-> (a:_, _)) is in the heap actual
+        and   G => a :: Arr(T)
+        then  add A |-> T to the type substitution
+
+      Note that the first step looks for Arr(A) syntactically, which is
+      how all the primitives are written. Might need to make this more
+      general later.
+*)
+
+let isIntOfString s =
+  try Some (int_of_string s) with Failure _ -> None
+
+(* try to match v as a tuple dictionary, that is, a dictionary with
+   fields "0" through "n" in order without any duplicates *)
+let isValueTuple v =
+  let rec foo acc n = function
+    | VEmpty -> Some acc
+    | VExtend(v1,VBase(Str(sn)),v3) ->
+        (match isIntOfString sn with
+           | Some(n') when n = n' -> foo ((n,v3)::acc) (n-1) v1
+           | None -> None)
+    | _ -> None
+  in
+  match v with
+    | VExtend(_,VBase(Str(sn)),_) ->
+        (match isIntOfString sn with Some(n) -> foo [] n v | None -> None)
+    | _ -> None
+
+let findActualFromRefValue g lVar tTup vTup =
+  let rec foo i = function
+    | THasTyp(URef(LocVar(lVar'))) :: ts when lVar = lVar' ->
+        if List.mem_assoc i vTup then
+          let vi = List.assoc i vTup in
+          begin match refTermsOf g (ty (PEq (theV, WVal vi))) with
+            | [URef(lAct)] -> Some lAct
+            | _            -> None
+          end
+        else
+          foo (i+1) ts
+    | _ -> None
+  in
+  foo 0 tTup
+
+let findActualFromProtoLink locSubst lVar hForm hAct =
+  let rec foo = function
+    | (LocVar lVar', HConcObj (_, _, LocVar x)) :: cs when lVar = x ->
+        if not (List.mem_assoc lVar' locSubst) then foo cs
+        else begin match List.assoc lVar' locSubst with
+          | None -> None
+          | Some(lAct') ->
+              if not (List.mem_assoc lAct' (snd hAct)) then foo cs
+              else begin match List.assoc lAct' (snd hAct) with
+                | HConcObj(_,_,lAct) -> Some lAct
+                | _                  -> None
+              end
+        end
+    | _ :: cs -> foo cs
+    | []      -> None
+  in
+  foo (snd hForm)
+
+let findArrayActual g tVar locSubst hForm hAct =
+  let rec foo = function
+    | (LocVar lVar, HConc (_, THasTyp (UArray (THasTyp (UVar x))))) :: cs
+    | (LocVar lVar, HConcObj (_, THasTyp (UArray (THasTyp (UVar x))), _)) :: cs
+      when tVar = x ->
+        if not (List.mem_assoc lVar locSubst) then foo cs
+        else begin match List.assoc lVar locSubst with
+          | None -> foo cs
+          | Some(lAct) ->
+              if not (List.mem_assoc lAct (snd hAct)) then foo cs
+              else begin match List.assoc lAct (snd hAct) with
+                | HConc(a,_)
+                | HConcObj(a,_,_) ->
+                    (match arrayTermsOf g (ty (PEq (theV, wVar a))) with
+                       | [UArray(t)] -> Some t
+                       | _           -> foo cs)
+              end
+        end
+    | _ :: cs -> foo cs
+    | []      -> None
+  in
+  foo (snd hForm)
+
+let inferTypLocParams g tForms lForms tForm hForm vAct hAct =
+ 
+  (* Step 0 *)
+  match isValueTuple vAct, tForm with
+    | Some(vTup), TTuple(tTup) -> begin
+
+        (* Step 1 *)
+        let locSubst =
+          List.fold_left (fun subst lVar ->
+            let maybeActual = 
+              match findActualFromRefValue g lVar (List.map snd tTup) vTup with
+                | None       -> findActualFromProtoLink subst lVar hForm hAct
+                | Some(lact) -> Some lact in
+            ((lVar,maybeActual)::subst)
+          ) [] lForms in
+
+        let lActsOpt =
+          List.fold_left (fun acc (_,lActOpt) ->
+            match acc, lActOpt with
+              | Some(l), Some(lAct) -> Some (lAct::l)
+              | _                   -> None
+          ) (Some []) locSubst in
+
+        begin match lActsOpt with
+          | None -> ()
+          | Some(lActs) ->
+              pr "local inference inferred all loc acts: [%s]\n" (strLocs lActs)
+        end;
+
+        (* Step 2 *)
+        let tActsOpt =
+          match tForms with
+            | []     -> Some []
+            | [tVar] -> (match findArrayActual g tVar locSubst hForm hAct with
+                           | Some(tAct) -> Some [tAct]
+                           | None       -> None)
+            | _      -> None (* generalize the case for one to all tparams *) in
+
+        (* don't need to reverse lActs, since the two folds reversed it twice *)
+        match tActsOpt, lActsOpt with
+          | Some(l1), Some(l2) -> Some (l1, l2)
+          | _                  -> None
+      end
+
+    | _ -> None
 
 
 (***** Bidirectional type checking ********************************************)
@@ -954,45 +1140,53 @@ and tsExp_ g h = function
 
 and tsELetAppTryBoxes cap g curHeap x (tActs,lActs,hActs) v2 e boxes =
 
-  let checkLength s l1 l2 =
+  let checkLength s l1 l2 s2 =
     let (n1,n2) = (List.length l1, List.length l2) in
-    if n1 <> n2 then err [cap; spr "expected %d %s args but got %d" n1 s n2] in
+    if n1 <> n2 then
+      err [cap; spr "expected %d %s args but got %d %s" n1 s n2 s2] in
 
   let tryOne ((tForms,lForms,hForms),y,t11,e11,t12,e12) =
 
-(*
-    (* infer missing poly arg *)
-    let hActs =
-      match maybeInferHeapParam cap curHeap hActs hForms e11 with
-        | Some(e) -> [e]
-        | None    -> hActs in
+    let (tActs0,lActs0) = (tActs, lActs) in
+
+    (* try to infer type or location parameters by matching against the
+       formals for this arrow if
+         1. no type params are passed
+         2. either a) no loc params are passed
+                   b) an "argsArray" loc param is passed (from desugaring)
+                      and the last formal loc is "Largs" (from desugaring),
+                      in which case try to infer all _other_ loc params *)
+    let ((tActs,lActs),sInf) =
+      let lFormsRev = List.rev lForms in
+      match tActs, lActs, tForms, lFormsRev with
+        | [], [LocConst lc], _, lv::rest when Utils.strPrefix lc "argsArray"
+                                           && Utils.strPrefix lv "Largs" ->
+            let lFormsToInfer = List.rev rest in
+            (match inferTypLocParams g tForms lFormsToInfer t11 e11 v2 curHeap with
+               | Some(ts,ls) -> ((ts,ls@[LocConst lc]), "from local inference")
+               | None        -> (([],[]), "and local inference failed"))
+        | [], [], _::_, _
+        | [], [], _, _::_ ->
+            (match inferTypLocParams g tForms lForms t11 e11 v2 curHeap with
+               | Some(ts,ls) -> ((ts,ls), "from local inference")
+               | None        -> (([],[]), "and local inference failed"))
+        | _ ->
+            ((tActs, lActs), "from source program") in
+
+    (* TODO at some point, might want to rewrite the input program with
+       inferred instantiations *)
+    if (tActs,lActs) <> (tActs0,lActs0) then begin
+      let foo (ts,ls) =
+        spr "[%s; %s]" (String.concat "," (List.map strTyp ts))
+                       (String.concat "," (List.map strLoc ls)) in
+      pr "local inference succeeded:\n";
+      pr "  before : %s\n" (foo (tActs0,lActs0));
+      pr "  after  : %s\n" (foo (tActs,lActs));
+    end;
 
     (* check well-formedness of all poly args *)
-    checkLength "type" tForms tActs;
-    checkLength "loc" lForms lActs;
-    checkLength "heap" hForms hActs;
-    (match Utils.someDupe lActs with
-       | None    -> ()
-       | Some(l) -> err [cap; spr "duplicate loc arg: %s" (strLoc l)]
-    );
-    let polySubst =
-      ([], List.combine tForms tActs,
-       List.combine lForms lActs, List.combine hForms hActs) in
-
-    (* instantiate input world with poly args, and check that it's satisfied *)
-    let (t11,e11) =
-      (masterSubstTyp polySubst t11, masterSubstHeap polySubst e11) in
-    let (t11,e11) =
-      (expandPreTyp t11, expandPreHeap e11) in
-    Wf.heap "e11 after instantiation" g e11;
-    let binderVSubst = Sub.heaps cap g curHeap e11 in
-    let t11 = masterSubstTyp (binderVSubst, [], [], []) t11 in
-    tcVal g curHeap t11 v2;
-*)
-
-    (* check well-formedness of all poly args *)
-    checkLength "type" tForms tActs;
-    checkLength "loc" lForms lActs;
+    checkLength "type" tForms tActs sInf;
+    checkLength "loc" lForms lActs sInf;
     (match Utils.someDupe lActs with
        | None    -> ()
        | Some(l) -> err [cap; spr "duplicate loc arg: %s" (strLoc l)]
@@ -1008,7 +1202,7 @@ and tsELetAppTryBoxes cap g curHeap x (tActs,lActs,hActs) v2 e boxes =
     (* infer missing poly arg.
        note: this must take place after loc args have been substituted. *)
     let hActs =
-      match maybeInferHeapParam cap curHeap hActs hForms e11 with
+      match inferHeapParam cap curHeap hActs hForms e11 with
         | Some(e) -> [e]
         | None    -> hActs in
 

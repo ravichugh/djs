@@ -7,7 +7,7 @@ var a = /*: lA */ [0,"hi",true];
 
 /*: {(= v True)} */ (/*: [Top;lA,lArrayProto;] */ a[2]);
 
-/*: {(= v undefined)} */ (/*: [;lA;] */ a[3]);
+/*: {(= v undefined)} */ (/*: [Top;lA,lArrayProto] */ a[3]);
 
 /*: {(= v 3)} */ (/*: [Top;lA,lArrayProto;] */ a.length);
 
