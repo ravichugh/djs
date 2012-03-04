@@ -5,7 +5,7 @@ var a = /*: lA */ [0,"hi",true];
 
 /*: {(= v "hi")} */ (/*: [Top;lA;] */ a[1]);
 
-/*: {(= v True)} */ (/*: [Top;lA;] */ a[2]);
+/*: {(= v true)} */ (/*: [Top;lA;] */ a[2]);
 
 /*: {(= v undefined)} */ (/*: [Top;lA;] */ a[3]);
 

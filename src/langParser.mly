@@ -448,7 +448,10 @@ formula :
  (***** uninterpreted predicates *****)
  | LPAREN w=walue DCOLON u=typ_term RPAREN      { PUn(HasTyp(w,u)) }
  | LPAREN w=walue DCOLON u=typ_term BANG RPAREN { pIsBang w u }
+(*
  | HEAPHAS LPAREN h=heap COMMA l=loc COMMA k=walue RPAREN { PHeapHas(h,l,k) }
+*)
+ | LPAREN HEAPHAS h=heap l=loc k=walue RPAREN   { PHeapHas(h,l,k) }
  | LPAREN PACKED w=walue RPAREN                 { PPacked(w) }
  (***** logical connectives *****)
  | b=BOOL                                       { if b then PTru else PFls }
@@ -467,10 +470,14 @@ formula :
  (***** syntactic macros *****)
  | LPAREN w=walue TCOLON t=typ RPAREN           { applyTyp t w }
  | LPAREN w=walue COLON t=typ RPAREN            { applyTyp t w }
+(*
  | OBJHAS LPAREN d=walue COMMA k=walue COMMA h=heap COMMA l=loc RPAREN
      { PObjHas([d],k,h,l) }
  | OBJHAS LPAREN ds=waluelist COMMA k=walue COMMA h=heap COMMA l=loc RPAREN
      { PObjHas(ds,k,h,l) }
+*)
+ | LPAREN OBJHAS d=walue k=walue h=heap l=loc RPAREN      { PObjHas([d],k,h,l) }
+ | LPAREN OBJHAS ds=waluelist k=walue h=heap l=loc RPAREN { PObjHas(ds,k,h,l) }
  | LPAREN TYPE x=VAR RPAREN  { ParseUtils.doIntersectionHack x }
 
 (*
@@ -502,12 +509,17 @@ walue :
  | LPAREN MINUS x=walue y=walue RPAREN       { minus x y }
  | LPAREN UPD x=walue y=walue z=walue RPAREN { upd x y z }
  | LPAREN LEN x=walue RPAREN                 { arrlen x }
+(*
  | HEAPSEL LPAREN h=heap COMMA l=loc COMMA k=walue RPAREN
      { WHeapSel(h,l,k) }
  | OBJSEL LPAREN d=walue COMMA k=walue COMMA h=heap COMMA l=loc RPAREN
      { WObjSel([d],k,h,l) }
  | OBJSEL LPAREN ds=waluelist COMMA k=walue COMMA h=heap COMMA l=loc RPAREN
      { WObjSel(ds,k,h,l) }
+*)
+ | LPAREN HEAPSEL h=heap l=loc k=walue RPAREN             { WHeapSel(h,l,k) }
+ | LPAREN OBJSEL d=walue k=walue h=heap l=loc RPAREN      { WObjSel([d],k,h,l) }
+ | LPAREN OBJSEL ds=waluelist k=walue h=heap l=loc RPAREN { WObjSel(ds,k,h,l) }
 
 walueset :
  | LBRACE RBRACE                         { [] }

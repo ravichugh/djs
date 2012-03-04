@@ -1,25 +1,25 @@
 
 var a = /*: lA Arr(Int) */ [0,1,2];
 
-/*: {(= v True)} */
+/*: {(= v true)} */
 (0 in /*: [Int;lA,lArrayProto] */ a);
 
-/*: {(= v True)} */
+/*: {(= v true)} */
 (2 in /*: [Int;lA,lArrayProto] */ a);
 
-/*: {(= v False)} */
+/*: {(= v false)} */
 (3 in /*: [Int;lA,lArrayProto] */ a);
 
 // note: can't prove anything about negative indices
 (-1 in /*: [Int;lA,lArrayProto] */ a);
 
-/*: {(= v True)} */
+/*: {(= v true)} */
 ("length" in /*: [Int;lA,lArrayProto] */ a);
 
 // TODO need to have syntactic rule to allow using prototype
-// /*: {(= v True)} */
+// /*: {(= v true)} */
 // ("push" in /*: [Int;lA,lArrayProto] */ a);
 
 // TODO need to have unrolling bottom out at lROOT to prove this
-// /*: {(= v False)} */
+// /*: {(= v false)} */
 // ("missing" in /*: [Int;lA,lArrayProto] */ a);

@@ -19,8 +19,8 @@
 ))
 
 (declare-datatypes (
-  (DVal  (True)
-         (False)
+  (DVal  (VTrue)
+         (VFalse)
          (VInt (VIntSel Int))
          (VStr (VStrSel StrId))
          (VFun (FunSel FunId))
@@ -55,16 +55,18 @@
 (declare-fun tag (DVal) DVal)
 (declare-funs
   ((TagInt DVal) (TagBool DVal) (TagStr DVal) (TagDict DVal)
-   (TagFun DVal)
-   (TagBot DVal)))
+   (TagFun DVal) (TagBot DVal)
+   (TagObj DVal) (TagUndef DVal)))
 
 ; these ids have to match idStrings table in langUtils.ml
-(assert (= TagInt  (VStr 1)))
-(assert (= TagBool (VStr 2)))
-(assert (= TagStr  (VStr 3)))
-(assert (= TagDict (VStr 4)))
-(assert (= TagFun  (VStr 5)))
-(assert (= TagBot  (VStr 6)))
+(assert (= TagDict  (VStr 1)))
+(assert (= TagInt   (VStr 2)))
+(assert (= TagBool  (VStr 3)))
+(assert (= TagStr   (VStr 4)))
+(assert (= TagFun   (VStr 5)))
+(assert (= TagBot   (VStr 6)))
+(assert (= TagObj   (VStr 7)))
+(assert (= TagUndef (VStr 8)))
 
 ; no source-level value can be bot
 (assert (= (tag bot) TagBot))
@@ -79,12 +81,12 @@
 ;;;;; source-level booleans
 ;;;;;
 
-(assert (= (tag True) TagBool))
-(assert (= (tag False) TagBool))
+(assert (= (tag VTrue) TagBool))
+(assert (= (tag VFalse) TagBool))
 
 (assert (forall (v DVal)
                 (implies (= (tag v) TagBool)
-                         (or (= v True) (= v False)))))
+                         (or (= v VTrue) (= v VFalse)))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -115,6 +117,14 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;; source-level lambdas
 ;;;;;
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;; other DJS constants
+;;;;;
+
+(assert (= (tag null) TagObj))
+(assert (= (tag undefined) TagUndef))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

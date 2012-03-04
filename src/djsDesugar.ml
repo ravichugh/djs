@@ -603,12 +603,16 @@ let rec ds env = function
       | _ -> printParseErr "delete not applied to property"
     end
 
+  | E.PrefixExpr (_, "prefix:typeof", e) ->
+      (* going through mkTupleExp since typ/loc inference looks for tuples *)
+      EApp (([],[],[]), eVar "js_typeof", ParseUtils.mkTupleExp [ds env e])
+
   | E.PrefixExpr (_, op, e) ->
       let e0 =
         match op with
-          | "prefix:typeof" -> "tagof"
-          | "prefix:!"      -> "neg"
-          | "prefix:-"      -> "unary_minus"
+          (* | "prefix:typeof" -> "js_typeof" *)
+          | "prefix:!"      -> "js_not"
+          | "prefix:-"      -> "js_uminus"
           | x               -> failwith (spr "Op1Prefix [%s]" x)
       in
       mkApp (eVar e0) [ds env e]
@@ -634,18 +638,16 @@ let rec ds env = function
   | E.InfixExpr (_, op, e1, e2) ->
       let e0 =
         match op with
-          | "+"  -> "jsPlus"
-          | "-"  -> "minus"
-          | "*"  -> "mult"
-          | "==" -> "eq"
-          (* TODO *)
-          | "===" -> "eq"
-          | "<=" -> "le"
-          | "<"  -> "lt"
-          | "&&" -> "l_and"
-          | "^"  -> let _ = Log.warn "TODO is ^ op JS? Rhino allows it?" in
-                    "strcat"
-          | "in" -> "mem"
+          | "+"   -> "js_plus"
+          | "-"   -> "js_minus"
+          | "*"   -> "js_mult"
+          | "=="  -> "js_eek"
+          | "===" -> "js_threek"
+          | "<="  -> "js_le"
+          | "<"   -> "js_lt"
+          | "&&"  -> "js_and"
+          | "||"  -> "js_or"
+          (* | "in"  -> "mem" *)
           | _    -> failwith (spr "Op2Infix [%s]" op)
       in
       mkApp (eVar e0) [ds env e1; ds env e2]

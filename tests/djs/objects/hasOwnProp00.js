@@ -1,12 +1,12 @@
 
 var x = /*: lx */ {f:0, g:"hi"};
 
-/*: {(= v True)} */
+/*: {(= v true)} */
 (/*: [;lx,lObjectProto;] */ (x.hasOwnProperty)("f"));
 
-/*: {(= v True)} */
+/*: {(= v true)} */
 (/*: [;lx,lObjectProto;] */ (x.hasOwnProperty)("g"));
 
-/*: {(= v False)} */
+/*: {(= v false)} */
 (/*: [;lx,lObjectProto;] */ (x.hasOwnProperty)("h"));
 

@@ -352,6 +352,7 @@ let oc_boxes = open_out (Settings.out_dir ^ "boxes.txt")
 let isTag s =
   List.exists ((=) s) [tagInt; tagStr; tagBool; tagDict; tagFun]
 
+(*
 (* TODO quick, but somewhat dangerous, way to set up tags for JavaScript
    without changing any tags of System D primitives. *)
 let switchJsString = function
@@ -360,26 +361,31 @@ let switchJsString = function
   | "string"  -> "Str"
   | "object"  -> "Dict"
   | s         -> s
+*)
 
 let idStrings = Id.create ()
 
 let getStringId s = (* assigning ids on demand *)
+(*
   let s =
     if !Settings.djsMode
       then switchJsString s
       else s in
+*)
   let b = not (Id.mem idStrings s) in
   let i = Id.process idStrings s in
   if b then fpr oc_boxes "\nstring %d\n  \"%s\"\n" i s;
   i
 
 let _ = (* the ids for these strings need to match theory.lisp *)
-  assert (1 = getStringId tagInt);
-  assert (2 = getStringId tagBool);
-  assert (3 = getStringId tagStr);
-  assert (4 = getStringId tagDict);
+  assert (1 = getStringId tagDict);
+  assert (2 = getStringId tagInt);
+  assert (3 = getStringId tagBool);
+  assert (4 = getStringId tagStr);
   assert (5 = getStringId tagFun);
   assert (6 = getStringId "TagBot");
+  assert (7 = getStringId tagObj);
+  assert (8 = getStringId tagUndef);
   ()
 
 (***** Boxes *****)
@@ -438,13 +444,17 @@ let strLocs l = String.concat "," (List.map strLoc l)
 
 let strBaseValue v =
   match v, !prettyConst with
-    | Bool(b), _    -> if b then "True" else "False"
+    | Bool(b), true -> spr "%b" b
+    | Bool(b), false -> if b then "VTrue" else "VFalse"
     | Null, _       -> "null"
     | Undef, _      -> "undefined"
     | Int(i), true  -> spr "%d" i
     | Int(i), false -> spr "(VInt %d)" i
+(*
     | Str(s), true  -> spr "\"%s\""
                          (if !Settings.djsMode then switchJsString s else s)
+*)
+    | Str(s), true  -> spr "\"%s\"" s
     | Str(s), false -> spr "(VStr %d)" (getStringId s)
 
 let rec strValue = function
@@ -1206,7 +1216,10 @@ let rec expandHH (hs,cs) l k =
     else begin
       match List.assoc l cs with
         | HConcObj(d,_,l') -> 
-            pOr [has (wVar d) k; expandHH (hs,cs) l' k]
+            if l' = lRoot then
+              has (wVar d) k
+            else
+              pOr [has (wVar d) k; expandHH (hs,cs) l' k]
         | _ -> failwith (spr "expandHH: %s" (strLoc l))
     end
   in
@@ -1342,7 +1355,10 @@ let rec embedObjHas ds k (hs,cs) l =
     failwith (spr "embedObjHas: constraints should've been expanded:\n\n%s"
       (prettyStrForm (PObjHas(ds,k,(hs,cs),l))));
   let ps = List.map (fun d -> embedHas d [k]) ds in
-  pOr (ps @ [PHeapHas ((hs,[]), l, k)])
+  if l = lRoot then
+    pOr ps
+  else
+    pOr (ps @ [PHeapHas ((hs,[]), l, k)])
 
 let ohCache = Hashtbl.create 17
 

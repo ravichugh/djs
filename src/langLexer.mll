@@ -54,10 +54,14 @@ rule token = parse
   | "val"          { EXTERN }
   | "fail"         { FAIL }
   (* | "List"         { LIST } *)
-  | "True"         { VBOOL true }
-  | "False"        { VBOOL false }
-  | "true"         { BOOL true }
-  | "false"        { BOOL false }
+  (* | "True"         { VBOOL true } *)
+  (* | "False"        { VBOOL false } *)
+  (* | "true"         { BOOL true } *)
+  (* | "false"        { BOOL false } *)
+  | "true"         { VBOOL true }
+  | "false"        { VBOOL false }
+  | "TRU"          { BOOL true }
+  | "FLS"          { BOOL false }
   | "let"          { LET }
   | "rec"          { REC }
   | "not"          { NOT }
@@ -86,10 +90,10 @@ rule token = parse
   | "eqmod"        { EQMOD }
   | "dom"          { DOM }
   | "bot"          { WBOT }
-  | "HeapHas"      { HEAPHAS }
-  | "HeapSel"      { HEAPSEL }
-  | "ObjHas"       { OBJHAS }
-  | "ObjSel"       { OBJSEL }
+  | "heaphas"      { HEAPHAS }
+  | "heapsel"      { HEAPSEL }
+  | "objhas"       { OBJHAS }
+  | "objsel"       { OBJSEL }
   | "packed"       { PACKED }
   | "len"          { LEN }
   | "truthy"       { TRUTHY }

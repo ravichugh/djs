@@ -13,5 +13,5 @@ var b = x.hasOwnProperty("f")
         && x.hasOwnProperty("g")
         && !(x.hasOwnProperty("h"));
 
-/*: {(= v True)} */ b;
+/*: {(= v true)} */ b;
 

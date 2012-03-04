@@ -1,9 +1,9 @@
 
 var a = [0,1,2];
 
-/*: {(= v True)} */ (a.hasOwnProperty(0));
+/*: {(= v true)} */ (a.hasOwnProperty(0));
 
-/*: {(= v True)} */ (a.hasOwnProperty(2));
+/*: {(= v true)} */ (a.hasOwnProperty(2));
 
-/*: {(= v False)} */ (a.hasOwnProperty(3));
+/*: {(= v false)} */ (a.hasOwnProperty(3));
 

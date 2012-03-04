@@ -5,7 +5,7 @@ var a = /*: lA */ [0,"hi",true];
 
 /*: {(= v "hi")} */ (/*: [Top;lA,lArrayProto;] */ a[1]);
 
-/*: {(= v True)} */ (/*: [Top;lA,lArrayProto;] */ a[2]);
+/*: {(= v true)} */ (/*: [Top;lA,lArrayProto;] */ a[2]);
 
 /*: {(= v undefined)} */ (/*: [Top;lA,lArrayProto] */ a[3]);
 

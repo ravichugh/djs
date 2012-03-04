@@ -26,11 +26,13 @@ let bigindent () = String.make (4 * !depth) ' '
 
 type tag = string
 
-let tagInt  = "Int"
-let tagStr  = "Str"
-let tagBool = "Bool"
-let tagDict = "Dict"
-let tagFun  = "Fun"
+let tagDict  = "Dict"      (* for internal functional dictionaries *)
+let tagInt   = "number" (* TODO rename to tagNum *)
+let tagBool  = "boolean"
+let tagStr   = "string"
+let tagObj   = "object"
+let tagUndef = "undefined"
+let tagFun   = "function"
 
 type vvar   = string
 type tvar   = string
