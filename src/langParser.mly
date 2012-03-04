@@ -119,10 +119,10 @@ let sameCell l =
   PLUS MINUS MUL DIV LT LE GE (* NE EQEQ AMPAMP PIPEPIPE *) PLUSPLUS
   ASSGN (* LOCALL *) NEWREF REFTYPE (* AT *) MAPSTO SAME HEAP
   (* FOLD UNFOLD *) FREEZE
-  ARRTYPE PACKED LEN
+  ARRTYPE PACKED LEN TRUTHY FALSY
   BREAK THROW TRY CATCH FINALLY
   UNDEF
-  UNDERSCORE TCOLON
+  UNDERSCORE TCOLON ELLIPSIS
   HEAPHAS HEAPSEL OBJHAS OBJSEL
   WITH BEGIN END
   LTUP RTUP
@@ -289,6 +289,9 @@ typ :
  | LBRACE x=VAR COLON b=basetag PIPE p=formula RBRACE { TBaseRefine(x,b,p) }
 
  (***** syntactic macros *****)
+
+ (* TODO might want to add array tuple to abstract syntax *)
+ | LT x=array_tuple_typs GT  { let (ts,b) = x in tyArrayTuple tyAny ts b }
 
  
 basetag :
@@ -481,6 +484,10 @@ formula :
              substForm (sel a1 a2) (aVar x) p] }
 *)
 
+ (* TODO probably want to add PTruthy and PFalsy as delayed macros *)
+ | LPAREN TRUTHY x=walue RPAREN                 { pTruthy x }
+ | LPAREN FALSY x=walue RPAREN                  { pFalsy x }
+
 formulas :
  | formula                               { [$1] }
  | formulas formula                      { $1 @ [$2] }
@@ -621,6 +628,11 @@ fieldexps : (* weird: combining the field and fields leads to type error... *)
 walues :
  | walue                 { [$1] }
  | walue COMMA walues    { $1 :: $3 }
+
+array_tuple_typs :
+ | t=typ                             { ([t],false) }
+ | t=typ COMMA ELLIPSIS              { ([t],true) }
+ | t=typ COMMA att=array_tuple_typs  { let (ts,b) = att in (t::ts,b) }
 
 (*
 fieldtyps :

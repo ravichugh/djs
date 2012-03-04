@@ -1,13 +1,11 @@
 
 (******************************************************************************)
 
-(* TODO only use + if can var elim *)
 (*
-let succ :: x:INT -> {INT|(= v (+ x 1))} = fun x -> plus x 1
-*)
 let succ :: x:INT -> INT = fun x -> (plus x 1)
 
 let unary_minus :: x:INT -> INT = fun x -> (minus 0 x)
+*)
 
 (*
 (* 9/18 changed type to match the structure that elimBoolFlag requires *)

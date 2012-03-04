@@ -257,6 +257,8 @@ let le w1 w2      = PApp ("my_le", [w1; w2])
 let gt w1 w2      = PApp ("my_gt", [w1; w2])
 let ge w1 w2      = PApp ("my_ge", [w1; w2])
 
+let eq w1 w2      = PEq (w1, w2)
+
 let vBool x       = VBase (Bool x)
 let vStr x        = VBase (Str x)
 let vInt x        = VBase (Int x)
@@ -280,6 +282,7 @@ let wBool x       = WVal (vBool x)
 let wStr x        = WVal (vStr x)
 let wInt x        = WVal (vInt x)
 let wNull         = WVal vNull
+let wUndef        = WVal vUndef
 let wProj i       = wStr (string_of_int i)
 
 let pInt          = PEq (tag theV, wStr tagInt)
@@ -303,6 +306,11 @@ let pImp p q      = PConn ("implies", [p; q])
 let pIff p q      = PConn ("iff", [p; q])
 let pNot p        = PConn ("not", [p])
 let pIte p q r    = pAnd [pImp p q; pImp (pNot p) r]
+
+                    (* TODO need NaN *)
+let pFalsy x      = pOr [eq x (wBool false); eq x wNull; eq x wUndef;
+                         eq x (wStr ""); eq x (wInt 0)]
+let pTruthy x     = pNot (pFalsy x)
 
 let ty p          = TRefinement ("v", p)
 let tyAny         = TTop (* ty PTru *)
@@ -1422,4 +1430,13 @@ let embedForm1 p =
 
 let embedForm p = p |> embedForm1 |> embedObjSelsInsideOut
 
+
+(***** More stuff *************************************************************)
+
+let tyArrayTuple t ts extensible = 
+  let p = if extensible then ge else eq in
+  ty (pAnd (
+    hastyp theV (UArray t)
+    :: PPacked theV :: p (arrlen theV) (wInt (List.length ts))
+    :: Utils.map_i (fun ti i -> applyTyp ti (sel theV (wInt i))) ts))
 

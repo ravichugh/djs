@@ -356,7 +356,8 @@ let dsArrow arr =
   let outC  = snd (masterSubstHeap subst ([],outC)) @ [] in
   let tRet  = masterSubstTyp subst tRet in
 
-  let tyArgs = [("arguments", tyRef (LocVar lArgs))] in
+  (* let tyArgs = [("arguments", tyRef (LocVar lArgs))] in *)
+  let tyArgs = [("arguments", THasTyp (URef (LocVar lArgs)))] in
 
   ((ts, ls @ [lArgs], hs),
    freshVar "_",
@@ -633,7 +634,7 @@ let rec ds env = function
   | E.InfixExpr (_, op, e1, e2) ->
       let e0 =
         match op with
-          | "+"  -> "plus"
+          | "+"  -> "jsPlus"
           | "-"  -> "minus"
           | "*"  -> "mult"
           | "==" -> "eq"
@@ -895,7 +896,7 @@ let rec ds env = function
     begin
       let (ts,ls,hs) = parseAppArgs s in
       if hs <> [] then failwith "x[k] shouldn't have heap args";
-      dsMethCall env [] [] obj prop args 
+      dsMethCall env ts ls obj prop args 
     end
 
   | E.AppExpr (p, E.BracketExpr (p', obj, prop), args) ->

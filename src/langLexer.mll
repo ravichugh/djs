@@ -92,6 +92,8 @@ rule token = parse
   | "ObjSel"       { OBJSEL }
   | "packed"       { PACKED }
   | "len"          { LEN }
+  | "truthy"       { TRUTHY }
+  | "falsy"        { FALSY }
   (* | "All"          { ALL } *)
   (* | "all"          { LOCALL } *)
   | "new"          { NEW }
@@ -108,6 +110,7 @@ rule token = parse
   (* | "=="           { EQEQ } *)
   (* | "&&"           { AMPAMP } *)
   (* | "||"           { PIPEPIPE } *)
+  | "..."          { ELLIPSIS }
   | ":::"          { TCOLON }
   | "::"           { DCOLON }
   | ":="           { ASSGN }

@@ -443,19 +443,35 @@ let inferHeapParam cap curHeap hActs hForm e11 =
 
     The entry point is
 
-      inferTypLocParams g tForms lForms tForm hForm vAct hAct
+      inferTypLocParams g tForms lForms tForm hForm tActs lActs vAct hAct
 
- ** Step 0: Check for type and value tuples
+ ** Step 1: Find type and value tuples
 
-      Ensure that the value actual vAct is a tuple value of the
-      form {"0"=v0; "1"=v1, ... "n"=vn} up to some n, built up in
-      increasing order with dictionary extend operations and with
-      no duplicates. Let vTup[i] denote the ith value component.
+      Want to collect a tuple vTup of value arguments passed in, and a tuple tTup
+      of type arguments expected, so that we can compare each vTup[i] to tTup[i]
+      to infer missing arguments. There are three cases for function
+      types/calls from desugaring:
+                                    i.   direct call to a !D primitive
+                                    ii.  DJS simple call
+                                    iii. DJS method call
 
-      Ensure that the type argument is a tuple of types tTup.
-      Let tTup[i] denote the ith type component.
+      Case i:    tForm = [x1:T1, ..., xn:Tn]
 
- ** Step 1: Inferring location parameters for location formals lForms
+        The argument vAct must be a tuple with n values.
+
+      Case ii:   tForm = [arguments:Ref(Largs)]
+
+        The last location parameter is Largs. Look for Largs in the heap
+        formal, and it should be a tuple of types tTup. The last (and only
+        location) argument should be argsArray. Look for this location
+        in the heap and use its value as the vTup.
+ 
+      Case iii:  tForm = [this:Tthis, arguments:Targuments]
+
+        Just like the previous case, but add Tthis to the front of the
+        type tuple, and the this argument to the front of the value tuple.
+
+ ** Step 2: Inferring location parameters for location formals lForms
 
       Process lForms in increasing order.
 
@@ -475,7 +491,7 @@ let inferHeapParam cap curHeap hActs hForm e11 =
       must appear in lForms before L2. This is how all the primitives
       are written anyway, since it's intuitive.
 
- ** Step 2: Inferring type parameters for type formals tForms
+ ** Step 3: Inferring type parameters for type formals tForms
 
       For each Ai:
 
@@ -494,32 +510,32 @@ let isIntOfString s =
   try Some (int_of_string s) with Failure _ -> None
 
 (* try to match v as a tuple dictionary, that is, a dictionary with
-   fields "0" through "n" in order without any duplicates *)
+   fields "0" through "n" in order without any duplicates. *)
 let isValueTuple v =
   let rec foo acc n = function
-    | VEmpty -> Some acc
+    | VEmpty -> Some acc (* no need to rev, since outermost starts with "n" *)
     | VExtend(v1,VBase(Str(sn)),v3) ->
         (match isIntOfString sn with
-           | Some(n') when n = n' -> foo ((n,v3)::acc) (n-1) v1
+           | Some(n') when n = n' -> foo (v3::acc) (n-1) v1
            | None -> None)
     | _ -> None
   in
   match v with
     | VExtend(_,VBase(Str(sn)),_) ->
         (match isIntOfString sn with Some(n) -> foo [] n v | None -> None)
+    | VEmpty -> Some []
     | _ -> None
 
 let findActualFromRefValue g lVar tTup vTup =
   let rec foo i = function
     | THasTyp(URef(LocVar(lVar'))) :: ts when lVar = lVar' ->
-        if List.mem_assoc i vTup then
-          let vi = List.assoc i vTup in
+        if i >= List.length vTup then None
+        else
+          let vi = List.nth vTup i in
           begin match refTermsOf g (ty (PEq (theV, WVal vi))) with
             | [URef(lAct)] -> Some lAct
             | _            -> None
           end
-        else
-          foo (i+1) ts
     | _ -> None
   in
   foo 0 tTup
@@ -565,51 +581,109 @@ let findArrayActual g tVar locSubst hForm hAct =
   in
   foo (snd hForm)
 
-let inferTypLocParams g tForms lForms tForm hForm vAct hAct =
- 
-  (* Step 0 *)
-  match isValueTuple vAct, tForm with
-    | Some(vTup), TTuple(tTup) -> begin
+let steps2and3 g tForms lForms vFormTup hForm vActTup hAct =
 
-        (* Step 1 *)
-        let locSubst =
-          List.fold_left (fun subst lVar ->
-            let maybeActual = 
-              match findActualFromRefValue g lVar (List.map snd tTup) vTup with
-                | None       -> findActualFromProtoLink subst lVar hForm hAct
-                | Some(lact) -> Some lact in
-            ((lVar,maybeActual)::subst)
-          ) [] lForms in
+  (* Step 2 *)
+  let locSubst =
+    List.fold_left (fun subst lVar ->
+      let maybeActual = 
+        match findActualFromRefValue g lVar (List.map snd vFormTup) vActTup with
+          | None       -> findActualFromProtoLink subst lVar hForm hAct
+          | Some(lact) -> Some lact in
+      ((lVar,maybeActual)::subst)
+    ) [] lForms in
 
-        let lActsOpt =
-          List.fold_left (fun acc (_,lActOpt) ->
-            match acc, lActOpt with
-              | Some(l), Some(lAct) -> Some (lAct::l)
-              | _                   -> None
-          ) (Some []) locSubst in
+  let lActsOpt =
+    List.fold_left (fun acc (_,lActOpt) ->
+      match acc, lActOpt with
+        | Some(l), Some(lAct) -> Some (lAct::l)
+        | _                   -> None
+    ) (Some []) locSubst in
 
-        begin match lActsOpt with
-          | None -> ()
-          | Some(lActs) ->
-              pr "local inference inferred all loc acts: [%s]\n" (strLocs lActs)
-        end;
+  begin match lActsOpt with
+    | None -> ()
+    | Some(lActs) ->
+        pr "local inference inferred all loc acts: [%s]\n" (strLocs lActs)
+  end;
 
-        (* Step 2 *)
-        let tActsOpt =
-          match tForms with
-            | []     -> Some []
-            | [tVar] -> (match findArrayActual g tVar locSubst hForm hAct with
-                           | Some(tAct) -> Some [tAct]
-                           | None       -> None)
-            | _      -> None (* generalize the case for one to all tparams *) in
+  (* Step 3 *)
+  let tActsOpt =
+    match tForms with
+      | []     -> Some []
+      | [tVar] -> (match findArrayActual g tVar locSubst hForm hAct with
+                     | Some(tAct) -> Some [tAct]
+                     | None       -> None)
+      | _      -> None (* generalize the case for one to all tparams *) in
 
-        (* don't need to reverse lActs, since the two folds reversed it twice *)
-        match tActsOpt, lActsOpt with
-          | Some(l1), Some(l2) -> Some (l1, l2)
-          | _                  -> None
-      end
+  (* don't need to reverse lActs, since the two folds reversed it twice *)
+  match tActsOpt, lActsOpt with
+    | Some(l1), Some(l2) -> Some (l1, l2)
+    | _                  -> None
 
-    | _ -> None
+let inferTypLocParams g tForms lForms tForm hForm tActs lActs vAct hAct =
+  if List.length tActs <> 0 then None
+  else begin
+    match tForm with
+      | TTuple([("arguments",t)]) -> begin
+          match t, lActs with
+            | THasTyp(URef(lArgsForm)), [lArgsAct] ->
+                let (lForms,_) = Utils.longHeadShortTail lForms in
+                if not (List.mem_assoc lArgsForm (snd hForm)) then None
+                else if not (List.mem_assoc lArgsAct (snd hAct)) then None
+                else begin match List.assoc lArgsAct (snd hAct),
+                                 List.assoc lArgsForm (snd hForm) with
+                  | HConc(_,TRefinement("v",PEq(WVal(VVar"v"),WVal(v)))),
+                    HConc(_,TTuple(vFormTup)) -> begin
+                      match isValueTuple v with
+                        | None -> None
+                        | Some(vActTup) -> begin
+                            match steps2and3 g tForms lForms vFormTup hForm
+                                             vActTup hAct with
+                              | Some(ts,ls) -> Some (ts, ls @ [lArgsAct])
+                              | None        -> None
+                          end
+                    end
+                  | _ -> None
+                end
+            | _ -> None
+        end
+      (* copied from above case, and doing a bit extra to process the this
+         formal and actual *)
+      | TTuple([("this",tThis);("arguments",t)]) -> begin
+          match t, lActs with
+            | THasTyp(URef(lArgsForm)), [lArgsAct] ->
+                let (lForms,_) = Utils.longHeadShortTail lForms in
+                if not (List.mem_assoc lArgsForm (snd hForm)) then None
+                else if not (List.mem_assoc lArgsAct (snd hAct)) then None
+                else begin match List.assoc lArgsAct (snd hAct),
+                                 List.assoc lArgsForm (snd hForm),
+                                 isValueTuple vAct with
+                  | HConc(_,TRefinement("v",PEq(WVal(VVar"v"),WVal(v)))),
+                    HConc(_,TTuple(vFormTup)),
+                    Some([vThis;_]) -> begin
+                      match isValueTuple v with
+                        | None -> None
+                        | Some(vActTup) -> begin
+                            let vFormTup = ("this",tThis) :: vFormTup in
+                            let vActTup = vThis :: vActTup in
+                            match steps2and3 g tForms lForms vFormTup hForm
+                                             vActTup hAct with
+                              | Some(ts,ls) -> Some (ts, ls @ [lArgsAct])
+                              | None        -> None
+                          end
+                    end
+                  | _ -> None
+                end
+            | _ -> None
+        end
+      | TTuple(vFormTup) -> begin
+          match isValueTuple vAct with
+            | None -> None
+            | Some(vActTup) ->
+                steps2and3 g tForms lForms vFormTup hForm vActTup hAct
+        end
+      | _ -> None
+  end
 
 
 (***** Bidirectional type checking ********************************************)
@@ -696,7 +770,7 @@ and tsVal_ g h = function
       ty (pAnd (
         hastyp theV (UArray t)
         :: PPacked theV :: PEq (arrlen theV, wInt n)
-        :: (Utils.map_i (fun vi i -> PEq (sel theV (wInt i), WVal vi)) vs)))
+        :: Utils.map_i (fun vi i -> PEq (sel theV (wInt i), WVal vi)) vs))
     end
 
 
@@ -1148,29 +1222,11 @@ and tsELetAppTryBoxes cap g curHeap x (tActs,lActs,hActs) v1 v2 e boxes =
 
     let (tActs0,lActs0) = (tActs, lActs) in
 
-    (* try to infer type or location parameters by matching against the
-       formals for this arrow if
-         1. no type params are passed
-         2. either a) no loc params are passed
-                   b) an "argsArray" loc param is passed (from desugaring)
-                      and the last formal loc is "Largs" (from desugaring),
-                      in which case try to infer all _other_ loc params *)
     let ((tActs,lActs),sInf) =
-      let lFormsRev = List.rev lForms in
-      match tActs, lActs, tForms, lFormsRev with
-        | [], [LocConst lc], _, lv::rest when Utils.strPrefix lc "argsArray"
-                                           && Utils.strPrefix lv "Largs" ->
-            let lFormsToInfer = List.rev rest in
-            (match inferTypLocParams g tForms lFormsToInfer t11 e11 v2 curHeap with
-               | Some(ts,ls) -> ((ts,ls@[LocConst lc]), "from local inference")
-               | None        -> (([],[]), "and local inference failed"))
-        | [], [], _::_, _
-        | [], [], _, _::_ ->
-            (match inferTypLocParams g tForms lForms t11 e11 v2 curHeap with
-               | Some(ts,ls) -> ((ts,ls), "from local inference")
-               | None        -> (([],[]), "and local inference failed"))
-        | _ ->
-            ((tActs, lActs), "from source program") in
+      match inferTypLocParams g tForms lForms t11 e11
+                              tActs0 lActs0 v2 curHeap with
+        | Some(ts,ls) -> ((ts, ls), "with help from local inference")
+        | None        -> ((tActs0, lActs0), "without help from local inference") in
 
     (* TODO at some point, might want to rewrite the input program with
        inferred instantiations *)

@@ -100,6 +100,12 @@ let splitInMiddle l =
   foo [] 0 l
 
 
+let longHeadShortTail = function
+  | [] -> failwith "longHeadShortTail: need at least one element"
+  | l  -> let lRev = List.rev l in
+          (List.rev (List.tl lRev), List.hd lRev)
+
+
 let stringMultiply s n sep =
   if n <= 0 then ""
   else String.concat sep (List.map (fun _ -> s) (list0N (pred n)))

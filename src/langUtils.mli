@@ -63,6 +63,8 @@ val le : walue -> walue -> formula
 val gt : walue -> walue -> formula
 val ge : walue -> walue -> formula
 
+val eq : walue -> walue -> formula
+
 val vBool : bool -> value
 val vStr : string -> value
 val vInt : int -> value
@@ -92,6 +94,8 @@ val pImp : formula -> formula -> formula
 val pIff : formula -> formula -> formula
 val pNot : formula -> formula
 val pIte : formula -> formula -> formula -> formula
+val pTruthy : walue -> formula
+val pFalsy : walue -> formula
 
 val ty : formula -> typ
 val tyAny : typ
@@ -110,6 +114,7 @@ val tyNull : typ
 val tyRef : loc -> typ
 val pIsBang : walue -> typterm -> formula
 val tyIsBang : walue -> typterm -> typ
+val tyArrayTuple : typ -> typ list -> bool -> typ
 
 (***** Boxes ******************************************************************)
 
