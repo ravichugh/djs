@@ -29,6 +29,7 @@ rule token = parse
   | "DICT" | "Dict" { SUGAR_DICT }
   | "TOP"  | "Top"  { SUGAR_TOP }
   | "BOT"  | "Bot"  { SUGAR_BOT }
+  | "Num"           { SUGAR_NUM }
 
   | "INTORBOOL" | "IntOrBool" { SUGAR_INTORBOOL }
   | "INTORSTR"  | "IntOrStr"  { SUGAR_INTORSTR }
@@ -98,6 +99,7 @@ rule token = parse
   | "len"          { LEN }
   | "truthy"       { TRUTHY }
   | "falsy"        { FALSY }
+  | "integer"      { INTEGER }
   (* | "All"          { ALL } *)
   (* | "all"          { LOCALL } *)
   | "new"          { NEW }

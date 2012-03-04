@@ -70,6 +70,7 @@ let mapTyp ?fForm:(fForm=(fun x -> x))
     | TRefinement(x,p)   -> TRefinement (x, fooForm p)
     | TTop               -> TTop
     | TBot               -> TBot
+    | TInt               -> TInt
     | TBaseUnion(l)      -> TBaseUnion l
     | TBaseRefine(x,t,p) -> TBaseRefine (x, t, fooForm p)
     | THasTyp(u)         -> if onlyTopForm then THasTyp u
@@ -84,7 +85,6 @@ let mapTyp ?fForm:(fForm=(fun x -> x))
     | PApp(s,ws)         -> fForm (PApp (s, List.map fooWal ws))
     | PTru               -> fForm PTru
     | PFls               -> fForm PFls
-    | PPacked(w)         -> fForm (PPacked (fooWal w))
     | PUn(HasTyp(w,u))   -> let u = if onlyTopForm then u else fooTT u in
                             fForm (PUn (HasTyp (fooWal w, u)))
     | PHeapHas(h,l,w)    -> let h = if onlyTopForm then h else fooHeap h in
@@ -162,6 +162,7 @@ let foldTyp (fForm: 'a -> formula -> 'a)
     | TRefinement(_,p)   -> fooForm acc p
     | TTop               -> acc
     | TBot               -> acc
+    | TInt               -> acc
     | TBaseUnion _       -> acc
     | TBaseRefine(x,t,p) -> fooForm acc p
     | THasTyp(u)         -> fooTT acc u
@@ -177,8 +178,6 @@ let foldTyp (fForm: 'a -> formula -> 'a)
                             fForm acc (PApp (s, ws))
     | PTru               -> fForm acc PTru
     | PFls               -> fForm acc PFls
-    | PPacked(w)         -> let acc = fooWal acc w in
-                            fForm acc (PPacked w)
     | PUn(HasTyp(w,u))   -> let acc = fooWal acc w in
                             let acc = fooTT acc u in
                             fForm acc (PUn (HasTyp (w, u)))
@@ -251,6 +250,7 @@ let plus w1 w2    = WApp ("my_plus", [w1; w2])
 let minus w1 w2   = WApp ("my_minus", [w1; w2])
 
 let arrlen x      = WApp ("len", [x])
+let packed x      = PApp ("packed", [x])
 
 let lt w1 w2      = PApp ("my_lt", [w1; w2])
 let le w1 w2      = PApp ("my_le", [w1; w2])
@@ -258,6 +258,8 @@ let gt w1 w2      = PApp ("my_gt", [w1; w2])
 let ge w1 w2      = PApp ("my_ge", [w1; w2])
 
 let eq w1 w2      = PEq (w1, w2)
+
+let integer w     = PApp ("integer", [w])
 
 let vBool x       = VBase (Bool x)
 let vStr x        = VBase (Str x)
@@ -285,7 +287,8 @@ let wNull         = WVal vNull
 let wUndef        = WVal vUndef
 let wProj i       = wStr (string_of_int i)
 
-let pInt          = PEq (tag theV, wStr tagInt)
+let pNum          = PEq (tag theV, wStr tagNum)
+(* let pInt          = PEq (tag theV, wStr tagInt) *)
 let pBool         = PEq (tag theV, wStr tagBool)
 let pStr          = PEq (tag theV, wStr tagStr)
 let pDict         = PEq (tag theV, wStr tagDict)
@@ -315,7 +318,7 @@ let pTruthy x     = pNot (pFalsy x)
 let ty p          = TRefinement ("v", p)
 let tyAny         = TTop (* ty PTru *)
 let tyFls         = TBot (* ty PFls *)
-let tyInt         = ty pInt
+let tyNum         = ty pNum
 let tyBool        = ty pBool
 let tyStr         = ty pStr
 let tyDict        = ty pDict
@@ -327,8 +330,10 @@ let tyIntOrBool   = ty (pOr [pInt; pBool])
 let tyIntOrStr    = ty (pOr [pInt; pStr])
 let tyStrOrBool   = ty (pOr [pStr; pBool])
 *)
+(*
 let tyIntOrBool   = TBaseUnion [tagInt; tagBool]
 let tyIntOrStr    = TBaseUnion [tagInt; tagStr] 
+*)
 let tyStrOrBool   = TBaseUnion [tagStr; tagBool] 
 
 let tyArr x t t'  = ty (hastyp theV (UArr(([],[],[]),x,t,([],[]),t',([],[]))))
@@ -349,8 +354,10 @@ let oc_boxes = open_out (Settings.out_dir ^ "boxes.txt")
 
 (***** Strings *****)
 
+(*
 let isTag s =
   List.exists ((=) s) [tagInt; tagStr; tagBool; tagDict; tagFun]
+*)
 
 (*
 (* TODO quick, but somewhat dangerous, way to set up tags for JavaScript
@@ -379,7 +386,7 @@ let getStringId s = (* assigning ids on demand *)
 
 let _ = (* the ids for these strings need to match theory.lisp *)
   assert (1 = getStringId tagDict);
-  assert (2 = getStringId tagInt);
+  assert (2 = getStringId tagNum);
   assert (3 = getStringId tagBool);
   assert (4 = getStringId tagStr);
   assert (5 = getStringId tagFun);
@@ -400,6 +407,11 @@ let isNewBox x = not (Id.mem idTypTerms x)
 let isNewHeapBox x = not (Id.mem idHeapTerms x)
 let isNewLocBox x = not (Id.mem idLocTerms x)
 let isNewLamBox x = not (Id.mem idLamTerms x)
+
+
+(***** Skolems for floats *****)
+
+let idSkolems = Id.create ()
 
 
 (***** Lambdas *****)
@@ -441,6 +453,12 @@ let strLoc = function
   | LocConst(x) -> x
 
 let strLocs l = String.concat "," (List.map strLoc l)
+
+let strTag = function
+  | "number"  -> "Num"
+  | "string"  -> "Str"
+  | "boolean" -> "Bool"
+  | t         -> t
 
 let strBaseValue v =
   match v, !prettyConst with
@@ -540,9 +558,10 @@ and strTyp = function
   | TRefinement(x,p)     -> spr "{%s|%s}" x (strForm p)
   | TTop                 -> "Top"
   | TBot                 -> "Bot"
-  | TBaseUnion(l)        -> String.concat "Or" l
-  | TBaseRefine("v",t,p) -> spr "{%s|%s}" t (strForm p)
-  | TBaseRefine(x,t,p)   -> spr "{%s:%s|%s}" x t (strForm p)
+  | TInt                 -> "Int"
+  | TBaseUnion(l)        -> String.concat "Or" (List.map strTag l)
+  | TBaseRefine("v",t,p) -> spr "{%s|%s}" (strTag t) (strForm p)
+  | TBaseRefine(x,t,p)   -> spr "{%s:%s|%s}" x (strTag t) (strForm p)
   | THasTyp(u)           -> strTT u
   | TNonNull(t)          -> spr "%s" (strTyp t)
   | TMaybeNull(t)        -> spr "%s" (strTyp t)
@@ -627,7 +646,6 @@ and strForm = function
   | PConn("or",[])  -> spr "(false)"
   | PConn(s,l)      -> strFormExpanded s l
   | PAll(x,p)       -> spr "(forall ((%s DVal)) %s)" x (strForm p)
-  | PPacked(w)      -> spr "(packed %s)" (strWalue w)
   (* TODO make the call to registerBox somewhere more appropriate *)
   | PUn(HasTyp(w,u)) ->
       if !printFullUT
@@ -839,6 +857,7 @@ let rec freeVarsWal env = function
 and (* let rec *) freeVarsTyp env = function
   | TRefinement(x,p)   -> freeVarsForm (Quad.addV x env) p
   | TTop | TBot        -> Quad.empty
+  | TInt               -> Quad.empty
   | TBaseUnion _       -> Quad.empty
   | TBaseRefine(x,_,p) -> freeVarsForm (Quad.addV x env) p
   | THasTyp(u)         -> freeVarsTT env u
@@ -855,7 +874,6 @@ and freeVarsForm env = function
   | PApp(_,ws)       -> Quad.combineList (List.map (freeVarsWal env) ws)
   | PTru | PFls      -> Quad.empty
   | PUn(HasTyp(w,u)) -> Quad.combine (freeVarsWal env w) (freeVarsTT env u)
-  | PPacked(w)       -> freeVarsWal env w
   | PConn(_,ps)      -> Quad.combineList (List.map (freeVarsForm env) ps)
   | PHas(w,ws)       -> Quad.combineList (List.map (freeVarsWal env) (w::ws))
   | PDomEq(w,ws)     -> Quad.combineList (List.map (freeVarsWal env) (w::ws))
@@ -992,7 +1010,6 @@ and masterSubstForm subst = function
   | PTru        -> PTru
   | PFls        -> PFls
   | PConn(s,ps) -> PConn (s, List.map (masterSubstForm subst) ps)
-  | PPacked(w)  -> PPacked (masterSubstWal subst w)
   | PUn(HasTyp(w,UVar(x))) -> (* type variable instantiation *)
       let w = masterSubstWal subst w in
       let (_,sub,_,_) = subst in
@@ -1020,6 +1037,7 @@ and masterSubstForm subst = function
 and masterSubstTyp subst = function
   | TTop            -> TTop
   | TBot            -> TBot
+  | TInt            -> TInt
   | TBaseUnion(l)   -> TBaseUnion l
   | TNonNull(t)     -> TNonNull (masterSubstTyp subst t)
   | TMaybeNull(t)   -> TMaybeNull (masterSubstTyp subst t)
@@ -1104,6 +1122,7 @@ and applyTyp t w =
     | TRefinement(y,f) -> masterSubstForm ([(y,w)],[],[],[]) f
     | TTop             -> PTru
     | TBot             -> PFls
+    | TInt             -> pAnd [eq (tag w) (wStr tagNum); integer w]
     | THasTyp(u)       -> PUn (HasTyp (w, u))
     | TNonNull(t)      -> pAnd [applyTyp t w; pNot (PEq (w, wNull))]
     | TMaybeNull(t)    -> pOr [applyTyp t w; PEq (w, wNull)]
@@ -1453,6 +1472,6 @@ let tyArrayTuple t ts extensible =
   let p = if extensible then ge else eq in
   ty (pAnd (
     hastyp theV (UArray t)
-    :: PPacked theV :: p (arrlen theV) (wInt (List.length ts))
+    :: packed theV :: p (arrlen theV) (wInt (List.length ts))
     :: Utils.map_i (fun ti i -> applyTyp ti (sel theV (wInt i))) ts))
 

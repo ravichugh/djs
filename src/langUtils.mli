@@ -9,7 +9,7 @@ val pos0 : Lexing.position * Lexing.position
 
 val freshVar : vvar -> vvar
 val freshHVar : unit -> hvar
-val isTag : string -> bool
+(* val isTag : string -> bool *)
 
 val terminate : unit -> 'a
 val printBig : string -> string -> unit
@@ -65,6 +65,9 @@ val ge : walue -> walue -> formula
 
 val eq : walue -> walue -> formula
 
+val packed : walue -> formula
+val integer : walue -> formula
+
 val vBool : bool -> value
 val vStr : string -> value
 val vInt : int -> value
@@ -83,7 +86,7 @@ val eVar : vvar -> exp
 val eStr : string -> exp
 val mkApp : exp -> exp list -> exp
 
-val pInt : formula
+val pNum : formula
 val pBool : formula
 val pStr : formula
 val pDict : formula
@@ -100,13 +103,13 @@ val pFalsy : walue -> formula
 val ty : formula -> typ
 val tyAny : typ
 val tyFls : typ
-val tyInt : typ
+val tyNum : typ
 val tyBool : typ
 val tyStr : typ
 val tyDict : typ
 val tyEmpty : typ
-val tyIntOrBool : typ
-val tyIntOrStr : typ
+(* val tyIntOrBool : typ *)
+(* val tyIntOrStr : typ *)
 val tyStrOrBool : typ
 val tyArr : vvar -> typ -> typ -> typ
 val tyNull : typ
@@ -176,4 +179,8 @@ val expandPreTyp : typ -> typ
 val expandPreHeap : heap -> heap
 
 val embedForm : formula -> formula
+
+(******************************************************************************)
+
+val idSkolems : float Utils.IdTable.t
 

@@ -39,5 +39,5 @@ let le :: x:INT -> y:INT -> BOOL =
 
 (******************************************************************************)
 
-let end_of_pervasives :: INT = 0
+let end_of_pervasives :: Int = 0
 

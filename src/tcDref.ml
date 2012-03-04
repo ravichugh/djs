@@ -715,6 +715,8 @@ and tsVal_ g h = function
 
   | VBase(Null) -> tyNull
 
+  | VVar("__skolem__") -> tyNum
+
   | (VBase _ as v) | (VEmpty as v) -> ty (PEq (theV, WVal v))
 
   (* TODO any benefit to using upd instead of VExtend? *)
@@ -769,7 +771,7 @@ and tsVal_ g h = function
       let n = List.length vs in
       ty (pAnd (
         hastyp theV (UArray t)
-        :: PPacked theV :: PEq (arrlen theV, wInt n)
+        :: packed theV :: PEq (arrlen theV, wInt n)
         :: Utils.map_i (fun vi i -> PEq (sel theV (wInt i), WVal vi)) vs))
     end
 
@@ -1795,9 +1797,19 @@ and tcExp_ g h goal = function
 
 (***** Entry point ************************************************************)
 
+let addSkolems g =
+  let n = Utils.IdTable.size idSkolems in
+  let rec foo acc i =
+    if i > n then acc
+    else let sk = spr "_skolem_%d" i in
+         foo (snd (tcAddBinding ~printHeap:false acc ([],[]) sk tyNum)) (i+1)
+  in
+  foo g 1
+
 let typecheck e =
   let g = [] in
   let (_,g) = tcAddBinding ~printHeap:false g ([],[]) "v" tyAny in
+  let g = addSkolems g in
   let (_,g) = tcAddBinding ~printHeap:false g ([],[]) "dObjectProto" tyEmpty in
   (* TODO *)
 (*

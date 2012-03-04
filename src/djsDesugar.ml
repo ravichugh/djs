@@ -407,7 +407,7 @@ let convertConst = function
   | J.CBool(b)   -> EVal (VBase (Bool b))
   | J.CNull      -> EVal (VBase Null)
   | J.CUndefined -> EVal (VBase Undef)
-  | J.CNum _     -> failwith "convert CNum"
+  | J.CNum(f)    -> eVar (spr "_skolem_%d" (Utils.IdTable.process idSkolems f))
   | J.CRegexp _  -> failwith "convert CRegexp"
 
 let eLambda xs e =

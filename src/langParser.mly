@@ -114,12 +114,12 @@ let sameCell l =
   TYPE NULL NULLBOX NEW (* LIST *) BANG QMARK
   (* TODO get rid of the sugar tokens *)
   SUGAR_INT SUGAR_BOOL SUGAR_TOP SUGAR_DICT SUGAR_BOT
-  SUGAR_INTORBOOL SUGAR_STR SUGAR_INTORSTR SUGAR_STRORBOOL
+  SUGAR_INTORBOOL SUGAR_STR SUGAR_INTORSTR SUGAR_STRORBOOL SUGAR_NUM
   SUGAR_EXTEND SUGAR_FLD
   PLUS MINUS MUL DIV LT LE GE (* NE EQEQ AMPAMP PIPEPIPE *) PLUSPLUS
   ASSGN (* LOCALL *) NEWREF REFTYPE (* AT *) MAPSTO SAME HEAP
   (* FOLD UNFOLD *) FREEZE
-  ARRTYPE PACKED LEN TRUTHY FALSY
+  ARRTYPE PACKED LEN TRUTHY FALSY INTEGER
   BREAK THROW TRY CATCH FINALLY
   UNDEF
   UNDERSCORE TCOLON ELLIPSIS
@@ -270,8 +270,11 @@ typ :
  | SUGAR_TOP                              { tyAny }
  | SUGAR_BOT                              { tyFls }
  | b=basetag                              { TBaseUnion([b]) }
+ | SUGAR_INT                              { TInt }
+(*
  | SUGAR_INTORBOOL                        { tyIntOrBool }
  | SUGAR_INTORSTR                         { tyIntOrStr }
+*)
  | SUGAR_STRORBOOL                        { tyStrOrBool }
 
 (* bang and qmark introduce conflicts... 
@@ -287,6 +290,8 @@ typ :
 
  | LBRACE b=basetag PIPE p=formula RBRACE             { TBaseRefine("v",b,p) }
  | LBRACE x=VAR COLON b=basetag PIPE p=formula RBRACE { TBaseRefine(x,b,p) }
+ | LBRACE SUGAR_INT PIPE p=formula RBRACE
+     { TBaseRefine ("v", tagNum, pAnd [integer theV; p]) }
 
  (***** syntactic macros *****)
 
@@ -295,7 +300,8 @@ typ :
 
  
 basetag :
- | SUGAR_INT   { tagInt }
+ (* | SUGAR_INT   { tagInt } *)
+ | SUGAR_NUM   { tagNum }
  | SUGAR_BOOL  { tagBool }
  | SUGAR_STR   { tagStr }
  | SUGAR_DICT  { tagDict }
@@ -452,7 +458,8 @@ formula :
  | HEAPHAS LPAREN h=heap COMMA l=loc COMMA k=walue RPAREN { PHeapHas(h,l,k) }
 *)
  | LPAREN HEAPHAS h=heap l=loc k=walue RPAREN   { PHeapHas(h,l,k) }
- | LPAREN PACKED w=walue RPAREN                 { PPacked(w) }
+ | LPAREN PACKED w=walue RPAREN                 { packed w }
+ | LPAREN INTEGER w=walue RPAREN                { integer w }
  (***** logical connectives *****)
  | b=BOOL                                       { if b then PTru else PFls }
  | LPAREN OR ps=formulas RPAREN                 { pOr ps }

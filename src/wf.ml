@@ -83,7 +83,7 @@ let envToStrings g =
 let rec checkType errList g h t =
   let errList = errList @ [spr "Wf.checkType: %s" (prettyStrTyp t)] in
   match t with
-    | TTop | TBot | TBaseUnion _ -> ()
+    | TTop | TBot | TInt | TBaseUnion _ -> ()
     | THasTyp(u) -> checkTypeTerm errList g h u
     | TNonNull(t) | TMaybeNull(t) -> checkType errList g h t
     | TRefinement(x,p) | TBaseRefine(x,_,p) ->
@@ -104,7 +104,6 @@ and checkFormula errList g h p =
     | PHas(w,ws)
     | PDomEq(w,ws)        -> List.iter (checkWalue errList g h) (w::ws)
     | PEqMod(w1,w2,ws)    -> List.iter (checkWalue errList g h) (w1::w2::ws)
-    | PPacked(w)          -> checkWalue errList g h w
     | PUn(HasTyp(w,u))    -> (checkWalue errList g h w;
                               checkTypeTerm errList g h u)
     | PHeapHas(h',l,w)    -> (checkHeap errList g h'; (* h not used *)

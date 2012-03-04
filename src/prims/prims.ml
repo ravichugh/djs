@@ -21,7 +21,8 @@ val del :: d:Dict -> k:Str -> {(= v (upd d k bot))}
 val js_plus :: x:{(or (= (tag v) "number") (= (tag v) "string"))}
             -> y:{(= (tag v) (tag x))}
             -> {(and (= (tag v) (tag x))
-                     (implies (= (tag x) "number") (= v (+ x y))))}
+                     (implies (and (= (tag x) "number") (integer x) (integer y))
+                              (and (= v (+ x y)) (integer v))))}
 
 val js_uminus :: x:Int -> Int
 
@@ -32,10 +33,15 @@ val js_and :: x:Top -> y:Top -> {(ite (truthy x) (= v y) (= v x))}
 val js_not :: x:Top -> {Bool|(iff (= v true) (falsy x))}
 
 val js_eek :: (* == *)
-  x:Top -> y:Top -> {Bool|(implies (= (tag x) (tag y)) (= x y))}
+  x:Top -> y:Top -> {Bool|(implies (= (tag x) (tag y))
+                                   (iff (= v true) (= x y)))}
 
 val js_threek :: (* === *)
   x:Top -> y:{(= (tag v) (tag x))} -> {Bool|(iff (= v true) (= x y))}
+
+(* TODO for eek and threek, might need to special case numbers and only
+   have equality for integers. might need to special case reference
+   values also. *)
 
 val js_lt :: x:Int -> y:Int -> {Bool|(iff (= v true) (< x y))}
 val js_le :: x:Int -> y:Int -> {Bool|(iff (= v true) (<= x y))}

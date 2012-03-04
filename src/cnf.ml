@@ -50,7 +50,7 @@ let rec toCnfLists f =
   match f with
     | PTru | PFls | PEq _ | PApp _
     | PUn _ | PHeapHas _
-    | PHas _ | PDomEq _ | PEqMod _ | PObjHas _ | PPacked _ -> [[f]]
+    | PHas _ | PDomEq _ | PEqMod _ | PObjHas _ -> [[f]]
     | PConn("not",_) -> [[f]]
     | PConn("and",l) -> List.concat (List.map toCnfLists l)
     | PConn("or",l)  -> let l' = List.map toCnfLists l in
@@ -63,7 +63,6 @@ let checkCnfLists l =
   let rec isAtomic = function
     | PTru | PFls | PEq _ | PApp _         -> true
     | PUn _ | PHas _ | PDomEq _ | PEqMod _ -> true
-    | PPacked _                            -> true
     | PHeapHas _ | PObjHas _               -> true
     | PConn("and",_) | PConn("or",_)       -> false
     | PConn("implies",_) | PConn("iff",_)  -> false

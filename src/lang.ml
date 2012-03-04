@@ -27,7 +27,7 @@ let bigindent () = String.make (4 * !depth) ' '
 type tag = string
 
 let tagDict  = "Dict"      (* for internal functional dictionaries *)
-let tagInt   = "number" (* TODO rename to tagNum *)
+let tagNum   = "number"
 let tagBool  = "boolean"
 let tagStr   = "string"
 let tagObj   = "object"
@@ -114,13 +114,13 @@ and wobjsel = walue list * walue * heap * loc
 and formula =
   (***** simple predicates *****)
   | PEq of walue * walue
-  | PApp of string * walue list
   | PTru
   | PFls
   (***** uninterpreted predicates *****)
   | PUn of unpred
   | PHeapHas of heap * loc * walue
-  | PPacked of walue
+  (***** simple/uninterpreted predicates *****)
+  | PApp of string * walue list
   (***** logical connectives *****)
   | PConn of string * formula list
   (***** quantifiers for dictionary expanding macros *****)
@@ -143,6 +143,7 @@ and typ =
   | TTop | TBot
   | TBaseUnion of tag list
   | TBaseRefine of vvar * tag * formula
+  | TInt
   | THasTyp of typterm
   (* | TArrows of uarr list *)
   | TTuple of (vvar * typ) list

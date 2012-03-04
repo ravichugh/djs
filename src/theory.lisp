@@ -46,6 +46,7 @@
 (declare-fun heapsel (HeapId LocId DVal) DVal)
 (declare-preds ((packed DVal)))
 (declare-fun len (DVal) DVal)
+(declare-preds ((integer DVal)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -94,6 +95,7 @@
 ;;;;;
 
 (assert (forall (i Int) (= (tag (VInt i)) TagInt)))
+(assert (forall (i Int) (integer (VInt i))))
 
 ; TODO 9/24 added wrappers around arithmetic operators
 ; TODO once these symbols aren't even mentioned when not using integer

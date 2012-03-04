@@ -381,6 +381,7 @@ and coerce = function
   | EDict([]) -> EVal (VEmpty)
   | EDict _ -> failwith "Anf.coerce EDict: should have become calls to set"
   | EFun(l,x,t,e) -> EVal (VFun (l, x, t, coerce e))
+  | EArray(t,es) -> EVal (VArray (t, List.map coerceVal es))
   | EIf(e1,e2,e3) -> EIf (coerceEVal "if" e1, coerce e2, coerce e3)
   | EApp(l,e1,e2) -> EApp (l, coerceEVal "app1" e1, coerceEVal "app2" e2)
   | ELet(x,ao,e1,e2) -> ELet (x, ao, coerce e1, coerce e2)
@@ -398,4 +399,6 @@ and coerce = function
   | ETryFinally(e1,e2) -> ETryFinally (coerce e1, coerce e2)
   | ENewObj(e1,l1,e2,l2) ->
       ENewObj (coerceEVal "NewObj" e1, l1, coerceEVal "NewObj" e2, l2)
+  | ELoadSrc(s,e) -> ELoadSrc (s, coerce e)
+  | ELoadedSrc(s,e) -> ELoadedSrc (s, coerce e)
 
