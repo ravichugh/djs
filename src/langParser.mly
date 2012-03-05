@@ -223,8 +223,8 @@ exp2 :
  | LPAREN e=exp RPAREN AS f=frame            { EAs("source program",e,f) }
  | LBRACE RBRACE                             { EDict([]) }
  | LBRACE fieldexps RBRACE                   { EDict($2) }
- | LT GT                                     { EArray(tyAny,[]) }
- | LT es=exps GT                             { EArray(tyAny,es) }
+ | LT GT                                     { EArray(tyNotUndef,[]) }
+ | LT es=exps GT                             { EArray(tyNotUndef,es) }
  | LT GT AS u=typ_term           { match u with
                                      | UArray(t) -> EArray(t,[])
                                      | _ -> printParseErr "bad array ann" }
@@ -296,7 +296,7 @@ typ :
  (***** syntactic macros *****)
 
  (* TODO might want to add array tuple to abstract syntax *)
- | LT x=array_tuple_typs GT  { let (ts,b) = x in tyArrayTuple tyAny ts b }
+ | LT x=array_tuple_typs GT  { let (ts,b) = x in tyArrayTuple tyNotUndef ts b }
 
  
 basetag :
@@ -579,9 +579,10 @@ pats_ :
  | pat COMMA pats_           { $1 :: $3 }
 
 heapcell :
- | l=loc MAPSTO x=VAR COLON t=typ               { (l,HConc(x,t)) }
- | l=loc MAPSTO
-   LPAREN x=VAR COLON t=typ COMMA l2=loc RPAREN { (l,HConcObj(x,t,l2)) }
+ | l=loc MAPSTO x=varopt COLON t=typ { (l,HConc(x,t)) }
+ | l=loc MAPSTO LPAREN x=varopt COLON t=typ COMMA l2=loc RPAREN
+     { (l,HConcObj(x,t,l2)) }
+ (* TODO add same token sugar back in here *)
 
 rheapcell :
  | heapcell           { $1 }
@@ -690,13 +691,14 @@ jsPolyArgs : l=poly_actuals EOF { l }
 jsFail : FAIL s=STR EOF { s } 
 
 jsWhile :
- | f=frame EOF           { f }
- | t=typ EOF             { ParseUtils.typToFrame t }
- | h1=heap ARROW h2=heap { match h1, h2 with
-                             | ([],cs1), ([],cs2) ->
-                                 let h = freshHVar () in
-                                 ([h], ([h],cs1), (tyAny,([h],cs2)))
-                             | _ -> printParseErr "bad jsWhile format" }
+ | f=frame EOF  { f }
+ | t=typ EOF    { ParseUtils.typToFrame t }
+ | h1=dheap ARROW h2=rheap
+     { match h1, h2 with
+         | ([],cs1), ([],cs2) ->
+             let h = freshHVar () in
+             ([h], ([h],cs1), (tyAny,([h],cs2)))
+         | _ -> printParseErr "bad jsWhile format" }
 
 jsLoc : l=loc EOF { l }
 
@@ -712,7 +714,8 @@ jsCtor: NEW u=arrow_typ EOF { match u with
 jsNew : x=poly_actuals y=loc EOF  { (x,y) }
 
 jsArrLit :
- | l=loc EOF                           { (l, tyAny) }
- | l=loc ARRTYPE LPAREN t=typ RPAREN   { (l, t) }
+ | l=loc EOF                             { (l, tyNotUndef) }
+ | l=loc ARRTYPE LPAREN t=typ RPAREN EOF { (l, t) }
+ | ARRTYPE LPAREN t=typ RPAREN EOF       { (LocConst (freshVar "arrLit"), t) }
 
 %%

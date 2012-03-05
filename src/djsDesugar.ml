@@ -515,18 +515,18 @@ let rec ds env = function
 
   | E.HintExpr (_, h, E.ArrayExpr (_, es)) when !Settings.fullObjects ->
       let (l,t) = parseArrLit h in
-      ENewObj (mkEArray t env es, l, EDeref eArrayPro, lArrayPro)
+      ENewObj (mkEArray (Some t) env es, l, EDeref eArrayPro, lArrayPro)
 
   | E.ArrayExpr (_, es) when !Settings.fullObjects ->
-      ENewObj (mkEArray tyAny env es, LocConst (freshVar "arrLit"),
+      ENewObj (mkEArray None env es, LocConst (freshVar "arrLit"),
                EDeref eArrayPro, lArrayPro)
 
   | E.HintExpr (_, h, E.ArrayExpr (_, es)) ->
       let (l,t) = parseArrLit h in
-      ENewref (l, mkEArray t env es)
+      ENewref (l, mkEArray (Some t) env es)
 
   | E.ArrayExpr (_, es) ->
-      ENewref (LocConst (freshVar "arrLit"), mkEArray tyAny env es)
+      ENewref (LocConst (freshVar "arrLit"), mkEArray None env es)
 
   | E.ThisExpr p -> 
       (* In JavaScript, 'this' is a reserved word.  Hence, we are certain that
@@ -952,7 +952,8 @@ let rec ds env = function
 and mkEDict env fields =
   EDict (List.map (fun (_, x, e) -> (eStr x, ds env e)) fields)
 
-and mkEArray t env es =
+and mkEArray topt env es =
+  let t = match topt with Some(t) -> t | None -> tyNotUndef in
   EArray (t, List.map (ds env) es)
 
 and dsMethCall env ts ls obj prop args =

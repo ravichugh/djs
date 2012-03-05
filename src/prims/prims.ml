@@ -24,6 +24,10 @@ val js_plus :: x:{(or (= (tag v) "number") (= (tag v) "string"))}
                      (implies (and (= (tag x) "number") (integer x) (integer y))
                               (and (= v (+ x y)) (integer v))))}
 
+val js_minus ::
+  x:Num -> y:Num -> {Num|(implies (and (integer x) (integer y))
+                                  (and (= v (- x y)) (integer v)))}
+
 val js_uminus :: x:Int -> Int
 
 val js_or :: x:Top -> y:Top -> {(ite (falsy x) (= v y) (= v x))}

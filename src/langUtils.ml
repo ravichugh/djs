@@ -340,6 +340,8 @@ let tyArr x t t'  = ty (hastyp theV (UArr(([],[],[]),x,t,([],[]),t',([],[]))))
 let tyNull        = ty (pAnd [PEq (theV, wNull); hastyp theV UNull])
 let tyRef l       = ty (hastyp theV (URef l))
 
+let tyNotUndef    = ty (pNot (eq theV (WVal vUndef)))
+
 (*
 let tyArrImp l x t h t' h'  = ty (PIs (theV, UArr(l,x,t,h,t',h')))
 *)

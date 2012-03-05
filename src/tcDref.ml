@@ -732,8 +732,6 @@ and tsVal_ g h = function
         let _ = List.find (function Var(y,_) -> x = y | _ -> false) g in
         ty (PEq (theV, wVar x))
       with Not_found ->
-        let _ = List.iter (function Var(y,_) -> pr " found %s\n" y | _ -> ()) (List.rev g) in
-        let _ = kill x in
         err [spr "ts: var not found: [%s]" x]
     end
 

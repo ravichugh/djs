@@ -1,5 +1,5 @@
 
-var a = /*: lA */ [0,"hi",true];
+var a = /*: lA Arr(Top) */ [0,"hi",true];
 
 /*: {(= v 0)} */ (/*: [Top;lA,lArrayProto;] */ a[0]);
 
