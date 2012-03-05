@@ -783,12 +783,11 @@ let rec ds env = function
   | E.HintExpr (_, s, E.LabelledExpr (_, bl, E.WhileExpr (_, test, e2)))
       when isBreakLabel bl ->
     begin
-      let frame = parseWhile s in
       match e2 with
         | E.LabelledExpr(_,cl,body) when isContLabel cl ->
-            dsWhile env bl cl test body frame
+            dsWhile env bl cl test body (parseWhile s)
         | E.SeqExpr(_,E.LabelledExpr(_,cl,body),incr) when isContLabel cl ->
-            dsFor env bl cl test body incr frame
+            dsFor env bl cl test body incr (parseWhile s)
         | _ ->
             printParseErr "desugar EJS while fail"
     end
@@ -796,47 +795,21 @@ let rec ds env = function
   | E.HintExpr (_, s, E.LabelledExpr (_, bl, E.DoWhileExpr (_, e1, test)))
       when isBreakLabel bl ->
     begin
-      let (h1,t2,h2) = parseWhile s in
       match e1 with
-        | E.LabelledExpr(_,cl,body) when isBreakLabel cl ->
-            dsDoWhile env bl cl test body (h1,t2,h2)
+        | E.LabelledExpr(_,cl,body) when isContLabel cl ->
+            dsDoWhile env bl cl test body (parseWhile s)
         | _ ->
             printParseErr "desugar annotated do/while fail"
     end
 
   | E.LabelledExpr (_, bl, E.WhileExpr (_, test, e2)) when isBreakLabel bl ->
     begin
-      failwith "djsDesugar 11/27: loop"
-(*
-      match e2 with
-        | E.LabelledExpr (_, cl, body) when isContLabel cl ->
-            dsWhile env bl cl test body ([],tyAny,[])
-        | E.SeqExpr (_, E.LabelledExpr (_, cl, body), incr) when isContLabel cl ->
-            dsFor env bl cl test body incr ([],tyAny,[])
-        | _ ->
-            printParseErr "EJS always wraps while body with continue"
-*)
+      failwith "djsDesugar: unannotated while or for"
     end
-
-(*
-  | E.LabelledExpr (_, "%break", E.WhileExpr (_, e1, e2)) ->
-      dsWhile true env e1 e2 ([],tyAny,[])
-
-  | E.HintExpr (_, s, E.LabelledExpr (_, "%break", E.DoWhileExpr (_, e1, e2))) ->
-      let (h1,t2,h2) = parseWhile s in
-      dsWhile false env e2 e1 (h1,t2,h2)
-*)
 
   | E.LabelledExpr (_, bl, E.DoWhileExpr (_, e1, test)) when isBreakLabel bl ->
     begin
-      failwith "djsDesugar 11/27: loop 2"
-(*
-      match e1 with
-        | E.LabelledExpr(_,cl,body) when isContLabel cl ->
-            dsDoWhile env bl cl test body ([],tyAny,[])
-        | _ ->
-            printParseErr "desugar unannotated do/while fail"
-*)
+      failwith "djsDesugar: unannotated dowhile"
     end
 
   | E.WhileExpr _
@@ -940,17 +913,6 @@ let rec ds env = function
       if !Settings.fullObjects
       then printParseErr "new must have annotations"
       else printParseErr "new not allowed in djsLite mode"
-
-(*
-  | NewExpr (p, constr, args) -> (* TODO: FIX THIS AND APP *)
-      ELet (p, "%constr", ds_expr env constr,
-            EApp (p, EId (p, "%constr"),
-                  [ EObject (p, [ (p, "__proto__", 
-                                   EOp2 (p, UnsafeGetField,
-                                         EOp1 (p, Deref, EId (p, "%constr")),
-                                         EConst (p, JavaScript_syntax.CString "prototype"))) ]);
-                    mk_array (p, map (ds_expr env) args) ]))
-*)
 
   (* rkc: LamJS desugaring normally writes to a non-existent reference *)
   (* | FuncStmtExpr (p, f, args, body) -> *)
@@ -1080,51 +1042,47 @@ and dsWhile env breakL continueL test body frame =
   else fixloop
 
 (* rkc: based on LamJS E.DoWhileExpr case *)
-and dsDoWhile env breakL continueL test body (h1,t2,h2) =
-  failwith "dsDoWhile"
-(*
+and dsDoWhile env breakL continueL test body frame =
+  let (hs,e1,(t2,e2)) = frame in
   let f = freshVar "dowhile" in
   let loop () = mkApp (eVar f) [EVal vUndef] in
-  let u = ([], freshVar "dummy", tyAny, h1, t2, h2) in
+  let u = (([],[],hs), freshVar "dummy", tyAny, e1, t2, e2) in
   let body =
     if StrSet.mem continueL !jumpedTo
-    then let _ = printParseErr "dsDoWhile continue" in
-         ELabel (continueL, Some (AFrame (h1, (STyp tyAny, h1))), ds env body)
+    then printParseErr "dsDoWhile continue"
+         (* ELabel (continueL, Some (AFrame (h1, (STyp tyAny, h1))), ds env body) *)
     else ds env body in
   let fixloop =
-    ParseUtils.mkLetRecMono f u
-      (eSeq body (EIf (ds env test, loop (), EVal vUndef)))
+    ParseUtils.mkLetRec f u
+      (eSeq [body; EIf (ds env test, loop (), EVal vUndef)])
       (loop ()) in
   if StrSet.mem breakL !jumpedTo
-  then ELabel (breakL, Some (AFrame (h1, (STyp t2, h2))), fixloop)
+  then ELabel (breakL, Some frame, fixloop)
   else fixloop
-*)
 
 (* rkc: based on EJS case for J.ForStmt
      note that by this time, the init statement has been de-coupled from
      the rest of the for statement. see notes on desugaring.
 *)
-and dsFor env breakL continueL test body incr (h1,t2,h2) =
-  failwith "dsFor"
-(*
+and dsFor env breakL continueL test body incr frame =
+  let (hs,e1,(t2,e2)) = frame in
   let f = freshVar "forwhile" in
   let loop () = mkApp (eVar f) [EVal vUndef] in
-  let u = ([], freshVar "dummy", tyAny, h1, t2, h2) in
+  let u = (([],[],hs), freshVar "dummy", tyAny, e1, t2, e2) in
   let body =
     if StrSet.mem continueL !jumpedTo
-    then let _ = failwith "dsFor continue" in
-         ELabel (continueL, Some (AFrame (h1, (STyp tyAny, h1))), ds env body)
+    then failwith "dsFor continue"
+         (* ELabel (continueL, Some (AFrame (h1, (STyp tyAny, h1))), ds env body) *)
     else ds env body in
   let fixloop =
-    ParseUtils.mkLetRecMono f u
+    ParseUtils.mkLetRec f u
       (EIf (ds env test,
-            eSeq (eSeq body (ds env incr)) (loop ()),
+            eSeq [body; ds env incr; loop ()],
             EVal vUndef))
       (loop ()) in
   if StrSet.mem breakL !jumpedTo
-  then ELabel (breakL, Some (AFrame (h1, (STyp t2, h2))), fixloop)
+  then ELabel (breakL, Some frame, fixloop)
   else fixloop
-*)
 
 (* rkc: creates a traditional lexically-scoped let-binding to a reference *)
 and dsVarDecl env x lo e e2 =
