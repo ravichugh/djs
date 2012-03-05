@@ -134,7 +134,7 @@ let sameCell l =
 %type <Lang.typs * Lang.locs * Lang.heaps> jsPolyArgs
 %type <Lang.loc> jsLoc
 %type <Lang.loc * Lang.loc option> jsObjLocs
-%type <Lang.heap * Lang.typ * Lang.heap> jsWhile
+%type <Lang.frame> jsWhile
 %type <Lang.uarr> jsCtor
 %type <(Lang.typs * Lang.locs * Lang.heaps) * Lang.loc> jsNew
 %type <Lang.loc * Lang.typ> jsArrLit
@@ -690,8 +690,13 @@ jsPolyArgs : l=poly_actuals EOF { l }
 jsFail : FAIL s=STR EOF { s } 
 
 jsWhile :
- | h1=heap ARROW h2=heap             { (h1,tyAny,h2) }
- | h1=heap ARROW t2=typ DIV h2=heap  { (h1,t2,h2) }
+ | f=frame EOF           { f }
+ | t=typ EOF             { ParseUtils.typToFrame t }
+ | h1=heap ARROW h2=heap { match h1, h2 with
+                             | ([],cs1), ([],cs2) ->
+                                 let h = freshHVar () in
+                                 ([h], ([h],cs1), (tyAny,([h],cs2)))
+                             | _ -> printParseErr "bad jsWhile format" }
 
 jsLoc : l=loc EOF { l }
 

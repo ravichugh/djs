@@ -732,6 +732,8 @@ and tsVal_ g h = function
         let _ = List.find (function Var(y,_) -> x = y | _ -> false) g in
         ty (PEq (theV, wVar x))
       with Not_found ->
+        let _ = List.iter (function Var(y,_) -> pr " found %s\n" y | _ -> ()) (List.rev g) in
+        let _ = kill x in
         err [spr "ts: var not found: [%s]" x]
     end
 
@@ -1693,7 +1695,7 @@ and tcExp_ g h goal = function
       tcExp g h (s1,h1) e1;
       Zzz.popScope ();
       let (n,g1) = tcAddBinding g h1 x s1 in
-      tcExp g h1 goal e2;
+      tcExp g1 h1 goal e2;
       tcRemoveBindingN n;
 (*
       let ruleName = "TC-Let" in

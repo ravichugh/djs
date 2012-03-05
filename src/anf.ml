@@ -242,7 +242,7 @@ and strExp k exp = match exp with
   | EApp((ts,ls,hs),EVal(w1),EVal(w2)) ->
       let s1 = strVal k w1 in
       let s2 = strVal k w2 in
-      let s0 = spr "[%s;%s;%s]"
+      let s0 = spr "[ %s; %s; %s ]" (* first space in particular to avoid [[ *)
                  (String.concat "," (List.map strTyp ts))
                  (strLocs ls)
                  (String.concat "," (List.map strHeap hs)) in

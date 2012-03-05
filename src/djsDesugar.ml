@@ -783,12 +783,12 @@ let rec ds env = function
   | E.HintExpr (_, s, E.LabelledExpr (_, bl, E.WhileExpr (_, test, e2)))
       when isBreakLabel bl ->
     begin
-      let (h1,t2,h2) = parseWhile s in
+      let frame = parseWhile s in
       match e2 with
         | E.LabelledExpr(_,cl,body) when isContLabel cl ->
-            dsWhile env bl cl test body (h1,t2,h2)
+            dsWhile env bl cl test body frame
         | E.SeqExpr(_,E.LabelledExpr(_,cl,body),incr) when isContLabel cl ->
-            dsFor env bl cl test body incr (h1,t2,h2)
+            dsFor env bl cl test body incr frame
         | _ ->
             printParseErr "desugar EJS while fail"
     end
@@ -1061,25 +1061,23 @@ and dsFunc isCtor env p args body =
     else eLambda ["arguments"] body
 
 (* rkc: based on LamJS E.WhileExpr case *)
-and dsWhile env breakL continueL test body (h1,t2,h2) =
-  printParseErr "dsWhile"
-(*
+and dsWhile env breakL continueL test body frame =
+  let (hs,e1,(t2,e2)) = frame in
   let f = freshVar "while" in
   let loop () = mkApp (eVar f) [EVal vUndef] in
-  let u = ([], freshVar "dummy", tyAny, h1, t2, h2) in
+  let u = (([],[],hs), freshVar "dummy", tyAny, e1, t2, e2) in
   let body =
     if StrSet.mem continueL !jumpedTo
-    then let _ = printParseErr "dsWhile continue" in
-         ELabel (continueL, Some (AFrame (h1, (STyp tyAny, h1))), ds env body)
+    then printParseErr "dsWhile continue"
+         (* ELabel (continueL, Some (AFrame (h1, (STyp tyAny, h1))), ds env body) *)
     else ds env body in
   let fixloop =
-    ParseUtils.mkLetRecMono f u
-      (EIf (ds env test, eSeq body (loop ()), EVal vUndef))
+    ParseUtils.mkLetRec f u
+      (EIf (ds env test, eSeq [body; loop ()], EVal vUndef))
       (loop ()) in
   if StrSet.mem breakL !jumpedTo
-  then ELabel (breakL, Some (AFrame (h1, (STyp t2, h2))), fixloop)
+  then ELabel (breakL, Some frame, fixloop)
   else fixloop
-*)
 
 (* rkc: based on LamJS E.DoWhileExpr case *)
 and dsDoWhile env breakL continueL test body (h1,t2,h2) =

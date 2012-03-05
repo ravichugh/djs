@@ -523,22 +523,22 @@ let rec strWalue = function
   | WBot -> "bot"
   | WHeapSel((h,[]),l,k) ->
       if !prettyConst then
-        spr "HeapSel(%s, %s, %s)" (strHeap (h,[])) (strLoc l) (strWalue k)
+        spr "(heapsel %s %s %s)" (strHeap (h,[])) (strLoc l) (strWalue k)
       else
         let ih = registerHeap (h,[]) in
         let il = registerLoc l in
         spr "(heapsel %d %d %s)" ih il (strWalue k)
   | WHeapSel((hs,cs),l,k) ->
       if !prettyConst then
-        spr "HeapSel(%s, %s, %s)" (strHeap (hs,cs)) (strLoc l) (strWalue k)
+        spr "(heapsel %s %s %s)" (strHeap (hs,cs)) (strLoc l) (strWalue k)
       else
         failwith "strWalue HeapSel: constraints not expanded"
   | WObjSel(ds,k,(h,[]),l) ->
-      spr "ObjSel(%s,%s,%s,%s)"
+      spr "(objsel %s %s %s %s)"
         (strWalueList ds) (strWalue k) (strHeap (h,[])) (strLoc l)
   | WObjSel(ds,k,h,l) ->
       if !prettyConst then
-        spr "ObjSel(%s,%s,%s,%s)"
+        spr "(objsel %s %s %s %s)"
           (strWalueList ds) (strWalue k) (strHeap h) (strLoc l)
       else
         let _ = setPretty true in
@@ -654,14 +654,14 @@ and strForm = function
         else spr "(= (hastyp %s %d) true)" (strWalue w) (registerBox u)
   | PHeapHas((h,[]),l,k) ->
       if !prettyConst then
-        spr "HeapHas(%s, %s, %s)" (strHeap (h,[])) (strLoc l) (strWalue k)
+        spr "(heaphas %s %s %s)" (strHeap (h,[])) (strLoc l) (strWalue k)
       else
         let ih = registerHeap (h,[]) in
         let il = registerLoc l in
         spr "(heaphas %d %d %s)" ih il (strWalue k)
   | PHeapHas(h,l,k) ->
       if !prettyConst then 
-        spr "HeapHas(%s, %s, %s)" (strHeap h) (strLoc l) (strWalue k)
+        spr "(heaphas %s %s %s)" (strHeap h) (strLoc l) (strWalue k)
       else
         let _ = setPretty true in
         printTcErr
@@ -686,7 +686,7 @@ and strForm = function
         (* else expandPEqMod w1 w2 ws *)
   | PObjHas(ds,k,h,l) ->
       if !printFullUT
-        then spr "ObjHas(%s,%s,%s,%s)"
+        then spr "(objhas %s %s %s %s)"
                (strWalueList ds) (strWalue k) (strHeap h) (strLoc l)
         else failwith "strForm: PObjHas should have been expanded"
 

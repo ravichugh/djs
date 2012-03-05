@@ -233,6 +233,24 @@ let rec mkLetRec f s e1 e2 =
 *)
 
 
+
+(*  given    val f :: [A;L;H] x:t1/e1 -> t2/e2
+      and    letrec f x = e1 in e2
+
+   create    let f :: [A;L;H] x:t1/e1 -> t2/e2 =
+                fix [ [A;L;H] x:t1/e1 -> t2/e2 ] (fun f x -> e)
+             in e2
+*)
+let mkLetRec f uarr e1 e2 =
+  let (_,x,_,_,_,_) = uarr in
+  let t = THasTyp (UArr uarr) in
+  ELet (f, Some (typToFrame t),
+        EApp (([t],[],[]), eVar "fix",
+          EFun (([],[],[]), f, None,
+            EFun (([],[],[]), x, None, e1))),
+        e2)
+
+
 (***** Hack for Primitive Intersections ***************************************)
 
 let doIntersectionHack x = pNot (PEq (wStr "type hack", wStr x))
