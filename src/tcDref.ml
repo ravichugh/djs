@@ -270,6 +270,18 @@ let singleRefTermOf cap g t =
     | []        -> err ([cap; "0 ref terms flow to value"])
     | l         -> err ([cap; "multiple ref terms flow to value";
                          String.concat ", " (List.map prettyStrTT l)])
+(*
+let singleRefTermOf cap g = function
+  | THasTyp(URef(l)) -> l
+  | t -> begin
+      pr "raviref %s\n" (strTyp t);
+      match refTermsOf g t with
+        | [URef(l)] -> l
+        | []        -> err ([cap; "0 ref terms flow to value"])
+        | l         -> err ([cap; "multiple ref terms flow to value";
+                             String.concat ", " (List.map prettyStrTT l)])
+    end
+*)
 
 let ensureSafeWeakRef cap g t =
   failwith "ensureSafeWeakRef"
@@ -526,6 +538,7 @@ let isValueTuple v =
     | VEmpty -> Some []
     | _ -> None
 
+(* TODO shouldn't i recursively call foo instead of None in some of the cases? *)
 let findActualFromRefValue g lVar tTup vTup =
   let rec foo i = function
     | THasTyp(URef(LocVar(lVar'))) :: ts when lVar = lVar' ->
@@ -734,6 +747,17 @@ and tsVal_ g h = function
       with Not_found ->
         err [spr "ts: var not found: [%s]" x]
     end
+(*
+  | VVar(x) -> begin
+      try
+        (match List.find (function Var(y,_) -> x = y | _ -> false) g with
+           | Var(_,THasTyp(URef(l))) -> THasTyp (URef l)
+           | Var _                   -> ty (PEq (theV, wVar x))
+           | _                       -> failwith "TS-Var impossible")
+      with Not_found ->
+        err [spr "ts: var not found: [%s]" x]
+    end
+*)
 
   | VFun(l,x,Some(t1,h1),e) -> begin
       failwith "ts VFun"
@@ -927,7 +951,8 @@ and tsExp_ g h = function
 
   | ELet(x,None,EApp(l,EVal(v1),EVal(v2)),e) -> begin
       let t1 = tsVal g h v1 in
-      let boxes = TypeTerms.elements (Sub.mustFlow g t1) in
+      let filter = function UArr _ -> true | _ -> false in
+      let boxes = TypeTerms.elements (Sub.mustFlow g t1 ~filter) in
       let (s1,s2) = (prettyStrVal v1, prettyStrVal v2) in
       let cap = spr "TS-LetApp: let %s = [...] (%s) (%s)" x s1 s2 in
       tsELetAppTryBoxes cap g h x l v1 v2 e boxes
@@ -1068,11 +1093,14 @@ and tsExp_ g h = function
     end
 
   | EIf(EVal(v),e1,e2) -> begin 
-      tcVal g h tyBool v;
-      Zzz.pushForm (pGuard v true);
+      (* tcVal g h tyBool v; *)
+      tcVal g h tyAny v;
+      (* Zzz.pushForm (pGuard v true); *)
+      Zzz.pushForm (pTruthy (WVal v));
       let (s1,h1) = tsExp g h e1 in (* same g, since no new bindings *)
       Zzz.popForm ();
-      Zzz.pushForm (pGuard v false);
+      (* Zzz.pushForm (pGuard v false); *)
+      Zzz.pushForm (pFalsy (WVal v));
       let (s2,h2) = tsExp g h e2 in (* same g, since no new bindings *)
       Zzz.popForm ();
       (* TODO better join for heaps *)
@@ -1082,7 +1110,18 @@ and tsExp_ g h = function
         pAnd [pImp (pGuard v true) (applyTyp s1 (wVar x));
               pImp (pGuard v false) (applyTyp s2 (wVar x))]
       in
+(*
       (TRefinement(x,p), h12)
+*)
+      (* TODO 3/7 the heaps in the if happen inside a nested scope, so after
+         the heap join, need a way to bring the binders in scope. this is
+         really messy, but for now simply snapshotting those bindings by
+         using exists *)
+      let t = TRefinement(x,p) in
+      let heapbindings =
+        List.map
+          (function (_,HConc(y,t)) | (_,HConcObj(y,t,_)) -> (y,t)) (snd h12) in
+      (mkExists t heapbindings, h12)
     end
 
   | EExtern(x,s,e) -> begin
@@ -1717,11 +1756,14 @@ and tcExp_ g h goal = function
     end
 
   | EIf(EVal(v),e1,e2) -> begin
-      tcVal g h tyBool v;
-      Zzz.pushForm (pGuard v true);
+      (* tcVal g h tyBool v; *)
+      (* Zzz.pushForm (pGuard v true); *)
+      tcVal g h tyAny v;
+      Zzz.pushForm (pTruthy (WVal v));
       tcExp g h goal e1;  (* same g, since no new bindings *)
       Zzz.popForm ();
-      Zzz.pushForm (pGuard v false);
+      (* Zzz.pushForm (pGuard v false); *)
+      Zzz.pushForm (pFalsy (WVal v));
       tcExp g h goal e2; (* same g, since no new bindings *)
       Zzz.popForm ();
     end
@@ -1819,6 +1861,7 @@ let typecheck e =
   let h = ([], [(lObjectPro, HConcObj ("dObjectProto", tyEmpty, lRoot))]) in
   try begin
     ignore (tsExp g h e);
+    Sub.writeCacheStats ();
     let s = spr "OK! %d queries." !Zzz.queryCount in
     pr "\n%s\n" (Utils.greenString s)
   end with Tc_error(s) ->

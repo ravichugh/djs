@@ -65,13 +65,17 @@
 (assert (= TagObj   (VStr 7)))
 (assert (= TagUndef (VStr 8)))
 
-; no source-level value can be bot
-(assert (= (tag bot) TagBot))
-(assert (forall (u BoxId) (not (hastyp bot u))))
-
-; (assert (forall (v DVal) (= (tag (tag v)) TagStr)))
-
 ; NOTE: could define closed set of tags here ...
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;; logical bot
+;;;;;
+
+(assert (= (tag bot) TagBot))
+
+; no source-level function value can be bot
+(assert (forall (u BoxId) (not (hastyp bot u))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -125,6 +129,9 @@
 
 (assert (= (tag null) TagObj))
 (assert (= (tag undefined) TagUndef))
+
+; 3/5
+(assert (forall (u BoxId) (not (hastyp undefined u))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

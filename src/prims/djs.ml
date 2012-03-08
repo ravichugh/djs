@@ -4,8 +4,8 @@
 val js_typeof1 :: [[x:{(or (= (tag v) "number")
                            (= (tag v) "boolean")
                            (= (tag v) "string")
-                           (= v null))}]]
-  -> {(ite (= v null) (= v "object") (= v (tag x)))}
+                           (= v undefined) (= v null))}]]
+  -> {Str|(ite (= v null) (= v "object") (= v (tag x)))}
 
 (* note: not treating functions as objects right now *)
 val js_typeof2 ::
@@ -16,10 +16,10 @@ val js_typeof :: {(and (type js_typeof1) (type js_typeof2))}
 
 (***** Full Objects / Arrays **************************************************)
 
-(**    [[ x.f  ]] = getProp ([[x]],   f  )                                   **)
-(**    [[ x[i] ]] = getIdx  ([[x]],   i  )                                   **)
-(**    [[ x[k] ]] = getElem ([[x]], [[k]])                                   **)
-(**       where i is an integer literal, k is not an integer literal         **)
+(**    [[ x.f    ]] = getProp ([[x]],  "f" )                                 **)
+(**    [[ x["f"] ]] = getProp ([[x]],  "f" )    where "f" is a SafeStr       **)
+(**    [[ x[i]   ]] = getIdx  ([[x]],   i  )    where i is an int literal    **)
+(**    [[ x[k]   ]] = getElem ([[x]], [[k]])    where k is anything else     **)
 
 val getPropObj :: [; L1,L2; H]
      [[x:Ref(L1), k:Str]] / [H ++ L1 |-> (d:Dict, L2)]
@@ -51,7 +51,7 @@ val getElem :: {(and (type getPropObj) (type getPropArrLen) (type getIdx))}
   (* note that the non-"length" part of getPropArr is _not_ included
      in this intersection *)
 
-(**    [[ x.f  = y ]] = setProp ([[x]],   f  , [[y]])                        **)
+(**    [[ x.f  = y ]] = setProp ([[x]],  "f" , [[y]])                        **)
 (**    [[ x[i] = y ]] = setIdx  ([[x]],   i  , [[y]])                        **)
 (**    [[ x[k] = y ]] = setElem ([[x]], [[k]], [[y]])                        **)
 
@@ -80,15 +80,19 @@ val setProp :: {(and (type setPropObj) (type setPropArrLen))}
 
 val setElem :: {(and (type setPropObj) (type setPropArrLen) (type setIdx))}
 
-(**    [[ i in x ]] = hasIdx  ([[x]],   i  )                                 **)
-(**    [[ k in x ]] = hasElem ([[x]], [[k]])                                 **)
-(**       note: syntactically, there is no "hasProp" analog                  **)
+(**    [[  i  in x ]] = hasIdx  ([[x]],   i  )                                 **)
+(**    [[ "f" in x ]] = hasProp ([[x]],  "f" )    where "f" is a SafeStr       **)
+(**    [[  k  in x ]] = hasElem ([[x]], [[k]])                                 **)
 
-val hasElemObj :: [; L1,L2; H]
+val hasPropObj :: [; L1,L2; H]
      [[x:Ref(L1), k:Str]] / [H ++ L1 |-> (d:Dict, L2)]
   -> {Bool|(iff (= v true) (objhas d k H L2))} / same
 
-val hasElemArrLen :: [A; L1,L2; H]
+val hasPropArr :: [A; L1,L2; H]
+     [[x:Ref(L1), k:Str]] / [H ++ L1 |-> (a:Arr(A), L2)]
+  -> {Bool|(iff (= v true) (or (= k "length") (heaphas H L2 k)))} / same
+
+val hasPropArrLen :: [A; L1,L2; H]
      [[x:Ref(L1), k:{(= v "length")}]] / [H ++ L1 |-> (a:Arr(A), L2)]
   -> {(= v true)} / same
 
@@ -97,7 +101,9 @@ val hasIdx :: [A; L1,L2]
   -> {Bool|(implies (and (packed a) (>= i 0))
                     (iff (= v true) (< i (len a))))} / same
 
-val hasElem :: {(and (type hasElemObj) (type hasElemArrLen) (type hasIdx))}
+val hasProp :: {(and (type hasPropObj) (type hasPropArr) (type hasIdx))}
+
+val hasElem :: {(and (type hasPropObj) (type hasPropArrLen) (type hasIdx))}
 
 
 (******************************************************************************)

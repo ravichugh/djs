@@ -626,6 +626,9 @@ let rec ds env = function
       match ek with
         | E.ConstExpr (_, J.CInt i) ->
             objOp ts ls "hasIdx" [ds env ed; EVal (vInt i)]
+        | E.ConstExpr (_, J.CString s) ->
+            let f = if notAnIntStr s then "hasProp" else "hasElem" in
+            objOp ts ls f [ds env ed; EVal (vStr s)]
         | _ ->
             objOp ts ls "hasElem" [ds env ed; ds env ek]
     end
@@ -953,7 +956,7 @@ and mkEDict env fields =
   EDict (List.map (fun (_, x, e) -> (eStr x, ds env e)) fields)
 
 and mkEArray topt env es =
-  let t = match topt with Some(t) -> t | None -> tyNotUndef in
+  let t = match topt with Some(t) -> t | None -> tyArrDefault in
   EArray (t, List.map (ds env) es)
 
 and dsMethCall env ts ls obj prop args =

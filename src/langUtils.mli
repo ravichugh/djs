@@ -115,7 +115,7 @@ val tyArr : vvar -> typ -> typ -> typ
 val tyNull : typ
 (* val tyArrImp : locs -> vvar -> typ -> heap -> typ -> heap -> typ *)
 val tyRef : loc -> typ
-val tyNotUndef : typ
+val tyArrDefault : typ
 val pIsBang : walue -> typterm -> formula
 val tyIsBang : walue -> typterm -> typ
 val tyArrayTuple : typ -> typ list -> bool -> typ

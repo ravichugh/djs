@@ -338,9 +338,13 @@ let tyStrOrBool   = TBaseUnion [tagStr; tagBool]
 
 let tyArr x t t'  = ty (hastyp theV (UArr(([],[],[]),x,t,([],[]),t',([],[]))))
 let tyNull        = ty (pAnd [PEq (theV, wNull); hastyp theV UNull])
-let tyRef l       = ty (hastyp theV (URef l))
+(*let tyRef l       = ty (hastyp theV (URef l))*)
+let tyRef l       = THasTyp (URef l)
 
-let tyNotUndef    = ty (pNot (eq theV (WVal vUndef)))
+(* setting the default for array tuple invariants to be v != undefined,
+   not Top, so that packed array accesses can at least prove that the
+   value retrieved is not undefined *)
+let tyArrDefault  = ty (pNot (eq theV (WVal vUndef)))
 
 (*
 let tyArrImp l x t h t' h'  = ty (PIs (theV, UArr(l,x,t,h,t',h')))

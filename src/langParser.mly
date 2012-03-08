@@ -223,8 +223,8 @@ exp2 :
  | LPAREN e=exp RPAREN AS f=frame            { EAs("source program",e,f) }
  | LBRACE RBRACE                             { EDict([]) }
  | LBRACE fieldexps RBRACE                   { EDict($2) }
- | LT GT                                     { EArray(tyNotUndef,[]) }
- | LT es=exps GT                             { EArray(tyNotUndef,es) }
+ | LT GT                                     { EArray(tyArrDefault,[]) }
+ | LT es=exps GT                             { EArray(tyArrDefault,es) }
  | LT GT AS u=typ_term           { match u with
                                      | UArray(t) -> EArray(t,[])
                                      | _ -> printParseErr "bad array ann" }
@@ -296,7 +296,7 @@ typ :
  (***** syntactic macros *****)
 
  (* TODO might want to add array tuple to abstract syntax *)
- | LT x=array_tuple_typs GT  { let (ts,b) = x in tyArrayTuple tyNotUndef ts b }
+ | LT x=array_tuple_typs GT  { let (ts,b) = x in tyArrayTuple tyArrDefault ts b }
 
  
 basetag :
@@ -714,7 +714,7 @@ jsCtor: NEW u=arrow_typ EOF { match u with
 jsNew : x=poly_actuals y=loc EOF  { (x,y) }
 
 jsArrLit :
- | l=loc EOF                             { (l, tyNotUndef) }
+ | l=loc EOF                             { (l, tyArrDefault) }
  | l=loc ARRTYPE LPAREN t=typ RPAREN EOF { (l, t) }
  | ARRTYPE LPAREN t=typ RPAREN EOF       { (LocConst (freshVar "arrLit"), t) }
 

@@ -21,6 +21,8 @@ val mustFlow : ?filter:(typterm -> bool) -> env -> typ -> TypeTerms.t
 
 val canFlow : ?filter:(typterm -> bool) -> env -> typ -> TypeTerms.t
 
+val writeCacheStats : unit -> unit
+
 (***** Subtyping **************************************************************)
 
 val types : string -> env -> typ -> typ -> unit

@@ -4,3 +4,4 @@
 /*: {(= v "object")} */ (typeof null);
 /*: {(= v "object")} */ (typeof {});
 /*: {(= v "object")} */ (typeof []);
+/*: {(= v "undefined")} */ (typeof undefined);

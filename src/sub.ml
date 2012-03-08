@@ -375,5 +375,29 @@ let heaps cap  = checkHeaps  [spr "Sub.heaps: %s" cap]  TypeTerms.empty
 let worlds cap = checkWorlds [spr "Sub.worlds: %s" cap] TypeTerms.empty
 
 let mustFlow   = mustFlow_ TypeTerms.empty
+
+let mustFlowCache = Hashtbl.create 17
+let mustFlowCounters = Hashtbl.create 17
+
+(*
+let mustFlow ?filter:(filter=(fun _ -> true)) g t = 
+  if !depth >= 0 && Hashtbl.mem mustFlowCache t then begin
+    Hashtbl.replace mustFlowCounters t (1 + Hashtbl.find mustFlowCounters t);
+    Hashtbl.find mustFlowCache t
+  end else begin
+    let boxes = mustFlow_ TypeTerms.empty ~filter g t in
+    Hashtbl.add mustFlowCache t boxes;
+    Hashtbl.add mustFlowCounters t 1;
+    boxes
+  end
+*)
+
+let writeCacheStats () =
+  let oc = open_out (Settings.out_dir ^ "extract-cache.txt") in
+  Hashtbl.iter (fun t _ ->
+    let c = Hashtbl.find mustFlowCounters t in
+    fpr oc "%s %d\n" (strTyp t) c
+  ) mustFlowCache
+
 let canFlow    = canFlow_ TypeTerms.empty
 
