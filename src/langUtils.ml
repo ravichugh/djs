@@ -643,8 +643,8 @@ and strArrow (polyArgs,x,t1,e1,t2,e2) =
 *)
 
 and strForm = function
-  | PTru            -> "true"
-  | PFls            -> "false"
+  | PTru            -> if !prettyConst then "TRU" else "true"
+  | PFls            -> if !prettyConst then "FLS" else "false"
   | PEq(w1,w2)      -> spr "(= %s %s)" (strWalue w1) (strWalue w2)
   | PApp(s,ws)      -> spr "(%s %s)" (strPredSym s)
                          (String.concat " " (List.map strWalue ws))

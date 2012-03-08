@@ -160,7 +160,6 @@ let rec strVal k = function
       let s = strLamImp k l (spr "(%s) / %s" (strBinding (x,t)) (strHeap h)) e in
       spr "%sbegin %s end" (tab k) (clip s)
   | VBase(Null) -> spr "%snull" (tab k)
-  | VBase(Bool(b)) -> spr "%s%s" (tab k) (if b then "True" else "False")
   | VBase(c) -> spr "%s%s" (tab k) (strBaseValue c)
   (* | VEmpty -> spr "%s{}" (tab k) *)
   | VEmpty -> spr "%sempty" (tab k)

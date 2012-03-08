@@ -60,7 +60,21 @@ var __ArrayProto = /*: lArrayProto */ {
   pop: __ArrayProto_pop,
 };
 
-var Array = /*: lArray */ { prototype: __ArrayProto };
+var __isArray = /*:
+  {(and (v :: [A;L1,L2]
+              [[this:Ref(lArray), _:Ref(L1)]] / [L1 |-> (_:Arr(A), L2)]
+           -> {(= v true)} / same)
+        (v :: [;L1,L2]
+              [[this:Ref(lArray), _:Ref(L1)]] / [L1 |-> (_:Dict, L2)]
+           -> {(= v false)} / same)
+        (v :: [[this:Ref(lArray),
+                _:{(or (= (tag v) "number") (= (tag v) "boolean")
+                       (= (tag v) "string") (= (tag v) "undefined")
+                       (= v null))}]]
+           -> {(= v false)})
+)} */ "#extern";
+
+var Array = /*: lArray */ { prototype: __ArrayProto, isArray: __isArray };
 
 __ArrayProto.constructor = Array;
 

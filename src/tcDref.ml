@@ -405,6 +405,8 @@ List.iter (fun (x,w) -> pr "ravi %s |-> %s\n" x (prettyStrWal w)) subst;
 
 (***** Heap parameter inference ***********************************************)
 
+let oc_local_inf = open_out (Settings.out_dir ^ "local-inf.txt")
+
 let inferHeapParam cap curHeap hActs hForms e11 =
   match hActs, hForms, e11 with
 
@@ -434,16 +436,15 @@ let inferHeapParam cap curHeap hActs hForms e11 =
                   prettyStrHeap e12]
 *)
 
-let inferHeapParam cap curHeap hActs hForm e11 =
-  let eo = inferHeapParam cap curHeap hActs hForm e11 in
-(*
-  begin match eo with
-    | None -> ()
-    | Some(e) -> pr "inferred heap act: %s\n\n for input heap: %s"
-                   (prettyStrHeap e) (prettyStrHeap e11)
-  end;
-*)
-  eo
+let inferHeapParam x cap curHeap hActs hForm e11 =
+  fpr oc_local_inf "\nlet [%s]\n" x;
+  match inferHeapParam cap curHeap hActs hForm e11 with
+    | None -> None
+    | Some(e) -> begin
+        fpr oc_local_inf "  heap formal: %s\n" (prettyStrHeap e11);
+        fpr oc_local_inf "  inferred heap: %s\n " (prettyStrHeap e);
+        Some e
+      end
 
 
 (***** Type/loc parameter inference *******************************************)
@@ -518,6 +519,9 @@ let inferHeapParam cap curHeap hActs hForm e11 =
       general later.
 *)
 
+let _strTyps ts = String.concat "," (List.map strTyp ts)
+let _strVals vs = String.concat "," (List.map prettyStrVal vs)
+
 let isIntOfString s =
   try Some (int_of_string s) with Failure _ -> None
 
@@ -538,7 +542,6 @@ let isValueTuple v =
     | VEmpty -> Some []
     | _ -> None
 
-(* TODO shouldn't i recursively call foo instead of None in some of the cases? *)
 let findActualFromRefValue g lVar tTup vTup =
   let rec foo i = function
     | THasTyp(URef(LocVar(lVar'))) :: ts when lVar = lVar' ->
@@ -546,10 +549,13 @@ let findActualFromRefValue g lVar tTup vTup =
         else
           let vi = List.nth vTup i in
           begin match refTermsOf g (ty (PEq (theV, WVal vi))) with
-            | [URef(lAct)] -> Some lAct
-            | _            -> None
+            | [URef(lAct)] ->
+                let _ = fpr oc_local_inf "  %s |-> %s\n" lVar (strLoc lAct) in
+                Some lAct
+            | _ -> foo (i+1) ts
           end
-    | _ -> None
+    | _ :: ts -> foo (i+1) ts
+    | [] -> None
   in
   foo 0 tTup
 
@@ -562,8 +568,10 @@ let findActualFromProtoLink locSubst lVar hForm hAct =
           | Some(lAct') ->
               if not (List.mem_assoc lAct' (snd hAct)) then foo cs
               else begin match List.assoc lAct' (snd hAct) with
-                | HConcObj(_,_,lAct) -> Some lAct
-                | _                  -> None
+                | HConcObj(_,_,lAct) ->
+                    let _ = fpr oc_local_inf "  %s |-> %s\n" lVar (strLoc lAct) in
+                    Some lAct
+                | _ -> None
               end
         end
     | _ :: cs -> foo cs
@@ -596,6 +604,9 @@ let findArrayActual g tVar locSubst hForm hAct =
 
 let steps2and3 g tForms lForms vFormTup hForm vActTup hAct =
 
+  fpr oc_local_inf "  vFormTup: [%s]\n" (_strTyps (List.map snd vFormTup));
+  fpr oc_local_inf "  vActTup:  [%s]\n" (_strVals vActTup);
+
   (* Step 2 *)
   let locSubst =
     List.fold_left (fun subst lVar ->
@@ -616,7 +627,7 @@ let steps2and3 g tForms lForms vFormTup hForm vActTup hAct =
   begin match lActsOpt with
     | None -> ()
     | Some(lActs) ->
-        pr "local inference inferred all loc acts: [%s]\n" (strLocs lActs)
+        fpr oc_local_inf "  inferred all loc acts: [%s]\n" (strLocs lActs)
   end;
 
   (* Step 3 *)
@@ -630,12 +641,16 @@ let steps2and3 g tForms lForms vFormTup hForm vActTup hAct =
 
   (* don't need to reverse lActs, since the two folds reversed it twice *)
   match tActsOpt, lActsOpt with
-    | Some(l1), Some(l2) -> Some (l1, l2)
-    | _                  -> None
+    | Some(l1), Some(l2) -> begin
+        fpr oc_local_inf "  inferred all typ acts: [%s]\n" (_strTyps l1);
+        Some (l1, l2)
+      end
+    | _ -> None
 
-let inferTypLocParams g tForms lForms tForm hForm tActs lActs vAct hAct =
+let inferTypLocParams x g tForms lForms tForm hForm tActs lActs vAct hAct =
   if List.length tActs <> 0 then None
   else begin
+    fpr oc_local_inf "\nlet [%s]\n" x;
     match tForm with
       | TTuple([("arguments",t)]) -> begin
           match t, lActs with
@@ -1264,7 +1279,7 @@ and tsELetAppTryBoxes cap g curHeap x (tActs,lActs,hActs) v1 v2 e boxes =
     let (tActs0,lActs0) = (tActs, lActs) in
 
     let ((tActs,lActs),sInf) =
-      match inferTypLocParams g tForms lForms t11 e11
+      match inferTypLocParams x g tForms lForms t11 e11
                               tActs0 lActs0 v2 curHeap with
         | Some(ts,ls) -> ((ts, ls), "with help from local inference")
         | None        -> ((tActs0, lActs0), "without help from local inference") in
@@ -1298,7 +1313,7 @@ and tsELetAppTryBoxes cap g curHeap x (tActs,lActs,hActs) v1 v2 e boxes =
     (* infer missing poly arg.
        note: this must take place after loc args have been substituted. *)
     let hActs =
-      match inferHeapParam cap curHeap hActs hForms e11 with
+      match inferHeapParam x cap curHeap hActs hForms e11 with
         | Some(e) -> [e]
         | None    -> hActs in
 
