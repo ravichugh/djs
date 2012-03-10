@@ -121,6 +121,9 @@ let rec anf = function
       let (l2,e2) = anfAndTmp e2 in
       finish (l1 @ l2, ENewObj (e1, loc1, e2, loc2))
   | ELoadedSrc(s,e) -> ([], ELoadedSrc (s, anfExp e))
+  | EFreeze(l,e) -> ([], EFreeze (l, anfExp e))
+  | EThaw(l,e) -> ([], EThaw (l, anfExp e))
+  | ERefreeze(l,e) -> ([], ERefreeze (l, anfExp e))
 
 and anfAndTmp e =
   let (l1,e) = anf e in
@@ -295,10 +298,6 @@ and strExp k exp = match exp with
       let s1 = strExp k e1 in
       let s2 = strExp k e2 in
       spr "%s%s := %s" (tab k) (clip s1) (clip s2)
-(*
-  | EFreeze(x,None) -> spr "%sfreeze %s" (tab k) x
-  | EFreeze(x,Some(s)) -> spr "%sfreeze %s %s" (tab k) x (strScm s)
-*)
   | EHeap(h,e) -> spr "%sheap %s\n\n%s" (tab k) (strHeap h) (strExp k e)
   | ELabel(x,None,e) ->
       let se = strExp (succ k) e in
@@ -331,6 +330,12 @@ and strExp k exp = match exp with
       let s2 = strVal (succ k) v2 in
       spr "%snew (%s, %s, %s, %s)"
         (tab k) (clip s1) (strLoc l1) (clip s2) (strLoc l2)
+  | EFreeze(l,EVal(v)) ->
+      spr "%sfreeze (%s, %s)" (tab k) (strLoc l) (clip (strVal (succ k) v))
+  | EThaw(l,EVal(v)) ->
+      spr "%sthaw (%s, %s)" (tab k) (strLoc l) (clip (strVal (succ k) v))
+  | ERefreeze(l,EVal(v)) ->
+      spr "%srefreeze (%s, %s)" (tab k) (strLoc l) (clip (strVal (succ k) v))
   | EBase _        -> badAnf "EBase"
   | EVar _         -> badAnf "EVar"
   | EFun _         -> badAnf "EFun"

@@ -117,6 +117,7 @@ let snapshot g h =
   let add = tcAddBinding ~printHeap:false in
   let (n,g1) = 
     List.fold_left (fun (k,acc) -> function
+      | HWeakObj _ -> (k, acc)
       | HConc(x,t) | HConcObj(x,t,_) ->
           let (i,g) = add acc h x tyAny in
           (* TODO 11/27: doing this so all the dep tuple binders get declared. *)
@@ -128,6 +129,7 @@ let snapshot g h =
   in
   let g2 = 
     List.fold_left (fun acc -> function
+      | HWeakObj _ -> acc
       (* TODO: here's one obvious place where binders are getting redefined *)
       | HConc(x,s) | HConcObj(x,s,_) -> snd (add ~isNew:false acc h x s)
     ) g1 l
@@ -136,9 +138,17 @@ let snapshot g h =
 
 
 let freshenWorld (t,(hs,cs)) =
+(*
   let vSubst =
     List.map
       (function (_,HConc(x,_)) | (_,HConcObj(x,_,_)) -> (x, freshVar x)) cs in
+*)
+  let vSubst =
+    List.rev (List.fold_left (fun acc -> function
+      | (_,HConc(x,_))
+      | (_,HConcObj(x,_,_)) -> (x, freshVar x) :: acc
+      | (_,HWeakObj _) -> acc
+    ) [] cs) in
   let subst = (List.map (fun (x,y) -> (x, wVar y)) vSubst, [], [], []) in
   let (fresh,cs) =
     List.fold_left (fun (acc1,acc2) -> function
@@ -150,6 +160,9 @@ let freshenWorld (t,(hs,cs)) =
           let x' = List.assoc x vSubst in
           let s' = masterSubstTyp subst s in
           ((x',s')::acc1, (l,HConcObj(x',s',l'))::acc2)
+      | (l,HWeakObj(thaw,s,l')) ->
+          let s' = masterSubstTyp subst s in
+          (acc1, (l,HWeakObj(thaw,s',l'))::acc2)
     ) ([],[]) cs in
   let t = masterSubstTyp subst t in
   (fresh, (t, (hs, cs)))
@@ -163,6 +176,8 @@ let selfifyHeap (hs,cs) =
       | (l,HConcObj(x,s,l')) ->
           let x' = freshVar x in
           ((x',s)::acc1, (l, HConcObj (x', ty (PEq (theV, wVar x)), l'))::acc2)
+      | (l,HWeakObj(thaw,s,l')) ->
+          (acc1, (l, HWeakObj (thaw, s, l')) :: acc2)
     ) ([],[]) cs
   in
   (fresh, (hs, cs))
@@ -260,6 +275,8 @@ let finishLet cap g y l (s,h) =
 
 (* TODO when adding abstract refs, revisit these two *)
 
+let startsWithTilde = function LocConst(x) | LocVar(x) -> x.[0] = '~'
+
 let refTermsOf g t =
   let isConcRef = function URef _ -> true | _ -> false in
   TypeTerms.elements (Sub.mustFlow g t ~filter:isConcRef)
@@ -270,6 +287,13 @@ let singleRefTermOf cap g t =
     | []        -> err ([cap; "0 ref terms flow to value"])
     | l         -> err ([cap; "multiple ref terms flow to value";
                          String.concat ", " (List.map prettyStrTT l)])
+
+let singleStrongRefTermOf cap g t =
+  let l = singleRefTermOf cap g t in
+  if startsWithTilde l
+  then err [cap; spr "[%s] flows to value, but is not strong" (strLoc l)]
+  else l
+
 (*
 let singleRefTermOf cap g = function
   | THasTyp(URef(l)) -> l
@@ -395,6 +419,7 @@ let heapDepTupleSubst (_,cs) =
   let subst =
     List.fold_left (fun acc -> function
       | (_,HConc(x,s)) | (_,HConcObj(x,s,_)) -> foo (wVar x) acc s
+      | _ -> acc (* TODO 3/9 *)
     ) [] cs
   in
 (*
@@ -1152,6 +1177,7 @@ and tsExp_ g h = function
       s2
     end
 
+(*
   | EHeap(h,e) -> begin
       if !depth <> 0  then failwith "ts EHeap: should be at top-level";
       if !initHeapSet then failwith "ts EHeap: init heap already set!";
@@ -1161,6 +1187,19 @@ and tsExp_ g h = function
       let (s,h') = tsExp g h e in
       tcRemoveBindingN n;
       (s, h')
+    end
+*)
+
+  (* 3/9 *)
+  | EHeap(h1,e) -> begin
+      match h1 with
+        | ([], [(l,HWeakObj(Frzn,t,l'))]) -> begin
+            Wf.heap "EHeap: weak heap" g h1;
+            let h' = (fst h, (l,HWeakObj(Frzn,t,l')) :: snd h) in
+            let (s,h'') = tsExp g h' e in
+            (s, h'')
+          end
+        | _ -> err ["TS-EHeap: should be a single frozen weak constraint"]
     end
 
   | ETcFail(s,e) ->
@@ -1234,6 +1273,40 @@ and tsExp_ g h = function
 *)
     end
 
+  | EFreeze(m,EVal(v)) -> begin
+      let cap = spr "ts EFreeze [%s] [%s]" (strLoc m) (prettyStrVal v) in
+      if not (startsWithTilde m) then err [cap; "doesn't start with tilde"];
+      match findAndRemoveHeapCell m h with
+        | Some(HWeakObj(Frzn,t,l'), h0) -> begin
+            let s = tsVal g h v in
+            let l = singleStrongRefTermOf "ts EFreeze" g s in
+            begin match findAndRemoveHeapCell l h0 with
+              | Some(HConcObj(x,s,l''), h1) -> begin
+                  if l' <> l'' then
+                    err [cap; spr "[%s] wrong proto link" (strLoc l)];
+                  Wf.heap cap g h1;
+                  Sub.types cap g s t;
+                  let h' = (fst h1, (m,HWeakObj(Frzn,t,l')) :: snd h1) in
+                  (tySafeRef m, h')
+                end
+              | Some _ ->
+                  err [cap; spr "[%s] isn't a strong obj" (strLoc l)]
+              | None ->
+                  err [cap; spr "[%s] not bound" (strLoc l)]
+            end
+          end
+        | Some(HWeakObj(_,t,l'), _) ->
+            err [spr "ts EFreeze: [%s] isn't frozen" (strLoc m)]
+        | Some _ ->
+            err [spr "ts EFreeze: [%s] isn't weak" (strLoc m)]
+        | None ->
+            err [spr "ts EFreeze: [%s] isn't bound in the heap" (strLoc m)]
+    end
+
+  | EThaw(l,EVal(v)) -> failwith "EThaw"
+
+  | ERefreeze(l,EVal(v)) -> failwith "ERefreeze"
+
   | EThrow(EVal(v)) ->
       let _ = tsVal g h v in (tyFls, h)
 
@@ -1266,6 +1339,9 @@ and tsExp_ g h = function
   | ESetref _  -> Anf.badAnf "ts ESetref"
   | EBreak _   -> Anf.badAnf "ts EBreak"
   | EThrow _   -> Anf.badAnf "ts EThrow"
+  | EFreeze _  -> Anf.badAnf "ts EFreeze"
+  | EThaw _    -> Anf.badAnf "ts EThaw"
+  | ERefreeze _  -> Anf.badAnf "ts ERefreeze"
 
 and tsELetAppTryBoxes cap g curHeap x (tActs,lActs,hActs) v1 v2 e boxes =
 
@@ -1819,6 +1895,10 @@ and tcExp_ g h goal = function
       let cap = (spr "TC-Break: %s" x) in
       ignore (Sub.worlds cap g w goal)
     end
+
+  | EFreeze _ -> failwith "tc EThrow"
+  | EThaw _ -> failwith "tc ETryCatch"
+  | ERefreeze _ -> failwith "tc ETryFinally"
 
   | EThrow _ -> failwith "tc EThrow"
   | ETryCatch _ -> failwith "tc ETryCatch"

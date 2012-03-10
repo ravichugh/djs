@@ -39,14 +39,18 @@ rule token = parse
   | "FLD"          { SUGAR_FLD }
 *)
   | "type"         { TYPE }
-  | "heap"         { HEAP }
+  | "weak"         { HEAP }
   | "ref"          { NEWREF }
   | "Ref"          { REFTYPE }
   | "Arr"          { ARRTYPE }
   | "same"         { SAME }
   (* | "fold"         { FOLD } *)
   (* | "unfold"       { UNFOLD } *)
+  | "frzn"         { FRZN }
+  | "thwd"         { THWD }
   | "freeze"       { FREEZE }
+  | "thaw"         { THAW }
+  | "refreeze"     { REFREEZE }
   | "break"        { BREAK }
   | "throw"        { THROW }
   | "try"          { TRY }
@@ -147,6 +151,8 @@ rule token = parse
   | digit+ as s         { INT (int_of_string s) }
   | ident as s          { VAR s }
   | tyvar as s          { TVAR s }
+  | ('~'ident) as s     { VAR s }
+  | ('~'tyvar) as s     { TVAR s }
   | hashk as s          { LBL (String.sub s 1 (String.length s - 1)) }
   | '"' (str as s) '"'  { STR s}
 

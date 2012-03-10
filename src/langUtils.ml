@@ -132,6 +132,7 @@ let mapTyp ?fForm:(fForm=(fun x -> x))
       List.map (function
         | (l,HConc(x,s))       -> (l, HConc (x, fooTyp s))
         | (l,HConcObj(x,s,l')) -> (l, HConcObj (x, fooTyp s, l'))
+        | (l,HWeakObj(a,s,l')) -> (l, HWeakObj (a, fooTyp s, l'))
       ) cs
     in
     (hs, cs)
@@ -340,6 +341,7 @@ let tyArr x t t'  = ty (hastyp theV (UArr(([],[],[]),x,t,([],[]),t',([],[]))))
 let tyNull        = ty (pAnd [PEq (theV, wNull); hastyp theV UNull])
 (*let tyRef l       = ty (hastyp theV (URef l))*)
 let tyRef l       = THasTyp (URef l)
+let tySafeRef l   = TNonNull (THasTyp (URef l))
 
 (* setting the default for array tuple invariants to be v != undefined,
    not Top, so that packed array accesses can at least prove that the
@@ -459,6 +461,10 @@ let strLoc = function
   | LocConst(x) -> x
 
 let strLocs l = String.concat "," (List.map strLoc l)
+
+let strThawState = function
+  | Frzn    -> "frzn"
+  | Thwd(l) -> spr "thwd %s" (strLoc l)
 
 let strTag = function
   | "number"  -> "Num"
@@ -770,6 +776,7 @@ and strTTFlat ut =
 and strHeapCell = function
   | HConc(x,s)      -> spr "%s:%s" x (strTyp s)
   | HConcObj(x,s,l) -> spr "(%s:%s, %s)" x (strTyp s) (strLoc l)
+  | HWeakObj(a,s,l) -> spr "(%s, %s, %s)" (strThawState a) (strTyp s) (strLoc l)
 
 and strHeap (hs,cs) =
   let s = 
@@ -834,7 +841,8 @@ end
 let heapBinders cs =
   List.fold_left
     (fun acc (l,hc) ->
-       match hc with HConc(x,_) | HConcObj(x,_,_) -> VVars.add x acc)
+       match hc with HWeakObj _ -> acc
+                   | HConc(x,_) | HConcObj(x,_,_) -> VVars.add x acc)
     VVars.empty cs
 
 (* all the freeVarsX functions are of the form env:Quad.t -> x:X -> Quad.t *)
@@ -915,6 +923,8 @@ and freeVarsHeap env (hs,cs) =
   List.fold_left (fun acc -> function
     | (l,HConc(_,t))
     | (l,HConcObj(_,t,_)) ->
+         Quad.combineList [freeVarsLoc env l; freeVarsTyp env t; acc]
+    | (l,HWeakObj(_,t,_)) ->
          Quad.combineList [freeVarsLoc env l; freeVarsTyp env t; acc]
   ) free cs
 
@@ -1112,6 +1122,9 @@ and masterSubstHeap subst (hs,cs) =
           let subst = MasterSubst.removeVVars [x] subst in
           (masterSubstLoc subst l,
            HConcObj (x, masterSubstTyp subst s, masterSubstLoc subst l'))
+      | (l,HWeakObj(thaw,s,l')) -> (* TODO *)
+          (masterSubstLoc subst l,
+           HWeakObj (thaw, masterSubstTyp subst s, masterSubstLoc subst l'))
     ) cs
   in
   (hs, cs)
@@ -1342,6 +1355,7 @@ let expandPreHeap (hs,cs) =
     List.map (fun (l,hc) -> match hc with
       | HConc(x,s)       -> (l, HConc (x, expandPreTyp s))
       | HConcObj(x,s,l') -> (l, HConcObj (x, expandPreTyp s, l'))
+      | HWeakObj(a,s,l') -> (l, HWeakObj (a, expandPreTyp s, l'))
     ) cs
   in
   (hs, cs)

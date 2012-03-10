@@ -184,6 +184,15 @@ and checkConstraints errList g h = function
       checkLoc errList g h l';
       checkConstraints errList g h ((l,HConc(x,s))::rest)
     end
+  | (l,HWeakObj(Frzn,s,l'))::rest -> begin
+      checkLoc errList g h l';
+      checkConstraints errList g h (rest) (* TODO *)
+    end
+  | (l,HWeakObj(Thwd(l0),s,l'))::rest -> begin
+      checkLoc errList g h l';
+      checkLoc errList g h l0;
+      checkConstraints errList g h (rest) (* TODO *)
+    end
 
 (*
 and checkWorld errList g (t,h) =

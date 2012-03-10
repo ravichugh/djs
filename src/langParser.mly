@@ -118,7 +118,7 @@ let sameCell l =
   SUGAR_EXTEND SUGAR_FLD
   PLUS MINUS MUL DIV LT LE GE (* NE EQEQ AMPAMP PIPEPIPE *) PLUSPLUS
   ASSGN (* LOCALL *) NEWREF REFTYPE (* AT *) MAPSTO SAME HEAP
-  (* FOLD UNFOLD *) FREEZE
+  FRZN THWD FREEZE THAW REFREEZE
   ARRTYPE PACKED LEN TRUTHY FALSY INTEGER
   BREAK THROW TRY CATCH FINALLY
   UNDEF
@@ -209,10 +209,7 @@ exp1 :
  | NEWREF l=loc e=exp2           { ENewref(l,e) }
  | NEW LPAREN e1=exp COMMA l1=loc COMMA e2=exp COMMA l2=loc RPAREN
      { ENewObj(e1,l1,e2,l2) }
-(*
- | FREEZE VAR                    { EFreeze($2,None) }
- | FREEZE VAR typ                { EFreeze($2,Some($3)) }
-*)
+ | FREEZE LPAREN l=loc COMMA e=exp RPAREN    { EFreeze(l,e) }
 
 exp2 :
  | v=value                                   { EVal v }
@@ -582,11 +579,18 @@ heapcell :
  | l=loc MAPSTO x=varopt COLON t=typ { (l,HConc(x,t)) }
  | l=loc MAPSTO LPAREN x=varopt COLON t=typ COMMA l2=loc RPAREN
      { (l,HConcObj(x,t,l2)) }
- (* TODO add same token sugar back in here *)
+ | l=loc MAPSTO LPAREN x=thawstate COMMA t=typ COMMA l2=loc RPAREN
+     { (l,HWeakObj(x,t,l2)) }
 
 rheapcell :
  | heapcell           { $1 }
  | l=loc MAPSTO SAME  { (l, sameCell l) }
+ (* TODO add same token sugar back in here *)
+ (* TODO add weak obj *)
+
+thawstate :
+ | FRZN       { Frzn }
+ | THWD l=loc { Thwd(l) }
 
 varopt:
  | x=VAR                { x }

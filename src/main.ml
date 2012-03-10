@@ -113,6 +113,7 @@ let anfAndAddPrelude e =
   else
     let prims = parsePrelude !primsPath in
     let pervs = parsePrelude !pervsPath in
+(*
     let e =
       if !S.djsMode then
         let pre =
@@ -122,6 +123,11 @@ let anfAndAddPrelude e =
       else
         prims (pervs e)
     in
+*)
+    let pre =
+      parsePrelude
+        (S.prim_dir ^ (if !S.fullObjects then "djs.ml" else "djsLite.ml")) in
+    let e = prims (pervs (pre e)) in
     let e = Anf.anfExp e in
     let _ = Anf.printAnfExp e in
     e

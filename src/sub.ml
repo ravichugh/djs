@@ -164,11 +164,13 @@ let simpleSnapshot cap g h =
   let (n,g1) = 
     List.fold_left (fun (k,acc) -> function
       | HConc(x,_) | HConcObj(x,_,_) -> (k+1, simpleTcAddBinding x tyAny acc)
+      | HWeakObj _ -> (k, acc)
     ) (0,g) l
   in
   let g2 = 
     List.fold_left (fun acc -> function
       | HConc(x,s) | HConcObj(x,s,_) -> simpleTcAddBinding ~isNew:false x s acc
+      | HWeakObj _ -> acc
     ) g1 l
   in
   (n, g2)
@@ -198,6 +200,12 @@ let heapSubstAndObligations errList cs1 cs2 =
               err (errList @ [spr "proto links for [%s] differ:" (strLoc l);
                               spr "  %s" (strLoc l1');
                               spr "  %s" (strLoc l2')])
+        | HWeakObj(ts1,t1,l1), HWeakObj(ts2,t2,l2) ->
+            if ts1 = ts2 && t1 = t2 && l1 = l2 then
+              (acc1, acc2)
+            else 
+              err (errList @ [spr
+                "constraints for [%s] TODO" (strLoc l)])
         | _ ->
             err (errList @ [spr
               "constraints for [%s] have different shape" (strLoc l)])

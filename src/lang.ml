@@ -48,6 +48,7 @@ type hvars  = hvar list
 type lconst = string
 type loc    = LocVar of lvar | LocConst of lconst
 type locs   = loc list
+type thawstate = Frzn | Thwd of loc
 
 type pat =
   | PLeaf of vvar
@@ -72,8 +73,10 @@ type exp =
   | ENewref of loc * exp
   | EDeref of exp
   | ESetref of exp * exp
-  (* | EFreeze of loc * typ option *)
-  | EHeap of heap * exp
+  | EFreeze of loc * exp
+  | EThaw of loc * exp
+  | ERefreeze of loc * exp
+  | EHeap of heap * exp   (* using this to add weak constraints TODO EWeak *)
   (***** control operators *****)
   | ELabel of lbl * frame option * exp (* TODO get rid of annotation? *)
   | EBreak of lbl * exp
@@ -162,9 +165,9 @@ and typterm =
   | UArray of typ
 
 and heapconstraint =
-  (* | HAbs  of loc * typ                (* [l |-> S]   *) *)
   | HConc    of vvar * typ       (* [l |-> x:S] *)
   | HConcObj of vvar * typ * loc (* [l |-> (x:S, l')] *)
+  | HWeakObj of thawstate * typ * loc (* [l |-> (0, S, l')] *)
 
 and heap  = hvar list * (loc * heapconstraint) list
 and world = typ * heap
