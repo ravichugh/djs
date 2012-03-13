@@ -73,8 +73,11 @@ let mapTyp ?fForm:(fForm=(fun x -> x))
     | TInt               -> TInt
     | TBaseUnion(l)      -> TBaseUnion l
     | TBaseRefine(x,t,p) -> TBaseRefine (x, t, fooForm p)
-    | THasTyp(u)         -> if onlyTopForm then THasTyp u
-                            else THasTyp (fooTT u)
+(*
+    | THasTyp(us,p)      -> if onlyTopForm then THasTyp (us, p)
+*)
+    | THasTyp(us,p)      -> if onlyTopForm then THasTyp (us, fooForm p)
+                            else THasTyp (List.map fooTT us, fooForm p)
     | TTuple(l)          -> TTuple (List.map (fun (x,t) -> (x, fooTyp t)) l)
     | TNonNull(t)        -> TNonNull (fooTyp t)
     | TMaybeNull(t)      -> TMaybeNull (fooTyp t)
@@ -166,7 +169,8 @@ let foldTyp (fForm: 'a -> formula -> 'a)
     | TInt               -> acc
     | TBaseUnion _       -> acc
     | TBaseRefine(x,t,p) -> fooForm acc p
-    | THasTyp(u)         -> fooTT acc u
+    | THasTyp(us,p)      -> let acc = List.fold_left fooTT acc us in
+                            fooForm acc p
     | TTuple(l)          -> List.fold_left (fun a (x,t) -> fooTyp a t) acc l
     | TNonNull(t)        -> fooTyp acc t
     | TMaybeNull(t)      -> fooTyp acc t
@@ -337,11 +341,19 @@ let tyIntOrStr    = TBaseUnion [tagInt; tagStr]
 *)
 let tyStrOrBool   = TBaseUnion [tagStr; tagBool] 
 
+(*
 let tyArr x t t'  = ty (hastyp theV (UArr(([],[],[]),x,t,([],[]),t',([],[]))))
 let tyNull        = ty (pAnd [PEq (theV, wNull); hastyp theV UNull])
+*)
+
 (*let tyRef l       = ty (hastyp theV (URef l))*)
-let tyRef l       = THasTyp (URef l)
-let tySafeRef l   = TNonNull (THasTyp (URef l))
+(* 3/12 added tag(v)="ref" so that strong refs are truthy *)
+(*
+let tyRef l       = THasTyp ([URef l], eq (tag theV) (wStr tagRef))
+*)
+let tyRef l       = THasTyp ([URef l], PTru)
+
+let tySafeRef l   = TNonNull (THasTyp ([URef l], PTru))
 
 (* setting the default for array tuple invariants to be v != undefined,
    not Top, so that packed array accesses can at least prove that the
@@ -353,7 +365,9 @@ let tyArrImp l x t h t' h'  = ty (PIs (theV, UArr(l,x,t,h,t',h')))
 *)
 
 let pIsBang a u   = pAnd [pNot (PEq (a, wNull)); hastyp a u]
+(*
 let tyIsBang a u  = ty (pIsBang a u)
+*)
 
 
 (***** Id Tables **************************************************************)
@@ -401,6 +415,8 @@ let _ = (* the ids for these strings need to match theory.lisp *)
   assert (6 = getStringId "TagBot");
   assert (7 = getStringId tagObj);
   assert (8 = getStringId tagUndef);
+  assert (9 = getStringId tagRef);
+  assert (10 = getStringId tagArray);
   ()
 
 (***** Boxes *****)
@@ -574,9 +590,12 @@ and strTyp = function
   | TBaseUnion(l)        -> String.concat "Or" (List.map strTag l)
   | TBaseRefine("v",t,p) -> spr "{%s|%s}" (strTag t) (strForm p)
   | TBaseRefine(x,t,p)   -> spr "{%s:%s|%s}" x (strTag t) (strForm p)
-  | THasTyp(u)           -> strTT u
   | TNonNull(t)          -> spr "%s" (strTyp t)
   | TMaybeNull(t)        -> spr "%s" (strTyp t)
+  | THasTyp([u],PTru)    -> strTT u
+  | THasTyp(us,p) ->
+      let ps = List.map (fun u -> PUn(HasTyp(theV,u))) us in
+      spr "{%s}" (strForm (pAnd (ps @ [p])))
   | TTuple(l) ->
       let l = List.map (fun (x,t) -> spr "%s:%s" x (strTyp t)) l in
       spr "[%s]" (String.concat ", " l)
@@ -874,7 +893,9 @@ and (* let rec *) freeVarsTyp env = function
   | TInt               -> Quad.empty
   | TBaseUnion _       -> Quad.empty
   | TBaseRefine(x,_,p) -> freeVarsForm (Quad.addV x env) p
-  | THasTyp(u)         -> freeVarsTT env u
+  | THasTyp(us,p)      -> let v = freeVarsForm env p in
+                          let vs = List.map (freeVarsTT env) us in
+                          Quad.combineList (v::vs)
   | TNonNull(t)        -> freeVarsTyp env t
   | TMaybeNull(t)      -> freeVarsTyp env t
   | TTuple(l) ->
@@ -1057,10 +1078,16 @@ and masterSubstTyp subst = function
   | TBaseUnion(l)   -> TBaseUnion l
   | TNonNull(t)     -> TNonNull (masterSubstTyp subst t)
   | TMaybeNull(t)   -> TMaybeNull (masterSubstTyp subst t)
-  | THasTyp(UVar(x)) -> (* type variable instantiation *)
+  (* TODO assuming that only one v::A predicate *)
+  | THasTyp([UVar(x)],PTru) -> (* type variable instantiation *)
       let (_,sub,_,_) = subst in
-      if List.mem_assoc x sub then List.assoc x sub else THasTyp (UVar x)
-  | THasTyp(u) -> THasTyp (masterSubstTT subst u)
+      if List.mem_assoc x sub
+      then List.assoc x sub
+      else THasTyp ([UVar x], PTru)
+  | THasTyp(us,p) ->
+      let us = List.map (masterSubstTT subst) us in
+      let p = masterSubstForm subst p in
+      THasTyp (us, p)
   (* binding forms *)
   | TRefinement(x,p) ->
       let subst = MasterSubst.removeVVars [x] subst in
@@ -1142,7 +1169,12 @@ and applyTyp t w =
     | TTop             -> PTru
     | TBot             -> PFls
     | TInt             -> pAnd [eq (tag w) (wStr tagNum); integer w]
+(*
     | THasTyp(u)       -> PUn (HasTyp (w, u))
+*)
+    | THasTyp(us,p)    -> let ps = List.map (fun u -> PUn (HasTyp (w, u))) us in
+                          let p = masterSubstForm (["v",w],[],[],[]) p in
+                          pAnd (p::ps)
     | TNonNull(t)      -> pAnd [applyTyp t w; pNot (PEq (w, wNull))]
     | TMaybeNull(t)    -> pOr [applyTyp t w; PEq (w, wNull)]
     | TBaseUnion([t])  -> PEq (tag w, wStr t)
@@ -1220,6 +1252,9 @@ and freshenDomain free x t =
   match freshenDepTuple free [(x,t)] with
     | [(x',t')] -> (x', t')
     | _         -> failwith "freshenDomain: impossible"
+
+let masterSubstTyp subst t =
+  BNstats.time "masterSubstTyp" (masterSubstTyp subst) t
 
 
 (***** Expression Substitution ************************************************)
@@ -1494,4 +1529,10 @@ let tyArrayTuple t ts extensible =
     hastyp theV (UArray t)
     :: packed theV :: p (arrlen theV) (wInt (List.length ts))
     :: Utils.map_i (fun ti i -> applyTyp ti (sel theV (wInt i))) ts))
+(* TODO 3/12
+  let ps =
+    packed theV :: p (arrlen theV) (wInt (List.length ts))
+    :: Utils.map_i (fun ti i -> applyTyp ti (sel theV (wInt i))) ts in
+  THasTyp ([UArray t], pAnd ps)
+*)
 

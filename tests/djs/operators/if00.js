@@ -9,3 +9,9 @@ if (0) {
 } else {
   "always gets here";
 };
+
+if (null) {
+  /*: Bot */ "never gets here";
+} else {
+  "always gets here";
+};

@@ -28,6 +28,8 @@ let argSpecs = [
   (* TODO should also suppress output for -fast *)
   ("-fast", Arg.Clear Cnf.checkConversion,
          "           don't check CNF conversion");
+  ("-checkCNF", Arg.Set Cnf.checkConversion,
+         "           check CNF conversion");
   ("-printAllTypes", Arg.Set S.printAllTypes,
                   "  default is just top-level definitions");
   ("-noElimLocals", Arg.Clear S.tryElimLocals,
@@ -202,5 +204,7 @@ let _ =
   if !Sub.maxJoinSize > 1 then failwith "join not implemented in dref/djs";
 
   Zzz.emitPreamble ();
-  TcDref.typecheck e
-
+  TcDref.typecheck e;
+  BNstats.print (open_out (Settings.out_dir ^ "stats.txt")) "";
+  ()
+  

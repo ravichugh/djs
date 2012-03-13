@@ -9,6 +9,7 @@ Licenses
   1) LICENSE.DJS   : System !D + DJS
   2) LICENSE.LamJS : LambdaJS by Arjun Guha and Claudiu Saftoiu (in src/LamJS)
   3) LICENSE.Z3    : Z3 by Microsoft Research
+  4) BNstats/      : BNstats.ml by Necula, McPeak, and Weimer
 
 --------------------------------------------------------------------------------
 Requirements

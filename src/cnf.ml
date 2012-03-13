@@ -3,7 +3,7 @@ open Lang
 open LangUtils
 
 
-let checkConversion = ref true
+let checkConversion = ref false
 
 type clause = formula * formula list
 

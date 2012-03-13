@@ -1,11 +1,12 @@
 
 LIBS=-libs unix,str
 LAM=-I LamJS
+STATS=-I BNstats
 PARSE=-use-menhir -yaccflag --explain # set to empty for ocamlyacc
 
 all:
 	([ -d out ] && echo "out/ exists") || (mkdir out && echo "out/ created")
-	ocamlbuild $(LIBS) $(PARSE) $(LAM) -no-links main.native
+	ocamlbuild $(LIBS) $(PARSE) $(LAM) $(STATS) -no-links main.native
 	ln -f -s _build/main.native system-d
 
 ## bytecode version with debugging

@@ -84,7 +84,12 @@ let rec checkType errList g h t =
   let errList = errList @ [spr "Wf.checkType: %s" (prettyStrTyp t)] in
   match t with
     | TTop | TBot | TInt | TBaseUnion _ -> ()
+(*
     | THasTyp(u) -> checkTypeTerm errList g h u
+*)
+    | THasTyp(us,p) ->
+        let _ = List.iter (checkTypeTerm errList g h) us in
+        checkFormula errList g h p
     | TNonNull(t) | TMaybeNull(t) -> checkType errList g h t
     | TRefinement(x,p) | TBaseRefine(x,_,p) ->
         checkFormula errList (Var(x,tyAny)::g) h p

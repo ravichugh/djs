@@ -328,9 +328,9 @@ let dsArrow arr =
 
   let (tyThis,tIn) =
     match tIn with
-      | TTuple(("this",THasTyp(URef(lThis)))::tup) ->
+      | TTuple(("this",THasTyp([URef(lThis)],_))::tup) ->
           (* ([("this", tyRef lThis)], TTuple tup) *)
-          ([("this", THasTyp (URef lThis))], TTuple tup)
+          ([("this", tyRef lThis)], TTuple tup)
       | _ ->
           ([], tIn) in
 
@@ -357,7 +357,7 @@ let dsArrow arr =
   let tRet  = masterSubstTyp subst tRet in
 
   (* let tyArgs = [("arguments", tyRef (LocVar lArgs))] in *)
-  let tyArgs = [("arguments", THasTyp (URef (LocVar lArgs)))] in
+  let tyArgs = [("arguments", tyRef (LocVar lArgs))] in
 
   ((ts, ls @ [lArgs], hs),
    freshVar "_",
@@ -385,11 +385,14 @@ let desugarTypHint hint =
 
 let desugarCtorHint hint =
   let arr = parseCtorTyp hint in
-  dsTyp (THasTyp (UArr arr))
+  dsTyp (THasTyp ([UArr arr], PTru))
 
 (* TODO for now, not allowing intersections of arrows *)
 let hasThisParam = function
+(*
   | THasTyp(UArr(_,_,TTuple(("this",_)::_),_,_,_)) -> true
+*)
+  | THasTyp([UArr(_,_,TTuple(("this",_)::_),_,_,_)],PTru) -> true
   | _ -> false
 
 

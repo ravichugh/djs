@@ -25,6 +25,9 @@ let typeTerms g =
         acc
   ) init g
 
+let typeTerms g =
+  BNstats.time "typeTerms" typeTerms g
+
 
 (***** Meet/Join **************************************************************)
 
@@ -97,6 +100,9 @@ let mustFlow_ usedBoxes ?filter:(f=(fun _ -> true)) g t =
   Zzz.dump (spr "; extracted: is(%s, %s)" x (Utils.strIntList il));
   Log.log (spr "%s\n" (Utils.strIntList il));
   extracted
+
+let mustFlow_ usedBoxes ?filter:(f=(fun _ -> true)) g t =
+  BNstats.time "mustFlow_" (mustFlow_ usedBoxes ~filter:f g) t
 
 let canFlow_ usedBoxes ?filter:(f=(fun _ -> true)) g t =
   Log.smallTitle "CanFlow";
@@ -288,14 +294,29 @@ and checkTypeTerms errList usedBoxes g u1 u2 =
     | UVar(x), UVar(y) -> x = y
     | URef(x), URef(y) -> x = y
     | UArr(arr1), UArr(arr2) -> checkArrow errList usedBoxes g arr1 arr2
+    | UArray(t1), UArray(t2) ->
+       (try (* TODO 3/10 ideally want a version that returns bool instead
+               of failing *)
+         let _ = checkTypes errList usedBoxes g t1 t2 in
+         let _ = checkTypes errList usedBoxes g t2 t1 in
+         true
+       with Tc_error _ ->
+         false)
     | _ -> err (errList @ ["Syntactic types don't match up."])
 
 and checkArrow errList usedBoxes g
       ((ts1,ls1,hs1),x1,t11,e11,t12,e12) ((ts2,ls2,hs2),x2,t21,e21,t22,e22) =
 
+(* TODO 3/10
   checkLength "type" errList ts1 ts2;
   checkLength "loc" errList ls1 ls2;
   checkLength "heap" errList hs1 hs2;
+*)
+  if List.length ts1 <> List.length ts2
+     || List.length ls1 <> List.length ls2
+     || List.length hs1 <> List.length hs2 then false
+  else
+  
 
   let (tSubst,lSubst,hSubst) =
     (List.combine ts1 (List.map (fun x -> ty (PUn(HasTyp(theV,UVar(x))))) ts2),

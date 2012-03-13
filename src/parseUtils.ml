@@ -243,7 +243,7 @@ let rec mkLetRec f s e1 e2 =
 *)
 let mkLetRec f uarr e1 e2 =
   let (_,x,_,_,_,_) = uarr in
-  let t = THasTyp (UArr uarr) in
+  let t = THasTyp ([UArr uarr], PTru) in
   ELet (f, Some (typToFrame t),
         EApp (([t],[],[]), eVar "fix",
           EFun (([],[],[]), f, None,
@@ -263,14 +263,27 @@ let undoIntersectionHack g t =
           match List.find (function Var(y,_) -> x = y | _ -> false) g with
             | Var(_,s) ->
                 (match s with
-                   | TRefinement("v",_)
-                   | THasTyp(_) -> applyTyp s theV
-                   | _ -> printTcErr [spr "can't expand type hack [%s]" x])
+                   | THasTyp([u],PTru) -> PUn (HasTyp (theV, u))
+                   | _ -> printTcErr [spr "0 can't expand type hack [%s]" x])
             | _ -> kill "undoIntersectionHack: impossible"
         end with Not_found ->
-          printTcErr [spr "can't expand type hack [%s]" x]
+          printTcErr [spr "1 can't expand type hack [%s]" x]
       end
     | p -> p
   in
-  mapTyp ~fForm t
+  let t = mapTyp ~fForm t in
+  match t with
+    | TRefinement("v",PConn("and",ps)) ->
+        let boxes_opt =
+          List.fold_left (fun acc p ->
+            match acc, p with
+              | Some(l), PUn(HasTyp(WVal(VVar"v"),u)) -> Some(u::l)
+              | _ -> None
+          ) (Some []) ps in
+        begin match boxes_opt with
+          | Some(us) -> THasTyp (us, PTru)
+          | None -> t
+        end
+    | _ ->
+        t
 

@@ -4,6 +4,32 @@ open LangUtils
 open TcUtils
 
 
+(**** Selfify *****************************************************************)
+
+(* Rather than blindly returning {v=x}, check if the type of x is a syntactic
+   type, and if so, keep that exposed at the top level so that don't need
+   as many extractions. *)
+
+let addPredicate p = function
+  | PTru -> p
+  | PConn("and",ps) -> pAnd (ps @ [p])
+  | q -> pAnd [q;p]
+
+let selfifyVar g x =
+  try
+    let eqX = eq theV (wVar x) in
+    begin match List.find (function Var(y,_) -> x = y | _ -> false) g with
+      | Var(_,THasTyp(us,p)) -> THasTyp (us, addPredicate eqX p)
+      | _                    -> ty eqX
+    end
+  with Not_found ->
+    err [spr "selfifyVar: var not found: [%s]" x]
+  
+let selfifyVal g = function
+  | VVar(x) -> selfifyVar g x
+  | v       -> ty (PEq (theV, WVal v))
+
+
 (**** Environment operations **************************************************)
 
 let removeLabels g =
@@ -167,15 +193,17 @@ let freshenWorld (t,(hs,cs)) =
   let t = masterSubstTyp subst t in
   (fresh, (t, (hs, cs)))
 
-let selfifyHeap (hs,cs) =
+let selfifyHeap g (hs,cs) =
   let (fresh,cs) =
     List.fold_left (fun (acc1,acc2) -> function
       | (l,HConc(x,s)) ->
           let x' = freshVar x in
-          ((x',s)::acc1, (l, HConc (x', ty (PEq (theV, wVar x))))::acc2)
+          (* ((x',s)::acc1, (l, HConc (x', ty (PEq (theV, wVar x))))::acc2) *)
+          ((x',s)::acc1, (l, HConc (x', selfifyVar g x))::acc2)
       | (l,HConcObj(x,s,l')) ->
           let x' = freshVar x in
-          ((x',s)::acc1, (l, HConcObj (x', ty (PEq (theV, wVar x)), l'))::acc2)
+          (* ((x',s)::acc1, (l, HConcObj (x', ty (PEq (theV, wVar x)), l'))::acc2) *)
+          ((x',s)::acc1, (l, HConcObj (x', selfifyVar g x, l'))::acc2)
       | (l,HWeakObj(thaw,s,l')) ->
           (acc1, (l, HWeakObj (thaw, s, l')) :: acc2)
     ) ([],[]) cs
@@ -275,11 +303,14 @@ let finishLet cap g y l (s,h) =
 
 (* TODO when adding abstract refs, revisit these two *)
 
-let startsWithTilde = function LocConst(x) | LocVar(x) -> x.[0] = '~'
-
-let refTermsOf g t =
-  let isConcRef = function URef _ -> true | _ -> false in
-  TypeTerms.elements (Sub.mustFlow g t ~filter:isConcRef)
+let refTermsOf g = function
+  | THasTyp([URef(l)],_) ->
+      let _ = pr "don't call extract [Ref(%s)]\n" (strLoc l) in
+      [URef l]
+  | t ->
+      let _ = pr "call extract refTermsOf [%s]\n" (prettyStrTyp t) in
+      let isConcRef = function URef _ -> true | _ -> false in
+      TypeTerms.elements (Sub.mustFlow g t ~filter:isConcRef)
 
 let singleRefTermOf cap g t =
   match refTermsOf g t with
@@ -290,7 +321,7 @@ let singleRefTermOf cap g t =
 
 let singleStrongRefTermOf cap g t =
   let l = singleRefTermOf cap g t in
-  if startsWithTilde l
+  if isWeakLoc l
   then err [cap; spr "[%s] flows to value, but is not strong" (strLoc l)]
   else l
 
@@ -314,9 +345,27 @@ let ensureSafeWeakRef cap g t =
   Sub.checkTypes cap g TypeTerms.empty t safe
 *)
 
-let arrayTermsOf g t =
-  let filter = function UArray _ -> true | _ -> false in
-  TypeTerms.elements (Sub.mustFlow g t ~filter)
+let arrayTermsOf g = function
+  | THasTyp([UArray(t)],_) ->
+      let _ = pr "don't call extract [Array(%s)]\n" (strTyp t) in
+      [UArray t]
+  | t ->
+      pr "call extract arrayTermsOf [%s]\n" (prettyStrTyp t);
+      let filter = function UArray _ -> true | _ -> false in
+      TypeTerms.elements (Sub.mustFlow g t ~filter)
+
+let arrowTermsOf g t =
+  match t with
+    | THasTyp(us,_) ->
+        (* this means that if there are any type terms at the top-level of
+           the type, return them. not _also_ considering the refinement to
+           see if that leads to more must flow boxes. *)
+        let _ = pr "don't call extract EApp [%s]\n" (prettyStrTyp t) in
+        us
+    | _ ->
+        let _ = pr "call extract EApp [%s]\n" (prettyStrTyp t) in
+        let filter = function UArr _ -> true | _ -> false in
+        TypeTerms.elements (Sub.mustFlow g t ~filter)
 
 
 (***** TC helpers *************************************************************)
@@ -371,7 +420,10 @@ let applyAnnotation g h = function
 
 let isArrow = function
   | TRefinement(x,PUn(HasTyp(y,UArr(arr)))) when y = wVar x -> Some arr
+(*
   | THasTyp(UArr(arr)) -> Some arr
+*)
+  | THasTyp([UArr(arr)],PTru) -> Some arr
   | _ -> None
 
 let isArrows t =
@@ -383,6 +435,12 @@ let isArrows t =
             | Some(l), PUn(HasTyp(y,UArr(arr))) when y = wVar x -> Some(arr::l)
             | _ -> None
         ) (Some []) ps
+    | _, THasTyp(us,PTru) ->
+        List.fold_left (fun acc u ->
+          match acc, u with
+            | Some(l), UArr(arr) -> Some(arr::l)
+            | _ -> None
+        ) (Some []) us
     | _ -> None
 
 type app_rule_result =
@@ -569,11 +627,17 @@ let isValueTuple v =
 
 let findActualFromRefValue g lVar tTup vTup =
   let rec foo i = function
+(*
     | THasTyp(URef(LocVar(lVar'))) :: ts when lVar = lVar' ->
+*)
+    | THasTyp([URef(LocVar(lVar'))],_) :: ts when lVar = lVar' ->
         if i >= List.length vTup then None
         else
           let vi = List.nth vTup i in
+(* TODO 3/10
           begin match refTermsOf g (ty (PEq (theV, WVal vi))) with
+*)
+          begin match refTermsOf g (selfifyVal g vi) with
             | [URef(lAct)] ->
                 let _ = fpr oc_local_inf "  %s |-> %s\n" lVar (strLoc lAct) in
                 Some lAct
@@ -606,9 +670,16 @@ let findActualFromProtoLink locSubst lVar hForm hAct =
 
 let findArrayActual g tVar locSubst hForm hAct =
   let rec foo = function
+(*
     | (LocVar lVar, HConc (_, THasTyp (UArray (THasTyp (UVar x))))) :: cs
     | (LocVar lVar, HConcObj (_, THasTyp (UArray (THasTyp (UVar x))), _)) :: cs
+*)
+    | (LocVar lVar, HConc (_, THasTyp ([UArray (THasTyp ([UVar x], _))], _))) :: cs
+    | (LocVar lVar, HConcObj (_, THasTyp ([UArray (THasTyp ([UVar x], _))], _), _)) :: cs
       when tVar = x ->
+(*
+        let _ = pr "ravi %s" (strHeap hForm) in
+*)
         if not (List.mem_assoc lVar locSubst) then foo cs
         else begin match List.assoc lVar locSubst with
           | None -> foo cs
@@ -617,12 +688,18 @@ let findArrayActual g tVar locSubst hForm hAct =
               else begin match List.assoc lAct (snd hAct) with
                 | HConc(a,_)
                 | HConcObj(a,_,_) ->
+(*
                     (match arrayTermsOf g (ty (PEq (theV, wVar a))) with
+*)
+                    (match arrayTermsOf g (selfifyVar g a) with
                        | [UArray(t)] -> Some t
                        | _           -> foo cs)
               end
         end
     | _ :: cs -> foo cs
+(*
+    | c :: cs -> let _ = pr "didn't match %s" (prettyStrHeap ([],[c])) in foo cs
+*)
     | []      -> None
   in
   foo (snd hForm)
@@ -679,7 +756,10 @@ let inferTypLocParams x g tForms lForms tForm hForm tActs lActs vAct hAct =
     match tForm with
       | TTuple([("arguments",t)]) -> begin
           match t, lActs with
+(*
             | THasTyp(URef(lArgsForm)), [lArgsAct] ->
+*)
+            | THasTyp([URef(lArgsForm)],_), [lArgsAct] ->
                 let (lForms,_) = Utils.longHeadShortTail lForms in
                 if not (List.mem_assoc lArgsForm (snd hForm)) then None
                 else if not (List.mem_assoc lArgsAct (snd hAct)) then None
@@ -704,7 +784,10 @@ let inferTypLocParams x g tForms lForms tForm hForm tActs lActs vAct hAct =
          formal and actual *)
       | TTuple([("this",tThis);("arguments",t)]) -> begin
           match t, lActs with
+(*
             | THasTyp(URef(lArgsForm)), [lArgsAct] ->
+*)
+            | THasTyp([URef(lArgsForm)],_), [lArgsAct] ->
                 let (lForms,_) = Utils.longHeadShortTail lForms in
                 if not (List.mem_assoc lArgsForm (snd hForm)) then None
                 else if not (List.mem_assoc lArgsAct (snd hAct)) then None
@@ -766,7 +849,9 @@ and tcExp g h w e =
 
 and tsVal_ g h = function
 
+(* TODO add v::Null back in
   | VBase(Null) -> tyNull
+*)
 
   | VVar("__skolem__") -> tyNum
 
@@ -780,6 +865,7 @@ and tsVal_ g h = function
       ty (PEq (theV, WVal v))
     end
 
+(*
   | VVar(x) -> begin
       try
         let _ = List.find (function Var(y,_) -> x = y | _ -> false) g in
@@ -787,6 +873,10 @@ and tsVal_ g h = function
       with Not_found ->
         err [spr "ts: var not found: [%s]" x]
     end
+*)
+
+  | VVar(x) -> selfifyVar g x
+
 (*
   | VVar(x) -> begin
       try
@@ -833,10 +923,19 @@ and tsVal_ g h = function
   | VArray(t,vs) -> begin
       List.iter (tcVal g h t) vs;
       let n = List.length vs in
+(*
       ty (pAnd (
         hastyp theV (UArray t)
         :: packed theV :: PEq (arrlen theV, wInt n)
         :: Utils.map_i (fun vi i -> PEq (sel theV (wInt i), WVal vi)) vs))
+*)
+(* 3/12
+*)
+      let ps = 
+        (* eq (tag theV) (wStr tagArray) :: *)
+        packed theV :: PEq (arrlen theV, wInt n)
+        :: Utils.map_i (fun vi i -> PEq (sel theV (wInt i), WVal vi)) vs in
+      THasTyp ([UArray t], pAnd ps)
     end
 
 
@@ -909,7 +1008,10 @@ and tsExp_ g h = function
       let t1 = tsVal g h v in
       let l = singleRefTermOf cap g t1 in
       match findHeapCell l h with
+(* TODO 3/10
         | Some(HConc(y,s)) -> (ty (PEq (theV, wVar y)), h)
+*)
+        | Some(HConc(y,s)) -> (selfifyVar g y, h)
         | Some(HConcObj _) -> err ([cap; "not handling ConcObj cell"])
         | None -> err ([cap; spr "unbound loc [%s]" (strLoc l)])
                      
@@ -991,8 +1093,12 @@ and tsExp_ g h = function
 
   | ELet(x,None,EApp(l,EVal(v1),EVal(v2)),e) -> begin
       let t1 = tsVal g h v1 in
+(*
       let filter = function UArr _ -> true | _ -> false in
+      let _ = pr "call extract EApp [%s]\n" (prettyStrTyp t1) in
       let boxes = TypeTerms.elements (Sub.mustFlow g t1 ~filter) in
+*)
+      let boxes = arrowTermsOf g t1 in
       let (s1,s2) = (prettyStrVal v1, prettyStrVal v2) in
       let cap = spr "TS-LetApp: let %s = [...] (%s) (%s)" x s1 s2 in
       tsELetAppTryBoxes cap g h x l v1 v2 e boxes
@@ -1275,7 +1381,7 @@ and tsExp_ g h = function
 
   | EFreeze(m,EVal(v)) -> begin
       let cap = spr "ts EFreeze [%s] [%s]" (strLoc m) (prettyStrVal v) in
-      if not (startsWithTilde m) then err [cap; "doesn't start with tilde"];
+      if not (isWeakLoc m) then err [cap; "doesn't start with tilde"];
       match findAndRemoveHeapCell m h with
         | Some(HWeakObj(Frzn,t,l'), h0) -> begin
             let s = tsVal g h v in
@@ -1431,7 +1537,7 @@ and tsELetAppTryBoxes cap g curHeap x (tActs,lActs,hActs) v1 v2 e boxes =
 
     let (freshFromHInst,hAct) =
       match hActs with
-        | [e] -> selfifyHeap e
+        | [e] -> selfifyHeap g e
         | []  -> ([], ([],[]))
         | _   -> failwith "app: >1 heap arg nyi"
     in
@@ -1467,6 +1573,15 @@ and tsELetAppTryBoxes cap g curHeap x (tActs,lActs,hActs) v1 v2 e boxes =
     let (t12,e12) =
       (expandPreTyp t12, expandPreHeap e12) in
     Wf.heap "e12 after instantiation" g e12;
+
+(*
+    (* TODO 3/9 *)
+    (match t12 with
+       | THasTyp(UArr _) ->
+           (pr "ravi yes %s\n" (prettyStrTyp t12); incr synCount)
+       | _ ->
+           (pr "ravi no %s\n" (prettyStrTyp t12); incr notSynCount));
+*)
 
     (* now that call has been checked, process the let body *)
     let (n,g') = snapshot g e12 in
@@ -1678,7 +1793,10 @@ and tcExp_ g h goal = function
       let cap = spr "TC-LetNewref-Bare: let %s = ..." x in
       let e = EAsW (cap, e, goal) in
       let w = tsExp g h (ELet(x,None,ENewref(l,EVal(v)),e)) in
+(* 3/12 removing worlds
       ignore (Sub.worlds cap g w goal)
+*)
+      ()
 (*
       let ruleName = "TC-LetNewref" in
       let strE = spr "  let %s = ref %s (%s) in ..." x l (prettyStrVal v) in
@@ -1724,7 +1842,10 @@ and tcExp_ g h goal = function
       let cap = spr "TC-LetSetref-Bare: let %s = ..." x in
       let e = EAsW (cap, e, goal) in
       let w = tsExp g h (ELet(x,None,ESetref(EVal(v1),EVal(v2)),e)) in
+(* 3/12 removing worlds
       ignore (Sub.worlds cap g w goal)
+*)
+      ()
 (*
       let ruleName = "TC-LetSetref" in
       let strE = spr "  let %s = (%s) := (%s) in ..." x
@@ -1747,7 +1868,10 @@ and tcExp_ g h goal = function
       let cap = spr "TC-LetApp: let %s = [...] (%s) (%s)" x s1 s2 in
       let e = EAsW (cap, e, goal) in
       let w = tsExp g h (ELet(x,None,EApp(l,EVal(v1),EVal(v2)),e)) in
+(* 3/12 removing worlds
       ignore (Sub.worlds cap g w goal)
+*)
+      ()
 (*
       (* TODO hmm, how to help the application, not just the body *)
       let ruleName = "TC-LetApp" in
@@ -1783,7 +1907,10 @@ and tcExp_ g h goal = function
       let cap = spr "TC-NewObj: let %s = ..." x in
       let e = EAsW (cap, e, goal) in
       let w = tsExp g h (ELet(x,None,ENewObj(EVal(v1),l1,EVal(v),l2),e)) in
+(* 3/12 removing worlds
       ignore (Sub.worlds cap g w goal)
+*)
+      ()
     end
 
   (***** all typing rules that use special let-bindings should be above *****)
@@ -1798,7 +1925,10 @@ and tcExp_ g h goal = function
       let cap = spr "TC-Let: let %s = ..." x in
       let e2 = EAsW (cap, e2, goal) in
       let w = tsExp g h (ELet(x,None,e1,e2)) in
+(* 3/12 removing worlds
       ignore (Sub.worlds cap g w goal)
+*)
+      ()
 
 (* pre 11/25
       let w = tsExp g h (ELet(x,None,e1,e2)) in
@@ -1961,4 +2091,7 @@ let typecheck e =
     pr "\n%s\n" (Utils.greenString s)
   end with Tc_error(s) ->
     printTcErr s
+
+let typecheck e =
+  BNstats.time "typecheck" typecheck e
 

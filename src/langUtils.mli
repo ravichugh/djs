@@ -111,14 +111,18 @@ val tyEmpty : typ
 (* val tyIntOrBool : typ *)
 (* val tyIntOrStr : typ *)
 val tyStrOrBool : typ
+(*
 val tyArr : vvar -> typ -> typ -> typ
 val tyNull : typ
+*)
 (* val tyArrImp : locs -> vvar -> typ -> heap -> typ -> heap -> typ *)
 val tyRef : loc -> typ
 val tySafeRef : loc -> typ
 val tyArrDefault : typ
 val pIsBang : walue -> typterm -> formula
+(*
 val tyIsBang : walue -> typterm -> typ
+*)
 val tyArrayTuple : typ -> typ list -> bool -> typ
 
 (***** Boxes ******************************************************************)

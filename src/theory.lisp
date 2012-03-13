@@ -29,6 +29,8 @@
          (bot)
          (null)
          (undefined) ; added for DJS
+         (VRef (VRefSel Int))
+         ;(VArray (VArraySel Int))
   )
 ))
 
@@ -53,7 +55,8 @@
 (declare-funs
   ((TagInt DVal) (TagBool DVal) (TagStr DVal) (TagDict DVal)
    (TagFun DVal) (TagBot DVal)
-   (TagObj DVal) (TagUndef DVal)))
+   (TagObj DVal) (TagUndef DVal)
+   (TagRef DVal) (TagArray DVal)))
 
 ; these ids have to match idStrings table in langUtils.ml
 (assert (= TagDict  (VStr 1)))
@@ -64,6 +67,8 @@
 (assert (= TagBot   (VStr 6)))
 (assert (= TagObj   (VStr 7)))
 (assert (= TagUndef (VStr 8)))
+(assert (= TagRef   (VStr 9)))
+(assert (= TagArray (VStr 10)))
 
 ; NOTE: could define closed set of tags here ...
 
@@ -132,6 +137,22 @@
 
 ; 3/5
 (assert (forall (u BoxId) (not (hastyp undefined u))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;; source-level reference values
+;;;;;
+
+; 3/12
+(assert (forall (i Int) (= (tag (VRef i)) TagRef)))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;; functional array values
+;;;;;
+
+;; 3/13
+;(assert (forall (i Int) (= (tag (VArray i)) TagArray)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

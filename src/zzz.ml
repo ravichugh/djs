@@ -62,6 +62,9 @@ let checkSat cap =
   dump ~tab:false (spr "; [%s] query %d (%s)" s !queryCount cap);
   b
 
+let checkSat cap =
+  BNstats.time "checkSat" checkSat cap
+
 let checkValid cap p =
   pushScope ();
   (match p with

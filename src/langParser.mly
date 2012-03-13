@@ -279,8 +279,16 @@ typ :
  | t=typ QMARK                            { TMaybeNull(t) }
 *)
 
- | u=typ_term                             { THasTyp(u) }
- | LPAREN u=typ_term RPAREN               { THasTyp(u) }
+(*
+ | u=typ_term                             { THasTyp([u],PTru) }
+ | LPAREN u=typ_term RPAREN               { THasTyp([u],PTru) }
+*)
+ | u=typ_term                             { match u with
+                                              | URef(l) -> tyRef l
+                                              | _ -> THasTyp([u],PTru) }
+ | LPAREN u=typ_term RPAREN               { match u with
+                                              | URef(l) -> tyRef l
+                                              | _ -> THasTyp([u],PTru) }
 
  (* be careful of conflicts *)
  | l=deptuple                             { TTuple(l) }

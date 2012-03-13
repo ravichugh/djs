@@ -27,6 +27,8 @@ let bigindent () = String.make (4 * !depth) ' '
 type tag = string
 
 let tagDict  = "Dict"      (* for internal functional dictionaries *)
+let tagRef   = "Ref"       (* for internal references *)
+let tagArray = "Array"     (* for internal functional arrays *)
 let tagNum   = "number"
 let tagBool  = "boolean"
 let tagStr   = "string"
@@ -147,7 +149,7 @@ and typ =
   | TBaseUnion of tag list
   | TBaseRefine of vvar * tag * formula
   | TInt
-  | THasTyp of typterm
+  | THasTyp of typterm list * formula (* {v | v::U_1 /\ ... /\ v::U_n /\ p} *)
   (* | TArrows of uarr list *)
   | TTuple of (vvar * typ) list
   | TNonNull of typ
@@ -205,4 +207,7 @@ let botSubst = [("dummySubst", WVal (VVar "blah"))]
 
 let lRoot = LocConst "lROOT"
 let lObjectPro = LocConst "lObjectProto"
+
+let isWeakLoc = function LocConst(x) | LocVar(x) -> x.[0] = '~'
+let isStrongLoc l = not (isWeakLoc l)
 
