@@ -1,0 +1,13 @@
+
+let px = ref loc1 1 in
+let _ :: {(= v 1)} = !px in
+
+(* strong update *)
+let _ = px := 2 in
+let _ :: {(= v 2)} = !px in
+
+let _ = px := true in
+let _ :: {(= v true)} = !px in
+
+0
+

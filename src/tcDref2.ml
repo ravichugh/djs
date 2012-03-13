@@ -1268,14 +1268,10 @@ and tcVFun ruleName g goal (l,x,anno,e) =
     let u = UArr arr in
     Wf.typeTerm (spr "%s: arrow:\n  %s" ruleName (prettyStrTT u)) g ([],[]) u;
     let (ts,ls,hs) =
-(* TODO requring all missing params now, since don't want to deal with
-   heap prefix vars that get inserted...
-      if l = ([],[],[]) then (ts,ls,hs) (* fill in omitted loc params *)
-      else if l = (ts,ls,hs) then l
-      else err [spr "%s: supplied poly params not equal to expected" ruleName]
-*)
       if l = ([],[],[]) then (ts,ls,hs)
       else err ["lambda has some params..."]
+        (* requiring all params to be missing, since don't want to deal
+           with heap prefix vars that get inserted. *)
     in
     let subst = ([(y, wVar x)], [], [], []) in
     let t2 = masterSubstTyp subst t2 in
@@ -1284,10 +1280,6 @@ and tcVFun ruleName g goal (l,x,anno,e) =
     let g = List.fold_left (fun acc x -> LVar(x)::acc) g ls in
     let g = List.fold_left (fun acc x -> HVar(x)::acc) g hs in
     Zzz.pushScope ();
-(*
-    let (n,g) = snapshot g h1 in
-    let (m,g) = tcAddBinding g h1 x t1 in
-*)
     (* since input heap can refer to arg binders, need to process t1 first *)
     let (m,g) = tcAddBinding g h1 x t1 in
     let (n,g) = snapshot g h1 in
@@ -1296,36 +1288,9 @@ and tcVFun ruleName g goal (l,x,anno,e) =
        | Some(t,h) -> failwith "tc fun ann"
     );
     tcExp g h1 (t2,h2) e;
-(*
-    tcRemoveBinding ();
-    tcRemoveBindingN n;
-*)
     tcRemoveBindingN (n + m);
     Zzz.popScope ()
   in
-(*
-    Wf.wfLocFormalsFail ruleName l;
-    let t2 = substVarInTyp x y t2 in
-    let h1 = applyVarSubstHeap [x,y] h1 in
-    let h2 = applyVarSubstHeap [x,y] h2 in
-    Zzz.pushScope ();
-    let (n,g) = snapshot g h1 in 
-    let (g,h1) = tcAddBinding g h1 x (STyp t1) in
-    (match anno with
-       | None -> ()
-       | Some(t,h) -> begin
-           Wf.wfTypFail ruleName g h t;
-           Wf.wfHeapFail ruleName g h1;
-           Sub.checkTypes ruleName g TypeTerms.empty t1 t;
-           ignore (Sub.checkHeapsFail ruleName g h1 h);
-         end
-    );
-    tcExp g h1 (STyp t2, h2) e;
-    tcRemoveBinding ();
-    tcRemoveBindingN n;
-    Zzz.popScope ();
-  in 
-*)
   match isArrows goal with 
     | Some(l) -> List.iter checkOne l
     | None    -> err [spr "%s: goal should be one or more arrows\n  %s"
@@ -1342,164 +1307,50 @@ and tcExp_ g h goal = function
       ignore (Sub.heaps (spr "TC-Val: %s" (prettyStrVal v)) g h hGoal)
     end
 
-  | ELet(x,None,ENewref(l,EVal(v)),e) -> begin
-(*
-      failwith (spr "Tc elet newref goal: %s" (strWorld goal))
-*)
-      let cap = spr "TC-LetNewref-Bare: let %s = ..." x in
-      let e = EAsW (cap, e, goal) in
-      let w = tsExp g h (ELet(x,None,ENewref(l,EVal(v)),e)) in
-(* 3/12 removing worlds
+  | ENewref(l,EVal(v)) ->
+      let cap = spr "TC-Newref: ref (%s, %s)" (strLoc l) (prettyStrVal v) in
+      let w = tsExp g h (ENewref(l,EVal(v))) in
       ignore (Sub.worlds cap g w goal)
-*)
-      ()
-(*
-      let ruleName = "TC-LetNewref" in
-      let strE = spr "  let %s = ref %s (%s) in ..." x l (prettyStrVal v) in
-      let e = wrapWithGoal ruleName x e w in
-      let w' = tsExp g h (ELet(x,None,ENewref(l,EVal(v)),e)) in
-      niceCheckWorlds [ruleName; strE; strW] g w' w
-*)
-    end
 
-  | EDeref(EVal(v)) -> begin
-(*
-      failwith "Tc deref"
-*)
+  | EDeref(EVal(v)) ->
       let w = tsExp g h (EDeref(EVal(v))) in
       let cap = spr "TC-Deref: !(%s)" (prettyStrVal v) in
       ignore (Sub.worlds cap g w goal)
-(*
-      let ruleName = "TC-Deref" in
-      let strE = spr "  !(%s)" (prettyStrVal v) in
-      let w' = tsExp g h (EDeref(EVal(v))) in
-      niceCheckWorlds [ruleName; strE; strW] g w' w
-*)
-    end
 
-(*
-  TODO 9/27 why was this case needed?
-  | ELet(x,Some(a0),EDeref(EVal(v)),e) -> begin
-      let ruleName = "TC-LetDeref" in
-      let strE = spr "  let %s :: ... = !(%s) in ..." x (prettyStrVal v) in
-      let e = wrapWithGoal ruleName x e a in
-      let (s,h') = tsExp g h (ELet(x,Some(a0),EDeref(EVal(v)),e)) in
-      let (s0,sGoal) = (scmOfAnn a0, scmOfAnn a) in     
-      niceCheckSchemes [ruleName; strE; spr "checking s < s0"] g s s0;
-      niceCheckSchemes [ruleName; strE; spr "checking s0 < goal"] g s0 sGoal;
-      finishHeap [ruleName; strE] g h' a
-    end
-*)
-
-  | ELet(x,None,ESetref(EVal(v1),EVal(v2)),e) -> begin
-(*
-      failwith (spr "Tc let setref: goal world:\n\n%s" (strWorld goal))
-*)
-      let cap = spr "TC-LetSetref-Bare: let %s = ..." x in
-      let e = EAsW (cap, e, goal) in
-      let w = tsExp g h (ELet(x,None,ESetref(EVal(v1),EVal(v2)),e)) in
-(* 3/12 removing worlds
+  | ESetref(EVal(v1),EVal(v2)) ->
+      let cap = spr "TC-Setref: (%s) := (%s)"
+        (prettyStrVal v1) (prettyStrVal v2) in
+      let w = tsExp g h (ESetref(EVal(v1),EVal(v2))) in
       ignore (Sub.worlds cap g w goal)
-*)
-      ()
-(*
-      let ruleName = "TC-LetSetref" in
-      let strE = spr "  let %s = (%s) := (%s) in ..." x
-                    (prettyStrVal v1) (prettyStrVal v2) in
-      let e = wrapWithGoal ruleName x e w in
-      let w' = tsExp g h (ELet(x,None,ESetref(EVal(v1),EVal(v2)),e)) in
-      niceCheckWorlds [ruleName; strE; strW] g w' w
-*)
-    end
 
-(*
-  | EFreeze _ -> failwith "tc EFreeze"
-*)
+  | ENewObj(EVal(v1),l1,EVal(v2),l2) ->
+      let cap = spr "TC-NewObj: new (%s, %s, %s, %s)"
+        (prettyStrVal v1) (strLoc l1) (prettyStrVal v2) (strLoc l2) in
+      let w = tsExp g h (ENewObj(EVal(v1),l1,EVal(v2),l2)) in
+      ignore (Sub.worlds cap g w goal)
 
-  | ELet(x,None,EApp(l,EVal(v1),EVal(v2)),e) -> begin
-(*
-      (* TODO wrap with goal *)
-*)
+  | EApp(l,EVal(v1),EVal(v2)) ->
       let (s1,s2) = (prettyStrVal v1, prettyStrVal v2) in
-      let cap = spr "TC-LetApp: let %s = [...] (%s) (%s)" x s1 s2 in
-      let e = EAsW (cap, e, goal) in
-      let w = tsExp g h (ELet(x,None,EApp(l,EVal(v1),EVal(v2)),e)) in
-(* 3/12 removing worlds
+      let cap = spr "TC-App: [...] (%s) (%s)" s1 s2 in
+      let w = tsExp g h (EApp(l,EVal(v1),EVal(v2))) in
       ignore (Sub.worlds cap g w goal)
-*)
-      ()
-(*
-      (* TODO hmm, how to help the application, not just the body *)
-      let ruleName = "TC-LetApp" in
-      let strE = spr "  let %s = (%s) <%s> (%s) in ..."
-                   x (prettyStrVal v1) (strLocs la) (prettyStrVal v2) in
-      let e = wrapWithGoal ruleName x e w in
-      let w' = tsExp g h (ELet(x,None,EApp(EVal(v1),la,EVal(v2)),e)) in
-      niceCheckWorlds [ruleName; strE; strW] g w' w
-*)
-    end
 
   (* 9/21: special case added when trying to handle ANFed ifs *)
   (* 11/25: added this back in *)
   | ELet(x,None,e1,EVal(VVar(x'))) when x = x' -> begin
-(*
-      failwith "tc let special"
-*)
       tcExp g h goal e1;
       (* adding binding just so the type is printed *)
       let (n,_) = tcAddBinding g (snd goal) x (fst goal) in
       tcRemoveBindingN n;
-(*
-      let ruleName = "TC-Let special" in
-      let strE = spr "  let %s = ... in %s" x x in
-      tcExp g h w e1;
-      (* adding binding just so the type is printed *)
-      ignore (tcAddBinding g (snd w) x (fst w));
-      tcRemoveBinding ();
-*)
-    end
-
-  | ELet(x,None,ENewObj(EVal(v1),l1,EVal(v),l2),e) -> begin
-      let cap = spr "TC-NewObj: let %s = ..." x in
-      let e = EAsW (cap, e, goal) in
-      let w = tsExp g h (ELet(x,None,ENewObj(EVal(v1),l1,EVal(v),l2),e)) in
-(* 3/12 removing worlds
-      ignore (Sub.worlds cap g w goal)
-*)
-      ()
     end
 
   (***** all typing rules that use special let-bindings should be above *****)
 
-  | ELet(x,None,e1,e2) -> begin
-      (* TODO wrap with goal *)
-(*
-      let e2 = wrapWithGoal (spr "TC-Let: let %s = ..." x) e2 goal
-*)
-
-(* TODO post 11/25 *)
+  | ELet(x,None,e1,e2) ->
       let cap = spr "TC-Let: let %s = ..." x in
       let e2 = EAsW (cap, e2, goal) in
       let w = tsExp g h (ELet(x,None,e1,e2)) in
-(* 3/12 removing worlds
-      ignore (Sub.worlds cap g w goal)
-*)
       ()
-
-(* pre 11/25
-      let w = tsExp g h (ELet(x,None,e1,e2)) in
-      ignore (Sub.worlds (spr "TC-Let-Bare: let %s = ..." x) g w goal)
-*)
-
-
-(*
-      let ruleName = "TC-Let" in
-      let strE = spr "  let %s = ..." x in
-      let e2 = wrapWithGoal ruleName x e2 w in
-      let w' = tsExp g h (ELet(x,None,e1,e2)) in
-      niceCheckWorlds [ruleName; strE; strW] g w' w
-*)
-    end
 
   | ELet(x,Some(a1),e1,e2) -> begin
       let ruleName = "TC-Let-Ann" in
@@ -1511,25 +1362,6 @@ and tcExp_ g h goal = function
       let (n,g1) = tcAddBinding g h1 x s1 in
       tcExp g1 h1 goal e2;
       tcRemoveBindingN n;
-(*
-      let ruleName = "TC-Let" in
-      let strE = spr "  let %s = ..." x in
-      let (h0,(s1,h1)) = applyAnnotation g h a1 in
-      (* TODO change to wf annotation *)
-      Wf.wfScmFail ruleName g h s1;
-      Zzz.pushScope ();
-      tcExp g h (s1,h1) e1;
-      Zzz.popScope ();
-      let h1 = h0 @ h1 in
-      let (g,h1) = tcAddBinding g h1 x s1 in
-      (* 9/23 added snapshot
-         TODO might want to add bindings to the env without pushing their
-         types, since they're already there? *)
-      let (n,g) = snapshot g h1 in
-      tcExp g h1 w e2;
-      tcRemoveBindingN n;
-      tcRemoveBinding ();
-*)
     end
 
   | EIf(EVal(v),e1,e2) -> begin
@@ -1589,20 +1421,6 @@ and tcExp_ g h goal = function
   | EThrow _ -> failwith "tc EThrow"
   | ETryCatch _ -> failwith "tc ETryCatch"
   | ETryFinally _ -> failwith "tc ETryFinally"
-
-  (* 11/26: going through a let-binding, since that's the only
-     synthesis rule for new obj *)
-  | ENewObj(EVal(v1),l1,EVal(v),l2) -> begin
-      (* failwith "tc ENewObj: should've been checked with let-binding" *)
-
-      let x = freshVar "_tc_newobj" in
-      let w = tsExp g h (ELet(x,None,ENewObj(EVal(v1),l1,EVal(v),l2),eVar(x))) in
-      let cap = spr "TC-NewObj: %s %s" (strLoc l1) (strLoc l2) in
-      ignore (Sub.worlds cap g w goal)
-(*
-      failwith (spr "tc newobj, goal:\n%sj" (strWorld goal))
-*)
-    end
 
   (* the remaining cases should not make it to type checking, so they indicate
      some failure of parsing or ANFing *)
