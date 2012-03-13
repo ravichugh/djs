@@ -19,7 +19,7 @@ loc:
     sub.ml wf.ml tcUtils.ml                         \
     cnf.ml anf.ml main.ml                           \
     utils.ml log.ml                                 \
-    tcDref.ml                                       \
+    tcDref2.ml                                      \
     parseUtils.ml                                   \
     djsDesugar.ml                                   \
     settings.ml                                     \

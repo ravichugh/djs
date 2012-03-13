@@ -32,8 +32,6 @@ let argSpecs = [
          "           check CNF conversion");
   ("-printAllTypes", Arg.Set S.printAllTypes,
                   "  default is just top-level definitions");
-  ("-noElimLocals", Arg.Clear S.tryElimLocals,
-                 "   don't try to eliminate locals when synthesizing lets");
   ("-meet", Arg.Set Sub.doMeet,
          "           use meet to combine type terms");
   ("-join", Arg.Int (fun i -> Sub.maxJoinSize := i),
@@ -204,7 +202,7 @@ let _ =
   if !Sub.maxJoinSize > 1 then failwith "join not implemented in dref/djs";
 
   Zzz.emitPreamble ();
-  TcDref.typecheck e;
+  TcDref2.typecheck e;
   BNstats.print (open_out (Settings.out_dir ^ "stats.txt")) "";
   ()
   

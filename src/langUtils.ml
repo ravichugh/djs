@@ -1195,6 +1195,11 @@ and applyTyp t w =
         in
         pAnd (PEq (tag w, wStr "Dict") :: has :: sels)
     | TExists(x,t,s) ->
+(* TODO 3/13. now that i'm trying to pull existentials into the
+   env sooner, should this still fire? seems like it does on conditionals.
+        let _ = failwith (spr "applyTyp TExists %s %s %s %s"
+          x (prettyStrTyp t) (prettyStrTyp s) (prettyStrWal w)) in
+*)
         pAnd [applyTyp t (wVar x); applyTyp s w]
 
 (***** the helpers that rename binders to avoid capture *****)
