@@ -91,6 +91,7 @@ let rec checkType errList g h t =
         let _ = List.iter (checkTypeTerm errList g h) us in
         checkFormula errList g h p
     | TNonNull(t) | TMaybeNull(t) -> checkType errList g h t
+    | TSelfify(t,p) -> (checkType errList g h t; checkFormula errList g h p)
     | TRefinement(x,p) | TBaseRefine(x,_,p) ->
         checkFormula errList (Var(x,tyAny)::g) h p
     | TTuple(l) ->

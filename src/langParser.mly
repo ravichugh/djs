@@ -138,11 +138,13 @@ let sameCell l =
 %type <Lang.uarr> jsCtor
 %type <(Lang.typs * Lang.locs * Lang.heaps) * Lang.loc> jsNew
 %type <Lang.loc * Lang.typ> jsArrLit
+%type <Lang.heap> jsHeap
 %type <string> jsFail
 
 
 %start prog prelude
 %start jsTyp jsPolyArgs jsLoc jsObjLocs jsWhile jsFail jsCtor jsNew jsArrLit
+       jsHeap
 
 
 %%
@@ -723,5 +725,9 @@ jsArrLit :
  | l=loc EOF                             { (l, tyArrDefault) }
  | l=loc ARRTYPE LPAREN t=typ RPAREN EOF { (l, t) }
  | ARRTYPE LPAREN t=typ RPAREN EOF       { (LocConst (freshVar "arrLit"), t) }
+ | l=loc LT x=array_tuple_typs GT EOF
+     { let (ts,b) = x in (l, tyArrayTuple tyArrDefault ts b) }
+
+jsHeap : h=heap EOF { h }
 
 %%

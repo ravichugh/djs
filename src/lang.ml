@@ -78,7 +78,8 @@ type exp =
   | EFreeze of loc * exp
   | EThaw of loc * exp
   | ERefreeze of loc * exp
-  | EHeap of heap * exp   (* using this to add weak constraints TODO EWeak *)
+  (* TODO rename to EWeak, define weak constraint list instead of heap *)
+  | EHeap of heap * exp   (* using this to add weak constraints *)
   (***** control operators *****)
   | ELabel of lbl * frame option * exp (* TODO get rid of annotation? *)
   | EBreak of lbl * exp
@@ -149,11 +150,12 @@ and typ =
   | TBaseUnion of tag list
   | TBaseRefine of vvar * tag * formula
   | TInt
+  (* TODO remove the formula part, since that's what TSelfify does *)
   | THasTyp of typterm list * formula (* {v | v::U_1 /\ ... /\ v::U_n /\ p} *)
-  (* | TArrows of uarr list *)
   | TTuple of (vvar * typ) list
   | TNonNull of typ
   | TMaybeNull of typ
+  | TSelfify of typ * formula (* { v | T(v) /\ p } *)
   (***** created during type checking *****)
   | TExists of vvar * typ * typ
 

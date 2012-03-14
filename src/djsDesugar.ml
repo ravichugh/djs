@@ -263,7 +263,14 @@ let parseWith production cap s =
 let parseTyp s     = parseWith LangParser.jsTyp "typ annot" s
 let parseAppArgs s = parseWith LangParser.jsPolyArgs "typ/loc/heap args" s
 let parseWhile s   = parseWith LangParser.jsWhile "while annot" s
+let parseHeap s    = parseWith LangParser.jsHeap "heap annot" s
 let parseLoc s     = parseWith LangParser.jsLoc "loc annot" s
+(*
+let parseWeakLoc s =
+  let l = parseLoc s in
+  if isWeakLoc l then l
+  else printParseErr (spr "[%s] isn't a weak loc" (strLoc l))
+*)
 let parseCtorTyp s = parseWith LangParser.jsCtor "ctor annot" s
 let parseNew s     = parseWith LangParser.jsNew "new annot" s
 let parseArrLit s  = parseWith LangParser.jsArrLit "array literal annot" s
@@ -661,6 +668,18 @@ let rec ds env = function
   | E.IfExpr (_, e1, e2, e3) -> 
       EIf (ds env e1, ds env e2, ds env e3)
 
+  | E.AssignExpr (_,
+      E.VarLValue (_, x), E.HintExpr (_, h, E.ConstExpr (_, J.CString s)))
+    when s = "#freeze" || s = "#thaw" || s = "#refreeze" ->
+      let x = eVar (dsVar x) in
+      let l = parseLoc h in
+      ESetref (x,
+        match s with
+          | "#freeze"   -> EFreeze (l, EDeref x)
+          | "#thaw"     -> EThaw (l, EDeref x)
+          | "#refreeze" -> ERefreeze (l, EDeref x)
+          | _           -> printParseErr "freeze/thaw/refreeze impossible")
+
   | E.AssignExpr (_, E.VarLValue (_, x), e) -> 
       let x = dsVar x in
       if IdMap.mem x env then (* assume var-bound *)
@@ -725,10 +744,12 @@ let rec ds env = function
 
   | E.SeqExpr (_,
       E.VarDeclExpr (_, x,
-        E.HintExpr (_, s, E.ConstExpr (_, J.CString "#extern"))), e2) -> begin
+        E.HintExpr (_, s, E.ConstExpr (_, J.CString "#extern"))), e2) ->
       let x = dsVar x in
       EExtern (x, desugarTypHint s, ds (IdMap.add x false env) e2)
-    end
+
+  | E.SeqExpr (_, E.HintExpr (_, s, E.ConstExpr (_, J.CString "#weak")), e2) ->
+      EHeap (parseHeap s, ds env e2)
 
   | E.SeqExpr (_, E.VarDeclExpr (_, x, e), e2) -> begin
       let (lo,e) =

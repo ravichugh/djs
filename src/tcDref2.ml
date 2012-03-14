@@ -19,6 +19,8 @@ let selfifyVar g x =
   try
     let eqX = eq theV (wVar x) in
     begin match List.find (function Var(y,_) -> x = y | _ -> false) g with
+      | Var(_,TSelfify(t,p)) -> TSelfify (t, addPredicate eqX p)
+      | Var(_,TMaybeNull(t)) -> TSelfify (TMaybeNull(t), eqX)
       | Var(_,THasTyp(us,p)) -> THasTyp (us, addPredicate eqX p)
       | _                    -> ty eqX
     end
@@ -279,10 +281,13 @@ let finishLet cap g y l (s,h) =
 
 (* TODO when adding abstract refs, revisit these two *)
 
+(* TODO might want a separate version for local inf, where maybenulls should be
+   considered, and a version for type checking, where they shouldn't *)
 let refTermsOf g = function
   (* 3/14 the MaybeNull case is so that thawed references can be passed
      to the object primitives *)
   | TMaybeNull(THasTyp([URef(l)],_))
+  | TSelfify(TMaybeNull(THasTyp([URef(l)],_)),_) (* TODO 3/14 *)
   | THasTyp([URef(l)],_) ->
       let _ = pr "don't call extract [Ref(%s)]\n" (strLoc l) in
       [URef l]
@@ -299,7 +304,7 @@ let singleRefTermOf ?(strong=None) cap g t =
         else err [cap; spr "[%s] flows to value, but is not strong" (strLoc l)]
     | [URef(l)], Some(false) ->
         if isWeakLoc l then l
-        else err [cap; spr "[%s] flows to value, but is not strong" (strLoc l)]
+        else err [cap; spr "[%s] flows to value, but is not weak" (strLoc l)]
     | [], _ -> err ([cap; "0 ref terms flow to value"])
     | l, _  -> err ([cap; "multiple ref terms flow to value";
                      String.concat ", " (List.map prettyStrTT l)])
@@ -405,7 +410,9 @@ let heapDepTupleSubst (_,cs) =
           let acc = foo path acc t in
           (x, path) :: acc
         ) acc l
-    | TNonNull(t) | TMaybeNull(t) -> failwith "heapDepTupleSubst: null"
+    | TNonNull(t) -> failwith "heapDepTupleSubst: nonnull"
+    (* TODO ok to just recurse inside? *)
+    | TMaybeNull(t) -> foo path acc t
     | _ -> acc
   in
   let subst =
@@ -610,6 +617,8 @@ let findArrayActual g tVar locSubst hForm hAct =
                     (match arrayTermsOf g (selfifyVar g a) with
                        | [UArray(t)] -> Some t
                        | _           -> foo cs)
+                | HWeakObj _ ->
+                    foo cs
               end
         end
     | _ :: cs -> foo cs
@@ -838,7 +847,7 @@ and tsExp_ g h = function
 
   | ESetref(EVal(v1),EVal(v2)) -> begin
       let (s1,s2) = (prettyStrVal v1, prettyStrVal v2) in
-      let cap = spr "TS-LetSetref: (%s) := (%s)" s1 s2 in
+      let cap = spr "TS-Setref: (%s) := (%s)" s1 s2 in
       let t1 = tsVal g h v1 in
       let s2 = tsVal g h v2 in
       let l = singleRefTermOf cap g t1 in
@@ -929,9 +938,12 @@ and tsExp_ g h = function
          using exists *)
       let t = TRefinement(x,p) in
       let heapbindings =
-        List.map
-          (function (_,HConc(y,t)) | (_,HConcObj(y,t,_)) -> (y,t)) (snd h12) in
-      (mkExists t heapbindings, h12)
+        List.fold_left
+          (fun acc -> function
+             | (_,HConc(y,t)) | (_,HConcObj(y,t,_)) -> (y,t)::acc
+             | (_,HWeakObj _) -> acc
+          ) [] (snd h12) in
+      (mkExists t (List.rev heapbindings), h12)
     end
 
   | EExtern(x,s,e) -> begin

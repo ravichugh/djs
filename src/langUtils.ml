@@ -81,6 +81,7 @@ let mapTyp ?fForm:(fForm=(fun x -> x))
     | TTuple(l)          -> TTuple (List.map (fun (x,t) -> (x, fooTyp t)) l)
     | TNonNull(t)        -> TNonNull (fooTyp t)
     | TMaybeNull(t)      -> TMaybeNull (fooTyp t)
+    | TSelfify(t,p)      -> TSelfify (fooTyp t, fooForm p)
     | TExists _          -> failwith "mapTyp TExists"
 
   and fooForm = function
@@ -596,6 +597,7 @@ and strTyp = function
   | TBaseRefine(x,t,p)   -> spr "{%s:%s|%s}" x (strTag t) (strForm p)
   | TNonNull(t)          -> spr "(%s)!" (strTyp t)
   | TMaybeNull(t)        -> spr "(%s)?" (strTyp t)
+  | TSelfify(t,p)        -> spr "{(and (v:%s) %s)}" (strTyp t) (strForm p)
   | THasTyp([u],PTru)    -> strTT u
   | THasTyp(us,p) ->
       let ps = List.map (fun u -> PUn(HasTyp(theV,u))) us in
@@ -902,6 +904,8 @@ and (* let rec *) freeVarsTyp env = function
                           Quad.combineList (v::vs)
   | TNonNull(t)        -> freeVarsTyp env t
   | TMaybeNull(t)      -> freeVarsTyp env t
+  | TSelfify(t,p) ->
+      Quad.combineList [freeVarsTyp env t; freeVarsForm env p]
   | TTuple(l) ->
       let (xs,ts) = List.split l in
       let env = List.fold_left (fun env x -> Quad.addV x env) env xs in
@@ -1092,6 +1096,10 @@ and masterSubstTyp subst = function
       let us = List.map (masterSubstTT subst) us in
       let p = masterSubstForm subst p in
       THasTyp (us, p)
+  | TSelfify(t,p) ->
+      let t = masterSubstTyp subst t in
+      let p = masterSubstForm subst p in
+      TSelfify (t, p)
   (* binding forms *)
   | TRefinement(x,p) ->
       let subst = MasterSubst.removeVVars [x] subst in
@@ -1181,6 +1189,9 @@ and applyTyp t w =
                           pAnd (p::ps)
     | TNonNull(t)      -> pAnd [applyTyp t w; pNot (PEq (w, wNull))]
     | TMaybeNull(t)    -> pOr [applyTyp t w; PEq (w, wNull)]
+    | TSelfify(t,p)    -> let q = applyTyp t w in
+                          let p = masterSubstForm (["v",w],[],[],[]) p in
+                          pAnd [q;p]
     | TBaseUnion([t])  -> PEq (tag w, wStr t)
     | TBaseUnion(l)    -> pOr (List.map (fun t -> PEq (tag w, wStr t)) l)
     | TBaseRefine(y,t,p) ->

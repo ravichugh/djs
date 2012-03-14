@@ -121,9 +121,15 @@ let rec anf = function
       let (l2,e2) = anfAndTmp e2 in
       finish (l1 @ l2, ENewObj (e1, loc1, e2, loc2))
   | ELoadedSrc(s,e) -> ([], ELoadedSrc (s, anfExp e))
-  | EFreeze(l,e) -> ([], EFreeze (l, anfExp e))
-  | EThaw(l,e) -> ([], EThaw (l, anfExp e))
-  | ERefreeze(l,e) -> ([], ERefreeze (l, anfExp e))
+  | EFreeze(loc,e) ->
+      let (l,e) = anfAndTmp e in
+      finish (l, EFreeze (loc, e))
+  | EThaw(loc,e) ->
+      let (l,e) = anfAndTmp e in
+      finish (l, EThaw (loc, e))
+  | ERefreeze(loc,e) ->
+      let (l,e) = anfAndTmp e in
+      finish (l, ERefreeze (loc, e))
 
 and anfAndTmp e =
   let (l1,e) = anf e in
@@ -343,6 +349,9 @@ and strExp k exp = match exp with
   | EIf _          -> badAnf "EIf"
   | EApp _         -> badAnf "EApp"
   | ENewObj _      -> badAnf "ENewObj"
+  | EFreeze _      -> badAnf "EFreeze"
+  | EThaw _        -> badAnf "EThaw"
+  | ERefreeze _    -> badAnf "ERefreeze"
   | ELoadedSrc(s,e) ->
       let s = Str.replace_first (Str.regexp Settings.djs_dir) "DJS_DIR/" s in
       let n = max 0 (70 - String.length s) in
