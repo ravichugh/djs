@@ -9,7 +9,7 @@ let djs_dir =
                to the root of the DJS directory"
 
 let out_dir  = djs_dir ^ "src/out/"
-let prim_dir = djs_dir ^ "src/prims/"
+let prim_dir = djs_dir ^ "prims/"
 
 let strictWarn = ref false
 let printAllTypes = ref false

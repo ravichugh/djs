@@ -9,8 +9,8 @@ let spr = Printf.sprintf
 (***** Command-line options ***************************************************)
 
 let parseOnly = ref false
-let primsPath = ref (Settings.prim_dir ^ "prims.ml")
-let pervsPath = ref (Settings.prim_dir ^ "pervasives.ml")
+let primsPath = ref (Settings.prim_dir ^ "basics.dref")
+(* let pervsPath = ref (Settings.prim_dir ^ "pervasives.ml") *)
 let doRaw     = ref false
 let noPrelude = ref false
 let srcFiles  = ref []
@@ -111,23 +111,15 @@ let anfAndAddPrelude e =
     let _ = Anf.printAnfExp e in
     e
   else
-    let prims = parsePrelude !primsPath in
-    let pervs = parsePrelude !pervsPath in
-(*
-    let e =
-      if !S.djsMode then
-        let pre =
-          parsePrelude (S.prim_dir ^
-                       (if !S.fullObjects then "djs.ml" else "djsLite.ml")) in
-        prims (pervs (pre e))
-      else
-        prims (pervs e)
-    in
-*)
-    let pre =
+    let basics = parsePrelude !primsPath in
+    (* let pervs = parsePrelude !pervsPath in *)
+    let objects =
       parsePrelude
-        (S.prim_dir ^ (if !S.fullObjects then "djs.ml" else "djsLite.ml")) in
-    let e = prims (pervs (pre e)) in
+        (S.prim_dir ^
+        (if !S.fullObjects then "objects.dref" else "other/objectsLite.dref"))
+    in
+    (* let e = prims (pervs (pre e)) in *)
+    let e = basics (objects e) in
     let e = Anf.anfExp e in
     let _ = Anf.printAnfExp e in
     e
@@ -164,7 +156,7 @@ let doParseDJS fo =
   try
     let f_pre =
       S.prim_dir ^
-      if !Settings.fullObjects then "djsPrelude.js" else "djsLitePrelude.js" in
+      if !Settings.fullObjects then "prelude.js" else "other/preludeLite.js" in
     let ejs_pre = parseJStoEJS f_pre in
     let ejs = match fo with Some(f) -> parseJStoEJS f | None -> dummyEJS in
     DjsDesugar.desugar (DjsDesugar.makeFlatSeq ejs_pre ejs)

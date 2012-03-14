@@ -350,7 +350,7 @@ and strExp k exp = match exp with
       spr "%s%s\n\n%s" (tab k) sep (strExp k e)
 
 let printAnfExp e =
-  let oc = open_out (Settings.out_dir ^ "anfExp.ml") in
+  let oc = open_out (Settings.out_dir ^ "anfExp.dref.ml") in
   setPretty true;
   fpr oc "%s\n" (strExp 0 e);
   flush oc;

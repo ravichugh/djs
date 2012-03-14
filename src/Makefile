@@ -16,7 +16,7 @@ all:
 
 loc:
 	wc -l lang.ml langUtils.ml zzz.ml                 \
-    sub.ml wf.ml tcUtils.ml                         \
+    sub.ml wf.ml                                    \
     cnf.ml anf.ml main.ml                           \
     utils.ml log.ml                                 \
     tcDref2.ml                                      \
@@ -24,7 +24,7 @@ loc:
     djsDesugar.ml                                   \
     settings.ml                                     \
     langLexer.mll langParser.mly                    \
-    theory*.lisp prims/*                         
+    ../prims/*.dref* ../prims/*smt2*                         
 
 clean:
 	rm -rf _build out system-d

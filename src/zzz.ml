@@ -16,9 +16,8 @@ let emitPreamble () =
     try z3write (input_line ic ^ "\n"); f ic
     with End_of_file -> ()
   in
-  (* TODO move these files to the prims/ directory, use Settings.prim_dir *)
-  f (open_in (Settings.djs_dir ^ "src/theory.lisp"));
-  if !Settings.useTheoryLA then f (open_in (Settings.djs_dir ^ "src/theory-int.lisp"));
+  f (open_in (Settings.prim_dir ^ "theory.smt2"));
+  if !Settings.useTheoryLA then f (open_in (Settings.prim_dir ^ "theory-int.smt2"));
   ()
 
 (* let _ = emitPreamble () *)
