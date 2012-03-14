@@ -298,7 +298,7 @@ and strExp k exp = match exp with
       let s1 = strExp k e1 in
       let s2 = strExp k e2 in
       spr "%s%s := %s" (tab k) (clip s1) (clip s2)
-  | EHeap(h,e) -> spr "%sheap %s\n\n%s" (tab k) (strHeap h) (strExp k e)
+  | EHeap(h,e) -> spr "%sweak %s\n\n%s" (tab k) (strHeap h) (strExp k e)
   | ELabel(x,None,e) ->
       let se = strExp (succ k) e in
       spr "%s#%s {\n%s\n%s}" (tab k) x se (tab k)
@@ -350,7 +350,7 @@ and strExp k exp = match exp with
       spr "%s%s\n\n%s" (tab k) sep (strExp k e)
 
 let printAnfExp e =
-  let oc = open_out (Settings.out_dir ^ "anfExp.dref.ml") in
+  let oc = open_out (Settings.out_dir ^ "anfExp.dref") in
   setPretty true;
   fpr oc "%s\n" (strExp 0 e);
   flush oc;
@@ -405,4 +405,7 @@ and coerce = function
       ENewObj (coerceEVal "NewObj" e1, l1, coerceEVal "NewObj" e2, l2)
   | ELoadSrc(s,e) -> ELoadSrc (s, coerce e)
   | ELoadedSrc(s,e) -> ELoadedSrc (s, coerce e)
+  | EFreeze(l,e) -> EFreeze (l, coerceEVal "EFreeze" e)
+  | EThaw(l,e) -> EThaw (l, coerceEVal "EThaw" e)
+  | ERefreeze(l,e) -> ERefreeze (l, coerceEVal "ERefreeze" e)
 

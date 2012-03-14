@@ -1,0 +1,19 @@
+val ____ObjectProto :: Ref(lObjectProto)
+
+weak [~lWeak |-> (frzn, {Dict|((sel v "f") : Int)}, lObjectProto)]
+
+let strong_obj_1 = new ({"f" = 100}, lStrong1, ____ObjectProto, lObjectProto) in
+let _ :: {(= v 100)} = ([;lStrong1,lObjectProto;] getPropObj) (strong_obj_1, "f") in
+
+let weak_obj_1 = freeze (~lWeak, strong_obj_1) in
+
+let thaw_obj_1 = thaw (lThaw1, weak_obj_1) in
+
+let _ :: Int = ([;lThaw1,lObjectProto;] getPropObj) (thaw_obj_1, "f") in
+
+let weak_obj_2 = refreeze (~lWeak, thaw_obj_1) in
+
+(* already re-frozen *)
+let _ :: Int = ([;lThaw1,lObjectProto;] getPropObj) (thaw_obj_1, "f") in
+
+0

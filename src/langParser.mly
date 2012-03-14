@@ -210,6 +210,8 @@ exp1 :
  | NEW LPAREN e1=exp COMMA l1=loc COMMA e2=exp COMMA l2=loc RPAREN
      { ENewObj(e1,l1,e2,l2) }
  | FREEZE LPAREN l=loc COMMA e=exp RPAREN    { EFreeze(l,e) }
+ | THAW LPAREN l=loc COMMA e=exp RPAREN      { EThaw(l,e) }
+ | REFREEZE LPAREN l=loc COMMA e=exp RPAREN  { ERefreeze(l,e) }
 
 exp2 :
  | v=value                                   { EVal v }

@@ -117,7 +117,7 @@ val tyNull : typ
 *)
 (* val tyArrImp : locs -> vvar -> typ -> heap -> typ -> heap -> typ *)
 val tyRef : loc -> typ
-val tySafeRef : loc -> typ
+val tySafeWeakRef : loc -> typ
 val tyArrDefault : typ
 val pIsBang : walue -> typterm -> formula
 (*

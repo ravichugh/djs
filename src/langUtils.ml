@@ -353,7 +353,7 @@ let tyRef l       = THasTyp ([URef l], eq (tag theV) (wStr tagRef))
 *)
 let tyRef l       = THasTyp ([URef l], PTru)
 
-let tySafeRef l   = TNonNull (THasTyp ([URef l], PTru))
+let tySafeWeakRef l   = TNonNull (THasTyp ([URef l], PTru))
 
 (* setting the default for array tuple invariants to be v != undefined,
    not Top, so that packed array accesses can at least prove that the
