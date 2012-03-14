@@ -22,28 +22,31 @@ val js_typeof :: {(and (type js_typeof1) (type js_typeof2))}
 (**    [[ x[k]   ]] = getElem ([[x]], [[k]])    where k is anything else     **)
 
 val getPropObj :: [; L1,L2; H]
-     [[x:Ref(L1), k:Str]] / [H ++ L1 |-> (d:Dict, L2)]
-  -> {(ite (objhas d k H L2) (= v (objsel d k H L2)) (= v undefined))} / same
+     [[x:(Ref(L1))?, k:Str]] / [H ++ L1 |-> (d:Dict, L2)]
+  -> {(and (not (= x null))
+      (ite (objhas d k H L2) (= v (objsel d k H L2)) (= v undefined)))} / same
 
 (* tempting to write down getPropArr for "length" and non-"length" separately
    and then use an intersection, but that's no good for the type checker. *)
 val getPropArr :: [A; L1,L2; H]
-     [[x:Ref(L1), k:Str]] / [H ++ L1 |-> (a:Arr(A), L2)]
-  -> {(ite (= k "length")
+     [[x:(Ref(L1))?, k:Str]] / [H ++ L1 |-> (a:Arr(A), L2)]
+  -> {(and (not (= x null))
+      (ite (= k "length")
            (and (v:Int) (implies (packed a) (= v (len a))))
            (ite (heaphas H L2 k)
                 (= v (heapsel H L2 k))
-                (= v undefined)))} / same
+                (= v undefined))))} / same
 
 val getPropArrLen :: [A; L1,L2; H]
-     [[x:Ref(L1), k:{(= v "length")}]] / [H ++ L1 |-> (a:Arr(A), L2)]
-  -> {Int|(implies (packed a) (= v (len a)))} / same
+     [[x:(Ref(L1))?, k:{(= v "length")}]] / [H ++ L1 |-> (a:Arr(A), L2)]
+  -> {Int|(and (not (= x null)) (implies (packed a) (= v (len a))))} / same
 
 val getIdx :: [A; L1,L2; H]
-     [[x:Ref(L1), i:Int]] / [H ++ L1 |-> (a:Arr(A), L2)]
-  -> {(ite (and (packed a) (>= i 0))
+     [[x:(Ref(L1))?, i:Int]] / [H ++ L1 |-> (a:Arr(A), L2)]
+  -> {(and (not (= x null))
+      (ite (and (packed a) (>= i 0))
            (ite (< i (len a)) (and (v::A) (= v (sel a i))) (= v undefined))
-           (or (v::A) (= v undefined)))} / same
+           (or (v::A) (= v undefined))))} / same
 
 val getProp :: {(and (type getPropObj) (type getPropArr))}
 
@@ -56,19 +59,19 @@ val getElem :: {(and (type getPropObj) (type getPropArrLen) (type getIdx))}
 (**    [[ x[k] = y ]] = setElem ([[x]], [[k]], [[y]])                        **)
 
 val setPropObj :: [; L1,L2; H]
-     [[x:Ref(L1), y:Str, z:Top]] / [H ++ L1 |-> (d:Dict, L2)]
-  -> {(= v z)} / [H ++ L1 |-> (d':{(= v (upd d y z))}, L2)]
+     [[x:(Ref(L1))?, y:Str, z:Top]] / [H ++ L1 |-> (d:Dict, L2)]
+  -> {(and (not (= x null)) (= v z))} / [H ++ L1 |-> (d':{(= v (upd d y z))}, L2)]
 
 val setPropArrLen :: [A; L1,L2]
-     [[_:Ref(L1), k:{(= v "length")}, n:Int]] / [L1 |-> (a:Arr(A), L2)]
-  -> {(= v n)}
+     [[x:(Ref(L1))?, k:{(= v "length")}, n:Int]] / [L1 |-> (a:Arr(A), L2)]
+  -> {(and (not (= x null)) (= v n))}
    / [L1 |-> (a':{(and (v::Arr(A))
                        (implies (and (packed a) (<= n (len a)))
                                 (and (packed v) (= (len v) n))))}, L2)]
 
 val setIdx :: [A; L1,L2]
-     [[_:Ref(L1), i:Int, y:A]] / [L1 |-> (a:Arr(A), L2)]
-  -> {(= v y)}
+     [[x:(Ref(L1))?, i:Int, y:A]] / [L1 |-> (a:Arr(A), L2)]
+  -> {(and (not (= x null)) (= v y))}
    / [L1 |-> (a':{(and (v::Arr(A))
                   (= (sel a i) y)
                   (implies (and (packed a) (>= i 0) (< i (len a)))
@@ -85,21 +88,24 @@ val setElem :: {(and (type setPropObj) (type setPropArrLen) (type setIdx))}
 (**    [[  k  in x ]] = hasElem ([[x]], [[k]])                                 **)
 
 val hasPropObj :: [; L1,L2; H]
-     [[x:Ref(L1), k:Str]] / [H ++ L1 |-> (d:Dict, L2)]
-  -> {Bool|(iff (= v true) (objhas d k H L2))} / same
+     [[x:(Ref(L1))?, k:Str]] / [H ++ L1 |-> (d:Dict, L2)]
+  -> {Bool|(and (not (= x null))
+           (iff (= v true) (objhas d k H L2)))} / same
 
 val hasPropArr :: [A; L1,L2; H]
-     [[x:Ref(L1), k:Str]] / [H ++ L1 |-> (a:Arr(A), L2)]
-  -> {Bool|(iff (= v true) (or (= k "length") (heaphas H L2 k)))} / same
+     [[x:(Ref(L1))?, k:Str]] / [H ++ L1 |-> (a:Arr(A), L2)]
+  -> {Bool|(and (not (= x null))
+           (iff (= v true) (or (= k "length") (heaphas H L2 k))))} / same
 
 val hasPropArrLen :: [A; L1,L2; H]
-     [[x:Ref(L1), k:{(= v "length")}]] / [H ++ L1 |-> (a:Arr(A), L2)]
-  -> {(= v true)} / same
+     [[x:(Ref(L1))?, k:{(= v "length")}]] / [H ++ L1 |-> (a:Arr(A), L2)]
+  -> {(and (not (= x null)) (= v true))} / same
 
 val hasIdx :: [A; L1,L2]
-     [[_:Ref(L1), i:Int]] / [L1 |-> (a:Arr(A), L2)]
-  -> {Bool|(implies (and (packed a) (>= i 0))
-                    (iff (= v true) (< i (len a))))} / same
+     [[x:(Ref(L1))?, i:Int]] / [L1 |-> (a:Arr(A), L2)]
+  -> {Bool|(and (not (= x null))
+           (implies (and (packed a) (>= i 0))
+                    (iff (= v true) (< i (len a)))))} / same
 
 val hasProp :: {(and (type hasPropObj) (type hasPropArr) (type hasIdx))}
 

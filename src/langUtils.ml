@@ -360,6 +360,10 @@ let tySafeWeakRef l   = TNonNull (THasTyp ([URef l], PTru))
    value retrieved is not undefined *)
 let tyArrDefault  = ty (pNot (eq theV (WVal vUndef)))
 
+let tyTypTerm = function
+  | URef(l) -> tyRef l (* so that default for references can be tweaked *)
+  | u       -> THasTyp ([u], PTru)
+
 (*
 let tyArrImp l x t h t' h'  = ty (PIs (theV, UArr(l,x,t,h,t',h')))
 *)
@@ -590,8 +594,8 @@ and strTyp = function
   | TBaseUnion(l)        -> String.concat "Or" (List.map strTag l)
   | TBaseRefine("v",t,p) -> spr "{%s|%s}" (strTag t) (strForm p)
   | TBaseRefine(x,t,p)   -> spr "{%s:%s|%s}" x (strTag t) (strForm p)
-  | TNonNull(t)          -> spr "%s" (strTyp t)
-  | TMaybeNull(t)        -> spr "%s" (strTyp t)
+  | TNonNull(t)          -> spr "(%s)!" (strTyp t)
+  | TMaybeNull(t)        -> spr "(%s)?" (strTyp t)
   | THasTyp([u],PTru)    -> strTT u
   | THasTyp(us,p) ->
       let ps = List.map (fun u -> PUn(HasTyp(theV,u))) us in

@@ -276,21 +276,13 @@ typ :
 *)
  | SUGAR_STRORBOOL                        { tyStrOrBool }
 
-(* bang and qmark introduce conflicts... 
- | t=typ BANG                             { TNonNull(t) }
- | t=typ QMARK                            { TMaybeNull(t) }
-*)
+ (* parens to avoid conflicts *)
+ | LPAREN t=typ RPAREN BANG               { TNonNull(t) }
+ | LPAREN t=typ RPAREN QMARK              { TMaybeNull(t) }
 
-(*
- | u=typ_term                             { THasTyp([u],PTru) }
- | LPAREN u=typ_term RPAREN               { THasTyp([u],PTru) }
-*)
- | u=typ_term                             { match u with
-                                              | URef(l) -> tyRef l
-                                              | _ -> THasTyp([u],PTru) }
- | LPAREN u=typ_term RPAREN               { match u with
-                                              | URef(l) -> tyRef l
-                                              | _ -> THasTyp([u],PTru) }
+ | u=typ_term                             { tyTypTerm u }
+ (* | LPAREN u=typ_term RPAREN               { tyTypTerm u } *)
+ (* | LPAREN u=typ_term RPAREN QMARK         { TMaybeNull (tyTypTerm u) } *)
 
  (* be careful of conflicts *)
  | l=deptuple                             { TTuple(l) }

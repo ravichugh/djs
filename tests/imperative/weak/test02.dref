@@ -6,8 +6,8 @@ val weak_obj :: Ref(~lWeak)
 
 let thaw_obj_1 = thaw (lThaw1, weak_obj) in
 
-(* TODO need something like x != null => d:Dict in objects primitives. *)
-let _ :: {(implies (not (= weak_obj null)) (= (tag v) "number"))} =
-  ([;lThaw1,lObjectProto;] getPropObj) (thaw_obj_1, "f") in
+let _ :: Int = ([;lThaw1,lObjectProto;] getPropObj) (thaw_obj_1, "f") in
+
+let _ :: Int = getPropObj (thaw_obj_1, "f") in
 
 0

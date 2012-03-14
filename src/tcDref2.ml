@@ -280,6 +280,9 @@ let finishLet cap g y l (s,h) =
 (* TODO when adding abstract refs, revisit these two *)
 
 let refTermsOf g = function
+  (* 3/14 the MaybeNull case is so that thawed references can be passed
+     to the object primitives *)
+  | TMaybeNull(THasTyp([URef(l)],_))
   | THasTyp([URef(l)],_) ->
       let _ = pr "don't call extract [Ref(%s)]\n" (strLoc l) in
       [URef l]
@@ -383,7 +386,12 @@ let depTupleSubst t w =
           let acc = foo path acc t in
           (x, path) :: acc
         ) acc l
+(*
     | TNonNull(t) | TMaybeNull(t) -> failwith "depTupleSubst: null"
+*)
+    | TNonNull(t) -> failwith "depTupleSubst: nonnull"
+    (* TODO ok to just recurse inside? *)
+    | TMaybeNull(t) -> foo path acc t
     | _ -> acc
   in
   let subst = foo w [] t in
@@ -538,16 +546,13 @@ let isValueTuple v =
 
 let findActualFromRefValue g lVar tTup vTup =
   let rec foo i = function
-(*
-    | THasTyp(URef(LocVar(lVar'))) :: ts when lVar = lVar' ->
-*)
-    | THasTyp([URef(LocVar(lVar'))],_) :: ts when lVar = lVar' ->
+    (* 3/14 added the MaybeNull case since the objects.dref primitives
+       now take nullable strong references *)
+    | (THasTyp([URef(LocVar(lVar'))],_) :: ts)
+    | (TMaybeNull(THasTyp([URef(LocVar(lVar'))],_)) :: ts) when lVar = lVar' ->
         if i >= List.length vTup then None
         else
           let vi = List.nth vTup i in
-(* TODO 3/10
-          begin match refTermsOf g (ty (PEq (theV, WVal vi))) with
-*)
           begin match refTermsOf g (selfifyVal g vi) with
             | [URef(lAct)] ->
                 let _ = fpr oc_local_inf "  %s |-> %s\n" lVar (strLoc lAct) in
@@ -1081,13 +1086,22 @@ and tsExp_ g h = function
             let m = singleWeakRefTermOf cap g t1 in
             begin match findAndRemoveHeapCell m h with
               | Some(HWeakObj(Frzn,tFrzn,l'), h0) -> begin
-                  let tThwd =
-                    ty (pImp (pNot (eq (WVal v) wNull)) (applyTyp tFrzn theV)) in
+                  let tThwd = tFrzn in
                   let x = freshVar "thaw" in
                   let h' = (fst h0, (m,HWeakObj(Thwd(l),tFrzn,l'))
-                                       :: (l,HConcObj(x,tThwd,l'))
+                                       :: (l,HConcObj(x,tFrzn,l'))
                                        :: snd h0) in
-                  (TExists (x, tThwd, tyRef l), h')
+                  let t = TMaybeNull (tyRef l) in
+                  (* this version could be used to more precisely track these
+                     references.  but since i'm not interesting in checking for
+                     non-nullness, i can use the less precise disjunction.
+                     if i do end up going this route, might want a TNullIf sugar
+                     form that selfifyVar can look for.
+                  let t = ty (pIte (eq (WVal v) wNull)
+                                   (eq theV wNull)
+                                   (applyTyp (tyRef l) theV)) in
+                  *)
+                  (TExists (x, tFrzn, t), h')
                 end
               | Some(HWeakObj _, _) -> err [cap; "already thawed"]
               | None -> err [cap; spr "[%s] location not bound" (strLoc m)]

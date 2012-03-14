@@ -124,6 +124,7 @@ val pIsBang : walue -> typterm -> formula
 val tyIsBang : walue -> typterm -> typ
 *)
 val tyArrayTuple : typ -> typ list -> bool -> typ
+val tyTypTerm : typterm -> typ
 
 (***** Boxes ******************************************************************)
 
