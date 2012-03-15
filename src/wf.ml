@@ -181,7 +181,8 @@ and checkConstraints errList g h = function
   | (l,HConc(x,s))::rest -> begin
       checkLoc errList g h l;
       (if List.exists (function (l',_) -> l = l') rest
-       then err (errList @ [spr "loc [%s] bound multiple times" (strLoc l)])
+       then err (errList @ [spr "loc [%s] bound multiple times" (strLoc l);
+         "perhaps you are running into the cap-avoiding subst bug..."])
        else ());
       checkType errList g h s;
       checkConstraints errList g h rest

@@ -14,15 +14,15 @@
 */ "#define";
 
 function Foo(name)
-/*: ctor [;Lthis;]
-         [[this:Ref(Lthis), name:Str]]
-       / [Lthis |-> (dThis:{(= v empty)}, &Foo_proto)]
-      -> Ref(Lthis)
-       / [Lthis |-> (dThis2:{Dict|
-            (and (dom v {"name","getName"})
-                 (= (sel v "name") name)
-                 ((sel v "getName") :: tyGetName)
-            )}, &Foo_proto)] */
+/*: new [;Lthis;]
+        [[this:Ref(Lthis), name:Str]]
+      / [Lthis |-> (dThis:{(= v empty)}, &Foo_proto)]
+     -> Ref(Lthis)
+      / [Lthis |-> (dThis2:{Dict|
+           (and (dom v {"name","getName"})
+                (= (sel v "name") name)
+                ((sel v "getName") :: tyGetName)
+           )}, &Foo_proto)] */
 {
   this.name = name;
 

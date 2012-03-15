@@ -1,5 +1,5 @@
 function F()
-/*: ctor [;L;]
+/*: new [;L;]
     [[this:Ref(L)]]
   / [L |-> (dThis:{(= v empty)}, &F_proto), &F_proto |-> (_:Top, lObjectProto)]
  -> Ref(L)

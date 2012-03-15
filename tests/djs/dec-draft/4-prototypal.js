@@ -12,45 +12,45 @@
 */ "#define";
 
 /*: #define ty_beget
-    [;L1,L2,L3;]
-        [[o:Ref(L2)]] / [L2 |-> (dParent:Top, L3), nativeIn]
-     -> Ref(L1) / [L1 |-> (dChild:{(= v empty)}, L2), L2 |-> same, nativeOut]
+    [;LL1,LL2,LL3;]
+        [[o:Ref(LL2)]] / [LL2 |-> (dParent:Top, LL3), nativeIn]
+     -> Ref(LL1) / [LL1 |-> (dChild:{(= v empty)}, LL2), LL2 |-> same, nativeOut]
 */ '#define';
 
-/*: #define ty_F
-    ctor [;Lnew,Lpro;]
-         [[this:Ref(Lnew)]] / [Lnew |-> (dThis:{(= v empty)}, Lpro)]
-      -> Ref(Lnew) / same */ '#define';
+/*: #define ty_ctor
+    new [;Lnew,Lpro;]
+        [[this:Ref(Lnew)]] / [Lnew |-> (dThis:{(= v empty)}, Lpro)]
+     -> Ref(Lnew) / same */ '#define';
 
 var beget = function (o) /*: ty_beget */ {
-  function F() /*: ty_F */ { return this; };
-  F.prototype = o;
-  return new /*: [;L1,L2;] L2 */ F();
+  function ctor() /*: ty_ctor */ { return this; }; // TODO upper case letter
+  ctor.prototype = o;
+  return new /*: [;LL1,LL2;] LL2 */ ctor();
 };
 
-// /*: #define ty_get_name
-//     [; Lthis,Lpro; H]
-//         [[this:Ref(Lthis)]]
-//       / [H ++ Lthis |-> (dThis:{
-//            (and ObjHas([v],"name",[H],Lpro)
-//                (ObjSel([v],"name",[H],Lpro) : Str))}, Lpro)]
-//      -> Str / same */ '#define';
-// 
-// var herb = /*: lHerb */ {
-//   name : "Herb",
-//   get_name : function() /*: ty_get_name */ {
-//     return "Hi, I'm " ^ /*: Lthis Lpro */ this.name;
-//   }
-// };
-// 
-// var henrietta = /*: [;lHenrietta,lHerb,lObject;] */ beget(herb);
-// /*: lHenrietta lHerb */ henrietta.name = "Henrietta";
-// var s = (/*: [;lHenrietta,lHerb;] */ (henrietta.get_name))();
-// /*: Str */ s;
-// 
-// /*: #define ty_get_name_2
-//     [; Lthis,Lpro; ] [[this:Ref(Lthis)]] -> Int */ '#define';
-// 
-// /*: lHerb */ herb.get_name = function() /*: ty_get_name_2 */ { return 42; };
-// var i = (/*: [;lHenrietta,lHerb;] */ (henrietta.get_name))();
-// /*: Int */ i;
+/*: #define ty_get_name
+    [; Lthis,Lpro; H]
+        [[this:Ref(Lthis)]]
+      / [H ++ Lthis |-> (dThis:{Dict|
+           (and (objhas [v] "name" [H] Lpro)
+               ((objsel [v] "name" [H] Lpro) : Str))}, Lpro)]
+     -> Str / same */ '#define';
+
+var herb = /*: lHerb */ {
+  name : "Herb",
+  get_name : function() /*: ty_get_name */ {
+    return "Hi, I'm " + this.name;
+  }
+};
+
+var henrietta = /*: [;lHenrietta,lHerb,lObjectProto;] */ beget(herb);
+henrietta.name = "Henrietta";
+var s = henrietta.get_name();
+/*: Str */ s;
+
+/*: #define ty_get_name_2
+    [; Lthis; ] [[this:Ref(Lthis)]] -> Int */ '#define';
+
+herb.get_name = function() /*: ty_get_name_2 */ { return 42; };
+var i = henrietta.get_name();
+/*: Int */ i;

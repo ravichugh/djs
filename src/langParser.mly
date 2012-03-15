@@ -127,7 +127,6 @@ let sameCell l =
   HEAPHAS HEAPSEL OBJHAS OBJSEL
   WITH BEGIN END
   LTUP RTUP
-  CTOR
 
 
 %type <Lang.exp> prog
@@ -744,7 +743,7 @@ jsObjLocs :
  | l=loc l2=loc EOF                      { (l, Some l2) }
  (* | LPAREN l=loc COMMA l2=loc RPAREN EOF  { (l, Some l2) } *)
 
-jsCtor: CTOR u=arrow_typ EOF { match u with
+jsCtor: NEW u=arrow_typ EOF { match u with
                                 | UArr(arr) -> arr
                                 | _ -> printParseErr "jsCtor: impossible"  }
 

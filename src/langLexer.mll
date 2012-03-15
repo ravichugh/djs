@@ -105,7 +105,7 @@ rule token = parse
   | "truthy"       { TRUTHY }
   | "falsy"        { FALSY }
   | "integer"      { INTEGER }
-  | "ctor"         { CTOR }
+  (* | "ctor"         { CTOR } *)
   (* | "All"          { ALL } *)
   (* | "all"          { LOCALL } *)
   | "new"          { NEW }
