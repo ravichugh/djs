@@ -135,6 +135,12 @@
 (assert (= (tag null) TagObj))
 (assert (= (tag undefined) TagUndef))
 
+; 3/15
+; could either store let __null = null in initial typing environment, or
+; assert null :: Null here. make sure the id 1 is assigned to box UNull in
+; langUtils.ml.
+(assert (hastyp null 1))
+
 ; 3/5
 (assert (forall (u BoxId) (not (hastyp undefined u))))
 

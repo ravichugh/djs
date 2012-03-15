@@ -115,8 +115,8 @@ val tyIntOrBool : typ
 val tyIntOrStr : typ
 (*
 val tyArr : vvar -> typ -> typ -> typ
-val tyNull : typ
 *)
+val tyNull : typ
 (* val tyArrImp : locs -> vvar -> typ -> heap -> typ -> heap -> typ *)
 val tyRef : loc -> typ
 val tySafeWeakRef : loc -> typ

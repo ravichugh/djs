@@ -30,6 +30,7 @@ rule token = parse
   | "TOP"  | "Top"  { SUGAR_TOP }
   | "BOT"  | "Bot"  { SUGAR_BOT }
   | "Num"           { SUGAR_NUM }
+  | "Empty"         { SUGAR_EMPTY }
 
   | "NumOrBool" { SUGAR_NUMORBOOL }
   | "IntOrBool" { SUGAR_INTORBOOL }

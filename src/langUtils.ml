@@ -230,6 +230,7 @@ let foldTyp (fForm: 'a -> formula -> 'a)
   and fooHeap acc (_,cs) =
     List.fold_left (fun acc -> function
       | (_,HConc(_,s)) | (_,HConcObj(_,s,_)) -> fooTyp acc s
+      | (_,HWeakObj(_,s,_)) -> fooTyp acc s
     ) acc cs
 
   in fooTyp init t
@@ -341,6 +342,7 @@ let tyIntOrStr    = ty (pOr [pInt; pStr])
 let tyArr x t t'  = ty (hastyp theV (UArr(([],[],[]),x,t,([],[]),t',([],[]))))
 let tyNull        = ty (pAnd [PEq (theV, wNull); hastyp theV UNull])
 *)
+let tyNull        = THasTyp ([UNull], eq theV wNull)
 
 (*let tyRef l       = ty (hastyp theV (URef l))*)
 (* 3/12 added tag(v)="ref" so that strong refs are truthy *)
@@ -835,6 +837,10 @@ let prettyStrTyp  = prettyStr strTyp
 let prettyStrTT   = prettyStr strTT
 let prettyStrHeap = prettyStr strHeap
 
+let _ = (* the ids for these boxes need to match theory.lisp *)
+  assert (1 = registerBox UNull);
+  ()
+
 
 (***** Free variable computation **********************************************)
 
@@ -1247,6 +1253,8 @@ and freshenHeap free (hs,cs) =
       | (_,HConc(x,_))
       | (_,HConcObj(x,_,_)) ->
           if Quad.memV x free then (x, freshVar x)::acc else acc
+      | (_,HWeakObj _) ->
+          acc
     ) [] cs
   in
   let binderSubstW = List.map (fun (x,x') -> (x, wVar x')) binderSubst in
@@ -1265,6 +1273,8 @@ and freshenHeap free (hs,cs) =
             then List.assoc x binderSubst
             else x in
           (l, HConcObj (x, masterSubstTyp subst s, l'))
+      | (l,HWeakObj(ts,s,l')) ->
+          (l, HWeakObj (ts, s, l'))
     ) cs
   in
   (binderSubstW, (hs, cs))

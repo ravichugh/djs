@@ -666,7 +666,10 @@ let rec ds env = function
   | E.AssignExpr (_,
       E.VarLValue (_, x), E.HintExpr (_, h, E.ConstExpr (_, J.CString s)))
     when s = "#freeze" || s = "#thaw" || s = "#refreeze" ->
-      let x = eVar (dsVar x) in
+      (* TODO this still doesn't work, because of desugaring formals
+         doesn't get wrapped in a ref... *)
+      let x = if x = "_this" then eVar "this" else eVar (dsVar x) in
+      (* let x = eVar (dsVar x) in *)
       let l = parseLoc h in
       ESetref (x,
         match s with
@@ -774,7 +777,7 @@ let rec ds env = function
              dsFunc true env p args body,
              s |> desugarCtorHint |> ParseUtils.typToFrame) in
       let proto =
-        ENewObj (EVal VEmpty, LocConst (spr "&%s_proto" fOrig),
+        ENewObj (EVal VEmpty, LocConst (spr "l%sProto" fOrig),
                  eObjectPro, lObjectPro) in
 
       (* in v0, i used simple objects for ctor function objects
@@ -790,7 +793,7 @@ let rec ds env = function
 
       let xObj = freshVar "ctorObj" in
       let eObj = eVar xObj in
-      let lObj = LocConst (spr "&%s_obj" fOrig) in
+      let lObj = LocConst (spr "l%sObj" fOrig) in
       let freshObj =
         ENewObj (EVal VEmpty, lObj, eFunctionPro, lFunctionPro) in
       let setCode =

@@ -81,6 +81,7 @@ let popDHeap () =
 let freshenCell = function
   | HConc(x,s) -> HConc (freshVar x, ty (PEq (theV, wVar x)))
   | HConcObj(x,s,l') -> HConcObj (freshVar x, ty (PEq (theV, wVar x)), l')
+  | HWeakObj(ts,t,l') -> HWeakObj (ts, t, l')
 
 let sameHeap () =
   let (hs,cs) = List.hd !heapStack in
@@ -115,7 +116,7 @@ let sameCell l =
   (* TODO get rid of the sugar tokens *)
   SUGAR_INT SUGAR_BOOL SUGAR_TOP SUGAR_DICT SUGAR_BOT
   SUGAR_INTORBOOL SUGAR_STR SUGAR_INTORSTR SUGAR_STRORBOOL SUGAR_NUM
-  SUGAR_NUMORBOOL
+  SUGAR_NUMORBOOL SUGAR_EMPTY
   SUGAR_EXTEND SUGAR_FLD
   PLUS MINUS MUL DIV LT LE GE (* NE EQEQ AMPAMP PIPEPIPE *) PLUSPLUS
   ASSGN (* LOCALL *) NEWREF REFTYPE (* AT *) MAPSTO SAME HEAP
@@ -280,8 +281,6 @@ typ :
  | b=basetag                              { TBaseUnion([b]) }
  | SUGAR_INT                              { TInt }
  | SUGAR_NUMORBOOL                        { tyNumOrBool }
- | SUGAR_INTORBOOL                        { tyIntOrBool }
- | SUGAR_INTORSTR                         { tyIntOrStr }
  | SUGAR_STRORBOOL                        { tyStrOrBool }
 
  (* parens to avoid conflicts *)
@@ -301,6 +300,10 @@ typ :
      { TBaseRefine ("v", tagNum, pAnd [integer theV; p]) }
 
  (***** syntactic macros *****)
+
+ | SUGAR_INTORBOOL                        { tyIntOrBool }
+ | SUGAR_INTORSTR                         { tyIntOrStr }
+ | SUGAR_EMPTY                            { tyEmpty }
 
  (* TODO might want to add array tuple to abstract syntax *)
  | LT x=array_tuple_typs GT { let (ts,tInv,b) = x in tyArrayTuple tInv ts b }

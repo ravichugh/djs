@@ -63,6 +63,8 @@ let heapBinders (_,cs) =
     | (_,HConc(x,t))
     | (_,HConcObj(x,t,_)) ->
         Var(x,tyAny) :: depTupleBinders t @ acc
+    | (_,HWeakObj _) ->
+        acc
   ) [] cs
 
 let envToStrings g =

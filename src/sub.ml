@@ -85,6 +85,7 @@ let mustFlow_ usedBoxes ?filter:(f=(fun _ -> true)) g t =
   Log.smallTitle "MustFlow";
   let boxes = TypeTerms.diff (typeTerms g) usedBoxes in
   let boxes = TypeTerms.filter f boxes in
+  (* let boxes = TypeTerms.add UNull boxes in (* 3/15 *) *)
   let x = setUpExtract t usedBoxes in
   let extracted =
     TypeTerms.fold
@@ -307,6 +308,8 @@ and checkTypeTerms errList usedBoxes g u1 u2 =
   match u1, u2 with
     | UVar(x), UVar(y) -> x = y
     | URef(x), URef(y) -> x = y
+    (* 3/15 *)
+    | UNull, URef(y)   -> isWeakLoc y
     | UArr(arr1), UArr(arr2) -> checkArrow errList usedBoxes g arr1 arr2
     | UArray(t1), UArray(t2) ->
        (try (* TODO 3/10 ideally want a version that returns bool instead

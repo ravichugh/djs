@@ -1,0 +1,2 @@
+let _ :: Ref(~blah) = null in
+0

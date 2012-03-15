@@ -775,9 +775,8 @@ and tcExp g h w e =
 
 and tsVal_ g h = function
 
-(* TODO add v::Null back in
+  (* 3/15 adding v::Null back in *)
   | VBase(Null) -> tyNull
-*)
 
   | VVar("__skolem__") -> tyNum
 
@@ -984,13 +983,16 @@ and tsExp_ g h = function
   (* 3/9 *)
   | EHeap(h1,e) -> begin
       match h1 with
-        | ([], [(l,HWeakObj(Frzn,t,l'))]) -> begin
+        | ([], [(LocConst(l),HWeakObj(Frzn,t,l'))]) -> begin
             Wf.heap "EHeap: weak heap" g h1;
-            let h' = (fst h, (l,HWeakObj(Frzn,t,l')) :: snd h) in
+            let h' = (fst h, (LocConst(l),HWeakObj(Frzn,t,l')) :: snd h) in
             let (s,h'') = tsExp g h' e in
             (s, h'')
           end
-        | _ -> err ["TS-EHeap: should be a single frozen weak constraint"]
+        | ([], [(_,HWeakObj _)]) ->
+            err ["TS-EHeap: location should be a constant, not a var"]
+        | _ ->
+            err ["TS-EHeap: should be a single frozen weak constraint"]
     end
 
   | ETcFail(s,e) ->
