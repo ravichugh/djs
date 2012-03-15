@@ -16,7 +16,7 @@ echo -e "***************************************************************"
 echo -e "POSITIVE TESTS"
 echo -e "\e[0m"
 
-for FN in `ls $DJS_DIR/tests/djs/*/[^_x][^_x]*.js`
+for FN in `ls $DJS_DIR/tests/djs/[^e][^s]*/[^_x][^_x]*.js`
 do
   echo -n "$FN  "
   ./system-d -djs $FN | tail -1

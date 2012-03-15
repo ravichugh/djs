@@ -115,6 +115,7 @@ let sameCell l =
   (* TODO get rid of the sugar tokens *)
   SUGAR_INT SUGAR_BOOL SUGAR_TOP SUGAR_DICT SUGAR_BOT
   SUGAR_INTORBOOL SUGAR_STR SUGAR_INTORSTR SUGAR_STRORBOOL SUGAR_NUM
+  SUGAR_NUMORBOOL
   SUGAR_EXTEND SUGAR_FLD
   PLUS MINUS MUL DIV LT LE GE (* NE EQEQ AMPAMP PIPEPIPE *) PLUSPLUS
   ASSGN (* LOCALL *) NEWREF REFTYPE (* AT *) MAPSTO SAME HEAP
@@ -126,6 +127,7 @@ let sameCell l =
   HEAPHAS HEAPSEL OBJHAS OBJSEL
   WITH BEGIN END
   LTUP RTUP
+  CTOR
 
 
 %type <Lang.exp> prog
@@ -278,10 +280,9 @@ typ :
  | SUGAR_BOT                              { tyFls }
  | b=basetag                              { TBaseUnion([b]) }
  | SUGAR_INT                              { TInt }
-(*
+ | SUGAR_NUMORBOOL                        { tyNumOrBool }
  | SUGAR_INTORBOOL                        { tyIntOrBool }
  | SUGAR_INTORSTR                         { tyIntOrStr }
-*)
  | SUGAR_STRORBOOL                        { tyStrOrBool }
 
  (* parens to avoid conflicts *)
@@ -743,7 +744,7 @@ jsObjLocs :
  | l=loc l2=loc EOF                      { (l, Some l2) }
  (* | LPAREN l=loc COMMA l2=loc RPAREN EOF  { (l, Some l2) } *)
 
-jsCtor: NEW u=arrow_typ EOF { match u with
+jsCtor: CTOR u=arrow_typ EOF { match u with
                                 | UArr(arr) -> arr
                                 | _ -> printParseErr "jsCtor: impossible"  }
 

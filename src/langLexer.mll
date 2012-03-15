@@ -31,9 +31,10 @@ rule token = parse
   | "BOT"  | "Bot"  { SUGAR_BOT }
   | "Num"           { SUGAR_NUM }
 
-  | "INTORBOOL" | "IntOrBool" { SUGAR_INTORBOOL }
-  | "INTORSTR"  | "IntOrStr"  { SUGAR_INTORSTR }
-  | "STRORBOOL" | "StrOrBool" { SUGAR_STRORBOOL }
+  | "NumOrBool" { SUGAR_NUMORBOOL }
+  | "IntOrBool" { SUGAR_INTORBOOL }
+  | "IntOrStr"  { SUGAR_INTORSTR }
+  | "StrOrBool" { SUGAR_STRORBOOL }
 (*
   | "EXTEND"       { SUGAR_EXTEND }
   | "FLD"          { SUGAR_FLD }
@@ -104,6 +105,7 @@ rule token = parse
   | "truthy"       { TRUTHY }
   | "falsy"        { FALSY }
   | "integer"      { INTEGER }
+  | "ctor"         { CTOR }
   (* | "All"          { ALL } *)
   (* | "all"          { LOCALL } *)
   | "new"          { NEW }

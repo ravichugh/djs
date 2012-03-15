@@ -294,7 +294,6 @@ let wUndef        = WVal vUndef
 let wProj i       = wStr (string_of_int i)
 
 let pNum          = PEq (tag theV, wStr tagNum)
-(* let pInt          = PEq (tag theV, wStr tagInt) *)
 let pBool         = PEq (tag theV, wStr tagBool)
 let pStr          = PEq (tag theV, wStr tagStr)
 let pDict         = PEq (tag theV, wStr tagDict)
@@ -331,16 +330,12 @@ let tyDict        = ty pDict
 
 let tyEmpty       = ty (PEq (theV, WVal VEmpty))
 
-(*
+let pInt          = pAnd [eq (tag theV) (wStr tagNum); integer theV]
+
+let tyNumOrBool   = TBaseUnion [tagNum; tagBool]
+let tyStrOrBool   = TBaseUnion [tagStr; tagBool] 
 let tyIntOrBool   = ty (pOr [pInt; pBool])
 let tyIntOrStr    = ty (pOr [pInt; pStr])
-let tyStrOrBool   = ty (pOr [pStr; pBool])
-*)
-(*
-let tyIntOrBool   = TBaseUnion [tagInt; tagBool]
-let tyIntOrStr    = TBaseUnion [tagInt; tagStr] 
-*)
-let tyStrOrBool   = TBaseUnion [tagStr; tagBool] 
 
 (*
 let tyArr x t t'  = ty (hastyp theV (UArr(([],[],[]),x,t,([],[]),t',([],[]))))

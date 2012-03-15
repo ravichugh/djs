@@ -473,18 +473,13 @@ let objOp ts ls fn args =
   let fn = if !Settings.fullObjects then fn else fn ^ "Lite" in
   EApp ((ts,ls,[]), eVar fn, ParseUtils.mkTupleExp args)
 
-(*
-let objGet l1 l2 x k      = objOp [] [l1;l2] "objGet" [x; k]
-let objSet l1 l2 x k y    = objOp [] [l1;l2] "objSet" [x; k; y]
-let objSet l1 l2 x k y    = objOp [] [l1;l2] "setPropObj" [x; k; y]
-let objHas l1 l2 x k      = objOp [] [l1;l2] "objHas" [x; k]
-let objHasOwn l1 l2 x k   = objOp [] [l1;l2] "objHasOwn" [x; k]
-*)
+let eObjectPro   = eVar (dsVar "__ObjectProto")
+let eArrayPro    = EDeref (eVar (dsVar "__ArrayProto"))
+let eFunctionPro = EDeref (eVar (dsVar "__FunctionProto"))
 
-let eObjectPro = eVar (dsVar "__ObjectProto")
-let eArrayPro  = eVar (dsVar "__ArrayProto")
-let lArrayPro  = LocConst "lArrayProto"
-let lObjectPro = lObjectPro (* defined in lang.ml *)
+let lObjectPro   = lObjectPro (* defined in lang.ml *)
+let lArrayPro    = LocConst "lArrayProto"
+let lFunctionPro = LocConst "lFunctionProto"
 
 let rec ds env = function
 
@@ -525,11 +520,11 @@ let rec ds env = function
 
   | E.HintExpr (_, h, E.ArrayExpr (_, es)) when !Settings.fullObjects ->
       let (l,t) = parseArrLit h in
-      ENewObj (mkEArray (Some t) env es, l, EDeref eArrayPro, lArrayPro)
+      ENewObj (mkEArray (Some t) env es, l, eArrayPro, lArrayPro)
 
   | E.ArrayExpr (_, es) when !Settings.fullObjects ->
       ENewObj (mkEArray None env es, LocConst (freshVar "arrLit"),
-               EDeref eArrayPro, lArrayPro)
+               eArrayPro, lArrayPro)
 
   | E.HintExpr (_, h, E.ArrayExpr (_, es)) ->
       let (l,t) = parseArrLit h in
@@ -781,13 +776,35 @@ let rec ds env = function
       let proto =
         ENewObj (EVal VEmpty, LocConst (spr "&%s_proto" fOrig),
                  eObjectPro, lObjectPro) in
+
+      (* in v0, i used simple objects for ctor function objects
       let obj =
         ENewref (LocConst (spr "&%s_obj" fOrig),
                  EDict [(eStr "code", code);
                         (eStr "prototype", proto)]) in
-      (* adding f to after dsFunc, since ctor shouldn't be recursive *)
+      (* adding f after dsFunc, since ctor shouldn't be recursive *)
       let env = IdMap.add f true env in
+
       ELet (f, None, ENewref (LocConst (spr "&%s" fOrig), obj), ds env e2)
+      *)
+
+      let xObj = freshVar "ctorObj" in
+      let eObj = eVar xObj in
+      let lObj = LocConst (spr "&%s_obj" fOrig) in
+      let freshObj =
+        ENewObj (EVal VEmpty, lObj, eFunctionPro, lFunctionPro) in
+      let setCode =
+        objOp [] [lObj; lFunctionPro]
+          "setPropObj" [eObj; eStr "code"; code] in
+      let setProto =
+        objOp [] [lObj; lFunctionPro]
+          "setPropObj" [eObj; eStr "prototype"; proto] in
+
+      ELet (xObj, None, freshObj,
+      ELet (freshVar "setCode", None, setCode,
+      ELet (freshVar "setProto", None, setProto,
+      ELet (f, None, ENewref (LocConst (spr "&%s" fOrig), eObj),
+            ds (IdMap.add f true env) e2))))
 
   (* rkc: turning this into a letrec *)
   | E.SeqExpr (_, E.HintExpr (_, s, E.FuncStmtExpr (p, f, args, body)), e2) ->
@@ -920,10 +937,22 @@ let rec ds env = function
   | E.NewExpr (_, E.HintExpr (_, s, constr), args)-> begin
       if !Settings.fullObjects = false then
         printParseErr "new not allowed in djsLite mode";
+
+      (* v0 treated constructors as simple objects
       (* could save a couple let-bindings by factoring get (!funcObj) *)
       let funcObj = ds env constr in
       let ctor = mkApp (eVar "get") [EDeref funcObj; eStr "code"] in
       let proto = mkApp (eVar "get") [EDeref funcObj; eStr "prototype"] in
+      *)
+
+      (* providing at least the lFunctionProto loc param, the other will
+         be inferred *)
+      let funcObj = ds env constr in
+      let ctor =
+        objOp [] [lFunctionPro] "getPropObj" [funcObj; eStr "code"] in
+      let proto =
+        objOp [] [lFunctionPro] "getPropObj" [funcObj; eStr "prototype"] in
+
       let ((ts,ls,hs),lProto) = parseNew s in
       let lObj =
         match ls with

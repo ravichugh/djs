@@ -108,9 +108,11 @@ val tyBool : typ
 val tyStr : typ
 val tyDict : typ
 val tyEmpty : typ
-(* val tyIntOrBool : typ *)
-(* val tyIntOrStr : typ *)
+
+val tyNumOrBool : typ
 val tyStrOrBool : typ
+val tyIntOrBool : typ
+val tyIntOrStr : typ
 (*
 val tyArr : vvar -> typ -> typ -> typ
 val tyNull : typ

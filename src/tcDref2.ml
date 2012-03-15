@@ -446,7 +446,7 @@ let inferHeapParam cap curHeap hActs hForms e11 =
     | _ -> None
 
 let inferHeapParam cap curHeap hActs hForm e11 =
-  fpr oc_local_inf "\nlet [???]\n";
+  fpr oc_local_inf "\n%s\n\n" cap;
   match inferHeapParam cap curHeap hActs hForm e11 with
     | None -> None
     | Some(e) -> begin
@@ -674,11 +674,11 @@ let steps2and3 g tForms lForms vFormTup hForm vActTup hAct =
       end
     | _ -> None
 
-let inferTypLocParams g tForms lForms tForm hForm tActs lActs vAct hAct =
+let inferTypLocParams cap g tForms lForms tForm hForm tActs lActs vAct hAct =
   if List.length tActs <> 0 then None
   else if List.length lActs = List.length lForms then None
   else begin
-    fpr oc_local_inf "\nlet ???\n";
+    fpr oc_local_inf "\n%s\n\n" cap;
     match tForm with
       | TTuple([("arguments",t)]) -> begin
           match t, lActs with
@@ -1188,7 +1188,7 @@ and tsELetAppTryBoxes cap g curHeap (tActs,lActs,hActs) v1 v2 boxes =
     let (tActs0,lActs0) = (tActs, lActs) in
 
     let ((tActs,lActs),sInf) =
-      match inferTypLocParams g tForms lForms t11 e11
+      match inferTypLocParams cap g tForms lForms t11 e11
                               tActs0 lActs0 v2 curHeap with
         | Some(ts,ls) -> ((ts, ls), "with help from local inference")
         | None        -> ((tActs0, lActs0), "without help from local inference") in

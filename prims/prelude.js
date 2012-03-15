@@ -79,5 +79,15 @@ var Array = /*: lArray */ { prototype: __ArrayProto, isArray: __isArray };
 __ArrayProto.constructor = Array;
 
 
+////////////////////////////////////////////////////////////////////////////////
+///// Function.prototype
+
+var __FunctionProto = /*: lFunctionProto */ { };
+
+var Function = /*: lFunction */ { prototype: __FunctionProto };
+
+__FunctionProto.constructor = Function;
+
+
 "**********************************************************************";
 
