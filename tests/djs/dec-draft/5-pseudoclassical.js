@@ -29,7 +29,7 @@ function Cat(name) /*: ty_mammal */ {
   return this;
 };
 
-Cat.prototype = new /*: [;lCatPro,&Mammal_proto;] &Mammal_proto */
+Cat.prototype = new /*: [;lCatPro,lMammalProto;] lMammalProto */
   Mammal("__dummy__");
 
 var henrietta = new /*: [;lHenrietta,lCatPro;] lCatPro */

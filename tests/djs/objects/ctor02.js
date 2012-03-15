@@ -16,13 +16,13 @@
 function Foo(name)
 /*: new [;Lthis;]
         [[this:Ref(Lthis), name:Str]]
-      / [Lthis |-> (dThis:{(= v empty)}, &FooProto)]
+      / [Lthis |-> (dThis:{(= v empty)}, lFooProto)]
      -> Ref(Lthis)
       / [Lthis |-> (dThis2:{Dict|
            (and (dom v {"name","getName"})
                 (= (sel v "name") name)
                 ((sel v "getName") :: tyGetName)
-           )}, &FooProto)] */
+           )}, lFooProto)] */
 {
   this.name = name;
 
@@ -31,7 +31,7 @@ function Foo(name)
   return this;
 }
 
-var bob = new /*: [;lBob;] &FooProto */ Foo("bob");
+var bob = new /*: [;lBob;] lFooProto */ Foo("bob");
 
 /*: {(= v "bob")} */ (bob.name);
 /*: {(= v "bob")} */ (bob.getName());

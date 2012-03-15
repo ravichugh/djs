@@ -1,19 +1,19 @@
 function F()
 /*: new [;L;]
     [[this:Ref(L)]]
-  / [L |-> (dThis:{(= v empty)}, &FProto), &FProto |-> (_:Dict, lObjectProto)]
+  / [L |-> (dThis:{(= v empty)}, lFProto), lFProto |-> (_:Dict, lObjectProto)]
  -> Ref(L)
-  / [L |-> (_:{(= v (upd dThis "f" 1))}, &FProto), &FProto |-> same] */
+  / [L |-> (_:{(= v (upd dThis "f" 1))}, lFProto), lFProto |-> same] */
 {
   this.f = 1;
   return this;
 }
 
-/*: Ref(&FProto) */ (F.prototype);
+/*: Ref(lFProto) */ (F.prototype);
 
 F.prototype.g = "sweet";
 
-var x = new (/*: [;lx;] &FProto */ F)();
+var x = new (/*: [;lx;] lFProto */ F)();
 
 /*: {(= v 1)} */ (x.f);
 /*: {(= v "sweet")} */ (x.g);
