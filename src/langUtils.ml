@@ -359,7 +359,13 @@ let tySafeWeakRef l   = TNonNull (THasTyp ([URef l], PTru))
 (* setting the default for array tuple invariants to be v != undefined,
    not Top, so that packed array accesses can at least prove that the
    value retrieved is not undefined *)
-let tyArrDefault  = ty (pNot (eq theV (WVal vUndef)))
+let tyNotUndef = ty (pNot (eq theV (WVal vUndef)))
+let tyArrDefault = tyNotUndef
+
+(*
+let tyArrDefault =
+  THasTyp ([UArray (ty (pNot (eq theV (WVal vUndef))))], PTru)
+*)
 
 let tyTypTerm = function
   | URef(l) -> tyRef l (* so that default for references can be tweaked *)
@@ -1543,16 +1549,18 @@ let embedForm p = p |> embedForm1 |> embedObjSelsInsideOut
 
 (***** More stuff *************************************************************)
 
-let tyArrayTuple t ts extensible = 
+(* TODO TODO TODO figure out why THasTyp version breaks typ inst *)
+
+let tyArrayTuple tInv ts extensible = 
   let p = if extensible then ge else eq in
   ty (pAnd (
-    hastyp theV (UArray t)
+    hastyp theV (UArray tInv)
     :: packed theV :: p (arrlen theV) (wInt (List.length ts))
     :: Utils.map_i (fun ti i -> applyTyp ti (sel theV (wInt i))) ts))
 (* TODO 3/12
   let ps =
     packed theV :: p (arrlen theV) (wInt (List.length ts))
     :: Utils.map_i (fun ti i -> applyTyp ti (sel theV (wInt i))) ts in
-  THasTyp ([UArray t], pAnd ps)
+  THasTyp ([UArray tInv], pAnd ps)
 *)
 

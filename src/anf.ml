@@ -197,6 +197,7 @@ let rec strVal k = function
 *)
   | VArray(t,vs) ->
       let st = if t = tyArrDefault then "" else spr " as Arr(%s)" (strTyp t) in
+      (* let st = spr " as %s" (strTyp t) in *)
       let svs = List.map (fun s -> clip (strVal k s)) vs in
       spr "%s<%s>%s" (tab k) (String.concat ", " svs) st 
 

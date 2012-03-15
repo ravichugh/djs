@@ -795,8 +795,27 @@ and tsVal_ g h = function
 
   | VFun _ -> failwith "ts VFun"
 
+  | VArray(tInv,vs) -> begin
+      List.iter (tcVal g h tInv) vs;
+      let n = List.length vs in
+      let ps = 
+        (* eq (tag theV) (wStr tagArray) :: *)
+        packed theV :: PEq (arrlen theV, wInt n)
+        :: Utils.map_i (fun vi i -> PEq (sel theV (wInt i), WVal vi)) vs in
+      THasTyp ([UArray tInv], pAnd ps)
+    end
+
+(*
   | VArray(t,vs) -> begin
-      List.iter (tcVal g h t) vs;
+      let (tInv,q) =
+        match t with
+          | THasTyp([UArray(tInv)],q) -> (tInv, q)
+          (* TODO should be able to remove this once tyArrayTuple issue
+             is fixed *)
+          | TRefinement("v",PConn("and",
+              PUn(HasTyp(WVal(VVar"v"),UArray(tInv)))::ps)) -> (tInv, pAnd ps)
+          | _ -> err [spr "TS-Array: [%s] bad shape" (prettyStrTyp t)] in
+      List.iter (tcVal g h tInv) vs;
       let n = List.length vs in
 (*
       ty (pAnd (
@@ -810,8 +829,14 @@ and tsVal_ g h = function
         (* eq (tag theV) (wStr tagArray) :: *)
         packed theV :: PEq (arrlen theV, wInt n)
         :: Utils.map_i (fun vi i -> PEq (sel theV (wInt i), WVal vi)) vs in
+(* 3/14
       THasTyp ([UArray t], pAnd ps)
+*)
+      (* TODO shouldn't be able to use q unless prove it somehow *)
+      let q = "blah" in
+      THasTyp ([UArray tInv], pAnd (ps))
     end
+*)
 
 
 (***** Expression type synthesis **********************************************)

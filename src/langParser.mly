@@ -224,6 +224,12 @@ exp2 :
  | LPAREN e=exp RPAREN AS f=frame            { EAs("source program",e,f) }
  | LBRACE RBRACE                             { EDict([]) }
  | LBRACE fieldexps RBRACE                   { EDict($2) }
+(*
+ | LT GT                                     { EArray(tyArrDefault,[]) }
+ | LT es=exps GT                             { EArray(tyArrDefault,es) }
+ | LT GT AS t=typ                            { EArray(t,[]) }
+ | LT es=exps GT AS t=typ                    { EArray(t,es) }
+*)
  | LT GT                                     { EArray(tyArrDefault,[]) }
  | LT es=exps GT                             { EArray(tyArrDefault,es) }
  | LT GT AS u=typ_term           { match u with
@@ -297,7 +303,7 @@ typ :
  (***** syntactic macros *****)
 
  (* TODO might want to add array tuple to abstract syntax *)
- | LT x=array_tuple_typs GT  { let (ts,b) = x in tyArrayTuple tyArrDefault ts b }
+ | LT x=array_tuple_typs GT { let (ts,tInv,b) = x in tyArrayTuple tInv ts b }
 
  
 basetag :
@@ -658,9 +664,31 @@ walues :
  | walue COMMA walues    { $1 :: $3 }
 
 array_tuple_typs :
+ | att=array_tuple_typs_
+     { let (ts,b) = att in
+(* 3/14
+       (* instead of using not (v = undefined), taking the join
+          of all the components. assuming the binder of each component
+          is "v". *)
+
+       no, this is not a good idea until EArray/VArray keep the invariant
+       and other predicates separate, so that they can each be omitted/supplied
+       independently.
+
+       let tInvariant =
+         match Utils.removeDupes ts with
+           | []  -> tyNotUndef
+           | [t] -> t
+           | ts' -> ty (pOr (List.map (fun t -> applyTyp t theV) ts'))
+       in
+*)
+       let tInvariant = tyNotUndef in
+       (ts,tInvariant,b) }
+
+array_tuple_typs_ :
  | t=typ                             { ([t],false) }
  | t=typ COMMA ELLIPSIS              { ([t],true) }
- | t=typ COMMA att=array_tuple_typs  { let (ts,b) = att in (t::ts,b) }
+ | t=typ COMMA att=array_tuple_typs_ { let (ts,b) = att in (t::ts,b) }
 
 (*
 fieldtyps :
@@ -726,7 +754,14 @@ jsArrLit :
  | l=loc ARRTYPE LPAREN t=typ RPAREN EOF { (l, t) }
  | ARRTYPE LPAREN t=typ RPAREN EOF       { (LocConst (freshVar "arrLit"), t) }
  | l=loc LT x=array_tuple_typs GT EOF
-     { let (ts,b) = x in (l, tyArrayTuple tyArrDefault ts b) }
+     { let (ts,tInvariant,b) = x in (l, tyArrayTuple tInvariant ts b) }
+(*
+ | l=loc EOF        { (l, tyArrDefault) }
+ | l=loc t=typ EOF  { (l, t) }
+ | t=typ EOF        { (LocConst (freshVar "arrLit"), t) }
+ | l=loc LT x=array_tuple_typs GT EOF
+     { let (ts,tInvariant,b) = x in (l, tyArrayTuple tInvariant ts b) }
+*)
 
 jsHeap : h=heap EOF { h }
 

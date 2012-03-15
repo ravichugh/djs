@@ -191,6 +191,7 @@ let checkLength s errList l1 l2 =
 
 type obligation =
   | OConc of vvar * typ
+  | OWeak of typ * typ
 
 let heapSubstAndObligations errList cs1 cs2 =
   let foo (acc1,acc2) (l,hc2) =
@@ -207,11 +208,24 @@ let heapSubstAndObligations errList cs1 cs2 =
                               spr "  %s" (strLoc l1');
                               spr "  %s" (strLoc l2')])
         | HWeakObj(ts1,t1,l1), HWeakObj(ts2,t2,l2) ->
-            if ts1 = ts2 && t1 = t2 && l1 = l2 then
+            (*
+            if ts1 = ts2 && t1 = t2 && l1 = l2 then (acc1, acc2)
+            else err (errList @ [spr
+                   "constraints for [%s]\n\n[%s]\n\n[%s]" (strLoc l)
+                   (prettyStr strHeapCell hc1) (prettyStr strHeapCell hc2)])
+            *)
+            if l1 <> l2 then
+              err (errList @ [spr
+                "proto-links for [%s] differ: [%s] [%s]" (strLoc l)
+                   (strLoc l1) (strLoc l2)])
+            else if ts1 <> ts2 then
+              err (errList @ [spr
+                "thaw states for [%s] differ: [%s] [%s]" (strLoc l)
+                   (strThawState ts1) (strThawState ts2)])
+            else if t1 = t2 then
               (acc1, acc2)
             else 
-              err (errList @ [spr
-                "constraints for [%s] TODO" (strLoc l)])
+              (acc1, OWeak (t1, t2) :: acc2)
         | _ ->
             err (errList @ [spr
               "constraints for [%s] have different shape" (strLoc l)])
@@ -380,6 +394,14 @@ and checkHeaps errList usedBoxes g h1 h2 =
           let p = applyTyp s2 (wVar x2) in
           let p = masterSubstForm (binderSubst,[],[],[]) p in
           checkFormula errList usedBoxes g p
+      | OWeak(t1,t2) ->
+          (* TODO 3/14 issue with theV inside UArray typ_term... right now,
+             not checking OWeak obligations, since the typing rules don't
+             have a way of changing them anyway...
+          let _ = checkTypes errList usedBoxes g t1 t2 in
+          checkTypes errList usedBoxes g t2 t1
+          *)
+          ()
     ) obligations;
     simpleTcRemoveBindingN n;
     Zzz.popScope ();

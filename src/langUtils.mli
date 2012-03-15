@@ -118,6 +118,7 @@ val tyNull : typ
 (* val tyArrImp : locs -> vvar -> typ -> heap -> typ -> heap -> typ *)
 val tyRef : loc -> typ
 val tySafeWeakRef : loc -> typ
+val tyNotUndef : typ
 val tyArrDefault : typ
 val pIsBang : walue -> typterm -> formula
 (*
@@ -139,6 +140,7 @@ val setPretty : bool -> unit
 val sugarArrow : bool ref
 val strLoc : loc -> string
 val strLocs : locs -> string
+val strThawState : thawstate -> string
 val strBaseValue : basevalue -> string
 val strValue : value -> string
 val strWalue : walue -> string
@@ -148,6 +150,7 @@ val strForm : formula -> string
 val strFormExpanded : string -> formula list -> string
 val strTTFlat : typterm -> string
 val strHeap : heap -> string
+val strHeapCell : heapconstraint -> string
 val strWorld : world -> string
 val strFrame : frame -> string
 val strBinding : vvar * typ -> string
