@@ -1,9 +1,9 @@
 function F()
-/*: ctor [;L;]
+/*: new [;L;]
     [[this:Ref(L)]]
-  / [L |-> (dThis:{(= v empty)}, &F_proto), &F_proto |-> (_:Top, lObjectProto)]
+  / [L |-> (dThis:{(= v empty)}, lFProto), lFProto |-> (_:Top, lObjectProto)]
  -> Ref(L)
-  / [L |-> (_:{(= v (upd dThis "f" 1))}, &F_proto), &F_proto |-> same] */
+  / [L |-> (_:{(= v (upd dThis "f" 1))}, lFProto), lFProto |-> same] */
 {
   this.f = "not 1";
   return this;

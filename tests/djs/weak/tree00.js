@@ -27,4 +27,4 @@ tree = /*: lThwd1 */ "#thaw";
 
 var i = tree.item;
 
-/*: Int */ i;
+assert (/*: Int */ i);

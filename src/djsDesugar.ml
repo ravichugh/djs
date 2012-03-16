@@ -104,7 +104,8 @@ and fooIter curFunc lexScope varScope es =
   List.iter (fun e -> ignore (foo curFunc lexScope varScope e)) es
 
 let checkVars e =
-  try ignore (foo "TOP_LEVEL" IdSet.empty IdSet.empty e)
+  let init = IdSet.add "assert" IdSet.empty in
+  try ignore (foo "TOP_LEVEL" init IdSet.empty e)
   with NeedVarLifting(foo,x) ->
          Log.printParseErr (spr
            "function [%s] refers to [%s] before declaration\n\n\
@@ -926,6 +927,13 @@ let rec ds env = function
       else printParseErr "method call not allowed in djsLite mode"
 **)
 
+  | E.AppExpr (_, E.VarExpr (_, "assert"), es) -> begin
+      match es with
+        | [E.HintExpr (_, s, e)] -> dsAssert env s e
+        | [e]                    -> dsAssert env "{(= v true)}" e
+        | _                      -> Log.printParseErr "bad assert syntax"
+    end
+
   | E.AppExpr (_, E.HintExpr (_, _, E.BracketExpr _), _)
     when not !Settings.fullObjects ->
       Log.printParseErr "method call not allowed in djsLite mode"
@@ -940,8 +948,10 @@ let rec ds env = function
   | E.AppExpr (p, E.BracketExpr (p', obj, prop), args) ->
       dsMethCall env [] [] obj prop args 
 
+(*
   | E.AppExpr (_, E.BracketExpr _, _) when not !Settings.fullObjects ->
       Log.printParseErr "method call not allowed in djsLite mode"
+*)
 
   | E.AppExpr (p, f, args) ->
       let (f,(ts,ls,hs)) =
@@ -1003,12 +1013,6 @@ let rec ds env = function
 
   | E.HintExpr (_, s, E.FuncStmtExpr (p, f, args, body)) ->
       let t = desugarTypHint s in
-      let uarr =
-        match t with
-          | THasTyp([UArr(uarr)],_) -> uarr
-          | _ ->
-              Log.printParseErr
-                (spr "bad type for recursive function [%s]\n\n[%s]" f s) in
       let f = dsVar f in
       let env = IdMap.add f false env in
       let func = dsFunc false env p args body in
@@ -1018,19 +1022,7 @@ let rec ds env = function
   | E.FuncStmtExpr (_, f, _, _) ->
       Log.printParseErr (spr "function statement [%s] not annotated" f)
 
-  | E.HintExpr (_, s, e) ->
-      let t = desugarTypHint s in
-      let frame = ParseUtils.typToFrame t in
-      let e =
-        match e with
-          | E.FuncExpr(p,args,body) -> dsFunc (hasThisParam t) env p args body
-          | _ -> ds env e
-      in
-      EAs ("DjsDesugar", e, frame)
-(*
-      let x = freshVar "hint" in
-      ELet (x, Some frame, e, eVar x)
-*)
+  | E.HintExpr (_, s, e) -> dsAssert env s e
 
   | E.ThrowExpr _ -> failwith "throwexpr"
   | E.TryFinallyExpr _ -> failwith "try finally"
@@ -1045,6 +1037,21 @@ and mkEDict env fields =
 and mkEArray topt env es =
   let t = match topt with Some(t) -> t | None -> tyArrDefault in
   EArray (t, List.map (ds env) es)
+
+(* for FuncExprs, this is an annotation.
+   for all other expressions, it's an assert *)
+and dsAssert env s e =
+  let t = desugarTypHint s in
+  let e =
+    match e with
+      | E.FuncExpr(p,args,body) -> dsFunc (hasThisParam t) env p args body
+      | _ -> ds env e
+  in
+  EAs ("DjsDesugar", e, ParseUtils.typToFrame t)
+(*
+  let x = freshVar "hint" in
+  ELet (x, Some frame, e, eVar x)
+*)
 
 and dsMethCall env ts ls obj prop args =
   let obj = ds env obj in
