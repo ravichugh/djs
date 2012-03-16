@@ -40,7 +40,7 @@ let removeLabels g =
 let printBinding (x,s) =
   if !Settings.printAllTypes || !depth = 0 then begin
     setPretty true;
-    pr "\n%s :: %s\n" x (strTyp s);
+    Log.log2 "\n%s :: %s\n" x (strTyp s);
     setPretty false;
     flush stdout;
     ()
@@ -126,7 +126,7 @@ let tcAddBinding ?(printHeap=true) ?(isNew=true) g h x s =
 *)
   if !Settings.printAllTypes || !depth = 0 then begin
     if printHeap
-    then pr "/ %s\n" (prettyStr strHeap h)
+    then Log.log1 "/ %s\n" (prettyStr strHeap h)
     else ()
   end;
 (* 3/13
@@ -289,10 +289,10 @@ let refTermsOf g = function
   | TMaybeNull(THasTyp([URef(l)],_))
   | TSelfify(TMaybeNull(THasTyp([URef(l)],_)),_) (* TODO 3/14 *)
   | THasTyp([URef(l)],_) ->
-      let _ = pr "don't call extract [Ref(%s)]\n" (strLoc l) in
+      let _ = Log.log1 "don't call extract [Ref(%s)]\n" (strLoc l) in
       [URef l]
   | t ->
-      let _ = pr "call extract refTermsOf [%s]\n" (prettyStrTyp t) in
+      let _ = Log.log1 "call extract refTermsOf [%s]\n" (prettyStrTyp t) in
       let isConcRef = function URef _ -> true | _ -> false in
       TypeTerms.elements (Sub.mustFlow g t ~filter:isConcRef)
 
@@ -321,10 +321,10 @@ let ensureSafeWeakRef cap g t =
 
 let arrayTermsOf g = function
   | THasTyp([UArray(t)],_) ->
-      let _ = pr "don't call extract [Array(%s)]\n" (strTyp t) in
+      let _ = Log.log1 "don't call extract [Array(%s)]\n" (strTyp t) in
       [UArray t]
   | t ->
-      pr "call extract arrayTermsOf [%s]\n" (prettyStrTyp t);
+      Log.log1 "call extract arrayTermsOf [%s]\n" (prettyStrTyp t);
       let filter = function UArray _ -> true | _ -> false in
       TypeTerms.elements (Sub.mustFlow g t ~filter)
 
@@ -334,10 +334,10 @@ let arrowTermsOf g t =
         (* this means that if there are any type terms at the top-level of
            the type, return them. not _also_ considering the refinement to
            see if that leads to more must flow boxes. *)
-        let _ = pr "don't call extract EApp [%s]\n" (prettyStrTyp t) in
+        let _ = Log.log1 "don't call extract EApp [%s]\n" (prettyStrTyp t) in
         us
     | _ ->
-        let _ = pr "call extract EApp [%s]\n" (prettyStrTyp t) in
+        let _ = Log.log1 "call extract EApp [%s]\n" (prettyStrTyp t) in
         let filter = function UArr _ -> true | _ -> false in
         TypeTerms.elements (Sub.mustFlow g t ~filter)
 
@@ -1203,9 +1203,9 @@ and tsELetAppTryBoxes cap g curHeap (tActs,lActs,hActs) v1 v2 boxes =
       let foo (ts,ls) =
         spr "[%s; %s]" (String.concat "," (List.map strTyp ts))
                        (String.concat "," (List.map strLoc ls)) in
-      pr "local inference succeeded:\n";
-      pr "  before : %s\n" (foo (tActs0,lActs0));
-      pr "  after  : %s\n" (foo (tActs,lActs));
+      Log.log0 "local inference succeeded:\n";
+      Log.log1 "  before : %s\n" (foo (tActs0,lActs0));
+      Log.log1 "  after  : %s\n" (foo (tActs,lActs));
     end;
 
     (* check well-formedness of all poly args *)
@@ -1327,7 +1327,7 @@ and tsELetAppTryBoxes cap g curHeap (tActs,lActs,hActs) v1 v2 boxes =
     | AppFail(errors) ->
         let n = List.length boxes in
         let s = spr "%d boxes but none type check the call" n in
-        printTcErr (cap :: s :: errors)
+        Log.printTcErr (cap :: s :: errors)
         (* the buck stops here, instead of raising Tc_error, since otherwise
            get lots of cascading let-bindings *)
 
@@ -1547,9 +1547,10 @@ let typecheck e =
     ignore (tsExp g h e);
     Sub.writeCacheStats ();
     let s = spr "OK! %d queries." !Zzz.queryCount in
-    pr "\n%s\n" (Utils.greenString s)
+    Log.log1 "\n%s\n" (Utils.greenString s);
+    if not !Log.printToStdout then Printf.printf "\n%s\n" (Utils.greenString s);
   end with Tc_error(s) ->
-    printTcErr s
+    Log.printTcErr s
 
 let typecheck e =
   BNstats.time "typecheck" typecheck e

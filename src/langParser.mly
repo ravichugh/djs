@@ -21,7 +21,8 @@ open Settings
    with menhir. use parse_err instead. *)
 let failwith = 0
 
-let parse_err s = raise (Lang.Parse_error s)
+(* let parse_err s = raise (Lang.Parse_error s) *)
+let printParseErr = Log.printParseErr
 
 let eOp1 (s,x)     = mkApp (eVar s) [x]
 let eOp2 (s,x,y)   = mkApp (eVar s) [x;y]
@@ -30,7 +31,7 @@ let eOp3 (s,x,y,z) = mkApp (eVar s) [x;y;z]
 (* make curried lambdas, putting polyFormals on the first lambda *)
 let mkCurriedFuns polyFormals xs e =
   let rec foo l = function
-    | []    -> parse_err "mkCurriedFuns: need at least one value var"
+    | []    -> printParseErr "mkCurriedFuns: need at least one value var"
     | x::[] -> EFun (l, x, None, e)
     | x::xs -> EFun (l, x, None, foo ([],[],[]) xs)
   in foo polyFormals xs

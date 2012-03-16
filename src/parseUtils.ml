@@ -2,9 +2,6 @@
 open Lang
 open LangUtils
 
-(* let parse_err s = raise (Lang.Parse_error s) *)
-let parse_err s = printParseErr s
-
 (*
 
 (***** Tuple type desugaring **************************************************)
@@ -264,10 +261,10 @@ let undoIntersectionHack g t =
             | Var(_,s) ->
                 (match s with
                    | THasTyp([u],PTru) -> PUn (HasTyp (theV, u))
-                   | _ -> printTcErr [spr "0 can't expand type hack [%s]" x])
+                   | _ -> Log.printTcErr [spr "0 can't expand type hack [%s]" x])
             | _ -> kill "undoIntersectionHack: impossible"
         end with Not_found ->
-          printTcErr [spr "1 can't expand type hack [%s]" x]
+          Log.printTcErr [spr "1 can't expand type hack [%s]" x]
       end
     | p -> p
   in

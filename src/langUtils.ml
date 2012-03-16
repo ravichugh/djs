@@ -3,6 +3,14 @@ open Lang
 
 module Id = Utils.IdTable
 
+
+(* let pr = Printf.printf    use Log.log instead! *)
+let spr = Printf.sprintf
+let fpr = Printf.fprintf
+
+let (|>) f x = x f
+
+
 (* not storing these in expressions *)
 type pos = Lexing.position * Lexing.position
 let pos0 = (Lexing.dummy_pos, Lexing.dummy_pos)
@@ -34,27 +42,6 @@ let freshHVar =
     incr c;
     (* TODO spr "H_%06d" !c *)
     "H_"
-
-
-(***** Misc (used to be in main.ml) *******************************************)
-
-(* find some place better *)
-
-let terminate () =
-  flush stdout;
-  exit 1
-
-let printBig cap s =
-  pr "\n%s\n%s\n\n%s\n\n" (String.make 80 '-') cap s
-
-let printErr cap s =
-  printBig cap s;
-  pr "%s\n" (Utils.redString cap);
-  terminate ()
-
-let printParseErr s = printErr "PARSE ERROR!" s
-
-let printTcErr  l = printErr "TC ERROR!" (String.concat "\n" l)
 
 
 (***** Map ********************************************************************)
@@ -578,7 +565,7 @@ let rec strWalue = function
           (strWalueList ds) (strWalue k) (strHeap h) (strLoc l)
       else
         let _ = setPretty true in
-        printTcErr
+        Log.printTcErr
           ["WObjSel should not have loc constraints:\n";
            spr "WObjSel(%s, %s, %s, %s)" "..."
              (strWalue k) (strLoc l) (strHeap h)]
@@ -704,7 +691,7 @@ and strForm = function
         spr "(heaphas %s %s %s)" (strHeap h) (strLoc l) (strWalue k)
       else
         let _ = setPretty true in
-        printTcErr
+        Log.printTcErr
           ["PHeapHas should not have loc constraints:\n";
            spr "HeapHas(%s, %s, %s)" (strHeap h) (strLoc l) (strWalue k)]
   (* NOTE: if one of these failwiths triggers, might be because not calling

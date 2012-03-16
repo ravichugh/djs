@@ -106,12 +106,12 @@ and fooIter curFunc lexScope varScope es =
 let checkVars e =
   try ignore (foo "TOP_LEVEL" IdSet.empty IdSet.empty e)
   with NeedVarLifting(foo,x) ->
-         printParseErr (spr
+         Log.printParseErr (spr
            "function [%s] refers to [%s] before declaration\n\n\
             to enable variable lifting: -varLifting true"
               foo x)
      | NeedImplicitGlobal(foo,x) ->
-         printParseErr (spr
+         Log.printParseErr (spr
            "function [%s] refers to [%s] that is not declared\n\n\
             to enable implicit reads/writes to global: -implicitGlobal true"
               foo x)
@@ -258,11 +258,11 @@ let parseWith production cap s =
   let s = expandMacros s in
   try production LangLexer.token (Lexing.from_string s)
   with Lang.Parse_error(x) ->
-         printParseErr (spr "couldn't parse annotation as [%s]:\n\n[%s]\n\n%s"
-           cap s x)
+         Log.printParseErr
+           (spr "couldn't parse annotation as [%s]:\n\n[%s]\n\n%s" cap s x)
      | LangParser.Error -> (* menhir *)
-         printParseErr (spr "couldn't parse annotation as [%s]:\n\n[%s]"
-           cap s)
+         Log.printParseErr
+           (spr "couldn't parse annotation as [%s]:\n\n[%s]" cap s)
 
 let parseTyp s     = parseWith LangParser.jsTyp "typ annot" s
 let parseAppArgs s = parseWith LangParser.jsPolyArgs "typ/loc/heap args" s
@@ -384,7 +384,7 @@ let dsTyp t =
 let desugarTypHint hint =
   (* let err x = printParseErr (spr "desugarScm\n\n%s\n\n%s" cap x) in *)
   match maybeParseTcFail hint with
-    | Some(s) -> printParseErr "TODO DJS failure annotations not implemented"
+    | Some(s) -> Log.printParseErr "TODO DJS failure annotations not implemented"
     | None -> begin
         fpr oc_desugar_hint "%s\n" (String.make 80 '-');
         fpr oc_desugar_hint "hint: [%s]\n\n" hint;
@@ -541,7 +541,7 @@ let rec ds env = function
       (* In JavaScript, 'this' is a reserved word.  Hence, we are certain that
          the the bound identifier is not captured by existing bindings. *)
       if !Settings.fullObjects then eVar "this"
-      else printParseErr "\"this\" not allowed in djsLite mode"
+      else Log.printParseErr "\"this\" not allowed in djsLite mode"
 
   (* TODO 3/15
   | E.IdExpr (p, x) -> let _ = failwith "rkc: ds idexpr" in EVar x
@@ -604,7 +604,7 @@ let rec ds env = function
   | E.PrefixExpr (_, "prefix:delete", e) -> begin
       match e with E.BracketExpr (_, ed, ek) -> begin
         if !Settings.fullObjects then
-          printParseErr "full: delete"
+          Log.printParseErr "full: delete"
         else
           let ek = undoDotExp ek in
           let x = freshVar "del" in
@@ -612,7 +612,7 @@ let rec ds env = function
                 ESetref (eVar x,
                          mkApp (eVar "del") [EDeref (eVar x); ds env ek]))
       end
-      | _ -> printParseErr "delete not applied to property"
+      | _ -> Log.printParseErr "delete not applied to property"
     end
 
   | E.PrefixExpr (_, "prefix:typeof", e) ->
@@ -683,7 +683,7 @@ let rec ds env = function
           | "#freeze"   -> EFreeze (l, EDeref x)
           | "#thaw"     -> EThaw (l, EDeref x)
           | "#refreeze" -> ERefreeze (l, EDeref x)
-          | _           -> printParseErr "freeze/thaw/refreeze impossible")
+          | _           -> Log.printParseErr "freeze/thaw/refreeze impossible")
 
   | E.AssignExpr (_, E.VarLValue (_, x), e) -> 
       let x = dsVar x in
@@ -852,7 +852,7 @@ let rec ds env = function
         | E.SeqExpr(_,E.LabelledExpr(_,cl,body),incr) when isContLabel cl ->
             dsFor env bl cl test body incr (parseWhile s)
         | _ ->
-            printParseErr "desugar EJS while fail"
+            Log.printParseErr "desugar EJS while fail"
     end
 
   | E.HintExpr (_, s, E.LabelledExpr (_, bl, E.DoWhileExpr (_, e1, test)))
@@ -862,7 +862,7 @@ let rec ds env = function
         | E.LabelledExpr(_,cl,body) when isContLabel cl ->
             dsDoWhile env bl cl test body (parseWhile s)
         | _ ->
-            printParseErr "desugar annotated do/while fail"
+            Log.printParseErr "desugar annotated do/while fail"
     end
 
   | E.LabelledExpr (_, bl, E.WhileExpr (_, test, e2)) when isBreakLabel bl ->
@@ -877,7 +877,7 @@ let rec ds env = function
 
   | E.WhileExpr _
   | E.DoWhileExpr _ ->
-      printParseErr "EJS always wraps while and do/while with %break label"
+      Log.printParseErr "EJS always wraps while and do/while with %break label"
 
 (*
   | ForInExpr (p, x, obj, body) ->
@@ -928,7 +928,7 @@ let rec ds env = function
 
   | E.AppExpr (_, E.HintExpr (_, _, E.BracketExpr _), _)
     when not !Settings.fullObjects ->
-      printParseErr "method call not allowed in djsLite mode"
+      Log.printParseErr "method call not allowed in djsLite mode"
 
   | E.AppExpr (p, E.HintExpr (_, s, E.BracketExpr (p', obj, prop)), args) ->
     begin
@@ -941,7 +941,7 @@ let rec ds env = function
       dsMethCall env [] [] obj prop args 
 
   | E.AppExpr (_, E.BracketExpr _, _) when not !Settings.fullObjects ->
-      printParseErr "method call not allowed in djsLite mode"
+      Log.printParseErr "method call not allowed in djsLite mode"
 
   | E.AppExpr (p, f, args) ->
       let (f,(ts,ls,hs)) =
@@ -955,7 +955,7 @@ let rec ds env = function
 
   | E.NewExpr (_, E.HintExpr (_, s, constr), args)-> begin
       if !Settings.fullObjects = false then
-        printParseErr "new not allowed in djsLite mode";
+        Log.printParseErr "new not allowed in djsLite mode";
 
       (* v0 treated constructors as simple objects
       (* could save a couple let-bindings by factoring get (!funcObj) *)
@@ -976,7 +976,7 @@ let rec ds env = function
       let lObj =
         match ls with
           | lObj::_ -> lObj
-          | _ -> printParseErr "new annot: must have at least 1 loc arg"
+          | _ -> Log.printParseErr "new annot: must have at least 1 loc arg"
       in
       let obj = ENewObj (EVal VEmpty, lObj, proto, lProto) in
       let (locArgs,argsArray) = mkArgsArray (List.map (ds env) args) in
@@ -986,8 +986,8 @@ let rec ds env = function
 
   | E.NewExpr _ ->
       if !Settings.fullObjects
-      then printParseErr "new must have annotations"
-      else printParseErr "new not allowed in djsLite mode"
+      then Log.printParseErr "new must have annotations"
+      else Log.printParseErr "new not allowed in djsLite mode"
 
   (* rkc: LamJS desugaring normally writes to a non-existent reference *)
   (* | FuncStmtExpr (p, f, args, body) -> *)
@@ -997,8 +997,9 @@ let rec ds env = function
   (* | HintExpr (_, _, e) -> ds_expr env e *)
 
   | E.FuncExpr (_, args, _) ->
-      printParseErr (spr "function expression with formals [%s] not annotated"
-        (String.concat ", " args))
+      Log.printParseErr (spr
+        "function expression with formals [%s] not annotated"
+           (String.concat ", " args))
 
   | E.HintExpr (_, s, E.FuncStmtExpr (p, f, args, body)) ->
       let t = desugarTypHint s in
@@ -1006,7 +1007,7 @@ let rec ds env = function
         match t with
           | THasTyp([UArr(uarr)],_) -> uarr
           | _ ->
-              printParseErr
+              Log.printParseErr
                 (spr "bad type for recursive function [%s]\n\n[%s]" f s) in
       let f = dsVar f in
       let env = IdMap.add f false env in
@@ -1015,7 +1016,7 @@ let rec ds env = function
         EFun (([],[],[]), f, None, func))
 
   | E.FuncStmtExpr (_, f, _, _) ->
-      printParseErr (spr "function statement [%s] not annotated" f)
+      Log.printParseErr (spr "function statement [%s] not annotated" f)
 
   | E.HintExpr (_, s, e) ->
       let t = desugarTypHint s in
@@ -1120,7 +1121,7 @@ and dsWhile env breakL continueL test body frame =
   let u = (([],[],hs), freshVar "dummy", tyAny, e1, t2, e2) in
   let body =
     if StrSet.mem continueL !jumpedTo
-    then printParseErr "dsWhile continue"
+    then Log.printParseErr "dsWhile continue"
          (* ELabel (continueL, Some (AFrame (h1, (STyp tyAny, h1))), ds env body) *)
     else ds env body in
   let fixloop =
@@ -1139,7 +1140,7 @@ and dsDoWhile env breakL continueL test body frame =
   let u = (([],[],hs), freshVar "dummy", tyAny, e1, t2, e2) in
   let body =
     if StrSet.mem continueL !jumpedTo
-    then printParseErr "dsDoWhile continue"
+    then Log.printParseErr "dsDoWhile continue"
          (* ELabel (continueL, Some (AFrame (h1, (STyp tyAny, h1))), ds env body) *)
     else ds env body in
   let fixloop =
@@ -1189,7 +1190,7 @@ and dsVarDecl env x lo e e2 =
             ds (IdMap.add x false env) e2) *)
 
 and dsVarDeclOrig env x e =
-  printParseErr (spr "dsVarDeclOrig [%s]" x)
+  Log.printParseErr (spr "dsVarDeclOrig [%s]" x)
 (*
   (* rkc: this is the original LamJS case. *)
   | VarDeclExpr (p, x, e) -> 

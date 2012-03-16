@@ -1,21 +1,57 @@
 
-let pr = Printf.printf
+let spr = Printf.sprintf
 let fpr = Printf.fprintf
 
-let oc_log = open_out (Settings.out_dir ^ "log.lisp")
+let printToStdout = ref true
+let printToLog = ref true
+
+(*******************************************************************************)
+
+let terminate () = flush stdout; exit 1
+
+let printBig cap s =
+  Printf.printf "\n%s\n%s\n\n%s\n\n" (String.make 80 '-') cap s
+
+let printErr cap s =
+  printBig cap s;
+  Printf.printf "%s\n" (Utils.redString cap);
+  terminate ()
+
+let printParseErr s = printErr "PARSE ERROR!" s
+
+let printTcErr  l = printErr "TC ERROR!" (String.concat "\n" l)
+
+(*******************************************************************************)
+
+let oc_log = open_out (Settings.out_dir ^ "log.txt")
+
+let log0 s =
+  if !printToLog then fpr oc_log s;
+  if !printToStdout then fpr stdout s;
+  ()
+
+let log1 fmt s1 =
+  if !printToLog then fpr oc_log fmt s1;
+  if !printToStdout then fpr stdout fmt s1;
+  ()
+
+let log2 fmt s1 s2 =
+  if !printToLog then fpr oc_log fmt s1 s2;
+  if !printToStdout then fpr stdout fmt s1 s2;
+  ()
 
 let bigTitle s =
-  fpr oc_log "%s\n" (String.make 80 ';');
-  fpr oc_log ";;; %s\n\n" s
+  log1 "%s\n" (String.make 80 ';');
+  log1 ";;; %s\n\n" s
 
 let smallTitle s =
-  fpr oc_log ";;; %s\n\n" s
-
-let log s =
-  fpr oc_log "%s\n" s
+  log1 ";;; %s\n\n" s
   
 let warn s =
-  if !Settings.strictWarn then pr "\n%s\n" (String.make 80 '-');
-  pr "WARN! %s\n" s;
-  if !Settings.strictWarn then LangUtils.printTcErr ["strict warning"]
+  if !Settings.strictWarn then log1 "\n%s\n" (String.make 80 '-');
+  log1 "WARN! %s\n" s;
+  if !Settings.strictWarn then printTcErr ["strict warning"]
+
+
+(* TODO should also move other special purpose log files here *)
 

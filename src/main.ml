@@ -25,9 +25,12 @@ let argSpecs = [
         "            don't a-normalize or use prims/pervasives");
   ("-noPrelude", Arg.Set noPrelude,
               "      don't use prims/pervasives");
-  (* TODO should also suppress output for -fast *)
-  ("-fast", Arg.Clear Cnf.checkConversion,
-         "           don't check CNF conversion");
+  ("-fast", Arg.Unit (fun () ->
+              Cnf.checkConversion := false;
+              Log.printToStdout := false;
+              Log.printToLog := false;
+              ()),
+         "           don't check CNF conversion, ");
   ("-checkCNF", Arg.Set Cnf.checkConversion,
          "           check CNF conversion");
   ("-printAllTypes", Arg.Set S.printAllTypes,
@@ -88,14 +91,14 @@ let doParse start_production name =
     end with
       | Failure s when String.length s >= 13 &&
                        String.sub s 0 13 = "Lex: bad char" ->
-          LangUtils.printParseErr (spr "%s\n\nat %s" s (strPos ()))
+          Log.printParseErr (spr "%s\n\nat %s" s (strPos ()))
       | Failure "lexing: empty token" ->
-          LangUtils.printParseErr (spr "lexical error\n\nat %s" (strPos ()))
+          Log.printParseErr (spr "lexical error\n\nat %s" (strPos ()))
       | Lang.Parse_error(s) ->
-          LangUtils.printParseErr (spr "at %s\n\n%s" (strPos ()) s)
+          Log.printParseErr (spr "at %s\n\n%s" (strPos ()) s)
       | Parsing.Parse_error _  (* thrown when using ocamlyacc *)
       | LangParser.Error ->    (* thrown when using menhir *)
-          LangUtils.printParseErr
+          Log.printParseErr
             (spr "unexpected token [%s]\n\nat %s" (lexeme lexbuf) (strPos ()))
 
 let parsePrelude f =
@@ -137,7 +140,7 @@ let parseSystemD () =
       | []  -> Lang.EVal (LangUtils.vStr "no source file")
       | [f] -> let f = makeAbsolute f in
                (checkSuffix f; expandProg f (doParse LangParser.prog f))
-      | _   -> (pr "%s" usage; LangUtils.terminate ())
+      | _   -> (pr "%s" usage; Log.terminate ())
   in
   anfAndAddPrelude e
 
@@ -162,7 +165,7 @@ let doParseDJS fo =
     DjsDesugar.desugar (DjsDesugar.makeFlatSeq ejs_pre ejs)
   with Failure(s) ->
     if Utils.strPrefix s "parse error" || Utils.strPrefix s "lexical error"
-    then LangUtils.printParseErr s
+    then Log.printParseErr s
     else failwith s
 
 let parseDJS () =
@@ -170,7 +173,7 @@ let parseDJS () =
     match !srcFiles with
       | []  -> doParseDJS None
       | [f] -> (checkSuffix f; doParseDJS (Some f))
-      | _   -> (pr "%s" usage; LangUtils.terminate ())
+      | _   -> (pr "%s" usage; Log.terminate ())
   in
   anfAndAddPrelude e
 

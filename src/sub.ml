@@ -99,7 +99,7 @@ let mustFlow_ usedBoxes ?filter:(f=(fun _ -> true)) g t =
   tearDownExtract ();
   let il = boxNumbers extracted in
   Zzz.dump (spr "; extracted: is(%s, %s)" x (Utils.strIntList il));
-  Log.log (spr "%s\n" (Utils.strIntList il));
+  (* Log.log (spr "%s\n" (Utils.strIntList il)); *)
   extracted
 
 let mustFlow_ usedBoxes ?filter:(f=(fun _ -> true)) g t =
@@ -150,7 +150,7 @@ let simpleHeapJoin v h1 h2 =
     let (hs1,cs1) = h1 in
     let (hs2,cs2) = h2 in
     if hs1 <> hs2 then
-      printTcErr [
+      Log.printTcErr [
         spr "simpleheapjoin:\n\n%s\n\n%s" (prettyStrHeap h1) (prettyStrHeap h2);
         "heap vars not the same"]
     else (hs1,[]) (* TODO dropping _all_ constraints... *)

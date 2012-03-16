@@ -1,11 +1,4 @@
 
-let pr = Printf.printf
-let spr = Printf.sprintf
-let fpr = Printf.fprintf
-
-let (|>) f x = x f
-
-
 (*****************************************************************************)
 
 exception Parse_error of string
@@ -14,7 +7,7 @@ exception Tc_error of string list
 
 let err s = raise (Tc_error s)
 let z3err s = raise (Z3_read_error s)
-let kill s = fpr stderr "\nFATAL ERROR\n\n%s\n" s; exit 1
+let kill s = Printf.fprintf stderr "\nFATAL ERROR\n\n%s\n" s; exit 1
 
 (* for current nesting during type checking *)
 let depth = ref 0

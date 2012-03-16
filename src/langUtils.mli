@@ -5,17 +5,24 @@ open Lang
 
 (******************************************************************************)
 
+val spr : ('a, unit, string) format -> 'a
+val fpr : out_channel -> ('a, out_channel, unit) format -> 'a
+
+val (|>) : 'a -> ('a -> 'b) -> 'b
+
 val pos0 : Lexing.position * Lexing.position
 
 val freshVar : vvar -> vvar
 val freshHVar : unit -> hvar
 (* val isTag : string -> bool *)
 
+(*
 val terminate : unit -> 'a
 val printBig : string -> string -> unit
 val printErr : string -> string -> 'a
 val printParseErr : string -> 'a
 val printTcErr : string list -> 'a
+*)
 
 (******************************************************************************)
 
