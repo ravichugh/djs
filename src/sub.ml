@@ -142,8 +142,18 @@ let simpleHeapJoin v h1 h2 =
   else if h1 = botHeap then h2
   else if h2 = botHeap then h1
   else
+  (* TODO 3/15 for factorial, there are different bindings on each branch.
+     so, try returning the heap vars...
   printTcErr [(spr "simpleheapjoin:\n\n%s\n\n%s"
     (prettyStrHeap h1) (prettyStrHeap h2))]
+  *)
+    let (hs1,cs1) = h1 in
+    let (hs2,cs2) = h2 in
+    if hs1 <> hs2 then
+      printTcErr [
+        spr "simpleheapjoin:\n\n%s\n\n%s" (prettyStrHeap h1) (prettyStrHeap h2);
+        "heap vars not the same"]
+    else (hs1,[]) (* TODO dropping _all_ constraints... *)
 
 
 

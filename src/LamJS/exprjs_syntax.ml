@@ -119,6 +119,11 @@ let rec expr (e : S.expr) = match e with
   | S.FuncExpr (a, args, body) ->
       FuncExpr (a, args, LabelledExpr (a, "%return", stmt body))
   | S.HintExpr (p, text, e) -> HintExpr (p, text, expr e)      
+  (* rkc: hijacking this form for recursive function expressions *)
+  | S.NamedFuncExpr (a, name, args, body) ->
+      FuncStmtExpr 
+        (a, name, args, LabelledExpr (a, "%return", stmt body))
+  (*
   | S.NamedFuncExpr (a, name, args, body) ->
       (* INFO: This translation is absurd and makes typing impossible.
          Introduce FIX and eliminate loops in the process. Note that the
@@ -131,6 +136,7 @@ let rec expr (e : S.expr) = match e with
                  (AssignExpr (a,
                               VarLValue (a,name),anonymous_func))
                  (IdExpr (a,name)))
+  *)
                         
 and lvalue (lv : S.lvalue) = match lv with
     S.VarLValue (a,x) -> VarLValue (a,x)

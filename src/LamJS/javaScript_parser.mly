@@ -154,6 +154,12 @@ member_expr
   | Function Id LParen ids RParen LBrace src_elts RBrace
       { NamedFuncExpr (($startpos, $endpos), $2, $4, 
                        BlockStmt (($startpos($6), $startpos($8)), $7)) }
+  (* rkc: adding hints around this form for recursive functions *)
+  | Function Id LParen ids RParen HINT LBrace src_elts RBrace
+      { HintExpr
+          (($startpos($6), $endpos($6)), $6,
+           NamedFuncExpr (($startpos, $endpos), $2, $4, 
+                       BlockStmt (($startpos($7), $startpos($9)), $8))) }
   | member_expr Period Id
       { DotExpr (($startpos, $endpos), $1, $3) } 
   | member_expr LBrack expr RBrack

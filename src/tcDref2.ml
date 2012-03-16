@@ -573,13 +573,15 @@ let findActualFromRefValue g lVar tTup vTup =
 
 let findActualFromProtoLink locSubst lVar hForm hAct =
   let rec foo = function
-    | (LocVar lVar', HConcObj (_, _, LocVar x)) :: cs when lVar = x ->
+    | ((LocVar lVar', HWeakObj (_, _, LocVar x)) :: cs)
+    | ((LocVar lVar', HConcObj (_, _, LocVar x)) :: cs) when lVar = x ->
         if not (List.mem_assoc lVar' locSubst) then foo cs
         else begin match List.assoc lVar' locSubst with
           | None -> None
           | Some(lAct') ->
               if not (List.mem_assoc lAct' (snd hAct)) then foo cs
               else begin match List.assoc lAct' (snd hAct) with
+                | HWeakObj(_,_,lAct)
                 | HConcObj(_,_,lAct) ->
                     let _ = fpr oc_local_inf "  %s |-> %s\n" lVar (strLoc lAct) in
                     Some lAct

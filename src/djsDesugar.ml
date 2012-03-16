@@ -49,7 +49,11 @@ let rec foo curFunc lexScope varScope = function
       let es = List.map (fun (_,_,e) -> e) ps in
       fooFold curFunc lexScope varScope es
   (* TODO look at this and djsLite/fail/fail06.js *)
+(*
   | E.IdExpr _ -> failwith "checkVars idexpr"
+*)
+  (* TODO 3/15 not sure what difference is between IdExpr and VarExpr *)
+  | E.IdExpr(p,x) -> foo curFunc lexScope varScope (E.VarExpr(p,x))
   | E.NewExpr (_, c, args) ->
       let _ = fooIter curFunc lexScope varScope args in
       lexScope
@@ -539,7 +543,10 @@ let rec ds env = function
       if !Settings.fullObjects then eVar "this"
       else printParseErr "\"this\" not allowed in djsLite mode"
 
+  (* TODO 3/15
   | E.IdExpr (p, x) -> let _ = failwith "rkc: ds idexpr" in EVar x
+  *)
+  | E.IdExpr (p, x) -> ds env (E.VarExpr (p, x))
 
   | E.VarExpr (p, x) -> begin
       let x = dsVar x in
@@ -749,6 +756,13 @@ let rec ds env = function
   | E.SeqExpr (_, E.HintExpr (_, s, E.ConstExpr (_, J.CString "#weak")), e2) ->
       EHeap (parseHeap s, ds env e2)
 
+  (* rkc: 3/15 match this case if i wanted to look for recursive functions as
+         var fact = function f(n) /*: ... */ {};
+  | E.SeqExpr (_,
+      E.VarDeclExpr (_, x, E.HintExpr (_, s, E.FuncStmtExpr (p, f, args, body))), e2) ->
+      printParseErr "good"
+  *)
+
   | E.SeqExpr (_, E.VarDeclExpr (_, x, e), e2) -> begin
       let (lo,e) =
         match e with
@@ -809,6 +823,7 @@ let rec ds env = function
       ELet (f, None, ENewref (LocConst (spr "&%s" fOrig), eObj),
             ds (IdMap.add f true env) e2))))
 
+(*
   (* rkc: turning this into a letrec *)
   | E.SeqExpr (_, E.HintExpr (_, s, E.FuncStmtExpr (p, f, args, body)), e2) ->
     begin
@@ -822,6 +837,7 @@ let rec ds env = function
       ParseUtils.mkLetRec f scm e1 e2
 *)
     end
+*)
 
   (* rkc: the original LamJS case *)
   | E.SeqExpr (_, e1, e2) -> 
@@ -983,6 +999,20 @@ let rec ds env = function
   | E.FuncExpr (_, args, _) ->
       printParseErr (spr "function expression with formals [%s] not annotated"
         (String.concat ", " args))
+
+  | E.HintExpr (_, s, E.FuncStmtExpr (p, f, args, body)) ->
+      let t = desugarTypHint s in
+      let uarr =
+        match t with
+          | THasTyp([UArr(uarr)],_) -> uarr
+          | _ ->
+              printParseErr
+                (spr "bad type for recursive function [%s]\n\n[%s]" f s) in
+      let f = dsVar f in
+      let env = IdMap.add f false env in
+      let func = dsFunc false env p args body in
+      EApp (([t],[],[]), eVar "fix",
+        EFun (([],[],[]), f, None, func))
 
   | E.FuncStmtExpr (_, f, _, _) ->
       printParseErr (spr "function statement [%s] not annotated" f)

@@ -30,6 +30,9 @@ val js_minus ::
 
 val js_uminus :: x:Int -> Int
 
+val js_mult :: x:Num -> y:Num -> {Num|(implies (and (integer x) (integer y))
+                                               (integer v))}
+
 val js_or :: x:Top -> y:Top -> {(ite (falsy x) (= v y) (= v x))}
 
 val js_and :: x:Top -> y:Top -> {(ite (truthy x) (= v y) (= v x))}

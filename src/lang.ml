@@ -163,6 +163,7 @@ and uarr = (tvars * lvars * hvars) * vvar * typ * heap * typ * heap
 
 and typterm =
   | UArr  of uarr
+  (* TODO maybe add a DJS sugared arrow type *)
   | UVar  of tvar
   | URef  of loc
   | UNull
