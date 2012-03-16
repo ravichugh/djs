@@ -138,11 +138,11 @@ let patternToBindings4 initBinder pat =
              match pat with
                | PLeaf(x) -> [(x, newExp)]
                | _ -> let newVar = freshVar "pattern" in
-                      (newVar, mkApp (eVar "get") [newExp]) :: (foo newVar pat)
+                      (newVar, mkApp (eVar "get_curried") [newExp]) :: (foo newVar pat)
           ) l)
   in
   let newVar = freshVar "pattern" in
-  (newVar, mkApp (eVar "get") [eVar initBinder]) :: (foo newVar pat)
+  (newVar, mkApp (eVar "get_curried") [eVar initBinder]) :: (foo newVar pat)
 
 let mkPatFun polyFormals pat e =
   let initBinder = freshVar "pattern" in

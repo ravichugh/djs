@@ -474,6 +474,13 @@ let notAnIntStr s =
 
 (***** Desugaring expressions *************************************************)
 
+let mkApp ?(curried=false) f args =
+  if curried then LangUtils.mkApp (eVar f) args
+  else begin match args with
+    | [x] -> EApp (([],[],[]), eVar f, x)
+    | _   -> EApp (([],[],[]), eVar f, (ParseUtils.mkTupleExp args))
+  end
+
 let objOp ts ls fn args =
   let fn = if !Settings.fullObjects then fn else fn ^ "Lite" in
   EApp ((ts,ls,[]), eVar fn, ParseUtils.mkTupleExp args)
@@ -561,7 +568,7 @@ let rec ds env = function
       with Not_found ->
         (* TODO *)
         let _ = failwith (spr "rkc: think about top-level VarExpr [%s]" x) in
-        mkApp (eVar "get") [EDeref (EVar "global"); eStr x]
+        mkApp "get" [EDeref (EVar "global"); eStr x]
     end
 
 (** these were the get cases from v0
@@ -610,8 +617,7 @@ let rec ds env = function
           let ek = undoDotExp ek in
           let x = freshVar "del" in
           ELet (x, None, ds env ed,
-                ESetref (eVar x,
-                         mkApp (eVar "del") [EDeref (eVar x); ds env ek]))
+                ESetref (eVar x, mkApp "del" [EDeref (eVar x); ds env ek]))
       end
       | _ -> Log.printParseErr "delete not applied to property"
     end
@@ -628,7 +634,7 @@ let rec ds env = function
           | "prefix:-"      -> "js_uminus"
           | x               -> failwith (spr "Op1Prefix [%s]" x)
       in
-      mkApp (eVar e0) [ds env e]
+      mkApp e0 [ds env e]
 
   | E.InfixExpr (_, "in", ek, ed) -> begin
       let ((ts,ls,hs),ed) =
@@ -666,7 +672,7 @@ let rec ds env = function
           (* | "in"  -> "mem" *)
           | _    -> failwith (spr "Op2Infix [%s]" op)
       in
-      mkApp (eVar e0) [ds env e1; ds env e2]
+      mkApp e0 [ds env e1; ds env e2]
 
   | E.IfExpr (_, e1, e2, e3) -> 
       EIf (ds env e1, ds env e2, ds env e3)
@@ -692,9 +698,8 @@ let rec ds env = function
         ESetref (eVar x, ds env e)
       else
         let _ = failwith (spr "assignexpr global [%s]" x) in
-        ESetref (eVar "global", mkApp (eVar "set") [EDeref (eVar "global");
-                                                    eStr x;
-                                                    ds env e])
+        ESetref (eVar "global",
+                 mkApp "set" [EDeref (eVar "global"); eStr x; ds env e])
 
 (** these were the get cases from v0
   | E.AssignExpr (_, E.PropLValue (_, E.HintExpr (_, h, e1), e2), e3)
@@ -1093,7 +1098,7 @@ and dsFunc isCtor env p args body =
        original source binder x, using it as the initial value for the
        pointer variable __x. *)
     let xOrig = undoDsVar x in
-    ELet (xOrig, None, mkApp (eVar "getarg") [eStr (string_of_int n)], 
+    ELet (xOrig, None, mkApp "getarg" [eStr (string_of_int n)],
     ELet (x, None, ENewref (LocConst (spr "&%s" xOrig), eVar xOrig),
       exp))
   and vars = Exprjs_syntax.locals body in
@@ -1113,7 +1118,7 @@ and dsFunc isCtor env p args body =
   let body =
     if List.length args = 0 then body
     else ELet ("getarg", None,
-               mkApp (eVar "get") [EDeref (eVar "arguments")],
+               mkApp ~curried:true "get_curried" [EDeref (eVar "arguments")],
                body)
   in
   if isCtor
@@ -1124,7 +1129,7 @@ and dsFunc isCtor env p args body =
 and dsWhile env breakL continueL test body frame =
   let (hs,e1,(t2,e2)) = frame in
   let f = freshVar "while" in
-  let loop () = mkApp (eVar f) [EVal vUndef] in
+  let loop () = mkApp f [EVal vUndef] in
   let u = (([],[],hs), freshVar "dummy", tyAny, e1, t2, e2) in
   let body =
     if StrSet.mem continueL !jumpedTo
@@ -1143,7 +1148,7 @@ and dsWhile env breakL continueL test body frame =
 and dsDoWhile env breakL continueL test body frame =
   let (hs,e1,(t2,e2)) = frame in
   let f = freshVar "dowhile" in
-  let loop () = mkApp (eVar f) [EVal vUndef] in
+  let loop () = mkApp f [EVal vUndef] in
   let u = (([],[],hs), freshVar "dummy", tyAny, e1, t2, e2) in
   let body =
     if StrSet.mem continueL !jumpedTo
@@ -1165,7 +1170,7 @@ and dsDoWhile env breakL continueL test body frame =
 and dsFor env breakL continueL test body incr frame =
   let (hs,e1,(t2,e2)) = frame in
   let f = freshVar "forwhile" in
-  let loop () = mkApp (eVar f) [EVal vUndef] in
+  let loop () = mkApp f [EVal vUndef] in
   let u = (([],[],hs), freshVar "dummy", tyAny, e1, t2, e2) in
   let body =
     if StrSet.mem continueL !jumpedTo

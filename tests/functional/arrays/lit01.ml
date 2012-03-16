@@ -4,7 +4,7 @@
 let tup0 = <> as Arr(IntOrBool) in
 let tup1 = ([IntOrBool] push) tup0 17 in
 
-let tup2 = <1, True> as Arr(IntOrBool) in
+let tup2 = <1, true> as Arr(IntOrBool) in
 let tup3 = ([IntOrBool] push) tup2 17 in
 
 let _ :: {(= (len v) 0)} = tup0 in

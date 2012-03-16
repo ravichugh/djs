@@ -84,6 +84,8 @@ type exp =
   (***** helpers for parsing *****)
   | ELoadSrc of string * exp         (* inserted/eliminated by parsing *)
   | ELoadedSrc of string * exp       (* placeholder to indicate source file *)
+  (***** abstract sugar *****)
+  (* TODO add tuples, DJS App nodes, ... ***)
 
 and value =
   | VBase of basevalue
