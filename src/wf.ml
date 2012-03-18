@@ -63,8 +63,7 @@ let heapBinders (_,cs) =
     | (_,HConc(x,t))
     | (_,HConcObj(x,t,_)) ->
         Var(x,tyAny) :: depTupleBinders t @ acc
-    | (_,HWeakObj _) ->
-        acc
+    | (_,HWeakTok _) -> acc
   ) [] cs
 
 let envToStrings g =
@@ -193,14 +192,10 @@ and checkConstraints errList g h = function
       checkLoc errList g h l';
       checkConstraints errList g h ((l,HConc(x,s))::rest)
     end
-  | (l,HWeakObj(Frzn,s,l'))::rest -> begin
-      checkLoc errList g h l';
-      checkConstraints errList g h (rest) (* TODO *)
-    end
-  | (l,HWeakObj(Thwd(l0),s,l'))::rest -> begin
-      checkLoc errList g h l';
-      checkLoc errList g h l0;
-      checkConstraints errList g h (rest) (* TODO *)
+  | (l,HWeakTok(tok))::rest -> begin
+      checkLoc errList g h l;
+      (match tok with Frzn -> () | Thwd(l') -> checkLoc errList g h l');
+      checkConstraints errList g h rest;
     end
 
 (*

@@ -82,7 +82,7 @@ let popDHeap () =
 let freshenCell = function
   | HConc(x,s) -> HConc (freshVar x, ty (PEq (theV, wVar x)))
   | HConcObj(x,s,l') -> HConcObj (freshVar x, ty (PEq (theV, wVar x)), l')
-  | HWeakObj(ts,t,l') -> HWeakObj (ts, t, l')
+  | HWeakTok(tok) -> HWeakTok tok
 
 let sameHeap () =
   let (hs,cs) = List.hd !heapStack in
@@ -121,7 +121,7 @@ let sameCell l =
   SUGAR_EXTEND SUGAR_FLD
   PLUS MINUS MUL DIV LT LE GE (* NE EQEQ AMPAMP PIPEPIPE *) PLUSPLUS
   ASSGN (* LOCALL *) NEWREF REFTYPE (* AT *) MAPSTO SAME HEAP
-  FRZN THWD FREEZE THAW REFREEZE
+  FRZN THWD FREEZE THAW (* REFREEZE *)
   ARRTYPE PACKED LEN TRUTHY FALSY INTEGER
   BREAK THROW TRY CATCH FINALLY
   UNDEF
@@ -136,6 +136,8 @@ let sameCell l =
 %type <Lang.typ> jsTyp
 %type <Lang.typs * Lang.locs * Lang.heaps> jsPolyArgs
 %type <Lang.loc> jsLoc
+%type <Lang.weakloc> jsWeakLoc
+%type <Lang.loc * Lang.thawstate> jsFreeze
 %type <Lang.loc * Lang.loc option> jsObjLocs
 %type <Lang.frame> jsWhile
 %type <Lang.uarr> jsCtor
@@ -147,7 +149,7 @@ let sameCell l =
 
 %start prog prelude
 %start jsTyp jsPolyArgs jsLoc jsObjLocs jsWhile jsFail jsCtor jsNew jsArrLit
-       jsHeap
+       jsHeap jsFreeze jsWeakLoc
 
 
 %%
@@ -185,7 +187,7 @@ exp :
  | LET x=varopt a=ann EQ e1=exp IN e2=exp { ELet(x,Some(a),e1,e2) }
  (* | LET REC VAR DCOLON scm EQ exp IN exp  { ParseUtils.mkLetRec $3 $5 $7 $9 } *)
  | EXTERN VAR DCOLON typ exp             { EExtern($2,$4,$5) }
- | HEAP heap exp                         { EHeap($2,$3) }
+ | HEAP w=weakloc e=exp                  { EWeak(w,e) }
  | x=LBL LBRACE e=exp RBRACE             { ELabel(x,None,e) }
 (*
  | x=LBL DCOLON a=ann LBRACE e=exp RBRACE { ELabel($1,Some($3),$5) }
@@ -214,9 +216,9 @@ exp1 :
  | NEWREF l=loc e=exp2           { ENewref(l,e) }
  | NEW LPAREN e1=exp COMMA l1=loc COMMA e2=exp COMMA l2=loc RPAREN
      { ENewObj(e1,l1,e2,l2) }
- | FREEZE LPAREN l=loc COMMA e=exp RPAREN    { EFreeze(l,e) }
+ | FREEZE LPAREN l=loc COMMA x=thawstate COMMA e=exp RPAREN
+     { EFreeze(l,x,e) }
  | THAW LPAREN l=loc COMMA e=exp RPAREN      { EThaw(l,e) }
- | REFREEZE LPAREN l=loc COMMA e=exp RPAREN  { ERefreeze(l,e) }
 
 exp2 :
  | v=value                                   { EVal v }
@@ -593,14 +595,20 @@ heapcell :
  | l=loc MAPSTO x=varopt COLON t=typ { (l,HConc(x,t)) }
  | l=loc MAPSTO LPAREN x=varopt COLON t=typ COMMA l2=loc RPAREN
      { (l,HConcObj(x,t,l2)) }
+(*
  | l=loc MAPSTO LPAREN x=thawstate COMMA t=typ COMMA l2=loc RPAREN
      { (l,HWeakObj(x,t,l2)) }
+*)
+ | l=loc MAPSTO x=thawstate { (l,HWeakTok(x)) }
 
 rheapcell :
  | heapcell           { $1 }
  | l=loc MAPSTO SAME  { (l, sameCell l) }
  (* TODO add same token sugar back in here *)
  (* TODO add weak obj *)
+
+weakloc :
+ | LBRACK m=loc MAPSTO LPAREN t=typ COMMA l=loc RPAREN RBRACK { (m,t,l) }
 
 thawstate :
  | FRZN       { Frzn }
@@ -741,6 +749,10 @@ jsWhile :
          | _ -> printParseErr "bad jsWhile format" }
 
 jsLoc : l=loc EOF { l }
+
+jsWeakLoc : w=weakloc EOF { w }
+
+jsFreeze : LPAREN l=loc COMMA x=thawstate RPAREN { (l, x) }
 
 jsObjLocs :
  | l=loc EOF                             { (l, None) }

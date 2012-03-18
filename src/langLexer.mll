@@ -52,7 +52,7 @@ rule token = parse
   | "thwd"         { THWD }
   | "freeze"       { FREEZE }
   | "thaw"         { THAW }
-  | "refreeze"     { REFREEZE }
+  (* | "refreeze"     { REFREEZE } *)
   | "break"        { BREAK }
   | "throw"        { THROW }
   | "try"          { TRY }

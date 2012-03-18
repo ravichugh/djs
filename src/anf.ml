@@ -106,7 +106,7 @@ let rec anf = function
       let (l1,e1) = anfAndTmp e1 in
       let (l2,e2) = anfAndTmp e2 in
       finish (l1 @ l2, ESetref (e1, e2))
-  | EHeap(h,e) -> ([], EHeap (h, anfExp e))
+  | EWeak(h,e) -> ([], EWeak (h, anfExp e))
   | ELabel(x,ao,e) -> ([], ELabel (x, ao, anfExp e))
   | EBreak(x,e) ->
       let (l,e) = anfAndTmp e in
@@ -121,15 +121,12 @@ let rec anf = function
       let (l2,e2) = anfAndTmp e2 in
       finish (l1 @ l2, ENewObj (e1, loc1, e2, loc2))
   | ELoadedSrc(s,e) -> ([], ELoadedSrc (s, anfExp e))
-  | EFreeze(loc,e) ->
+  | EFreeze(loc,x,e) ->
       let (l,e) = anfAndTmp e in
-      finish (l, EFreeze (loc, e))
+      finish (l, EFreeze (loc, x, e))
   | EThaw(loc,e) ->
       let (l,e) = anfAndTmp e in
       finish (l, EThaw (loc, e))
-  | ERefreeze(loc,e) ->
-      let (l,e) = anfAndTmp e in
-      finish (l, ERefreeze (loc, e))
 
 and anfAndTmp e =
   let (l1,e) = anf e in
@@ -305,7 +302,7 @@ and strExp k exp = match exp with
       let s1 = strExp k e1 in
       let s2 = strExp k e2 in
       spr "%s%s := %s" (tab k) (clip s1) (clip s2)
-  | EHeap(h,e) -> spr "%sweak %s\n\n%s" (tab k) (strHeap h) (strExp k e)
+  | EWeak(h,e) -> spr "%sweak %s\n\n%s" (tab k) (strWeakLoc h) (strExp k e)
   | ELabel(x,None,e) ->
       let se = strExp (succ k) e in
       spr "%s#%s {\n%s\n%s}" (tab k) x se (tab k)
@@ -337,12 +334,11 @@ and strExp k exp = match exp with
       let s2 = strVal (succ k) v2 in
       spr "%snew (%s, %s, %s, %s)"
         (tab k) (clip s1) (strLoc l1) (clip s2) (strLoc l2)
-  | EFreeze(l,EVal(v)) ->
-      spr "%sfreeze (%s, %s)" (tab k) (strLoc l) (clip (strVal (succ k) v))
+  | EFreeze(l,x,EVal(v)) ->
+      let sx = strThawState x in
+      spr "%sfreeze (%s, %s, %s)" (tab k) (strLoc l) sx (clip (strVal (succ k) v))
   | EThaw(l,EVal(v)) ->
       spr "%sthaw (%s, %s)" (tab k) (strLoc l) (clip (strVal (succ k) v))
-  | ERefreeze(l,EVal(v)) ->
-      spr "%srefreeze (%s, %s)" (tab k) (strLoc l) (clip (strVal (succ k) v))
   | EBase _        -> badAnf "EBase"
   | EVar _         -> badAnf "EVar"
   | EFun _         -> badAnf "EFun"
@@ -352,7 +348,6 @@ and strExp k exp = match exp with
   | ENewObj _      -> badAnf "ENewObj"
   | EFreeze _      -> badAnf "EFreeze"
   | EThaw _        -> badAnf "EThaw"
-  | ERefreeze _    -> badAnf "ERefreeze"
   | ELoadedSrc(s,e) ->
       let s = Str.replace_first (Str.regexp Settings.djs_dir) "DJS_DIR/" s in
       let n = max 0 (70 - String.length s) in
@@ -405,7 +400,7 @@ and coerce = function
   | ENewref(cl,e) -> ENewref (cl, coerce e)
   | EDeref(e) -> EDeref (coerceEVal "deref" e)
   | ESetref(e1,e2) -> ESetref (coerceEVal "setref1" e1, coerceEVal "setref2" e2)
-  | EHeap(h,e) -> EHeap (h, coerce e)
+  | EWeak(h,e) -> EWeak (h, coerce e)
   | ELabel(x,ao,e) -> ELabel (x, ao, coerce e)
   | EBreak(x,e) -> EBreak (x, coerceEVal "break" e)
   | EThrow(e) -> EThrow (coerceEVal "throw" e)
@@ -415,7 +410,6 @@ and coerce = function
       ENewObj (coerceEVal "NewObj" e1, l1, coerceEVal "NewObj" e2, l2)
   | ELoadSrc(s,e) -> ELoadSrc (s, coerce e)
   | ELoadedSrc(s,e) -> ELoadedSrc (s, coerce e)
-  | EFreeze(l,e) -> EFreeze (l, coerceEVal "EFreeze" e)
+  | EFreeze(l,x,e) -> EFreeze (l, x, coerceEVal "EFreeze" e)
   | EThaw(l,e) -> EThaw (l, coerceEVal "EThaw" e)
-  | ERefreeze(l,e) -> ERefreeze (l, coerceEVal "ERefreeze" e)
 

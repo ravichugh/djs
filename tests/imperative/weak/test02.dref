@@ -1,6 +1,6 @@
 val ____ObjectProto :: Ref(lObjectProto)
 
-weak [~lWeak |-> (frzn, {Dict|((sel v "f") : Int)}, lObjectProto)]
+weak [~lWeak |-> ({Dict|((sel v "f") : Int)}, lObjectProto)]
 
 val weak_obj :: Ref(~lWeak)
 

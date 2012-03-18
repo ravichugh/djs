@@ -270,6 +270,8 @@ let parseAppArgs s = parseWith LangParser.jsPolyArgs "typ/loc/heap args" s
 let parseWhile s   = parseWith LangParser.jsWhile "while annot" s
 let parseHeap s    = parseWith LangParser.jsHeap "heap annot" s
 let parseLoc s     = parseWith LangParser.jsLoc "loc annot" s
+let parseWeakLoc s = parseWith LangParser.jsWeakLoc "weak loc annot" s
+let parseFreeze s  = parseWith LangParser.jsFreeze "freeze annot" s
 (*
 let parseWeakLoc s =
   let l = parseLoc s in
@@ -406,6 +408,13 @@ let hasThisParam = function
 *)
   | THasTyp([UArr(_,_,TTuple(("this",_)::_),_,_,_)],PTru) -> true
   | _ -> false
+
+let dsHeap (hs,cs) =
+  (hs, List.map (fun (l,hc) ->
+         (l, match hc with
+               | HConc(x,t) -> HConc (x, dsTyp t)
+               | HConcObj(x,t,l') -> HConcObj (x, dsTyp t, l')
+               | HWeakTok(tok) -> HWeakTok tok)) cs)
 
 
 (***** Misc *******************************************************************)
@@ -677,6 +686,21 @@ let rec ds env = function
   | E.IfExpr (_, e1, e2, e3) -> 
       EIf (ds env e1, ds env e2, ds env e3)
 
+  (* TODO for freeze and thaw, figure out how to handle this (_this) and
+     other formals, which aren't ref cells so can't setref *)
+
+  | E.AssignExpr (_, E.VarLValue (_, x),
+        E.HintExpr (_, h, E.ConstExpr (_, J.CString "#freeze"))) ->
+      let x = eVar (dsVar x) in
+      let (l,thaw) = parseFreeze h in
+      ESetref (x, EFreeze (l, thaw, EDeref x))
+
+  | E.AssignExpr (_, E.VarLValue (_, x),
+        E.HintExpr (_, h, E.ConstExpr (_, J.CString "#thaw"))) ->
+      let x = eVar (dsVar x) in
+      ESetref (x, EThaw (parseLoc h, EDeref x))
+
+(*
   | E.AssignExpr (_,
       E.VarLValue (_, x), E.HintExpr (_, h, E.ConstExpr (_, J.CString s)))
     when s = "#freeze" || s = "#thaw" || s = "#refreeze" ->
@@ -687,10 +711,11 @@ let rec ds env = function
       let l = parseLoc h in
       ESetref (x,
         match s with
-          | "#freeze"   -> EFreeze (l, EDeref x)
+          | "#freeze"   -> EFreeze (l, Frzn, EDeref x) (* TODO *)
           | "#thaw"     -> EThaw (l, EDeref x)
           | "#refreeze" -> ERefreeze (l, EDeref x)
           | _           -> Log.printParseErr "freeze/thaw/refreeze impossible")
+*)
 
   | E.AssignExpr (_, E.VarLValue (_, x), e) -> 
       let x = dsVar x in
@@ -760,7 +785,8 @@ let rec ds env = function
       EExtern (x, desugarTypHint s, ds (IdMap.add x false env) e2)
 
   | E.SeqExpr (_, E.HintExpr (_, s, E.ConstExpr (_, J.CString "#weak")), e2) ->
-      EHeap (parseHeap s, ds env e2)
+      let (m,t,l) = parseWeakLoc s in
+      EWeak ((m, dsTyp t, l), ds env e2)
 
   (* rkc: 3/15 match this case if i wanted to look for recursive functions as
          var fact = function f(n) /*: ... */ {};
@@ -957,6 +983,13 @@ let rec ds env = function
   | E.AppExpr (_, E.BracketExpr _, _) when not !Settings.fullObjects ->
       Log.printParseErr "method call not allowed in djsLite mode"
 *)
+
+  (* TODO *)
+  | E.AppExpr (p, E.HintExpr(_,"apply",f), obj::args) ->
+      let (locArgs,argsArray) = mkArgsArray (List.map (ds env) args) in
+      EApp (([], [] @ [locArgs], []),
+            ds env f,
+            ParseUtils.mkTupleExp [ds env obj; argsArray])
 
   | E.AppExpr (p, f, args) ->
       let (f,(ts,ls,hs)) =

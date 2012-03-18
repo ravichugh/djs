@@ -160,6 +160,7 @@ val strFormExpanded : string -> formula list -> string
 val strTTFlat : typterm -> string
 val strHeap : heap -> string
 val strHeapCell : heapconstraint -> string
+val strWeakLoc : weakloc -> string
 val strWorld : world -> string
 val strFrame : frame -> string
 val strBinding : vvar * typ -> string

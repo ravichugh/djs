@@ -68,11 +68,9 @@ type exp =
   | ENewref of loc * exp
   | EDeref of exp
   | ESetref of exp * exp
-  | EFreeze of loc * exp
+  | EFreeze of loc * thawstate * exp
   | EThaw of loc * exp
-  | ERefreeze of loc * exp
-  (* TODO rename to EWeak, define weak constraint list instead of heap *)
-  | EHeap of heap * exp   (* using this to add weak constraints *)
+  | EWeak of weakloc * exp
   (***** control operators *****)
   | ELabel of lbl * frame option * exp (* TODO get rid of annotation? *)
   | EBreak of lbl * exp
@@ -154,11 +152,12 @@ and typ =
   (***** created during type checking *****)
   | TExists of vvar * typ * typ
 
+(* TODO add weak heap *)
 and uarr = (tvars * lvars * hvars) * vvar * typ * heap * typ * heap
 
 and typterm =
   | UArr  of uarr
-  (* TODO maybe add a DJS sugared arrow type *)
+  (* TODO maybe add a DJS sugared arrow type. rename UArr to UArrow *)
   | UVar  of tvar
   | URef  of loc
   | UNull
@@ -167,13 +166,15 @@ and typterm =
 and heapconstraint =
   | HConc    of vvar * typ       (* [l |-> x:S] *)
   | HConcObj of vvar * typ * loc (* [l |-> (x:S, l')] *)
-  | HWeakObj of thawstate * typ * loc (* [l |-> (0, S, l')] *)
+  | HWeakTok of thawstate        (* [m |-> 0] *)
 
 and heap  = hvar list * (loc * heapconstraint) list
 and world = typ * heap
 and frame = hvars * heap * world
 and typs  = typ list
 and heaps = heap list
+
+and weakloc = loc * typ * loc (* m |-> (T, l) *)
 
 (* differences compared to formal presentation:
    - patterns for (abstract) syntactic sugar
@@ -187,6 +188,7 @@ type envbinding =
   | LVar of lvar
   | HVar of hvar
   | Lbl  of lbl * world option
+  | WeakLoc of weakloc
 
 type env = envbinding list
 

@@ -154,6 +154,15 @@ let tcRemoveBindingN n =
 *)
   for i = 1 to n do Zzz.removeBinding () done
 
+let findWeakLoc g m =
+  try
+    begin match List.find (function WeakLoc(y,_,_) -> m = y | _ -> false) g with
+      | WeakLoc(_,t,l) -> (t, l)
+      | _              -> failwith "findWeakLoc: impossible"
+    end
+  with Not_found ->
+    err [spr "findWeakLoc: not found: [%s]" (strLoc m)]
+
 
 (***** Heap operations ********************************************************)
 
@@ -164,7 +173,7 @@ let snapshot g h =
   let add = tcAddBinding ~printHeap:false in
   let (n,g1) = 
     List.fold_left (fun (k,acc) -> function
-      | HWeakObj _ -> (k, acc)
+      | HWeakTok _ -> (k, acc)
       | HConc(x,t) | HConcObj(x,t,_) ->
           let (i,g) = add acc h x tyAny in
           (* TODO 11/27: doing this so all the dep tuple binders get declared. *)
@@ -176,7 +185,7 @@ let snapshot g h =
   in
   let g2 = 
     List.fold_left (fun acc -> function
-      | HWeakObj _ -> acc
+      | HWeakTok _ -> acc
       (* TODO: here's one obvious place where binders are getting redefined *)
       | HConc(x,s) | HConcObj(x,s,_) -> snd (add ~isNew:false acc h x s)
     ) g1 l
@@ -194,7 +203,7 @@ let freshenWorld (t,(hs,cs)) =
     List.rev (List.fold_left (fun acc -> function
       | (_,HConc(x,_))
       | (_,HConcObj(x,_,_)) -> (x, freshVar x) :: acc
-      | (_,HWeakObj _) -> acc
+      | (_,HWeakTok _) -> acc
     ) [] cs) in
   let subst = (List.map (fun (x,y) -> (x, wVar y)) vSubst, [], [], []) in
   let (fresh,cs) =
@@ -207,9 +216,8 @@ let freshenWorld (t,(hs,cs)) =
           let x' = List.assoc x vSubst in
           let s' = masterSubstTyp subst s in
           ((x',s')::acc1, (l,HConcObj(x',s',l'))::acc2)
-      | (l,HWeakObj(thaw,s,l')) ->
-          let s' = masterSubstTyp subst s in
-          (acc1, (l,HWeakObj(thaw,s',l'))::acc2)
+      | (l,HWeakTok(tok)) ->
+          (acc1, (l, HWeakTok tok) :: acc2)
     ) ([],[]) cs in
   let t = masterSubstTyp subst t in
   (fresh, (t, (hs, cs)))
@@ -225,8 +233,8 @@ let selfifyHeap g (hs,cs) =
           let x' = freshVar x in
           (* ((x',s)::acc1, (l, HConcObj (x', ty (PEq (theV, wVar x)), l'))::acc2) *)
           ((x',s)::acc1, (l, HConcObj (x', selfifyVar g x, l'))::acc2)
-      | (l,HWeakObj(thaw,s,l')) ->
-          (acc1, (l, HWeakObj (thaw, s, l')) :: acc2)
+      | (l,HWeakTok(tok)) ->
+          (acc1, (l, HWeakTok tok) :: acc2)
     ) ([],[]) cs
   in
   (fresh, (hs, cs))
@@ -237,7 +245,7 @@ let findHeapCell l (_,cs) =
   try Some (snd (List.find (fun (l',_) -> l = l') cs))
   with Not_found -> None
 
-let findAndRemoveHeapCell l (hs,cs) =
+let findAndRemoveWeakCell l (hs,cs) =
   match findHeapCell l (hs,cs) with
     | Some(cell) -> Some (cell, (hs, List.remove_assoc l cs))
     | None       -> None
@@ -256,7 +264,7 @@ let checkLocActuals cap lf la =
 
 (***** Var elimination for let rules ******************************************)
 
-(* stop checking heap well-formedness at the EHeap exp *)
+(* stop checking heap well-formedness at the EWeak exp *)
 let checkWfHeap = ref true
 
 (* TODO 11/22 *)
@@ -266,7 +274,7 @@ let rec mkExists s = function
   | []       -> s
 
 let finishLet cap g y l (s,h) =
-  (* TODO: 11/26 hack so that EHeap works w/o change
+  (* TODO: 11/26 hack so that EWeak works w/o change
            2/27 also special casing djs_prelude *)
   if y = "end_of_pervasives" then checkWfHeap := false;
   if y = "end_of_djs_prelude" then checkWfHeap := false;
@@ -573,15 +581,13 @@ let findActualFromRefValue g lVar tTup vTup =
 
 let findActualFromProtoLink locSubst lVar hForm hAct =
   let rec foo = function
-    | ((LocVar lVar', HWeakObj (_, _, LocVar x)) :: cs)
-    | ((LocVar lVar', HConcObj (_, _, LocVar x)) :: cs) when lVar = x ->
+    | (LocVar lVar', HConcObj (_, _, LocVar x)) :: cs when lVar = x ->
         if not (List.mem_assoc lVar' locSubst) then foo cs
         else begin match List.assoc lVar' locSubst with
           | None -> None
           | Some(lAct') ->
               if not (List.mem_assoc lAct' (snd hAct)) then foo cs
               else begin match List.assoc lAct' (snd hAct) with
-                | HWeakObj(_,_,lAct)
                 | HConcObj(_,_,lAct) ->
                     let _ = fpr oc_local_inf "  %s |-> %s\n" lVar (strLoc lAct) in
                     Some lAct
@@ -619,7 +625,7 @@ let findArrayActual g tVar locSubst hForm hAct =
                     (match arrayTermsOf g (selfifyVar g a) with
                        | [UArray(t)] -> Some t
                        | _           -> foo cs)
-                | HWeakObj _ ->
+                | HWeakTok _ ->
                     foo cs
               end
         end
@@ -877,7 +883,7 @@ and tsExp_ g h = function
       let t1 = tsVal g h v1 in
       let s2 = tsVal g h v2 in
       let l = singleRefTermOf cap g t1 in
-      match findAndRemoveHeapCell l h with
+      match findAndRemoveWeakCell l h with
         | None -> err ([cap; spr "unbound loc [%s]" (strLoc l)])
         | Some(HConcObj _, _) -> err ([cap; "not handling ConcObj cell"])
         | Some(HConc(y,s), (hs,cs)) -> begin
@@ -967,7 +973,7 @@ and tsExp_ g h = function
         List.fold_left
           (fun acc -> function
              | (_,HConc(y,t)) | (_,HConcObj(y,t,_)) -> (y,t)::acc
-             | (_,HWeakObj _) -> acc
+             | (_,HWeakTok _) -> acc
           ) [] (snd h12) in
       (mkExists t (List.rev heapbindings), h12)
     end
@@ -982,20 +988,36 @@ and tsExp_ g h = function
       s2
     end
 
+  | EWeak((m,t,l),e) -> begin
+      if isStrongLoc m then err ["TS-EWeak: location should be weak"];
+      Wf.typ "EWeak" g h t;
+      (* TODO should check Wf.weakLoc to check locations also *)
+      let g = WeakLoc (m, t, l) :: g in
+      let h = (fst h, (m, HWeakTok Frzn) :: snd h) in
+      tsExp g h e
+    end
+
+(*
   (* 3/9 *)
-  | EHeap(h1,e) -> begin
+  | EWeak(h1,e) -> begin
       match h1 with
         | ([], [(LocConst(l),HWeakObj(Frzn,t,l'))]) -> begin
-            Wf.heap "EHeap: weak heap" g h1;
+            Wf.heap "EWeak: weak heap" g h1;
+            (* 3/17
             let h' = (fst h, (LocConst(l),HWeakObj(Frzn,t,l')) :: snd h) in
             let (s,h'') = tsExp g h' e in
             (s, h'')
+            *)
+            let g = WeakLoc (LocConst l, t, l') :: g in
+            let h = (fst h, (LocConst l, HWeakTok Frzn) :: snd h) in
+            tsExp g h e
           end
         | ([], [(_,HWeakObj _)]) ->
-            err ["TS-EHeap: location should be a constant, not a var"]
+            err ["TS-EWeak: location should be a constant, not a var TODO"]
         | _ ->
-            err ["TS-EHeap: should be a single frozen weak constraint"]
+            err ["TS-EWeak: should be a single frozen weak constraint"]
     end
+*)
 
   | ETcFail(s,e) ->
       failwith "ts tcfail"
@@ -1068,14 +1090,107 @@ and tsExp_ g h = function
 *)
     end
 
+  | EFreeze(m,ts,EVal(v)) -> begin
+      let cap = spr "ts EFreeze: [%s] [%s] [%s]"
+        (strLoc m) (strThawState ts) (prettyStrVal v) in
+      if not (isWeakLoc m) then err [cap; "location isn't weak"];
+      let (tFrzn,l') = findWeakLoc g m in
+      match findAndRemoveWeakCell m h with
+        | Some(HWeakTok(ts'),h0) when ts' = ts -> begin
+            let s = tsVal g h v in
+            let l = singleStrongRefTermOf "ts EFreeze" g s in
+            begin match findAndRemoveWeakCell l h0 with
+              | Some(HConcObj(x,tStrong,l''), h1) -> begin
+                  if l' <> l'' then
+                    err [cap; spr "[%s] wrong proto link" (strLoc l)];
+                  Wf.heap cap g h1;
+                  Sub.types cap g tStrong tFrzn;
+                  let h' = (fst h1, (m, HWeakTok Frzn) :: snd h1) in
+                  (tySafeWeakRef m, h')
+                end
+              | Some _ -> err [cap; spr "[%s] isn't a strong obj" (strLoc l)]
+              | None -> err [cap; spr "[%s] not bound" (strLoc l)]
+            end
+          end
+        | Some(HWeakTok(ts'),_) ->
+            err [cap; spr "different thaw state [%s]" (strThawState ts')]
+        | Some _ -> err [cap; "isn't a weaktok constraint"]
+        | None -> err [cap; "isn't bound in the heap"]
+    end
+
+  | EThaw(l,EVal(v)) -> begin
+      let cap = spr "ts EThaw: [%s] [%s]" (strLoc l) (prettyStrVal v) in
+      if not (isStrongLoc l) then err [cap; "location isn't strong"];
+      match findHeapCell l h with
+        | Some _ -> err [cap; "already bound"] (* TODO also check DEAD *)
+        | None -> begin
+            let t1 = tsVal g h v in
+            let m = singleWeakRefTermOf cap g t1 in
+            let (tFrzn,l') = findWeakLoc g m in
+            begin match findAndRemoveWeakCell m h with
+              | Some(HWeakTok(Frzn), h0) -> begin
+                  let tThwd = tFrzn in
+                  let x = freshVar "thaw" in
+                  let h' = (fst h0, (m, HWeakTok (Thwd l))
+                                       :: (l, HConcObj (x, tFrzn, l'))
+                                       :: snd h0) in
+                  let t = TMaybeNull (tyRef l) in
+                  (* this version could be used to more precisely track these
+                     references.  but since i'm not interesting in checking for
+                     non-nullness, i can use the less precise disjunction.
+                     if i do end up going this route, might want a TNullIf sugar
+                     form that selfifyVar can look for.
+                  let t = ty (pIte (eq (WVal v) wNull)
+                                   (eq theV wNull)
+                                   (applyTyp (tyRef l) theV)) in
+                  *)
+                  (TExists (x, tFrzn, t), h')
+                end
+              | Some(HWeakTok _, _) -> err [cap; "already thawed"]
+              | Some _ -> err [cap; "isn't a weaktok constraint"]
+              | None -> err [cap; spr "[%s] location not bound" (strLoc m)]
+            end
+          end
+    end
+
+(*
+  | EFreeze(m,ts,EVal(v)) -> begin
+      let cap = spr "ts EFreeze: [%s] [%s] [%s]"
+        (strLoc m) (strThawState ts) (prettyStrVal v) in
+      if not (isWeakLoc m) then err [cap; "location isn't weak"];
+      match findAndRemoveWeakCell m h with
+        | Some(HWeakObj(ts',tFrzn,l'), h0) when ts' = ts -> begin
+            let s = tsVal g h v in
+            let l = singleStrongRefTermOf "ts EFreeze" g s in
+            begin match findAndRemoveWeakCell l h0 with
+              | Some(HConcObj(x,tStrong,l''), h1) -> begin
+                  if l' <> l'' then
+                    err [cap; spr "[%s] wrong proto link" (strLoc l)];
+                  Wf.heap cap g h1;
+                  Sub.types cap g tStrong tFrzn;
+                  let h' = (fst h1, (m,HWeakObj(Frzn,tFrzn,l')) :: snd h1) in
+                  (tySafeWeakRef m, h')
+                end
+              | Some _ -> err [cap; spr "[%s] isn't a strong obj" (strLoc l)]
+              | None -> err [cap; spr "[%s] not bound" (strLoc l)]
+            end
+          end
+        | Some(HWeakObj(ts',_,_), _) ->
+            err [cap; spr "different thaw state [%s]" (strThawState ts')]
+        | Some _ -> err [cap; "isn't a weakobj constraint"]
+        | None -> err [cap; "isn't bound in the heap"]
+    end
+*)
+
+(*
   | EFreeze(m,EVal(v)) -> begin
       let cap = spr "ts EFreeze: [%s] [%s]" (strLoc m) (prettyStrVal v) in
       if not (isWeakLoc m) then err [cap; "location isn't weak"];
-      match findAndRemoveHeapCell m h with
+      match findAndRemoveWeakCell m h with
         | Some(HWeakObj(Frzn,tFrzn,l'), h0) -> begin
             let s = tsVal g h v in
             let l = singleStrongRefTermOf "ts EFreeze" g s in
-            begin match findAndRemoveHeapCell l h0 with
+            begin match findAndRemoveWeakCell l h0 with
               | Some(HConcObj(x,tStrong,l''), h1) -> begin
                   if l' <> l'' then
                     err [cap; spr "[%s] wrong proto link" (strLoc l)];
@@ -1092,14 +1207,16 @@ and tsExp_ g h = function
         | Some _ -> err [cap; "isn't a weakobj constraint"]
         | None -> err [cap; "isn't bound in the heap"]
     end
+*)
 
+(*
   | ERefreeze(m,EVal(v)) -> begin
       let cap = spr "ts ERefreeze: [%s] [%s]" (strLoc m) (prettyStrVal v) in
       if not (isWeakLoc m) then err [cap; "location isn't weak"];
-      match findAndRemoveHeapCell m h with
+      match findAndRemoveWeakCell m h with
         | Some(HWeakObj(Thwd(l),tFrzn,l'), h0) -> begin
             tcVal g h (tyRef l) v;
-            begin match findAndRemoveHeapCell l h0 with
+            begin match findAndRemoveWeakCell l h0 with
               | Some(HConcObj(x,tThwd,l''), h1) -> begin
                   if l' <> l'' then
                     err [cap; spr "[%s] wrong proto link" (strLoc l)];
@@ -1116,7 +1233,9 @@ and tsExp_ g h = function
         | Some _ -> err [cap; "isn't a weakobj constraint"]
         | None -> err [cap; "isn't bound in the heap"]
     end
+*)
 
+(*
   | EThaw(l,EVal(v)) -> begin
       let cap = spr "ts EThaw: [%s] [%s]" (strLoc l) (prettyStrVal v) in
       if not (isStrongLoc l) then err [cap; "location isn't strong"];
@@ -1125,7 +1244,7 @@ and tsExp_ g h = function
         | None -> begin
             let t1 = tsVal g h v in
             let m = singleWeakRefTermOf cap g t1 in
-            begin match findAndRemoveHeapCell m h with
+            begin match findAndRemoveWeakCell m h with
               | Some(HWeakObj(Frzn,tFrzn,l'), h0) -> begin
                   let tThwd = tFrzn in
                   let x = freshVar "thaw" in
@@ -1149,6 +1268,7 @@ and tsExp_ g h = function
             end
           end
     end
+*)
 
   | EThrow(EVal(v)) ->
       let _ = tsVal g h v in (tyFls, h)
@@ -1178,7 +1298,6 @@ and tsExp_ g h = function
   | EThrow _   -> Anf.badAnf "ts EThrow"
   | EFreeze _  -> Anf.badAnf "ts EFreeze"
   | EThaw _    -> Anf.badAnf "ts EThaw"
-  | ERefreeze _  -> Anf.badAnf "ts ERefreeze"
 
 and tsELetAppTryBoxes cap g curHeap (tActs,lActs,hActs) v1 v2 boxes =
 
@@ -1462,7 +1581,7 @@ and tcExp_ g h goal = function
       Zzz.popForm ();
     end
 
-  | EHeap(h,e) -> failwith "tc EHeap"
+  | EWeak(h,e) -> failwith "tc EWeak"
 
   | EExtern _ -> failwith "tc EExtern"
 
@@ -1501,7 +1620,6 @@ and tcExp_ g h goal = function
 
   | EFreeze _ -> failwith "tc EFreeze"
   | EThaw _ -> failwith "tc EThaw"
-  | ERefreeze _ -> failwith "tc ERefreeze"
 
   | EThrow _ -> failwith "tc EThrow"
   | ETryCatch _ -> failwith "tc ETryCatch"

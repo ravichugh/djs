@@ -123,7 +123,7 @@ let mapTyp ?fForm:(fForm=(fun x -> x))
       List.map (function
         | (l,HConc(x,s))       -> (l, HConc (x, fooTyp s))
         | (l,HConcObj(x,s,l')) -> (l, HConcObj (x, fooTyp s, l'))
-        | (l,HWeakObj(a,s,l')) -> (l, HWeakObj (a, fooTyp s, l'))
+        | (l,HWeakTok(tok))    -> (l, HWeakTok tok)
       ) cs
     in
     (hs, cs)
@@ -217,7 +217,7 @@ let foldTyp (fForm: 'a -> formula -> 'a)
   and fooHeap acc (_,cs) =
     List.fold_left (fun acc -> function
       | (_,HConc(_,s)) | (_,HConcObj(_,s,_)) -> fooTyp acc s
-      | (_,HWeakObj(_,s,_)) -> fooTyp acc s
+      | (_,HWeakTok(_)) -> acc
     ) acc cs
 
   in fooTyp init t
@@ -791,7 +791,7 @@ and strTTFlat ut =
 and strHeapCell = function
   | HConc(x,s)      -> spr "%s:%s" x (strTyp s)
   | HConcObj(x,s,l) -> spr "(%s:%s, %s)" x (strTyp s) (strLoc l)
-  | HWeakObj(a,s,l) -> spr "(%s, %s, %s)" (strThawState a) (strTyp s) (strLoc l)
+  | HWeakTok(ts)    -> strThawState ts
 
 and strHeap (hs,cs) =
   let s = 
@@ -802,6 +802,9 @@ and strHeap (hs,cs) =
     (* 11/28: extra space to avoid ]] conflict *)
     | _, [] -> spr "[%s ]" (String.concat "," hs)
     | _     -> spr "[%s ++ %s ]" (String.concat "," hs) s
+
+and strWeakLoc (m,t,l) =
+  spr "[%s |-> (%s, %s)]" (strLoc m) (strTyp t) (strLoc l)
 
 and strWorld (s,h) =
   spr "%s / %s" (strTyp s) (strHeap h)
@@ -860,7 +863,7 @@ end
 let heapBinders cs =
   List.fold_left
     (fun acc (l,hc) ->
-       match hc with HWeakObj _ -> acc
+       match hc with HWeakTok _ -> acc
                    | HConc(x,_) | HConcObj(x,_,_) -> VVars.add x acc)
     VVars.empty cs
 
@@ -947,8 +950,8 @@ and freeVarsHeap env (hs,cs) =
     | (l,HConc(_,t))
     | (l,HConcObj(_,t,_)) ->
          Quad.combineList [freeVarsLoc env l; freeVarsTyp env t; acc]
-    | (l,HWeakObj(_,t,_)) ->
-         Quad.combineList [freeVarsLoc env l; freeVarsTyp env t; acc]
+    | (l,HWeakTok(_)) ->
+         freeVarsLoc env l
   ) free cs
 
 and freeVarsWorld env (t,h) =
@@ -1155,9 +1158,10 @@ and masterSubstHeap subst (hs,cs) =
           let subst = MasterSubst.removeVVars [x] subst in
           (masterSubstLoc subst l,
            HConcObj (x, masterSubstTyp subst s, masterSubstLoc subst l'))
-      | (l,HWeakObj(thaw,s,l')) -> (* TODO *)
-          (masterSubstLoc subst l,
-           HWeakObj (thaw, masterSubstTyp subst s, masterSubstLoc subst l'))
+      | (l,HWeakTok(Frzn)) ->
+          (masterSubstLoc subst l, HWeakTok Frzn)
+      | (l,HWeakTok(Thwd(l'))) ->
+          (masterSubstLoc subst l, HWeakTok (Thwd (masterSubstLoc subst l')))
     ) cs
   in
   (hs, cs)
@@ -1240,7 +1244,7 @@ and freshenHeap free (hs,cs) =
       | (_,HConc(x,_))
       | (_,HConcObj(x,_,_)) ->
           if Quad.memV x free then (x, freshVar x)::acc else acc
-      | (_,HWeakObj _) ->
+      | (_,HWeakTok _) ->
           acc
     ) [] cs
   in
@@ -1260,8 +1264,8 @@ and freshenHeap free (hs,cs) =
             then List.assoc x binderSubst
             else x in
           (l, HConcObj (x, masterSubstTyp subst s, l'))
-      | (l,HWeakObj(ts,s,l')) ->
-          (l, HWeakObj (ts, s, l'))
+      | (l,HWeakTok(tok)) ->
+          (l, HWeakTok tok)
     ) cs
   in
   (binderSubstW, (hs, cs))
@@ -1408,7 +1412,7 @@ let expandPreHeap (hs,cs) =
     List.map (fun (l,hc) -> match hc with
       | HConc(x,s)       -> (l, HConc (x, expandPreTyp s))
       | HConcObj(x,s,l') -> (l, HConcObj (x, expandPreTyp s, l'))
-      | HWeakObj(a,s,l') -> (l, HWeakObj (a, expandPreTyp s, l'))
+      | HWeakTok(tok)    -> (l, HWeakTok tok)
     ) cs
   in
   (hs, cs)

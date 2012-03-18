@@ -82,7 +82,7 @@ let tearDownExtract () =
   ()
 
 let mustFlow_ usedBoxes ?filter:(f=(fun _ -> true)) g t =
-  Log.smallTitle "MustFlow";
+  (* Log.smallTitle "MustFlow"; *)
   let boxes = TypeTerms.diff (typeTerms g) usedBoxes in
   let boxes = TypeTerms.filter f boxes in
   (* let boxes = TypeTerms.add UNull boxes in (* 3/15 *) *)
@@ -106,7 +106,7 @@ let mustFlow_ usedBoxes ?filter:(f=(fun _ -> true)) g t =
   BNstats.time "mustFlow_" (mustFlow_ usedBoxes ~filter:f g) t
 
 let canFlow_ usedBoxes ?filter:(f=(fun _ -> true)) g t =
-  Log.smallTitle "CanFlow";
+  (* Log.smallTitle "CanFlow"; *)
   let boxes = TypeTerms.diff (typeTerms g) usedBoxes in
   let boxes = TypeTerms.filter f boxes in
   let x = setUpExtract t usedBoxes in
@@ -181,13 +181,13 @@ let simpleSnapshot cap g h =
   let (n,g1) = 
     List.fold_left (fun (k,acc) -> function
       | HConc(x,_) | HConcObj(x,_,_) -> (k+1, simpleTcAddBinding x tyAny acc)
-      | HWeakObj _ -> (k, acc)
+      | HWeakTok _ -> (k, acc)
     ) (0,g) l
   in
   let g2 = 
     List.fold_left (fun acc -> function
       | HConc(x,s) | HConcObj(x,s,_) -> simpleTcAddBinding ~isNew:false x s acc
-      | HWeakObj _ -> acc
+      | HWeakTok _ -> acc
     ) g1 l
   in
   (n, g2)
@@ -218,6 +218,7 @@ let heapSubstAndObligations errList cs1 cs2 =
               err (errList @ [spr "proto links for [%s] differ:" (strLoc l);
                               spr "  %s" (strLoc l1');
                               spr "  %s" (strLoc l2')])
+(*
         | HWeakObj(ts1,t1,l1), HWeakObj(ts2,t2,l2) ->
             (*
             if ts1 = ts2 && t1 = t2 && l1 = l2 then (acc1, acc2)
@@ -237,6 +238,12 @@ let heapSubstAndObligations errList cs1 cs2 =
               (acc1, acc2)
             else 
               (acc1, OWeak (t1, t2) :: acc2)
+*)
+        | HWeakTok(x), HWeakTok(y) ->
+            if x = y then (acc1, acc2)
+            else err (errList @ [spr
+                   "thaw states for [%s] differ: [%s] [%s] "
+                   (strLoc l) (strThawState x) (strThawState y)])
         | _ ->
             err (errList @ [spr
               "constraints for [%s] have different shape" (strLoc l)])
