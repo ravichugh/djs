@@ -155,6 +155,13 @@ let simpleHeapJoin v h1 h2 =
         "heap vars not the same"]
     else (hs1,[]) (* TODO dropping _all_ constraints... *)
 
+let simpleHeapJoin v h1 h2 =
+  let h = simpleHeapJoin v h1 h2 in
+  Log.log0 "simpleHeapJoin\n";
+  Log.log1 "  %s\n" (prettyStrHeap h1);
+  Log.log1 "  %s\n" (prettyStrHeap h2);
+  Log.log1 "  %s\n" (prettyStrHeap h);
+  h
 
 
 (* TODO for now, copied and simplified from TcDref *)
