@@ -6,7 +6,7 @@ var foo = function loop() /*: tyLoop */ {
   self = /*: l */ "#thaw";
   var bar = self.loop;
   self = /*: (~lLooper, thwd l) */ "#freeze";
-  return 1 + /*:apply*/ bar(self);
+  return 1 + bar.apply(self);
 };
 
 /*: #define tyLoop
@@ -16,7 +16,7 @@ var x = {"loop": foo};
 
 x = /*: (~lLooper, frzn) */ "#freeze";
 
-assert (/*: Int */ (/*:apply*/ foo(x)));
+assert (/*: Int */ (foo.apply(x)));
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -26,5 +26,5 @@ var xloop = x.loop;
 
 x = /*: (~lLooper, thwd lThwd) */ "#freeze";
 
-assert (/*: Int */ (/*:apply*/ xloop(x)));
+assert (/*: Int */ (xloop.apply(x)));
 
