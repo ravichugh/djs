@@ -111,6 +111,20 @@ val hasProp :: {(and (type hasPropObj) (type hasPropArr) (type hasIdx))}
 
 val hasElem :: {(and (type hasPropObj) (type hasPropArrLen) (type hasIdx))}
 
+(**    [[ delete x.f  ]] = delPropObj ([[x]],  "f" )                         **)
+(**    [[ delete x[i] ]] = delIdx     ([[x]],   i  )                         **)
+(**    [[ delete x[k] ]] = delElem    ([[x]], [[k]])                         **)
+
+val delPropObj :: [; L1,L2]
+     [[x:(Ref(L1))?, k:Str]] / [L1 |-> (d:Dict, L2)]
+  -> {Bool|(not (= x null))} / [L1 |-> (_:{(= v (upd d k bot))}, L2)]
+
+val delIdx :: [A; L1,L2]
+     [[x:(Ref(L1))?, i:Int]] / [L1 |-> (_:Arr(A), L2)]
+  -> {Bool|(and (not (= x null)))} / [L1 |-> (_:Arr(A), L2)]
+
+val delElem :: {(and (type delPropObj) (type delIdx))}
+
 
 (******************************************************************************)
 

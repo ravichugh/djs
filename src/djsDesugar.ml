@@ -619,18 +619,32 @@ let rec ds env = function
             objOp ts ls "getElem" [ds env e1; ds env e2]
     end
 
-  | E.PrefixExpr (_, "prefix:delete", e) -> begin
-      match e with E.BracketExpr (_, ed, ek) -> begin
-        if !Settings.fullObjects then
-          Log.printParseErr "full: delete"
-        else
-          let ek = undoDotExp ek in
-          let x = freshVar "del" in
-          ELet (x, None, ds env ed,
-                ESetref (eVar x, mkApp "del" [EDeref (eVar x); ds env ek]))
-      end
-      | _ -> Log.printParseErr "delete not applied to property"
+  | E.PrefixExpr (_, "prefix:delete", E.BracketExpr (_, ed, ek))
+    when !Settings.fullObjects -> begin
+      let ((ts,ls,hs),ed) =
+        match ed with
+          | E.HintExpr (_, h, ed) -> (parseAppArgs h, ed)
+          | _                     -> (([],[],[]), ed) in
+      if hs <> [] then failwith "delete x[k] shouldn't have heap args";
+      let ek = undoDotExp ek in
+      match ek with
+        | E.ConstExpr (_, J.CInt i) ->
+            objOp ts ls "delIdx" [ds env ed; EVal (vInt i)]
+        | E.ConstExpr (_, J.CString s) ->
+            objOp ts ls "delPropObj" [ds env ed; EVal (vStr s)]
+        | _ ->
+            objOp ts ls "delElem" [ds env ed; ds env ek]
     end
+
+  | E.PrefixExpr (_, "prefix:delete", E.BracketExpr (_, ed, ek)) ->
+      let _ = failwith "djsLite delete" in
+      let ek = undoDotExp ek in
+      let x = freshVar "del" in
+      ELet (x, None, ds env ed,
+            ESetref (eVar x, mkApp "del" [EDeref (eVar x); ds env ek]))
+
+  | E.PrefixExpr (_, "prefix:delete", _) ->
+      Log.printParseErr "delete not applied to property"
 
   | E.PrefixExpr (_, "prefix:typeof", e) ->
       (* going through mkTupleExp since typ/loc inference looks for tuples *)

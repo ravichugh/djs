@@ -1,19 +1,18 @@
 var k = "g";
 var x = {"f": k};
-/*: {(= v true)} */ ("f" in x);
+assert ("f" in x);
 
 var xf = x.f;
-/*: {(= v "g")} */ xf;
+assert (xf == "g");
 
 x[k] = 3;
-/*: {(= v 3)} */ (x[k]);
+assert (x[k] == 3);
 
-// TODO
-// delete x.f;
-// /*: {(= v false)} */ ("f" in x);
+delete x.f;
+assert (!("f" in x));
 
 var y = x;
 y.f = "hi";
 
 xf = x.f;
-/*: {(= v "hi")} */ xf;
+assert (xf == "hi");
