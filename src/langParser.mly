@@ -137,7 +137,8 @@ let sameCell l =
 %type <Lang.typs * Lang.locs * Lang.heaps> jsPolyArgs
 %type <Lang.loc> jsLoc
 %type <Lang.weakloc> jsWeakLoc
-%type <Lang.loc * Lang.thawstate> jsFreeze
+%type <Lang.vvar * Lang.loc * Lang.thawstate> jsFreeze
+%type <Lang.vvar * Lang.loc> jsThaw
 %type <Lang.loc * Lang.loc option> jsObjLocs
 %type <Lang.frame> jsWhile
 %type <Lang.uarr> jsCtor
@@ -149,7 +150,7 @@ let sameCell l =
 
 %start prog prelude
 %start jsTyp jsPolyArgs jsLoc jsObjLocs jsWhile jsFail jsCtor jsNew jsArrLit
-       jsHeap jsFreeze jsWeakLoc
+       jsHeap jsFreeze jsThaw jsWeakLoc
 
 
 %%
@@ -752,7 +753,9 @@ jsLoc : l=loc EOF { l }
 
 jsWeakLoc : w=weakloc EOF { w }
 
-jsFreeze : LPAREN l=loc COMMA x=thawstate RPAREN { (l, x) }
+jsFreeze : x=VAR LPAREN l=loc COMMA ts=thawstate RPAREN { (x, l, ts) }
+
+jsThaw : x=VAR l=loc { (x, l) }
 
 jsObjLocs :
  | l=loc EOF                             { (l, None) }

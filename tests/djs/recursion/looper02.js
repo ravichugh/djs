@@ -8,7 +8,7 @@ function Looper() /*:
 */
 {
   var self = this;
-  self = /*: (~lLooper, frzn) */ "#freeze";
+  /*: self (~lLooper, frzn) */ "#freeze";
   return self;
 };
 
@@ -25,7 +25,7 @@ Looper.prototype.loop = function loop() /*: tyLoop */ {
 //                      x.loop();
 
 var x = new /*: [;lx;] lLooperProto */ Looper();
-x = /*: lThawX */ "#thaw";
+/*: x lThawX */ "#thaw";
 var xloop = x.loop;
-x = /*: (~lLooper, thwd lThawX) */ "#freeze";
+/*: x (~lLooper, thwd lThawX) */ "#freeze";
 xloop.apply(x);

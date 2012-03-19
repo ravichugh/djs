@@ -10,14 +10,14 @@ function Looper() /*:
 {
   this.loop = function loop() /*: tyLoop */ {
     var self = this;
-    self = /*: l */ "#thaw";
+    /*: self l */ "#thaw";
     var bar = self.loop;
-    self = /*: (~lLooper, thwd l) */ "#freeze";
+    /*: self (~lLooper, thwd l) */ "#freeze";
     return 1 + bar.apply(self);
   };
 
   var self = this;
-  self = /*: (~lLooper, frzn) */ "#freeze";
+  /*: self (~lLooper, frzn) */ "#freeze";
   return self;
 };
 
@@ -27,7 +27,7 @@ function Looper() /*:
 /*: #define tyLooper {Dict|((sel v "loop") :: tyLoop)} */ "#define";
 
 var x = new /*: [;lx] lLooperProto */ Looper();
-x = /*: lThaw */ "#thaw";
+/*: x lThaw */ "#thaw";
 var foo = x.loop;
-x = /*: (~lLooper, thwd lThaw) */ "#freeze";
+/*: x (~lLooper, thwd lThaw) */ "#freeze";
 assert (/*: Int */ (foo.apply(x)));

@@ -272,6 +272,7 @@ let parseHeap s    = parseWith LangParser.jsHeap "heap annot" s
 let parseLoc s     = parseWith LangParser.jsLoc "loc annot" s
 let parseWeakLoc s = parseWith LangParser.jsWeakLoc "weak loc annot" s
 let parseFreeze s  = parseWith LangParser.jsFreeze "freeze annot" s
+let parseThaw s    = parseWith LangParser.jsThaw "thaw annot" s
 (*
 let parseWeakLoc s =
   let l = parseLoc s in
@@ -689,16 +690,15 @@ let rec ds env = function
   (* TODO for freeze and thaw, figure out how to handle this (_this) and
      other formals, which aren't ref cells so can't setref *)
 
-  | E.AssignExpr (_, E.VarLValue (_, x),
-        E.HintExpr (_, h, E.ConstExpr (_, J.CString "#freeze"))) ->
+  | E.HintExpr (_, h, E.ConstExpr (_, J.CString "#freeze")) ->
+      let (x,l,thaw) = parseFreeze h in
       let x = eVar (dsVar x) in
-      let (l,thaw) = parseFreeze h in
       ESetref (x, EFreeze (l, thaw, EDeref x))
 
-  | E.AssignExpr (_, E.VarLValue (_, x),
-        E.HintExpr (_, h, E.ConstExpr (_, J.CString "#thaw"))) ->
+  | E.HintExpr (_, h, E.ConstExpr (_, J.CString "#thaw")) ->
+      let (x,l) = parseThaw h in
       let x = eVar (dsVar x) in
-      ESetref (x, EThaw (parseLoc h, EDeref x))
+      ESetref (x, EThaw (l, EDeref x))
 
 (*
   | E.AssignExpr (_,
@@ -969,6 +969,13 @@ let rec ds env = function
     when not !Settings.fullObjects ->
       Log.printParseErr "method call not allowed in djsLite mode"
 
+  | E.AppExpr (p, E.BracketExpr (_, f, E.ConstExpr (_, J.CString s)), obj::args)
+        when snd (undoDotStr s) = "apply" ->
+      let (locArgs,argsArray) = mkArgsArray (List.map (ds env) args) in
+      EApp (([], [] @ [locArgs], []),
+            ds env f,
+            ParseUtils.mkTupleExp [ds env obj; argsArray])
+
   | E.AppExpr (p, E.HintExpr (_, s, E.BracketExpr (p', obj, prop)), args) ->
     begin
       let (ts,ls,hs) = parseAppArgs s in
@@ -984,12 +991,13 @@ let rec ds env = function
       Log.printParseErr "method call not allowed in djsLite mode"
 *)
 
-  (* TODO *)
+  (*
   | E.AppExpr (p, E.HintExpr(_,"apply",f), obj::args) ->
       let (locArgs,argsArray) = mkArgsArray (List.map (ds env) args) in
       EApp (([], [] @ [locArgs], []),
             ds env f,
             ParseUtils.mkTupleExp [ds env obj; argsArray])
+  *)
 
   | E.AppExpr (p, f, args) ->
       let (f,(ts,ls,hs)) =

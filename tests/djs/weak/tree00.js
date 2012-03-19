@@ -16,13 +16,13 @@ function TreeNode(left,right,item)
   this.item = item;
 
   var self = this;
-  self = /*: (~lTreeNode,frzn) */ "#freeze";
+  /*: self (~lTreeNode,frzn) */ "#freeze";
   return self;
 };
 
 var tree = new (/*: [;l;] lTreeNodeProto */ TreeNode)(null, null, 10);
 
-tree = /*: lThwd1 */ "#thaw";
+/*: tree lThwd1 */ "#thaw";
 
 var i = tree.item;
 

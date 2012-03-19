@@ -3,26 +3,26 @@
 var row1 = /*: lRow1 Arr(Str) */ ["00","01"];
 var row2 = /*: lRow2 Arr(Str) */ ["10","11"];
 
-/*: Ref(lRow1) */ row1;
-/*: Ref(lRow2) */ row2;
+assert (/*: Ref(lRow1) */ row1);
+assert (/*: Ref(lRow2) */ row2);
 
-row1 = /*: (~lRow,frzn) */ "#freeze";
-row2 = /*: (~lRow,frzn) */ "#freeze";
+/*: row1 (~lRow,frzn) */ "#freeze";
+/*: row2 (~lRow,frzn) */ "#freeze";
 
-/*: Ref(~lRow) */ row1;
-/*: Ref(~lRow) */ row2;
+assert (/*: Ref(~lRow) */ row1);
+assert (/*: Ref(~lRow) */ row2);
 
 var mat = /*: Arr(Ref(~lRow)) */ [row1, row2];
 
 row1 = mat[0];
-row1 = /*: lThwd1 */ "#thaw";
+/*: row1 lThwd1 */ "#thaw";
 
 var s = row1[0];
 
-/*: {(or (= v undefined) (v:Str))} */ s;
+assert (/*: {(or (= v undefined) (v:Str))} */ s);
 
 s = (s == undefined ? "bleh" : s);
 
-/*: Str */ s;
+assert (/*: Str */ s);
 
 // /*: {(= v true)} */ Array.isArray(row1);
