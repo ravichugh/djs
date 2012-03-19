@@ -15,6 +15,8 @@ let strictWarn = ref false
 let printAllTypes = ref false
 let useTheoryLA = ref true
 
+let tryAllBoxesHack = ref false
+
 (* DJS options *)
 let djsMode = ref false
 let doVarLifting = ref false

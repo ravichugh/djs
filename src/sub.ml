@@ -8,6 +8,8 @@ let maxJoinSize   = ref 1 (* anything <= 1 means not doing joins *)
 
 (***** Collecting type terms, or "boxes" **************************************)
 
+(* TODO better way to compute this *)
+
 let typeTermsTyp acc t =
   foldForm (fun acc -> function
     | PUn(HasTyp(_,u)) -> TypeTerms.add u acc
@@ -24,6 +26,17 @@ let typeTerms g =
     | _ ->
         acc
   ) init g
+
+(* 3/19 TODO hack since simpleSnapshot doesn't dive into arrows on the heap.
+   running with -tryAllBoxes just tries all of them instead of what's
+   in the current type env. sound, but slower. *)
+let typeTerms g =
+  if !Settings.tryAllBoxesHack then
+    List.fold_left
+      (fun acc i -> TypeTerms.add (Utils.IdTable.getVal idTypTerms i) acc)
+      TypeTerms.empty (Utils.list1N (Utils.IdTable.size idTypTerms))
+  else
+    typeTerms g
 
 let typeTerms g =
   BNstats.time "typeTerms" typeTerms g

@@ -95,7 +95,7 @@ let mapTyp ?fForm:(fForm=(fun x -> x))
     | UVar(x)       -> fTT (UVar x)
     | UNull         -> fTT UNull
     | URef(al)      -> fTT (URef al)
-    | UArray(t)     -> fTT (UArray t)
+    | UArray(t)     -> fTT (UArray (fooTyp t))
     | UArr(l,x,t1,h1,t2,h2) ->
         let (t1,h1) = fooTyp t1, fooHeap h1 in
         let (t2,h2) = fooTyp t2, fooHeap h2 in

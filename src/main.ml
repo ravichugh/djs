@@ -41,6 +41,8 @@ let argSpecs = [
          "           <int> max size for CanFlow (default is 1, i.e. no join)");
   ("-useLA", Arg.Unit (fun () -> S.useTheoryLA := true),
           "          use theory of linear arithmetic");
+  ("-tryAllBoxes", Arg.Set S.tryAllBoxesHack,
+        "            try all boxes, in case typeTerms misses some");
   ("-djsLite", Arg.Set S.djsMode,
         "            Dependent JavaScript (simple dictionaries)");
   ("-djs", Arg.Unit (fun () -> S.djsMode := true; S.fullObjects := true),

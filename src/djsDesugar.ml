@@ -379,6 +379,7 @@ let dsArrow arr =
    TTuple (tyThis @ tyArgs), (inH,inC),
    tRet, (outH,outC))
 
+(* TODO desugar variables to add __ *)
 let dsTyp t =
   let fTT = function
     | UArr(arr) -> UArr (dsArrow arr)
