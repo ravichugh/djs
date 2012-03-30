@@ -31,7 +31,7 @@ def iterate(positive):
             b = re.match("^xx_", nm)
             if positive:
                 b = not b
-            if b:
+            if b and nm[0] != '.':
                 f = os.path.join(top, nm)
                 os.system("echo -n '%s  ' && ./system-d %s %s | tail -1"
                           % (strip_test_dir(f), mode, f))

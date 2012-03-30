@@ -336,7 +336,7 @@ let depTupleSubst t w =
     -> tRet
      / [outH ++ outC, l_this |-> c_this': TOP]
 *)
-let dsArrow arr =
+let dsArrowWithArgsArray arr =
 
   let arr = ParseUtils.maybeAddHeapPrefixVar arr in
   let ((ts,ls,hs),x,tIn,(inH,inC),tRet,(outH,outC)) = arr in
@@ -378,6 +378,15 @@ let dsArrow arr =
    freshVar "_",
    TTuple (tyThis @ tyArgs), (inH,inC),
    tRet, (outH,outC))
+
+let dsArrowWithoutArgsArray arr =
+  let arr = ParseUtils.maybeAddHeapPrefixVar arr in
+  arr
+
+let dsArrow arr =
+  if !Settings.doArgsArray
+  then dsArrowWithArgsArray arr
+  else dsArrowWithoutArgsArray arr
 
 (* TODO desugar variables to add __ *)
 let dsTyp t =
@@ -440,6 +449,15 @@ let eLambda xs e =
   let pat = PNode (List.map (fun x -> PLeaf x) xs) in
   ParseUtils.mkPatFun ([],[],[]) pat e
 
+let eLambdaSimple xs e =
+  let pattern = freshVar "pattern" in
+  let es =
+    Utils.map_i
+      (fun x i -> (x, EApp (([],[],[]), eVar "getarg", eStr (string_of_int i))))
+      xs in
+  let get = ("getarg", EApp (([],[],[]), eVar "get_curried", eVar pattern)) in
+  EFun (([],[],[]), pattern, None, ParseUtils.addLets e (get::es))
+
 (*
 let eSeq e1 e2 =
   ELet (freshVar "seq", None, e1, e2)
@@ -491,6 +509,15 @@ let mkApp ?(curried=false) f args =
     | [x] -> EApp (([],[],[]), eVar f, x)
     | _   -> EApp (([],[],[]), eVar f, (ParseUtils.mkTupleExp args))
   end
+
+let mkCall ts ls func recvOpt args =
+  let recv = match recvOpt with Some(e) -> [e] | None -> [] in
+  if !Settings.doArgsArray then
+    let (locArgs,argsArray) = mkArgsArray args in
+    EApp ((ts, ls @ [locArgs], []), 
+          func, ParseUtils.mkTupleExp (recv @ [argsArray]))
+  else
+    EApp ((ts, ls, []), func, ParseUtils.mkTupleExp (recv @ args))
 
 let objOp ts ls fn args =
   let fn = if !Settings.fullObjects then fn else fn ^ "Lite" in
@@ -829,6 +856,8 @@ let rec ds env = function
          else dsVarDecl env x lo e e2)
     end
 
+  | E.VarDeclExpr _ -> Log.printParseErr "ds VarDeclExpr: shouldn't get here"
+
   | E.SeqExpr (_, E.HintExpr (_, s, E.FuncStmtExpr (p, f, args, body)), e2)
     when !Settings.fullObjects ->
       let fOrig = f in
@@ -926,6 +955,8 @@ let rec ds env = function
   | E.DoWhileExpr _ ->
       Log.printParseErr "EJS always wraps while and do/while with %break label"
 
+  | E.ForInExpr _ -> failwith "forin"
+
 (*
   | ForInExpr (p, x, obj, body) ->
       EFix
@@ -944,14 +975,6 @@ let rec ds env = function
   | E.LabelledExpr (_, l, e) -> ELabel (trimLabel l, None, ds env e)
 
   | E.BreakExpr (_, l, e) -> EBreak (trimLabel l, ds env e)
-
-(*
-  | TryCatchExpr (p, body, x, catch) ->
-      ETryCatch (p, ds_expr env body, ELambda (p, [x], ds_expr env catch))
-  | TryFinallyExpr (p, e1, e2) -> 
-      ETryFinally (p, ds_expr env e1, ds_expr env e2)
-  | ThrowExpr (p, e) -> EThrow (p, ds_expr env e)
-*)
 
 (** these were the get cases from v0
   | E.AppExpr (p, E.HintExpr (_, s, E.BracketExpr (p', obj, prop)), args)
@@ -986,10 +1009,7 @@ let rec ds env = function
 
   | E.AppExpr (p, E.BracketExpr (_, f, E.ConstExpr (_, J.CString s)), obj::args)
         when snd (undoDotStr s) = "apply" ->
-      let (locArgs,argsArray) = mkArgsArray (List.map (ds env) args) in
-      EApp (([], [] @ [locArgs], []),
-            ds env f,
-            ParseUtils.mkTupleExp [ds env obj; argsArray])
+      mkCall [] [] (ds env f) (Some (ds env obj)) (List.map (ds env) args)
 
   | E.AppExpr (p, E.HintExpr (_, s, E.BracketExpr (p', obj, prop)), args) ->
     begin
@@ -1019,10 +1039,8 @@ let rec ds env = function
         match f with
           | E.HintExpr(_,h,f) -> (f, parseAppArgs h)
           | _                 -> (f, ([],[],[])) in
-      let (locArgs,argsArray) = mkArgsArray (List.map (ds env) args) in
-      EApp ((ts, ls @ [(*"locGlobal";*) locArgs], hs),
-            ds env f,
-            ParseUtils.mkTupleExp [(*eVar "global";*) argsArray])
+      let _ = if hs <> [] then Log.printParseErr "why passing heap args" in
+      mkCall ts ls (ds env f) None (List.map (ds env) args)
 
   | E.NewExpr (_, E.HintExpr (_, s, constr), args)-> begin
       if !Settings.fullObjects = false then
@@ -1050,9 +1068,7 @@ let rec ds env = function
           | _ -> Log.printParseErr "new annot: must have at least 1 loc arg"
       in
       let obj = ENewObj (EVal VEmpty, lObj, proto, lProto) in
-      let (locArgs,argsArray) = mkArgsArray (List.map (ds env) args) in
-      EApp ((ts, ls @ [locArgs], hs), ctor,
-            ParseUtils.mkTupleExp [obj; argsArray])
+      mkCall ts ls ctor (Some obj) (List.map (ds env) args)
     end
 
   | E.NewExpr _ ->
@@ -1088,9 +1104,14 @@ let rec ds env = function
   | E.ThrowExpr _ -> failwith "throwexpr"
   | E.TryFinallyExpr _ -> failwith "try finally"
   | E.TryCatchExpr _ -> failwith "try catch"
-  | E.ForInExpr _ -> failwith "forin"
 
-  | E.VarDeclExpr _ -> failwith "ds vardecl: shouldn't get here"
+(*
+  | TryCatchExpr (p, body, x, catch) ->
+      ETryCatch (p, ds_expr env body, ELambda (p, [x], ds_expr env catch))
+  | TryFinallyExpr (p, e1, e2) -> 
+      ETryFinally (p, ds_expr env e1, ds_expr env e2)
+  | ThrowExpr (p, e) -> EThrow (p, ds_expr env e)
+*)
 
 and mkEDict env fields =
   EDict (List.map (fun (_, x, e) -> (eStr x, ds env e)) fields)
@@ -1126,14 +1147,28 @@ and dsMethCall env ts ls obj prop args =
           let prop = undoDotExp prop in
           objOp ts ls "getElem" [obj; ds env prop]
   in
-  let (locArgs,argsArray) = mkArgsArray (List.map (ds env) args) in
-  (* TODO for now, just passing the same poly args, but this probably
-     will not work in general *)
-  EApp ((ts, ls @ [locArgs], []), func,
-        ParseUtils.mkTupleExp [obj; argsArray])
+  mkCall ts ls func (Some obj) (List.map (ds env) args)
+
+and dsFunc isCtor env p args body =
+  if !Settings.doArgsArray
+  then dsFuncWithArgsArray isCtor env p args body
+  else dsFuncWithoutArgsArray isCtor env p args body
+
+(* 3/30 *)
+and dsFuncWithoutArgsArray isCtor env p args body =
+  let env =
+    List.fold_left (fun env x -> IdMap.add (dsVar x) true env) env args in
+  let body =
+    List.fold_left (fun acc x ->
+      let _x = dsVar x in
+      ELet (_x, None, ENewref (LocConst (spr "&%s" x), eVar x), acc)
+    ) (ds env body) args in
+  if isCtor
+    then eLambdaSimple ("this"::args) body
+    else eLambdaSimple args body
 
 (* rkc: based on LamJS E.FuncExpr case *)
-and dsFunc isCtor env p args body =
+and dsFuncWithArgsArray isCtor env p args body =
   let args = List.map dsVar args in
   let init_var x exp =
 (*

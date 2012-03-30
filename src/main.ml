@@ -51,6 +51,8 @@ let argSpecs = [
                "     <bool> (default is false)");
   ("-implicitGlobal", Arg.Bool (fun b -> S.doImplicitGlobal := b),
                    " <bool> (default is false)");
+  ("-argsArray", Arg.Set S.doArgsArray,
+                   " desugar lambdas/calls with arguments tuple");
 ]
 
 let anonArgFun s =

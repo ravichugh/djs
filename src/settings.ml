@@ -22,4 +22,5 @@ let djsMode = ref false
 let doVarLifting = ref false
 let doImplicitGlobal = ref false
 let fullObjects = ref true
+let doArgsArray = ref false
 
