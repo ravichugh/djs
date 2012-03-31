@@ -25,4 +25,5 @@ let doVarLifting = ref false
 let doImplicitGlobal = ref false
 let fullObjects = ref true
 let doArgsArray = ref false
+let typedDesugaring = ref true
 

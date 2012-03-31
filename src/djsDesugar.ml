@@ -295,6 +295,104 @@ let maybeParseWith production s =
 let maybeParseTcFail s  = maybeParseWith LangParser.jsFail s
 
 
+(***** Desugaring variables ***************************************************)
+
+(* normal desugaring creates a local variable "x" for JS formal "x",
+   set to the initial value passed in. so that i can still use the JS
+   formals inside types, using a different name for the corresponding
+   local variable. *)
+let dsVar x = spr "__%s" x
+
+let undoDsVar x = String.sub x 2 (String.length x - 2)
+
+
+(***** Object.prototype and Array.prototype ***********************************)
+
+(* to keep things simpler, when desugaring object and array literals, using
+   the initial values of Object.prototype and Array.prototype, rather than
+   retrieving them on demand. but really should be checking that they
+   haven't been overwritten, since this assumption is not sound in general.
+*)
+
+let eObjectPro   = eVar (dsVar "__ObjectProto")
+let eArrayPro    = EDeref (eVar (dsVar "__ArrayProto"))
+let eFunctionPro = EDeref (eVar (dsVar "__FunctionProto"))
+
+let lObjectPro   = lObjectPro (* defined in lang.ml *)
+let lArrayPro    = LocConst "lArrayProto"
+let lFunctionPro = LocConst "lFunctionProto"
+
+
+(***** Desugaring environments ************************************************)
+
+(* 3/31 *)
+
+type jstyp =
+  | JsObject of loc * loc
+  | JsArray of typ * loc * loc
+  | JsInt
+  | JsStr
+  | JsTop
+
+let strJsTyp = function
+  | JsInt -> "int"
+  | JsStr -> "str"
+  | JsTop -> "top"
+  | JsObject(l1,l2) -> spr "object %s %s" (strLoc l1) (strLoc l2)
+  | JsArray(t,l1,l2) ->
+      spr "array %s %s %s" (prettyStrTyp t) (strLoc l1) (strLoc l2)
+
+let oc_js_types = open_out (Settings.out_dir ^ "js-types.txt")
+
+(* the boolean b in binding (x,b) indicates whether x is a reference.
+     if so,  [[ x ]] = deref __x
+     if not, [[ x ]] = __x
+*)
+type env = { flags: bool IdMap.t; types: jstyp IdMap.t }
+
+let addFlag x b env = { env with flags = IdMap.add x b env.flags }
+let addType x t env = { env with types = IdMap.add x t env.types }
+
+let emptyEnv = { flags = IdMap.empty; types = IdMap.empty }
+
+let addVarType env x e =
+  let t = match e with
+    | ELet (_, None, ENewObj (EVal VEmpty, l1, _, l2), _) when l2 = lObjectPro ->
+        JsObject (l1, l2)
+    | ENewObj (EArray (t, _), l1, _, l2) when l2 = lArrayPro ->
+        JsArray (t, l1, l2)
+    | _ ->
+        JsTop
+  in
+  fpr oc_js_types "addVarType(%s) = %s\n" x (strJsTyp t);
+  addType x t env
+
+let getType env = function
+  | EVal (VBase (Int _)) -> JsInt
+  | EVal (VBase (Str _)) -> JsStr
+  | EDeref (EVar x) ->
+      if not (IdMap.mem x env.types) then
+        (* Log.printParseErr (spr "DjsDesugar.getType [%s]: var not found" x) *)
+        let _ = fpr oc_js_types "getType(%s) = NOT FOUND\n" x in
+        JsTop
+      else
+        let t = IdMap.find x env.types in
+        let _ = fpr oc_js_types "getType(%s) = %s\n" x (strJsTyp t) in
+        t
+  | _ -> JsTop
+
+(* useful for thaw/freeze *)
+let updateVarType env x l =
+  let (b,t) =
+    match getType env (EDeref (EVar x)) with
+      | JsObject(_,l2)  -> (true, JsObject (l, l2))
+      | JsArray(t,_,l2) -> (true, JsArray (t, l, l2))
+      | t               -> (false, t)
+  in
+  if b then fpr oc_js_types "updateVarType(%s) = %s\n" x (strJsTyp t);
+  addType x t env
+
+
 (***** Desugaring types *******************************************************)
 
 let oc_desugar_hint = open_out (Settings.out_dir ^ "desugar_hint.txt")
@@ -430,12 +528,6 @@ let dsHeap (hs,cs) =
 
 (***** Misc *******************************************************************)
 
-(* the boolean b in binding (x,b) indicates whether x is a reference.
-     if so,  [[ x ]] = deref __x
-     if not, [[ x ]] = __x
-*)
-type env = bool IdMap.t
-
 let convertConst = function
   | J.CString(s) -> EVal (VBase (Str s))
   | J.CInt(i)    -> EVal (VBase (Int i))
@@ -472,14 +564,6 @@ let mkArgsArray es =
   let l = LocConst (freshVar "argsArray") in
   (l, ENewref (l, ParseUtils.mkTupleExp es))
 
-(* normal desugaring creates a local variable "x" for JS formal "x",
-   set to the initial value passed in. so that i can still use the JS
-   formals inside types, using a different name for the corresponding
-   local variable. *)
-let dsVar x = spr "__%s" x
-
-let undoDsVar x = String.sub x 2 (String.length x - 2)
-
 
 (***** Prop/Bracket ***********************************************************)
 
@@ -487,10 +571,16 @@ let undoDsVar x = String.sub x 2 (String.length x - 2)
    even though the abstract syntax doesn't. so, need to make sure to undo
    the hack whenever using BracketExpr or PropLValue *)
 
+(* TODO 3/31 instead, just add safe(v) predicate to primitives where needed,
+   and ditch the syntactic prop detection *)
+
+(* 3/31: removed this
 let undoDotStr s =
   if Str.string_match (Str.regexp "^__dot__\\(.*\\)$") s 0
   then (true, Str.matched_group 1 s)
   else (false, s)
+*)
+let undoDotStr s = (false, s)
 
 let undoDotExp = function
   | E.ConstExpr (p, J.CString s) ->
@@ -501,7 +591,11 @@ let notAnIntStr s =
   try let _ = int_of_string s in false with Failure _ -> true
 
 
-(***** Desugaring expressions *************************************************)
+(***** Desugaring calls *******************************************************)
+
+let objOp ts ls fn args =
+  let fn = if !Settings.fullObjects then fn else fn ^ "Lite" in
+  EApp ((ts,ls,[]), eVar fn, ParseUtils.mkTupleExp args)
 
 let mkApp ?(curried=false) f args =
   if curried then LangUtils.mkApp (eVar f) args
@@ -519,19 +613,10 @@ let mkCall ts ls func recvOpt args =
   else
     EApp ((ts, ls, []), func, ParseUtils.mkTupleExp (recv @ args))
 
-let objOp ts ls fn args =
-  let fn = if !Settings.fullObjects then fn else fn ^ "Lite" in
-  EApp ((ts,ls,[]), eVar fn, ParseUtils.mkTupleExp args)
 
-let eObjectPro   = eVar (dsVar "__ObjectProto")
-let eArrayPro    = EDeref (eVar (dsVar "__ArrayProto"))
-let eFunctionPro = EDeref (eVar (dsVar "__FunctionProto"))
+(***** Desugaring expressions *************************************************)
 
-let lObjectPro   = lObjectPro (* defined in lang.ml *)
-let lArrayPro    = LocConst "lArrayProto"
-let lFunctionPro = LocConst "lFunctionProto"
-
-let rec ds env = function
+let rec ds (env:env) = function
 
   | E.HintExpr (_, s, E.ConstExpr (_, J.CString "#define")) ->
       if Hashtbl.mem macroDefs s
@@ -598,7 +683,7 @@ let rec ds env = function
       let x = dsVar x in
       (* TODO: IdExpr makes the else clause unnecessary *)
       try 
-        if IdMap.find x env then
+        if IdMap.find x env.flags then
           (* var-lifting would have introduced a binding for x. *)
           EDeref (EVar x)
         else
@@ -635,16 +720,32 @@ let rec ds env = function
           | E.HintExpr (_, h, e1) -> (parseAppArgs h, e1)
           | _                     -> (([],[],[]), e1) in
       if hs <> [] then failwith "x[k] shouldn't have heap args";
-      match e2 with
-        | E.ConstExpr (_, J.CInt i) ->
-            objOp ts ls "getIdx" [ds env e1; EVal (vInt i)]
-        | E.ConstExpr (_, J.CString s) ->
-            let (b,s) = undoDotStr s in
-            let f = if b || notAnIntStr s then "getProp" else "getElem" in
-            objOp ts ls f [ds env e1; EVal (vStr s)]
-        | _ ->
-            let e2 = undoDotExp e2 in
-            objOp ts ls "getElem" [ds env e1; ds env e2]
+      if !Settings.typedDesugaring then begin
+        let e1 = ds env e1 in
+        let e2 = ds env e2 in
+        match getType env e1, getType env e2 with
+          | JsObject(l1,l2), JsInt  -> Log.printParseErr
+                                         "object.integer will definitely fail"
+          | JsObject(l1,l2), JsStr  -> objOp [] [l1;l2] "getPropObj" [e1;e2]
+          | JsObject(l1,l2), _      -> objOp [] [l1;l2] "getPropObj" [e1;e2]
+          | JsArray(t,l1,l2), JsStr -> objOp [t] [l1;l2] "getPropArr" [e1;e2]
+          | JsArray(t,l1,l2), JsInt -> objOp [t] [l1;l2] "getIdx" [e1;e2]
+          | JsArray(t,l1,l2), _     -> objOp [t] [l1;l2] "getElem" [e1;e2]
+          | JsTop, JsStr            -> objOp ts ls "getProp" [e1;e2] 
+          | JsTop, JsInt            -> objOp ts ls "getIdx"  [e1;e2] 
+          | JsTop, JsTop            -> objOp ts ls "getElem" [e1;e2] 
+      end else begin
+        match e2 with
+          | E.ConstExpr (_, J.CInt i) ->
+              objOp ts ls "getIdx" [ds env e1; EVal (vInt i)]
+          | E.ConstExpr (_, J.CString s) ->
+              let (b,s) = undoDotStr s in
+              let f = if b || notAnIntStr s then "getProp" else "getElem" in
+              objOp ts ls f [ds env e1; EVal (vStr s)]
+          | _ ->
+              let e2 = undoDotExp e2 in
+              objOp ts ls "getElem" [ds env e1; ds env e2]
+      end
     end
 
   | E.PrefixExpr (_, "prefix:delete", E.BracketExpr (_, ed, ek))
@@ -694,6 +795,7 @@ let rec ds env = function
           | E.HintExpr (_, s, ed) -> (parseAppArgs s, ed)
           | _                     -> (([],[],[]), ed) in
       if hs <> [] then failwith "(k in d) shouldn't have heap args";
+      (* TODO could add the typedDesugaring stuff here *)
       match ek with
         | E.ConstExpr (_, J.CInt i) ->
             objOp ts ls "hasIdx" [ds env ed; EVal (vInt i)]
@@ -737,10 +839,24 @@ let rec ds env = function
   (* TODO for freeze and thaw, figure out how to handle this (_this) and
      other formals, which aren't ref cells so can't setref *)
 
+  | E.SeqExpr (_, E.HintExpr (_, h, E.ConstExpr (_, J.CString "#freeze")), e2)
+        when !Settings.typedDesugaring ->
+      let (x,l,thaw) = parseFreeze h in
+      let x = dsVar x in
+      let env = updateVarType env x l in
+      eSeq [ESetref (eVar x, EFreeze (l, thaw, EDeref (eVar x))); ds env e2]
+
   | E.HintExpr (_, h, E.ConstExpr (_, J.CString "#freeze")) ->
       let (x,l,thaw) = parseFreeze h in
       let x = eVar (dsVar x) in
       ESetref (x, EFreeze (l, thaw, EDeref x))
+
+  | E.SeqExpr (_, E.HintExpr (_, h, E.ConstExpr (_, J.CString "#thaw")), e2)
+        when !Settings.typedDesugaring ->
+      let (x,l) = parseThaw h in
+      let x = dsVar x in
+      let env = updateVarType env x l in
+      eSeq [ESetref (eVar x, EThaw (l, EDeref (eVar x))); ds env e2]
 
   | E.HintExpr (_, h, E.ConstExpr (_, J.CString "#thaw")) ->
       let (x,l) = parseThaw h in
@@ -766,7 +882,7 @@ let rec ds env = function
 
   | E.AssignExpr (_, E.VarLValue (_, x), e) -> 
       let x = dsVar x in
-      if IdMap.mem x env then (* assume var-bound *)
+      if IdMap.mem x env.flags then (* assume var-bound *)
         ESetref (eVar x, ds env e)
       else
         let _ = failwith (spr "assignexpr global [%s]" x) in
@@ -793,21 +909,38 @@ let rec ds env = function
           | E.HintExpr (_, h, e1) -> (parseAppArgs h, e1)
           | _                     -> (([],[],[]), e1) in
       if hs <> [] then failwith "x[k] = y shouldn't have heap args";
-      match e2 with
-        | E.ConstExpr (_, J.CInt i) ->
-            objOp ts ls "setIdx" [ds env e1; EVal (vInt i); ds env e3]
-        | E.ConstExpr (_, J.CString s) ->
-            let (b,s) = undoDotStr s in
-            let f = if b || notAnIntStr s then "setProp" else "setElem" in
-            objOp ts ls f [ds env e1; EVal (vStr s); ds env e3]
-        | _ ->
-            let e2 = undoDotExp e2 in
-            objOp ts ls "setElem" [ds env e1; ds env e2; ds env e3]
+      if !Settings.typedDesugaring then begin
+        let e1 = ds env e1 in
+        let e2 = ds env e2 in
+        let e3 = ds env e3 in
+        match getType env e1, getType env e2 with
+          | JsObject(l1,l2), JsInt  -> Log.printParseErr
+                                         "object.integer will definitely fail"
+          | JsObject(l1,l2), JsStr  -> objOp [] [l1;l2] "setPropObj" [e1;e2;e3]
+          | JsObject(l1,l2), _      -> objOp [] [l1;l2] "setPropObj" [e1;e2;e3]
+          | JsArray(t,l1,l2), JsStr -> objOp [t] [l1;l2] "setPropArrLen" [e1;e2;e3]
+          | JsArray(t,l1,l2), JsInt -> objOp [t] [l1;l2] "setIdx" [e1;e2;e3]
+          | JsArray(t,l1,l2), _     -> objOp [t] [l1;l2] "setElem" [e1;e2;e3]
+          | JsTop, JsStr            -> objOp ts ls "setProp" [e1;e2;e3] 
+          | JsTop, JsInt            -> objOp ts ls "setIdx"  [e1;e2;e3] 
+          | JsTop, JsTop            -> objOp ts ls "setElem" [e1;e2;e3] 
+      end else begin
+        match e2 with
+          | E.ConstExpr (_, J.CInt i) ->
+              objOp ts ls "setIdx" [ds env e1; EVal (vInt i); ds env e3]
+          | E.ConstExpr (_, J.CString s) ->
+              let (b,s) = undoDotStr s in
+              let f = if b || notAnIntStr s then "setProp" else "setElem" in
+              objOp ts ls f [ds env e1; EVal (vStr s); ds env e3]
+          | _ ->
+              let e2 = undoDotExp e2 in
+              objOp ts ls "setElem" [ds env e1; ds env e2; ds env e3]
+      end
     end
 
   | E.LetExpr (_, x, e1, e2) ->
       let x = dsVar x in
-      ELet (x, None, ds env e1, ds (IdMap.add x false env) e2)
+      ELet (x, None, ds env e1, ds (addFlag x false env) e2)
 
   (* rkc: catching VarDeclExpr within SeqExpr so i can turn it into a
        normal let-binding instead of doing var lifting or implicit
@@ -828,8 +961,9 @@ let rec ds env = function
   | E.SeqExpr (_,
       E.VarDeclExpr (_, x,
         E.HintExpr (_, s, E.ConstExpr (_, J.CString "#extern"))), e2) ->
+      (* TODO could addVarType here for Ref(lObjectProto) *)
       let x = dsVar x in
-      EExtern (x, desugarTypHint s, ds (IdMap.add x false env) e2)
+      EExtern (x, desugarTypHint s, ds (addFlag x false env) e2)
 
   | E.SeqExpr (_, E.HintExpr (_, s, E.ConstExpr (_, J.CString "#weak")), e2) ->
       let (m,t,l) = parseWeakLoc s in
@@ -850,7 +984,7 @@ let rec ds env = function
           | _ ->
                (None, e) in
 
-      if IdMap.mem x env then (* x is local variable *)
+      if IdMap.mem x env.flags then (* x is local variable *)
         (if !Settings.doVarLifting (* do what LamJS normally does *)
          then eSeq [dsVarDeclOrig env x e; ds env e2]
          else dsVarDecl env x lo e e2)
@@ -902,7 +1036,7 @@ let rec ds env = function
       ELet (freshVar "setCode", None, setCode,
       ELet (freshVar "setProto", None, setProto,
       ELet (f, None, ENewref (LocConst (spr "&%s" fOrig), eObj),
-            ds (IdMap.add f true env) e2))))
+            ds (addFlag f true env) e2))))
 
 (*
   (* rkc: turning this into a letrec *)
@@ -1096,7 +1230,7 @@ let rec ds env = function
   | E.HintExpr (_, s, E.FuncStmtExpr (p, f, args, body)) ->
       let t = desugarTypHint s in
       let f = dsVar f in
-      let env = IdMap.add f false env in
+      let env = addFlag f false env in
       let func = dsFunc false env p args body in
       EApp (([t],[],[]), eVar "fix",
         EFun (([],[],[]), f, None, func))
@@ -1142,6 +1276,7 @@ and dsAssert env s e =
 
 and dsMethCall env ts ls obj prop args =
   let obj = ds env obj in
+  (* TODO could add the typedDesugaring stuff here *)
   let func =
     match prop with
       | E.ConstExpr (_, J.CString s) ->
@@ -1164,7 +1299,7 @@ and dsFunc isCtor env p args body =
 (* 3/30 *)
 and dsFuncWithoutArgsArray isCtor env p args body =
   let env =
-    List.fold_left (fun env x -> IdMap.add (dsVar x) true env) env args in
+    List.fold_left (fun env x -> addFlag (dsVar x) true env) env args in
   let body =
     List.fold_left (fun acc x ->
       let _x = dsVar x in
@@ -1204,10 +1339,10 @@ and dsFuncWithArgsArray isCtor env p args body =
   (* let env = IdSet.fold (fun x env -> IdMap.add x true env) vars env in *)
   let env =
     if !Settings.doVarLifting
-      then IdSet.fold (fun x env -> IdMap.add x true env) vars env
+      then IdSet.fold (fun x env -> addFlag x true env) vars env
       else env in
-  let env = List.fold_left (fun env x -> IdMap.add x true env) env args in
-  let env = IdMap.add "arguments" false (IdMap.add "this" false env) in
+  let env = List.fold_left (fun env x -> addFlag x true env) env args in
+  let env = addFlag "arguments" false (addFlag "this" false env) in
   let body = 
     List.fold_right2 get_arg args (Prelude.iota (List.length args))
       (List.fold_right init_var (IdSetExt.to_list vars)
@@ -1290,9 +1425,9 @@ and dsVarDecl env x lo e e2 =
   (* let l = match lo with Some(l) -> l | None -> freshVar x in *)
   let l = match lo with Some(l) -> l | None -> LocConst (spr "&%s" x) in
   let x = dsVar x in
-  ELet (x, None,
-        ENewref (l, ds env e),
-        ds (IdMap.add x true env) e2)
+  let e = ds env e in
+  let env = addVarType env x e in
+  ELet (x, None, ENewref (l, e), ds (addFlag x true env) e2)
 
   (* could even forgo the ref if a reason should arise ... *)
   (* ELet (x, None, None,
@@ -1320,7 +1455,7 @@ let desugar e =
   checkVars e;
   let e = freshenLabels e in
   collectMacros e;
-  ds Prelude.IdMap.empty e
+  ds emptyEnv e
 
 
 (***** Sequencing EJS expressions *********************************************)

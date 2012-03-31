@@ -65,7 +65,10 @@ let rec seq a e1 e2 = match e1 with
 (* rkc: DJS likes to distinguish between dot/bracket getprop operations.
    instead of adding DotExpr to EJS and separating PropLValue into
    DotLValue and BracketLValue, munging the strings for dot operations. *)
+(* 3/31: removed this
 let djsMungeDot s = sprintf "__dot__%s" s
+*)
+let djsMungeDot s = s
 
 let rec expr (e : S.expr) = match e with
   | S.ConstExpr (p, c) -> ConstExpr (p, c)

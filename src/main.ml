@@ -50,6 +50,8 @@ let argSpecs = [
                    " <bool> (default is false)");
   ("-argsArray", Arg.Set S.doArgsArray,
                    " desugar lambdas/calls with arguments tuple");
+  ("-untypedDs", Arg.Unit (fun () -> S.typedDesugaring := false),
+                   " untyped desugaring");
   ("-marshalOutEnv", Arg.Set S.marshalOutEnv,
                    " marshal output environments in out/world.world");
   ("-marshalInEnv", Arg.Set S.marshalInEnv,
