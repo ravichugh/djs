@@ -709,6 +709,12 @@ let rec ds env = function
       mkApp (eVar "mem") [EDeref (ds env ed); ds env ek]
 **)
 
+  | E.InfixExpr (p, "!=", e1, e2) ->
+      mkApp "js_not" [ds env (E.InfixExpr (p, "==", e1, e2))]
+
+  | E.InfixExpr (p, "!==", e1, e2) ->
+      mkApp "js_not" [ds env (E.InfixExpr (p, "===", e1, e2))]
+
   | E.InfixExpr (_, op, e1, e2) ->
       let e0 =
         match op with
@@ -721,8 +727,7 @@ let rec ds env = function
           | "<"   -> "js_lt"
           | "&&"  -> "js_and"
           | "||"  -> "js_or"
-          (* | "in"  -> "mem" *)
-          | _    -> failwith (spr "Op2Infix [%s]" op)
+          | _     -> failwith (spr "Op2Infix [%s]" op)
       in
       mkApp e0 [ds env e1; ds env e2]
 
@@ -1147,6 +1152,8 @@ and dsMethCall env ts ls obj prop args =
           let prop = undoDotExp prop in
           objOp ts ls "getElem" [obj; ds env prop]
   in
+ (* TODO for now, just passing the same poly args, but this probably
+    will not work in general *)
   mkCall ts ls func (Some obj) (List.map (ds env) args)
 
 and dsFunc isCtor env p args body =

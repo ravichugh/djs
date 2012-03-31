@@ -900,14 +900,26 @@ module Quad = struct
   let addT t (vs,ts,ls,hs) = (vs, TVars.add t ts, ls, hs)
   let addL l (vs,ts,ls,hs) = (vs, ts, LVars.add l ls, hs)
   let addH h (vs,ts,ls,hs) = (vs, ts, ls, HVars.add h hs)
+
+  let addVs xs quad = List.fold_left (fun acc x -> addV x acc) quad xs
 end
+
+let depTupleBinders t =
+  let rec foo acc = function
+    | TTuple(l) -> 
+        let (xs,ts) = List.split l in
+        let acc = List.fold_left (fun acc x -> x::acc) acc xs in
+        List.fold_left foo acc ts
+    | TNonNull(t) | TMaybeNull(t) -> foo acc t
+    | _ -> acc
+  in foo [] t
 
 let heapBinders cs =
   List.fold_left
     (fun acc (l,hc) ->
        match hc with HWeakTok _ -> acc
-                   | HConc(x,_) | HConcObj(x,_,_) -> VVars.add x acc)
-    VVars.empty cs
+                   | HConc(x,_) | HConcObj(x,_,_) -> x::acc)
+    [] cs
 
 (* all the freeVarsX functions are of the form env:Quad.t -> x:X -> Quad.t *)
 
@@ -977,16 +989,22 @@ and freeVarsTT env = function
       let env = List.fold_left (fun env t -> Quad.addT t env) env ts in
       let env = List.fold_left (fun env l -> Quad.addL l env) env ls in
       let env = List.fold_left (fun env h -> Quad.addH h env) env hs in
-      let xs = VVars.elements (heapBinders (snd h1)) in
+(*
       let env' = List.fold_left (fun env x -> Quad.addV x env) env (x::xs) in
       Quad.combine (freeVarsWorld env (t1,h1)) (freeVarsWorld env' (t2,h2))
+*)
+      (* 3/30: added depTupleBinders *)
+      let env1 = Quad.addVs (x :: depTupleBinders t1) env in
+      let env2 = Quad.addVs (heapBinders (snd h1)) env1 in
+      Quad.combineList
+        [freeVarsTyp env t1; freeVarsHeap env1 h1; freeVarsWorld env2 (t2,h2)]
 
 and freeVarsHeap env (hs,cs) =
   let free =
     List.fold_left
     (fun acc h -> if Quad.memH h env then acc else Quad.addH h acc)
     Quad.empty hs in
-  let xs = VVars.elements (heapBinders cs) in
+  let xs = heapBinders cs in
   let env = List.fold_left (fun env x -> Quad.addV x env) env xs in
   List.fold_left (fun acc -> function
     | (l,HConc(_,t))
@@ -997,7 +1015,7 @@ and freeVarsHeap env (hs,cs) =
   ) free cs
 
 and freeVarsWorld env (t,h) =
-  let xs = VVars.elements (heapBinders (snd h)) in
+  let xs = heapBinders (snd h) in
   let env' = List.fold_left (fun env x -> Quad.addV x env) env xs in
   Quad.combine (freeVarsHeap env h) (freeVarsTyp env' t)
 
@@ -1033,6 +1051,17 @@ module MasterSubst = struct
        List.map (freeVarsTyp Quad.empty) (List.map snd tsub);
        List.map (freeVarsLoc Quad.empty) (List.map snd lsub);
        List.map (freeVarsHeap Quad.empty) (List.map snd hsub)])
+
+  let print (vsub,tsub,lsub,hsub) =
+    Log.log0 "vsub\n";
+    List.iter (fun (x,w) -> Log.log2 "  %s |-> %s\n" x (prettyStrWal w)) vsub;
+    Log.log0 "tsub\n";
+    List.iter (fun (x,t) -> Log.log2 "  %s |-> %s\n" x (prettyStrTyp t)) tsub;
+    Log.log0 "lsub\n";
+    List.iter (fun (x,l) -> Log.log2 "  %s |-> %s\n" x (strLoc l)) lsub;
+    Log.log0 "hsub\n";
+    List.iter (fun (x,h) -> Log.log2 "  %s |-> %s\n" x (prettyStrHeap h)) hsub;
+    ()
 
 end
 
@@ -1161,7 +1190,8 @@ and masterSubstTT subst = function
   | UArray(t) -> UArray (masterSubstTyp subst t)
   (* binding form *)
   | UArr((ts,ls,hs),x,t1,h1,t2,h2) ->
-      let xs = VVars.elements (heapBinders (snd h1)) in
+      let xs = heapBinders (snd h1) in
+      let xs = depTupleBinders t1 @ xs in (* 3/30: added depTupleBinders *)
       let subst =
         subst |> MasterSubst.removeVVars (x::xs)
               |> MasterSubst.removeTVars ts

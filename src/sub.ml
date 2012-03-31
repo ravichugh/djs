@@ -221,8 +221,8 @@ let checkLength s errList l1 l2 =
   else ()
 
 type obligation =
-  | OConc of vvar * typ
-  | OWeak of typ * typ
+  | OConc of loc * vvar * typ
+  | OWeak of loc * typ * typ
 
 let heapSubstAndObligations errList cs1 cs2 =
   let foo (acc1,acc2) (l,hc2) =
@@ -230,10 +230,10 @@ let heapSubstAndObligations errList cs1 cs2 =
       let hc1 = snd (List.find (fun (l',_) -> l = l') cs1) in
       match hc1, hc2 with
         | HConc(y1,_), HConc(y2,s2) ->
-            ((y2, wVar y1) :: acc1, OConc (y2, s2) :: acc2)
+            ((y2, wVar y1) :: acc1, OConc (l, y2, s2) :: acc2)
         | HConcObj(y1,_,l1'), HConcObj(y2,s2,l2') ->
             if l1' = l2' then
-              ((y2, wVar y1) :: acc1, OConc (y2, s2) :: acc2)
+              ((y2, wVar y1) :: acc1, OConc (l, y2, s2) :: acc2)
             else
               err (errList @ [spr "proto links for [%s] differ:" (strLoc l);
                               spr "  %s" (strLoc l1');
@@ -429,20 +429,23 @@ and checkHeaps errList usedBoxes g h1 h2 =
     let (binderSubst,obligations) = heapSubstAndObligations errList cs1 cs2 in
     Zzz.pushScope ();
     let (n,g) = simpleSnapshot "check-heaps" g h1 in
-    List.iter (function 
-      | OConc(x2,s2) ->
+    ignore (List.fold_left (fun errList -> function
+      | OConc(l,x2,s2) ->
           let p = applyTyp s2 (wVar x2) in
           let p = masterSubstForm (binderSubst,[],[],[]) p in
-          checkFormula errList usedBoxes g p
-      | OWeak(t1,t2) ->
+          let errList' =
+            errList @ [spr "Checking location [%s] ..." (strLoc l)] in
+          let _ = checkFormula errList' usedBoxes g p in
+          errList @ [spr "Checked location [%s]" (strLoc l)]
+      | OWeak(l,t1,t2) ->
           (* TODO 3/14 issue with theV inside UArray typ_term... right now,
              not checking OWeak obligations, since the typing rules don't
              have a way of changing them anyway...
           let _ = checkTypes errList usedBoxes g t1 t2 in
           checkTypes errList usedBoxes g t2 t1
           *)
-          ()
-    ) obligations;
+          errList
+    ) errList obligations);
     simpleTcRemoveBindingN n;
     Zzz.popScope ();
     binderSubst

@@ -60,18 +60,6 @@ let processExistentialBinders g t =
   foo (0,g) t
 
 
-(* TODO should be factored somewhere, since Wf does something similar *)
-let depTupleBinders t =
-  let rec foo acc = function
-    | TTuple(l) -> 
-        let (xs,ts) = List.split l in
-        let acc = List.fold_left (fun acc x -> x::acc) acc xs in
-        List.fold_left foo acc ts
-    | TNonNull(t) | TMaybeNull(t) -> foo acc t
-    | _ -> acc
-  in foo [] t
-
-
 let addDepTupleBindings g t =
   let rec foo (accN,accG) = function
     | TTuple(l) ->
@@ -408,6 +396,10 @@ let depTupleSubst t w =
     | _ -> acc
   in
   let subst = foo w [] t in
+(*
+  Log.log1 "depTupleSubst [%s]\n" (prettyStrTyp t);
+  List.iter (fun (x,w) -> Log.log2 "ravi %s |-> %s\n" x (prettyStrWal w)) subst;
+*)
   subst
 
 let heapDepTupleSubst (_,cs) =
@@ -430,7 +422,8 @@ let heapDepTupleSubst (_,cs) =
     ) [] cs
   in
 (*
-List.iter (fun (x,w) -> pr "ravi %s |-> %s\n" x (prettyStrWal w)) subst;
+  Log.log0 "heapDepTupleSubst\n";
+  List.iter (fun (x,w) -> Log.log2 "ravi %s |-> %s\n" x (prettyStrWal w)) subst;
 *)
   subst
 
@@ -1357,13 +1350,17 @@ and tsELetAppTryBoxes cap g curHeap (tActs,lActs,hActs) v1 v2 boxes =
     checkLength "heap" hForms hActs;
     let hSubst = List.combine hForms hActs in
 
+    (* Log.log1 "t11 0 [%s]\n" (prettyStrTyp t11); *)
+
     (* instantiate input world with rest of poly args.
        expand from pre-formulas to formulas. check that the result is wf *)
     let (t11,e11) =
       (masterSubstTyp ([],[],[],hSubst) t11,
        masterSubstHeap ([],[],[],hSubst) e11) in
+    (* Log.log1 "t11 1 [%s]\n" (prettyStrTyp t11); *)
     let (t11,e11) =
       (expandPreTyp t11, expandPreHeap e11) in
+    (* Log.log1 "t11 2 [%s]\n" (prettyStrTyp t11); *)
 
 (*
     Wf.heap "e11 after instantiation" g e11;

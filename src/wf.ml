@@ -5,7 +5,9 @@ open LangUtils
 
 (***** Helpers ****************************************************************)
 
-let depTupleBinders t =
+let depTupleBindersEnv t =
+  List.map (fun x -> Var (x, tyAny)) (depTupleBinders t)
+(*
   let rec foo acc = function
     | TTuple(l) -> 
         let (xs,ts) = List.split l in
@@ -14,6 +16,7 @@ let depTupleBinders t =
     | TNonNull(t) | TMaybeNull(t) -> foo acc t
     | _ -> acc
   in foo [] t
+*)
 
 (*
 let varBoundInG x g =
@@ -48,7 +51,7 @@ let varBoundInH x h =
 let varBoundInH x h =
   List.exists
     (function HConc(y,t) | HConcObj(y,t,_) ->
-       x = y || varBoundInG x (depTupleBinders t))
+       x = y || varBoundInG x (depTupleBindersEnv t))
     (List.map snd (snd h))
   
 let varBound x g h = varBoundInG x g || varBoundInH x h
@@ -62,7 +65,7 @@ let heapBinders (_,cs) =
   List.fold_left (fun acc -> function
     | (_,HConc(x,t))
     | (_,HConcObj(x,t,_)) ->
-        Var(x,tyAny) :: depTupleBinders t @ acc
+        Var(x,tyAny) :: depTupleBindersEnv t @ acc
     | (_,HWeakTok _) -> acc
   ) [] cs
 
@@ -137,7 +140,8 @@ and checkValue errList g h v =
   match v with
     | VVar(x) ->
         if varBound x g h then ()
-        else err (errList @ [spr "unbound variable: [%s]" x] @ envToStrings g)
+        (* else err (errList @ [spr "unbound variable: [%s]" x] @ envToStrings g) *)
+        else err (errList @ [spr "unbound variable: [%s]" x])
     | VBase _ | VEmpty -> ()
     | VExtend(v1,v2,v3) -> List.iter (checkValue errList g h) [v1;v2;v3]
     | VFun _ -> () (* not recursing, since lambdas don't appear in formulas *)
@@ -158,7 +162,7 @@ and checkTypeTerm errList g h u =
         let g = List.fold_left (fun acc x -> TVar(x)::acc) g ts in
         let g = List.fold_left (fun acc x -> LVar(x)::acc) g ls in
         let g = List.fold_left (fun acc x -> HVar(x)::acc) g hs in
-        let g = g @ [Var(x,tyAny)] @ depTupleBinders t1 in
+        let g = g @ [Var(x,tyAny)] @ depTupleBindersEnv t1 in
         (* TODO this shouldn't be checkWorld *)
         checkWorld errList g (t1,e1);
 (*

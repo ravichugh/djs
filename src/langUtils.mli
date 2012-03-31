@@ -206,3 +206,5 @@ val embedForm : formula -> formula
 
 val idSkolems : float Utils.IdTable.t
 
+val depTupleBinders : typ -> vvar list
+
