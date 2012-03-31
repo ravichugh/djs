@@ -272,6 +272,16 @@ let heapSubstAndObligations errList cs1 cs2 =
   in
   List.fold_left foo ([],[]) cs2
 
+(* 3/31: only check the shallow constraints in the input heap, since
+   after substituting the heap actual, there will be a bunch of
+   identical locations to check *)
+let filterObligations obligations = function
+  | None -> obligations
+  | Some(locs) ->
+      List.filter
+        (function OConc(l,_,_) | OWeak(l,_,_) -> List.mem l locs)
+        obligations
+
 
 (***** Subtyping **************************************************************)
 
@@ -410,7 +420,7 @@ and checkArrow errList usedBoxes g
 
   true
 
-and checkHeaps errList usedBoxes g h1 h2 =
+and checkHeaps errList ?(locsOpt=None) usedBoxes g h1 h2 =
   let errList =
     errList @ [spr "checkHeaps:\n  %s\n< %s"
                  (prettyStrHeap h1) (prettyStrHeap h2)] in
@@ -427,6 +437,7 @@ and checkHeaps errList usedBoxes g h1 h2 =
 
     (* check location constraints *)
     let (binderSubst,obligations) = heapSubstAndObligations errList cs1 cs2 in
+    let obligations = filterObligations obligations locsOpt in (* 3/31 *)
     Zzz.pushScope ();
     let (n,g) = simpleSnapshot "check-heaps" g h1 in
     ignore (List.fold_left (fun errList -> function
@@ -438,6 +449,7 @@ and checkHeaps errList usedBoxes g h1 h2 =
           let _ = checkFormula errList' usedBoxes g p in
           errList @ [spr "Checked location [%s]" (strLoc l)]
       | OWeak(l,t1,t2) ->
+          let _ = failwith "shouldn't be any OWeak" in
           (* TODO 3/14 issue with theV inside UArray typ_term... right now,
              not checking OWeak obligations, since the typing rules don't
              have a way of changing them anyway...
@@ -465,8 +477,9 @@ and checkWorlds errList usedBoxes g (t1,h1) (t2,h2) =
 (***** Entry point ************************************************************)
 
 let types cap  = checkTypes  [spr "Sub.types: %s" cap]  TypeTerms.empty
-let heaps cap  = checkHeaps  [spr "Sub.heaps: %s" cap]  TypeTerms.empty
 let worlds cap = checkWorlds [spr "Sub.worlds: %s" cap] TypeTerms.empty
+let heaps cap ?(locsOpt=None) =
+  checkHeaps ~locsOpt [spr "Sub.heaps: %s" cap]  TypeTerms.empty
 
 let mustFlow   = mustFlow_ TypeTerms.empty
 

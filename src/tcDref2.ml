@@ -1344,6 +1344,8 @@ and tsELetAppTryBoxes cap g curHeap (tActs,lActs,hActs) v1 v2 boxes =
       (masterSubstTyp ([],tSubst,lSubst,[]) t11,
        masterSubstHeap ([],tSubst,lSubst,[]) e11) in
 
+    let manifestLocs = List.map fst (snd e11) in
+
     (* infer missing poly arg.
        note: this must take place after loc args have been substituted. *)
     let hActs =
@@ -1386,7 +1388,9 @@ and tsELetAppTryBoxes cap g curHeap (tActs,lActs,hActs) v1 v2 boxes =
     let e11 = masterSubstHeap heapPreSubst e11 in
 
     Wf.heap "e11 after instantiation" g e11;
-    let heapSubst = Sub.heaps cap g curHeap e11 in
+    (* 3/31 *)
+    (* let heapSubst = Sub.heaps cap g curHeap e11 in *)
+    let heapSubst = Sub.heaps cap ~locsOpt:(Some manifestLocs) g curHeap e11 in
     tcVal g curHeap t11 v2;
 
     (* TODO: see the note about hInst above *)
