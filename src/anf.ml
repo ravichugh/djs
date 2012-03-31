@@ -135,6 +135,18 @@ and anfAndTmp e =
 
 and anfExp e = mkExp (anf e)
 
+(* Clean up the results of ANFing a bit.
+     let _tmp = e1 in
+     let y = _tmp in     
+       e2
+*)
+let removeUselessLet = function
+  | ELet(x,None,e1,ELet(y,None,EVal(VVar(x')),e2)) when x = x' && x.[0] = '_' ->
+      ELet (y, None, e1, e2)
+  | e -> e
+
+let anfExp e = e |> anfExp |> mapExp removeUselessLet
+
 
 (***** A-Normalized program printer *******************************************)
 

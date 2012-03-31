@@ -229,6 +229,48 @@ let foldTT fTT init t =
   foldTyp (fun acc _ -> acc) fTT (fun acc _ -> acc) init t
 
 
+(***** Map Exp ****************************************************************)
+
+let mapExp fE e =
+  let rec fooExp = function
+    | EVal(v) -> fE (EVal (fooVal v))
+    | EBase(bv) -> fE (EBase bv)
+    | EVar(x) -> fE (EVar x)
+    | EDict(es) ->
+        fE (EDict (List.map (fun (e1,e2) -> (fooExp e1, fooExp e2)) es))
+    | EArray(t,es) -> fE (EArray (t, List.map fooExp es))
+    | EFun(poly,x,inWorld,e) -> EFun (poly, x, inWorld, fooExp e)
+    | EIf(e1,e2,e3) -> fE (EIf (fooExp e1, fooExp e2, fooExp e3))
+    | EApp(poly,e1,e2) -> fE (EApp (poly, fooExp e1, fooExp e2))
+    | ELet(x,fo,e1,e2) -> fE (ELet (x, fo, fooExp e1, fooExp e2))
+    | EExtern(x,t,e) -> fE (EExtern (x, t, fooExp e))
+    | ETcFail(s,e) -> fE (ETcFail (s, fooExp e))
+    | EAs(s,e,f) -> fE (EAs (s, fooExp e, f))
+    | EAsW(s,e,w) -> fE (EAsW (s, fooExp e, w))
+    | ENewref(l,e) -> fE (ENewref (l, fooExp e))
+    | EDeref(e) -> fE (EDeref (fooExp e))
+    | ESetref(e1,e2) -> fE (ESetref (fooExp e1, fooExp e2))
+    | EFreeze(l,x,e) -> fE (EFreeze (l, x, fooExp e))
+    | EThaw(l,e) -> fE (EThaw (l, fooExp e))
+    | EWeak(l,e) -> fE (EWeak (l, fooExp e))
+    | ELabel(l,fo,e) -> fE (ELabel (l, fo, fooExp e))
+    | EBreak(l,e) -> fE (EBreak (l, fooExp e))
+    | EThrow(e) -> fE (EThrow (fooExp e))
+    | ETryCatch(e1,x,e2) -> fE (ETryCatch (fooExp e1, x, fooExp e2))
+    | ETryFinally(e1,e2) -> fE (ETryFinally (fooExp e1, fooExp e2))
+    | ENewObj(e1,l1,e2,l2) -> fE (ENewObj (fooExp e1, l1, fooExp e2, l2))
+    | ELoadSrc(s,e) -> fE (ELoadSrc (s, fooExp e))
+    | ELoadedSrc(s,e) -> fE (ELoadedSrc (s, fooExp e))
+  and fooVal = function
+    | VBase(bv) -> VBase bv
+    | VVar(x) -> VVar x
+    | VEmpty -> VEmpty
+    | VExtend(v1,v2,v3) -> VExtend (fooVal v1, fooVal v2, fooVal v3)
+    | VArray(t,vs) -> VArray (t, List.map fooVal vs)
+    | VFun(poly,x,inWorld,e) -> VFun (poly, x, inWorld, fooExp e)
+  in fooExp e
+
+
 (***** Helpers for Abstract Syntax Programming ********************************)
 
 let tag w         = WApp ("tag", [w])
