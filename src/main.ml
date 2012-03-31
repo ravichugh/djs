@@ -12,7 +12,6 @@ let parseOnly = ref false
 let primsPath = ref (Settings.prim_dir ^ "basics.dref")
 (* let pervsPath = ref (Settings.prim_dir ^ "pervasives.ml") *)
 let doRaw     = ref false
-let noPrelude = ref false
 let srcFiles  = ref []
 
 let usage = "\n./system-d [options] [src_file]\n"
@@ -23,8 +22,6 @@ let argSpecs = [
                "     treat warnings as errors");
   ("-raw", Arg.Set doRaw,
         "            don't a-normalize or use prims/pervasives");
-  ("-noPrelude", Arg.Set noPrelude,
-              "      don't use prims/pervasives");
   ("-fast", Arg.Unit (fun () ->
               Cnf.checkConversion := false;
               Log.printToStdout := false;
@@ -53,6 +50,10 @@ let argSpecs = [
                    " <bool> (default is false)");
   ("-argsArray", Arg.Set S.doArgsArray,
                    " desugar lambdas/calls with arguments tuple");
+  ("-marshalOutEnv", Arg.Set S.marshalOutEnv,
+                   " marshal output environments in out/world.world");
+  ("-marshalInEnv", Arg.Set S.marshalInEnv,
+                   " use out/env.env as initial environments for typing");
 ]
 
 let anonArgFun s =
@@ -113,7 +114,7 @@ let parsePrelude f =
 let anfAndAddPrelude e =
   if !doRaw then
     Anf.coerce e
-  else if !noPrelude then 
+  else if !S.marshalInEnv then
     let e = Anf.anfExp e in
     let _ = Anf.printAnfExp e in
     e
@@ -161,12 +162,15 @@ let dummyEJS =
 
 let doParseDJS fo =
   try
-    let f_pre =
-      S.prim_dir ^
-      if !Settings.fullObjects then "prelude.js" else "other/preludeLite.js" in
-    let ejs_pre = parseJStoEJS f_pre in
-    let ejs = match fo with Some(f) -> parseJStoEJS f | None -> dummyEJS in
-    DjsDesugar.desugar (DjsDesugar.makeFlatSeq ejs_pre ejs)
+    let prog = match fo with Some(f) -> parseJStoEJS f | None -> dummyEJS in
+    if !S.marshalInEnv then
+      DjsDesugar.desugar prog
+    else
+      let f_pre =
+        S.prim_dir ^
+        if !Settings.fullObjects then "prelude.js" else "other/preludeLite.js" in
+      let ejs_pre = parseJStoEJS f_pre in
+      DjsDesugar.desugar (DjsDesugar.makeFlatSeq ejs_pre prog)
   with Failure(s) ->
     if Utils.strPrefix s "parse error" || Utils.strPrefix s "lexical error"
     then Log.printParseErr s
@@ -187,6 +191,16 @@ let parseDJS () =
 let _ = 
 
   Arg.parse argSpecs anonArgFun usage;
+
+  if !S.marshalOutEnv || !S.marshalInEnv then
+    failwith "need to marshal other state too...";
+
+  if !S.marshalOutEnv then begin
+    if !doRaw then
+      failwith "don't use both -marshalOutEnv and -doRaw"
+    else if !srcFiles <> [] then
+      failwith "don't provide source files with -marshalOutEnv"
+  end;
 
   let e =
     if !S.djsMode then parseDJS ()

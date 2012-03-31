@@ -16,9 +16,14 @@ let emitPreamble () =
     try z3write (input_line ic ^ "\n"); f ic
     with End_of_file -> ()
   in
-  f (open_in (Settings.prim_dir ^ "theory.smt2"));
-  if !Settings.useTheoryLA then f (open_in (Settings.prim_dir ^ "theory-int.smt2"));
-  ()
+  if !Settings.marshalInEnv then
+    f (open_in (Settings.out_dir ^ "env.lisp"))
+  else begin
+    f (open_in (Settings.prim_dir ^ "theory.smt2"));
+    if !Settings.useTheoryLA
+      then f (open_in (Settings.prim_dir ^ "theory-int.smt2"))
+      else ()
+  end
 
 (* let _ = emitPreamble () *)
 

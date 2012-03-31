@@ -781,6 +781,15 @@ and tsVal_ g h = function
 
   | VVar("__skolem__") -> tyNum
 
+  | VBase(Str("no source file")) when !Settings.marshalOutEnv -> begin
+      let oc_env = open_out_bin (Settings.out_dir ^ "env.env") in
+      Marshal.to_channel oc_env (g,h) [];
+      Utils.copyFile
+        (Settings.out_dir ^ "queries.lisp") (Settings.out_dir ^ "env.lisp");
+      (* TODO need to marshal other state too... *)
+      ty (PEq (theV, wStr "no source file"))
+    end
+
   | (VBase _ as v) | (VEmpty as v) -> ty (PEq (theV, WVal v))
 
   (* TODO any benefit to using upd instead of VExtend? *)
@@ -1647,17 +1656,22 @@ let addSkolems g =
   in
   foo g 1
 
+let initialEnvs () =
+  if !Settings.marshalInEnv then
+    let ic_env = open_in_bin (Settings.out_dir ^ "env.env") in
+    let (g,h) = (Marshal.from_channel ic_env : (env * heap)) in
+    let g = addSkolems g in
+    (g, h)
+  else
+    let g = [] in
+    let (_,g) = tcAddBinding ~printHeap:false g ([],[]) "v" tyAny in
+    let g = addSkolems g in
+    let (_,g) = tcAddBinding ~printHeap:false g ([],[]) "dObjectProto" tyEmpty in
+    let h = ([], [(lObjectPro, HConcObj ("dObjectProto", tyEmpty, lRoot))]) in
+    (g, h)
+
 let typecheck e =
-  let g = [] in
-  let (_,g) = tcAddBinding ~printHeap:false g ([],[]) "v" tyAny in
-  let g = addSkolems g in
-  let (_,g) = tcAddBinding ~printHeap:false g ([],[]) "dObjectProto" tyEmpty in
-  (* TODO *)
-(*
-  let (_,g) =
-    tcAddBinding ~printHeap:false g ([],[]) xObjectPro (tyRef lObjectPro) in
-*)
-  let h = ([], [(lObjectPro, HConcObj ("dObjectProto", tyEmpty, lRoot))]) in
+  let (g,h) = initialEnvs () in
   try begin
     ignore (tsExp g h e);
     Sub.writeCacheStats ();

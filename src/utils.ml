@@ -183,6 +183,14 @@ module IdTable =
   end
 
 
+let copyFile fFrom fTo =
+  let (ic,oc) = (open_in fFrom, open_out fTo) in
+  let rec foo () =
+    try (Printf.fprintf oc "%s\n" (input_line ic); foo ())
+    with End_of_file -> (close_in ic; close_out oc)
+  in foo()
+
+
 (* TODO generalize *)
 let redString s = Printf.sprintf "\027[31m%s\027[0m" s
 let greenString s = Printf.sprintf "\027[32m%s\027[0m" s
