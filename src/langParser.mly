@@ -79,18 +79,21 @@ let mkUArrImp a b c d e f =
 let popDHeap () =
   heapStack := List.tl !heapStack
 
-let freshenCell = function
-  | HConc(x,s) -> HConc (freshVar x, ty (PEq (theV, wVar x)))
-  | HConcObj(x,s,l') -> HConcObj (freshVar x, ty (PEq (theV, wVar x)), l')
+let copyCell exact x s =
+  if exact then ty (PEq (theV, wVar x)) else s
+
+let freshenCell exact = function
+  | HConc(x,s) -> HConc (freshVar x, copyCell exact x s)
+  | HConcObj(x,s,l') -> HConcObj (freshVar x, copyCell exact x s, l')
   | HWeakTok(tok) -> HWeakTok tok
 
-let sameHeap () =
+let sameHeap exact =
   let (hs,cs) = List.hd !heapStack in
-  let cs = List.map (fun (l,hc) -> (l, freshenCell hc)) cs in
+  let cs = List.map (fun (l,hc) -> (l, freshenCell exact hc)) cs in
   (hs, cs)
 
-let sameCell l =
-  try freshenCell (List.assoc l (snd (List.hd !heapStack)))
+let sameCell exact l =
+  try freshenCell exact (List.assoc l (snd (List.hd !heapStack)))
   with
     Not_found ->
     printParseErr (spr "sameCell: [%s] not found in previous heap" (strLoc l))
@@ -121,6 +124,7 @@ let sameCell l =
   SUGAR_EXTEND SUGAR_FLD
   PLUS MINUS MUL DIV LT LE GE (* NE EQEQ AMPAMP PIPEPIPE *) PLUSPLUS
   ASSGN (* LOCALL *) NEWREF REFTYPE (* AT *) MAPSTO SAME HEAP
+  SAME_TYPE SAME_EXACT
   FRZN THWD FREEZE THAW (* REFREEZE *)
   ARRTYPE PACKED LEN TRUTHY FALSY INTEGER
   BREAK THROW TRY CATCH FINALLY
@@ -559,6 +563,8 @@ heap :
  | LBRACK l1=tvars RBRACK                        { (l1,[]) }
  | LBRACK l1=tvars PLUSPLUS l2=heapcells RBRACK  { (l1,l2) }
  | h=TVAR                                        { ([h],[]) }
+ (* TODO generalize to multiple weaklocs *)
+ | LBRACK wl=weakloc_ PLUSPLUS hcl=heapcells RBRACK { Log.printParseErr "good" }
 
 rheap :
  | LBRACK RBRACK                                 { ([],[]) }
@@ -566,7 +572,9 @@ rheap :
  | LBRACK l1=tvars RBRACK                        { (l1,[]) }
  | LBRACK l1=tvars PLUSPLUS l2=rheapcells RBRACK { (l1,l2) }
  | h=TVAR                                        { ([h],[]) }
- | SAME                                          { sameHeap () }
+ | SAME                                          { sameHeap true }
+ | SAME_EXACT                                    { sameHeap true }
+ | SAME_TYPE                                     { sameHeap false }
 
 frame :
  | LBRACK l=tvars RBRACK h1=dheap ARROW t2=typ DIV h2=rheap { (l,h1,(t2,h2)) }
@@ -604,12 +612,15 @@ heapcell :
 
 rheapcell :
  | heapcell           { $1 }
- | l=loc MAPSTO SAME  { (l, sameCell l) }
+ | l=loc MAPSTO SAME  { (l, sameCell true l) }
  (* TODO add same token sugar back in here *)
  (* TODO add weak obj *)
 
 weakloc :
- | LBRACK m=loc MAPSTO LPAREN t=typ COMMA l=loc RPAREN RBRACK { (m,t,l) }
+ | LBRACK wl=weakloc_ RBRACK { wl }
+
+weakloc_ :
+ | m=loc MAPSTO LPAREN t=typ COMMA l=loc RPAREN { (m,t,l) }
 
 thawstate :
  | FRZN       { Frzn }

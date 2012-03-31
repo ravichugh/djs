@@ -1,15 +1,15 @@
 var sumPackedArray = function(ns) /*:
   [;L] [[ns:Ref(L)]]
-     / [L |-> (_:{(and (v::Arr(Int)) (packed v))}, lArrayProto)]
-    -> Int / sameType */
+     / [L |-> (array:{(and (v::Arr(Int)) (packed v))}, lArrayProto)]
+    -> Int / sameExact */
 {
     var sum = 0;
-    var i;
-
+    var i = 0;
+    var n = ns.length;
     /*: [&i |-> _:{Int|(>= v 0)}, &sum |-> _:Int, &ns |-> _:Ref(L),
-         L |-> (_:{(and (v::Arr(Int)) (packed v))}, lArrayProto)]
-     -> sameType */
-    for (i=0; i < ns.length; i++)
+         &n |-> _:{Int|(= v (len array))}, L |-> (_:{(= v array)}, lArrayProto)]
+     ->  sameType */
+    for (; i < n; i++)
         sum += ns[i];
 
     return sum;

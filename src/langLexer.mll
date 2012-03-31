@@ -46,6 +46,8 @@ rule token = parse
   | "Ref"          { REFTYPE }
   | "Arr"          { ARRTYPE }
   | "same"         { SAME }
+  | "sameType"     { SAME_TYPE }
+  | "sameExact"    { SAME_EXACT }
   (* | "fold"         { FOLD } *)
   (* | "unfold"       { UNFOLD } *)
   | "frzn"         { FRZN }
