@@ -7,60 +7,60 @@
 
 (***** System D dictionary operations *****************************************)
 
-val get_curried :: d:Dict -> k:{Str|(has d {v})} -> {(= v (sel d k))}
+val get_curried :: dd:Dict -> kk:{Str|(has dd {v})} -> {(= v (sel dd kk))}
 
-val get :: [[d:Dict, k:{Str|(has d {v})}]] -> {(= v (sel d k))}
+val get :: [[dd:Dict, kk:{Str|(has dd {v})}]] -> {(= v (sel dd kk))}
 
-val mem :: [[d:Dict, k:Str]] -> {Bool|(iff (= v true) (has d {k}))}
+val mem :: [[dd:Dict, kk:Str]] -> {Bool|(iff (= v true) (has dd {kk}))}
 
-val set :: [[d:Dict, k:Str, z:Top]] -> {(= v (upd d k z))}
+val set :: [[dd:Dict, kk:Str, zz:Top]] -> {(= v (upd dd kk zz))}
 
-val del :: [[d:Dict, k:Str]] -> {(= v (upd d k bot))}
+val del :: [[dd:Dict, kk:Str]] -> {(= v (upd dd kk bot))}
 
 
 (***** JS primitives **********************************************************)
 
-val js_plus :: [[x:{(or (= (tag v) "number") (= (tag v) "string"))},
-                 y:{(= (tag v) (tag x))}]]
-            -> {(and (= (tag v) (tag x))
-                     (implies (and (= (tag x) "number") (integer x) (integer y))
-                              (and (= v (+ x y)) (integer v))))}
+val js_plus :: [[xx:{(or (= (tag v) "number") (= (tag v) "string"))},
+                 yy:{(= (tag v) (tag xx))}]]
+            -> {(and (= (tag v) (tag xx))
+                     (implies (and (= (tag xx) "number") (integer xx) (integer yy))
+                              (and (= v (+ xx yy)) (integer v))))}
 
 val js_minus ::
-  [[x:Num, y:Num]] -> {Num|(implies (and (integer x) (integer y))
-                                    (and (= v (- x y)) (integer v)))}
+  [[xx:Num, yy:Num]] -> {Num|(implies (and (integer xx) (integer yy))
+                                      (and (= v (- xx yy)) (integer v)))}
 
-val js_uminus :: x:Int -> Int
+val js_uminus :: _:Int -> Int
 
-val js_mult :: [[x:Num, y:Num]] -> {Num|(implies (and (integer x) (integer y))
-                                                 (integer v))}
+val js_mult :: [[xx:Num, yy:Num]] -> {Num|(implies (and (integer xx) (integer yy))
+                                                   (integer v))}
 
-val js_or :: [[x:Top, y:Top]] -> {(ite (falsy x) (= v y) (= v x))}
+val js_or :: [[xx:Top, yy:Top]] -> {(ite (falsy xx) (= v yy) (= v xx))}
 
-val js_and :: [[x:Top, y:Top]] -> {(ite (truthy x) (= v y) (= v x))}
+val js_and :: [[xx:Top, yy:Top]] -> {(ite (truthy xx) (= v yy) (= v xx))}
 
-val js_not :: x:Top -> {Bool|(iff (= v true) (falsy x))}
+val js_not :: xx:Top -> {Bool|(iff (= v true) (falsy xx))}
 
 val js_eek :: (* == *)
-  [[x:Top, y:Top]] -> {Bool|(implies (= (tag x) (tag y))
-                                     (iff (= v true) (= x y)))}
+  [[xx:Top, yy:Top]] -> {Bool|(implies (= (tag xx) (tag yy))
+                                       (iff (= v true) (= xx yy)))}
 
 val js_threek :: (* === *)
-  [[x:Top, y:{(= (tag v) (tag x))}]] -> {Bool|(iff (= v true) (= x y))}
+  [[xx:Top, yy:{(= (tag v) (tag xx))}]] -> {Bool|(iff (= v true) (= xx yy))}
 
 (* TODO for eek and threek, might need to special case numbers and only
    have equality for integers. might need to special case reference
    values also. *)
 
-val js_lt :: [[x:Int, y:Int]] -> {Bool|(iff (= v true) (< x y))}
-val js_le :: [[x:Int, y:Int]] -> {Bool|(iff (= v true) (<= x y))}
-val js_gt :: [[x:Int, y:Int]] -> {Bool|(iff (= v true) (> x y))}
-val js_ge :: [[x:Int, y:Int]] -> {Bool|(iff (= v true) (>= x y))}
+val js_lt :: [[xx:Int, yy:Int]] -> {Bool|(iff (= v true) (< xx yy))}
+val js_le :: [[xx:Int, yy:Int]] -> {Bool|(iff (= v true) (<= xx yy))}
+val js_gt :: [[xx:Int, yy:Int]] -> {Bool|(iff (= v true) (> xx yy))}
+val js_ge :: [[xx:Int, yy:Int]] -> {Bool|(iff (= v true) (>= xx yy))}
 
 
 (***** recursion **************************************************************)
 
-val fix :: [A] (x: y:A->A) -> A
+val fix :: [A] (_: _:A->A) -> A
 
 
 (******************************************************************************)

@@ -9,13 +9,13 @@ var undefined = /*: {(= v undefined)} */ "#extern";
 //// Object.prototype
 
 var __ObjectProto_hasOwnProperty =
-/*: {(and (v :: [; L1,L2] _:[this:Ref(L1), k:Str] / [L1 |-> (d:Dict, L2)]
-             -> {Bool|(iff (= v true) (has d {k}))} / same)
-          (v :: [A; L1,L2] _:[this:Ref(L1), k:Str] / [L1 |-> (a:Arr(A), L2)]
+/*: {(and (v :: [; L1,L2] _:[this:Ref(L1), kk:Str] / [L1 |-> (dd:Dict, L2)]
+             -> {Bool|(iff (= v true) (has dd {kk}))} / same)
+          (v :: [A; L1,L2] _:[this:Ref(L1), kk:Str] / [L1 |-> (aa:Arr(A), L2)]
              -> {Bool|(iff (= v true) (= v "length"))} / same)
-          (v :: [A; L1,L2] _:[this:Ref(L1), i:Int] / [L1 |-> (a:Arr(A), L2)]
-             -> {Bool|(implies (and (packed a) (>= i 0))
-                               (iff (= v true) (< i (len a))))} / same))} */
+          (v :: [A; L1,L2] _:[this:Ref(L1), i:Int] / [L1 |-> (aa:Arr(A), L2)]
+             -> {Bool|(implies (and (packed aa) (>= i 0))
+                               (iff (= v true) (< i (len aa))))} / same))} */
 "#extern";
 
 var __ObjectProto = /*: Ref(lObjectProto) */ "#extern";
@@ -35,25 +35,25 @@ __ObjectProto.constructor = Object;
 
 var __ArrayProto_push =
 /*: [A; L1,L2]
-       _:[this:Ref(L1), x:A] / [L1 |-> (a:Arr(A), L2)]
-    -> {Int|(implies (packed a) (= v (+ 1 (len a))))}
-     / [L1 |-> (a':{(and (v::Arr(A)) 
-                    (implies (packed a)
-                             (and (packed v)
-                                  (= (len v) (+ 1 (len a)))
-                                  (= (sel a (len a)) x))))}, L2)] */ "#extern";
+       _:[this:Ref(L1), xx:A] / [L1 |-> (aa:Arr(A), L2)]
+    -> {Int|(implies (packed aa) (= v (+ 1 (len aa))))}
+     / [L1 |-> (_:{(and (v::Arr(A)) 
+                   (implies (packed aa)
+                            (and (packed v)
+                                 (= (len v) (+ 1 (len aa)))
+                                 (= (sel aa (len aa)) xx))))}, L2)] */ "#extern";
 
 var __ArrayProto_pop =
 /*: [A; L1,L2]
-       _:[this:Ref(L1)] / [L1 |-> (a:Arr(A), L2)]
-    -> {(ite (packed a)
-             (and (v::A) (= v (sel a (- (len a) 1))))
+       _:[this:Ref(L1)] / [L1 |-> (aa:Arr(A), L2)]
+    -> {(ite (packed aa)
+             (and (v::A) (= v (sel aa (- (len aa) 1))))
              (or (v::A) (= v undefined)))}
-     / [L1 |-> (a':{(and (v::Arr(A))
-                         (implies (packed a)
+     / [L1 |-> (_:{(and (v::Arr(A))
+                         (implies (packed aa)
                                   (and (packed v)
-                                       (= (len v) (- (len a) 1))
-                                       (> (len a) 0))))}, L2)] */ "#extern";
+                                       (= (len v) (- (len aa) 1))
+                                       (> (len aa) 0))))}, L2)] */ "#extern";
 
 var __ArrayProto = /*: lArrayProto */ {
   push: __ArrayProto_push,
