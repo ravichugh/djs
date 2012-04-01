@@ -285,10 +285,10 @@ let refTermsOf g = function
   | TMaybeNull(THasTyp([URef(l)],_))
   | TSelfify(TMaybeNull(THasTyp([URef(l)],_)),_) (* TODO 3/14 *)
   | THasTyp([URef(l)],_) ->
-      let _ = Log.log1 "don't call extract [Ref(%s)]\n" (strLoc l) in
+      (* let _ = Log.log1 "don't call extract [Ref(%s)]\n" (strLoc l) in *)
       [URef l]
   | t ->
-      let _ = Log.log1 "call extract refTermsOf [%s]\n" (prettyStrTyp t) in
+      (* let _ = Log.log1 "call extract refTermsOf [%s]\n" (prettyStrTyp t) in *)
       let isConcRef = function URef _ -> true | _ -> false in
       TypeTerms.elements (Sub.mustFlow g t ~filter:isConcRef)
 
@@ -317,10 +317,10 @@ let ensureSafeWeakRef cap g t =
 
 let arrayTermsOf g = function
   | THasTyp([UArray(t)],_) ->
-      let _ = Log.log1 "don't call extract [Array(%s)]\n" (strTyp t) in
+      (* let _ = Log.log1 "don't call extract [Array(%s)]\n" (strTyp t) in *)
       [UArray t]
   | t ->
-      Log.log1 "call extract arrayTermsOf [%s]\n" (prettyStrTyp t);
+      (* Log.log1 "call extract arrayTermsOf [%s]\n" (prettyStrTyp t); *)
       let filter = function UArray _ -> true | _ -> false in
       TypeTerms.elements (Sub.mustFlow g t ~filter)
 
@@ -330,10 +330,10 @@ let arrowTermsOf g t =
         (* this means that if there are any type terms at the top-level of
            the type, return them. not _also_ considering the refinement to
            see if that leads to more must flow boxes. *)
-        let _ = Log.log1 "don't call extract EApp [%s]\n" (prettyStrTyp t) in
+        (* let _ = Log.log1 "don't call extract EApp [%s]\n" (prettyStrTyp t) in *)
         us
     | _ ->
-        let _ = Log.log1 "call extract EApp [%s]\n" (prettyStrTyp t) in
+        (* let _ = Log.log1 "call extract EApp [%s]\n" (prettyStrTyp t) in *)
         let filter = function UArr _ -> true | _ -> false in
         TypeTerms.elements (Sub.mustFlow g t ~filter)
 
@@ -1150,6 +1150,7 @@ and tsExp_ g h = function
       match lblBinding with
         | Lbl(_,Some(tGoal,hGoal)) -> begin
             tcVal g h tGoal v;
+            Zzz.queryRoot := "TS-Break";
             ignore (Sub.heaps cap g h hGoal);
             (tyFls, botHeap)
           end
@@ -1183,6 +1184,7 @@ and tsExp_ g h = function
                   if l' <> l'' then
                     err [cap; spr "[%s] wrong proto link" (strLoc l)];
                   Wf.heap cap g h1;
+                  Zzz.queryRoot := "TS-Freeze";
                   Sub.types cap g tStrong tFrzn;
                   let h' = (fst h1, (m, HWeakTok Frzn) :: snd h1) in
                   (tySafeWeakRef m, h')
@@ -1397,6 +1399,7 @@ and tsELetAppTryBoxes cap g curHeap (tActs,lActs,hActs) v1 v2 boxes =
 
     (* TODO at some point, might want to rewrite the input program with
        inferred instantiations *)
+(*
     if (tActs,lActs) <> (tActs0,lActs0) then begin
       let foo (ts,ls) =
         spr "[%s; %s]" (String.concat "," (List.map strTyp ts))
@@ -1405,6 +1408,7 @@ and tsELetAppTryBoxes cap g curHeap (tActs,lActs,hActs) v1 v2 boxes =
       Log.log1 "  before : %s\n" (foo (tActs0,lActs0));
       Log.log1 "  after  : %s\n" (foo (tActs,lActs));
     end;
+*)
 
     (* check well-formedness of all poly args *)
     checkLength "type" tForms tActs sInf;
@@ -1465,6 +1469,7 @@ and tsELetAppTryBoxes cap g curHeap (tActs,lActs,hActs) v1 v2 boxes =
     let e11 = masterSubstHeap heapPreSubst e11 in
 
     Wf.heap "e11 after instantiation" g e11;
+    Zzz.queryRoot := "TS-App";
     (* 3/31 *)
     (* let heapSubst = Sub.heaps cap g curHeap e11 in *)
     let heapSubst = Sub.heaps cap ~locsOpt:(Some manifestLocs) g curHeap e11 in
@@ -1547,6 +1552,7 @@ and tcVal_ g h goal = function
   | (VEmpty as v)
   | (VExtend _ as v) ->
       let s = tsVal g h v in
+      let _ = Zzz.queryRoot := "TC-VVal" in
       Sub.types (spr "TC-EVal: %s" (prettyStr strValue v)) g s goal
 
   | VFun(l,x,anno,e) ->
@@ -1595,35 +1601,41 @@ and tcExp_ g h goal = function
   | EVal(v) -> begin
       let (sGoal,hGoal) = goal in
       tcVal g h sGoal v;
+      Zzz.queryRoot := "TC-EVal";
       ignore (Sub.heaps (spr "TC-Val: %s" (prettyStrVal v)) g h hGoal)
     end
 
   | ENewref(l,EVal(v)) ->
       let cap = spr "TC-Newref: ref (%s, %s)" (strLoc l) (prettyStrVal v) in
       let w = tsExp g h (ENewref(l,EVal(v))) in
+      let _ = Zzz.queryRoot := "TC-Newref" in
       ignore (Sub.worlds cap g w goal)
 
   | EDeref(EVal(v)) ->
       let w = tsExp g h (EDeref(EVal(v))) in
       let cap = spr "TC-Deref: !(%s)" (prettyStrVal v) in
+      let _ = Zzz.queryRoot := "TC-Deref" in
       ignore (Sub.worlds cap g w goal)
 
   | ESetref(EVal(v1),EVal(v2)) ->
       let cap = spr "TC-Setref: (%s) := (%s)"
         (prettyStrVal v1) (prettyStrVal v2) in
       let w = tsExp g h (ESetref(EVal(v1),EVal(v2))) in
+      let _ = Zzz.queryRoot := "TC-Setref" in
       ignore (Sub.worlds cap g w goal)
 
   | ENewObj(EVal(v1),l1,EVal(v2),l2) ->
       let cap = spr "TC-NewObj: new (%s, %s, %s, %s)"
         (prettyStrVal v1) (strLoc l1) (prettyStrVal v2) (strLoc l2) in
       let w = tsExp g h (ENewObj(EVal(v1),l1,EVal(v2),l2)) in
+      let _ = Zzz.queryRoot := "TC-NewObj" in
       ignore (Sub.worlds cap g w goal)
 
   | EApp(l,EVal(v1),EVal(v2)) ->
       let (s1,s2) = (prettyStrVal v1, prettyStrVal v2) in
       let cap = spr "TC-App: [...] (%s) (%s)" s1 s2 in
       let w = tsExp g h (EApp(l,EVal(v1),EVal(v2))) in
+      let _ = Zzz.queryRoot := "TC-App" in
       ignore (Sub.worlds cap g w goal)
 
   (* 9/21: special case added when trying to handle ANFed ifs *)
@@ -1683,11 +1695,13 @@ and tcExp_ g h goal = function
   | EAs(_,e,f) -> begin
       let w = applyFrame h f in
       tcExp g h w e;
+      Zzz.queryRoot := "TC-As";
       ignore (Sub.worlds "TC-EAs" g w goal)
     end
 
   | EAsW(_,e,w) -> begin
       tcExp g h w e;
+      Zzz.queryRoot := "TC-AsW";
       ignore (Sub.worlds "TC-EAsW" g w goal)
     end
 
@@ -1702,6 +1716,7 @@ and tcExp_ g h goal = function
   | EBreak(x,EVal(v)) -> begin
       let w = tsExp g h (EBreak(x,EVal(v))) in
       let cap = (spr "TC-Break: %s" x) in
+      Zzz.queryRoot := "TC-Break";
       ignore (Sub.worlds cap g w goal)
     end
 
@@ -1756,6 +1771,7 @@ let typecheck e =
   try begin
     ignore (tsExp g h e);
     Sub.writeCacheStats ();
+    Zzz.writeQueryStats ();
     let s = spr "OK! %d queries." !Zzz.queryCount in
     Log.log1 "\n%s\n" (Utils.greenString s);
     if not !Log.printToStdout then Printf.printf "\n%s\n" (Utils.greenString s);

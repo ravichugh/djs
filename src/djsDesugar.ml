@@ -1433,15 +1433,17 @@ and dsFor env breakL continueL test body incr frame =
 and dsForIn env breakL k obj body frame =
   let (hs,e1,(t2,e2)) = frame in
   let f = freshVar "forin" in
-  let loop () = mkApp f [EVal vUndef] in
+  let ek = eVar (dsVar k) in
+  let writeStr () = ESetref (ek, mkApp "randStr" [eStr "unitval"]) in
+  let loop () = mkApp f [eStr "unitval"] in
   let u = (([],[],hs), freshVar "dummy", tyAny, e1, t2, e2) in
   let body = ds env body in
   let fixloop =
     ParseUtils.mkLetRec f u
-      (EIf (objOp [] [] "hasElem" [ds env obj; EDeref (eVar (dsVar k))],
-            eSeq [body; loop ()],
+      (EIf (objOp [] [] "hasElem" [ds env obj; EDeref ek],
+            eSeq [body; writeStr (); loop ()],
             EVal vUndef))
-      (loop ()) in
+      (eSeq [writeStr (); loop ()]) in
   if StrSet.mem breakL !jumpedTo
   then ELabel (breakL, Some frame, fixloop)
   else fixloop

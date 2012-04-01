@@ -5,6 +5,10 @@ val emitPreamble : unit -> unit
 
 val queryCount : int ref
 
+val queryRoot : string ref
+
+val writeQueryStats : unit -> unit
+
 val doingExtract : bool ref
 
 val dump : ?nl:bool -> ?tab:bool -> string -> unit

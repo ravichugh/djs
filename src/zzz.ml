@@ -43,6 +43,24 @@ let popScope () =
   ()
 
 
+(***** Stats ******************************************************************)
+
+let queryRoot = ref "none"
+
+let queryRootCount = Hashtbl.create 17
+
+let incrQueryRootCount () =
+  let reason = !queryRoot in
+  let c = if Hashtbl.mem queryRootCount reason
+            then 1 + Hashtbl.find queryRootCount reason
+            else 1 in
+  Hashtbl.replace queryRootCount reason c
+
+let writeQueryStats () =
+  let oc = open_out (Settings.out_dir ^ "query-stats.txt") in
+  Hashtbl.iter (fun s i -> fpr oc "%-10s %10d\n" s i) queryRootCount
+
+
 (***** Querying ***************************************************************)
 
 (* prevents (check-sat) from being indented during flow queries *)
@@ -62,6 +80,7 @@ let checkSat cap =
   let b = if !doingCheckFlow then false else true in
   dump ~tab:b ~nl:false "(check-sat)";
   incr queryCount;
+  incrQueryRootCount ();
   let (s,b) = readSat () in
   dump ~tab:false (spr "; [%s] query %d (%s)" s !queryCount cap);
   b
