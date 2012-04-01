@@ -265,6 +265,7 @@ let mapExp fE e =
     | VBase(bv) -> VBase bv
     | VVar(x) -> VVar x
     | VEmpty -> VEmpty
+    | VNewObjRef(i) -> VNewObjRef i
     | VExtend(v1,v2,v3) -> VExtend (fooVal v1, fooVal v2, fooVal v3)
     | VArray(t,vs) -> VArray (t, List.map fooVal vs)
     | VFun(poly,x,inWorld,e) -> VFun (poly, x, inWorld, fooExp e)
@@ -453,7 +454,7 @@ let _ = (* the ids for these strings need to match theory.lisp *)
   assert (7 = getStringId tagObj);
   assert (8 = getStringId tagUndef);
   assert (9 = getStringId tagRef);
-  assert (10 = getStringId tagArray);
+  (* assert (10 = getStringId tagArray); *)
   ()
 
 (***** Boxes *****)
@@ -481,6 +482,13 @@ let idSkolems = Id.create ()
    (and binds them to variables first), then should not have to worry about
    substituting lambdas into types, and so logic should not have to worry
    about reasoning about function values. *)
+
+
+(***** ... *****)
+
+let newObjId =
+  let c = Utils.Counter.create () in
+  fun () -> Utils.Counter.next c
 
 
 (***** Printing to SMT-LIB-2 format *******************************************)
@@ -544,6 +552,7 @@ let rec strValue = function
   | VBase(c)    -> strBaseValue c
   | VVar(x)     -> x
   | VEmpty      -> "empty"
+  | VNewObjRef(i) -> spr "(VNewObjRef %d)" i
   | VFun _ as v -> spr "(VFun %d)" (Id.process idLamTerms v)
   | VExtend(v1,v2,v3) ->
       (* spr "(VExtend %s %s %s)" (strValue v1) (strValue v2) (strValue v3) *)
@@ -927,6 +936,7 @@ let rec freeVarsVal env = function
   | VBase _ -> Quad.empty
   | VVar(x) -> if Quad.memV x env then Quad.empty else Quad.addV x Quad.empty
   | VEmpty  -> Quad.empty
+  | VNewObjRef _ -> Quad.empty
   | VExtend(v1,v2,v3) ->
       Quad.combineList (List.map (freeVarsVal env) [v1;v2;v3])
   | VFun _ -> Quad.empty
@@ -1104,6 +1114,7 @@ let rec masterSubstWal subst = function
       if List.mem_assoc x sub then List.assoc x sub else WVal (VVar x)
   | WVal(VBase(x))       -> WVal (VBase x)
   | WVal(VEmpty)         -> WVal VEmpty
+  | WVal(VNewObjRef(i))  -> WVal (VNewObjRef i)
   | WVal(VExtend _ as v) -> WVal v
   | WVal(VFun _ as v)    -> WVal v
   (* TODO might need to recurse into lambdas, if they appear in formulas *)

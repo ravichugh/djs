@@ -1,6 +1,7 @@
 
 (***** DJS tag-test ***********************************************************)
 
+(*
 val js_typeof1 :: [[xx:{(or (= (tag v) "number")
                             (= (tag v) "boolean")
                             (= (tag v) "string")
@@ -12,6 +13,7 @@ val js_typeof2 :: [;Loc1,Loc2]
   [[_:Ref(Loc1)]] / [Loc1 |-> (_:Top, Loc2)] -> {(= v "object")} / same
 
 val js_typeof :: {(and (type js_typeof1) (type js_typeof2))}
+*)
 
 (* 3/19 stopgap for 2-counter. sensitive to order...
 val js_typeof3 :: [[x:Top]] -> {(= v (tag x))}
@@ -19,16 +21,18 @@ val js_typeof :: {(and (type js_typeof3) (type js_typeof1) (type js_typeof2))}
 *)
 
 
-(***** Full Objects / Arrays **************************************************)
+(***** Objects / Arrays *******************************************************)
 
 (**    [[ x.f    ]] = getProp ([[x]],  "f" )                                 **)
 (**    [[ x["f"] ]] = getProp ([[x]],  "f" )    where "f" is a SafeStr       **)
 (**    [[ x[i]   ]] = getIdx  ([[x]],   i  )    where i is an int literal    **)
 (**    [[ x[k]   ]] = getElem ([[x]], [[k]])    where k is anything else     **)
 
+(* TODO add v != bot to all primitives *)
+
 val getPropObj :: [; Loc1,Loc2; H]
      [[xx:(Ref(Loc1))?, kk:Str]] / [H ++ Loc1 |-> (dd:Dict, Loc2)]
-  -> {(and (not (= xx null))
+  -> {(and (not (= xx null)) (not (= v bot))
       (ite (objhas dd kk H Loc2) (= v (objsel dd kk H Loc2)) (= v undefined)))}
    / same
 

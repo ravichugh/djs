@@ -143,6 +143,7 @@ and checkValue errList g h v =
         (* else err (errList @ [spr "unbound variable: [%s]" x] @ envToStrings g) *)
         else err (errList @ [spr "unbound variable: [%s]" x])
     | VBase _ | VEmpty -> ()
+    | VNewObjRef _ -> ()
     | VExtend(v1,v2,v3) -> List.iter (checkValue errList g h) [v1;v2;v3]
     | VFun _ -> () (* not recursing, since lambdas don't appear in formulas *)
 

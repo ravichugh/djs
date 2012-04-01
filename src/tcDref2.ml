@@ -980,7 +980,10 @@ and tsExp_ g h = function
             let y = freshVar "new" in
             let t = tsVal g h v1 in
             let h' = (fst h, snd h @ [l1, HConcObj (y, t, l2)]) in
-            (TExists (y, t, tyRef l1), h')
+            (* (TExists (y, t, tyRef l1), h') *)
+            (* 4/1 *)
+            let wNewObj = WVal (VNewObjRef (newObjId ())) in
+            (TExists (y, t, THasTyp ([URef l1], eq theV wNewObj)), h')
           end
         | None, Some _ -> err [cap; spr "loc [%s] isn't a conc obj" (strLoc l2)]
         | None, None -> err [cap; spr "loc [%s] isn't bound" (strLoc l2)]

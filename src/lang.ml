@@ -21,7 +21,7 @@ type tag = string
 
 let tagDict  = "Dict"      (* for internal functional dictionaries *)
 let tagRef   = "Ref"       (* for internal references *)
-let tagArray = "Array"     (* for internal functional arrays *)
+(* let tagArray = "Array"     (* for internal functional arrays *) *)
 let tagNum   = "number"
 let tagBool  = "boolean"
 let tagStr   = "string"
@@ -92,6 +92,7 @@ and value =
   | VExtend of value * value * value
   | VArray of typ * value list (* TODO okay to drop typ? *)
   | VFun of (tvars * lvars * hvars) * vvar * (typ * heap) option * exp
+  | VNewObjRef of int
 
 and basevalue =
   | Int of int

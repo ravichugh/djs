@@ -31,6 +31,7 @@
          (undefined) ; added for DJS
          (VRef (VRefSel Int))
          ;(VArray (VArraySel Int))
+         (VNewObjRef (VNewObjRefSel Int)) ; 4/1
   )
 ))
 
@@ -68,7 +69,7 @@
 (assert (= TagObj   (VStr 7)))
 (assert (= TagUndef (VStr 8)))
 (assert (= TagRef   (VStr 9)))
-(assert (= TagArray (VStr 10)))
+; (assert (= TagArray (VStr 10)))
 
 ; NOTE: could define closed set of tags here ...
 
@@ -151,6 +152,9 @@
 
 ; 3/12
 (assert (forall (i Int) (= (tag (VRef i)) TagRef)))
+
+; 4/1
+(assert (forall (i Int) (= (tag (VNewObjRef i)) TagObj)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
