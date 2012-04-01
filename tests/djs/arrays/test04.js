@@ -16,10 +16,8 @@ var a = /*: lA Arr(Int) */ [0,1,2];
 /*: {(= v true)} */
 ("length" in /*: [Int;lA,lArrayProto] */ a);
 
-// TODO need to have syntactic rule to allow using prototype
-// /*: {(= v true)} */
-// ("push" in /*: [Int;lA,lArrayProto] */ a);
+/*: {(= v true)} */
+("push" in /*: [Int;lA,lArrayProto] */ a);
 
-// TODO need to have unrolling bottom out at lROOT to prove this
-// /*: {(= v false)} */
-// ("missing" in /*: [Int;lA,lArrayProto] */ a);
+/*: {(= v false)} */
+("missing" in /*: [Int;lA,lArrayProto] */ a);

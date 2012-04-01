@@ -1617,18 +1617,10 @@ let embedForm p = p |> embedForm1 |> embedObjSelsInsideOut
 
 (***** More stuff *************************************************************)
 
-(* TODO TODO TODO figure out why THasTyp version breaks typ inst *)
-
 let tyArrayTuple tInv ts extensible = 
   let p = if extensible then ge else eq in
-  ty (pAnd (
-    hastyp theV (UArray tInv)
-    :: packed theV :: p (arrlen theV) (wInt (List.length ts))
-    :: Utils.map_i (fun ti i -> applyTyp ti (sel theV (wInt i))) ts))
-(* TODO 3/12
   let ps =
     packed theV :: p (arrlen theV) (wInt (List.length ts))
     :: Utils.map_i (fun ti i -> applyTyp ti (sel theV (wInt i))) ts in
   THasTyp ([UArray tInv], pAnd ps)
-*)
 

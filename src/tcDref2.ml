@@ -565,6 +565,7 @@ let findActualFromRefValue g lVar tTup vTup =
             | [URef(lAct)] ->
                 let _ = fpr oc_local_inf "  %s |-> %s\n" lVar (strLoc lAct) in
                 Some lAct
+            (* 3/31 might want to check case with multiple ref terms *)
             | _ -> foo (i+1) ts
           end
     | _ :: ts -> foo (i+1) ts
@@ -617,6 +618,8 @@ let findArrayActual g tVar locSubst hForm hAct =
 *)
                     (match arrayTermsOf g (selfifyVar g a) with
                        | [UArray(t)] -> Some t
+                       (* 3/31 Arr({v|v != undef}) and Arr({v'|v' != undef}) *)
+                       | UArray(t)::_ -> Some t
                        | _           -> foo cs)
                 | HWeakTok _ ->
                     foo cs
