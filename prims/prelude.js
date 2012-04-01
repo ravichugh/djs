@@ -6,6 +6,14 @@ var undefined = /*: {(= v undefined)} */ "#extern";
 
 
 ////////////////////////////////////////////////////////////////////////////////
+//// for simplicity, modeling these constants imprecisely
+
+var NaN = /*: Num */ "#extern";
+var Infinity = /*: Num */ "#extern";
+// need to add -Infinity to parser
+
+
+////////////////////////////////////////////////////////////////////////////////
 //// Object.prototype
 
 var __ObjectProto_hasOwnProperty =

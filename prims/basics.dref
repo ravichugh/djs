@@ -32,7 +32,8 @@ val js_minus ::
   [[xx:Num, yy:Num]] -> {Num|(implies (and (integer xx) (integer yy))
                                       (and (= v (- xx yy)) (integer v)))}
 
-val js_uminus :: _:Int -> Int
+val js_uminus :: xx:Num
+              -> {Num|(implies (integer xx) (and (= v (- 0 xx)) (integer v)))}
 
 val js_mult :: [[xx:Num, yy:Num]] -> {Num|(implies (and (integer xx) (integer yy))
                                                    (integer v))}
