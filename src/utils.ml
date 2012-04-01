@@ -106,6 +106,11 @@ let longHeadShortTail = function
           (List.rev (List.tl lRev), List.hd lRev)
 
 
+let safeCombine cap l1 l2 =
+  if List.length l1 = List.length l2 then List.combine l1 l2
+  else failwith (Printf.sprintf "safeCombine: called from [%s]" cap)
+
+
 let stringMultiply s n sep =
   if n <= 0 then ""
   else String.concat sep (List.map (fun _ -> s) (list0N (pred n)))

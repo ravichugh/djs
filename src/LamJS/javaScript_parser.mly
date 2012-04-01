@@ -423,6 +423,11 @@ stmt :
       { HintStmt (($startpos, $endpos), $1,
                   ForStmt (($startpos, $endpos),$4,$6,$8,$10)) }
 
+  (* rkc 3/31 *)
+  | HINT For LParen forInInit In expr RParen stmt
+      { HintStmt (($startpos, $endpos), $1,
+                  ForInStmt (($startpos, $endpos),$4,$6,$8)) }
+
   | Break  Semi
       { BreakStmt (($startpos, $endpos)) }
   | BreakId Semi

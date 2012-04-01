@@ -1520,7 +1520,7 @@ let embedEqMod d1 d2 ks =
 
 let rec embedObjHas ds k (hs,cs) l =
   if cs <> [] then
-    failwith (spr "embedObjHas: constraints should've been expanded:\n\n%s"
+    kill (spr "embedObjHas: constraints should've been expanded:\n\n%s"
       (prettyStrForm (PObjHas(ds,k,(hs,cs),l))));
   let ps = List.map (fun d -> embedHas d [k]) ds in
   if l = lRoot then

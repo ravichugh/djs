@@ -564,7 +564,8 @@ heap :
  | LBRACK l1=tvars PLUSPLUS l2=heapcells RBRACK  { (l1,l2) }
  | h=TVAR                                        { ([h],[]) }
  (* TODO generalize to multiple weaklocs *)
- | LBRACK wl=weakloc_ PLUSPLUS hcl=heapcells RBRACK { Log.printParseErr "good" }
+ | LBRACK wl=weakloc_ PLUSPLUS hcl=heapcells RBRACK
+     { Log.printParseErr "need arrows to abstract over weak heaps" }
 
 rheap :
  | LBRACK RBRACK                                 { ([],[]) }

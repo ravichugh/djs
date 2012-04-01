@@ -1336,8 +1336,8 @@ and tsELetAppTryBoxes cap g curHeap (tActs,lActs,hActs) v1 v2 boxes =
        | None    -> ()
        | Some(l) -> err [cap; spr "duplicate loc arg: %s" (strLoc l)]
     );
-    let tSubst = List.combine tForms tActs in
-    let lSubst = List.combine lForms lActs in
+    let tSubst = Utils.safeCombine "app tSubst" tForms tActs in
+    let lSubst = Utils.safeCombine "app lSubst" lForms lActs in
 
     (* instantiate input world with poly args *)
     let (t11,e11) =
@@ -1359,7 +1359,7 @@ and tsELetAppTryBoxes cap g curHeap (tActs,lActs,hActs) v1 v2 boxes =
        actual for all occurrences in the output heap *)
 
     checkLength "heap" hForms hActs;
-    let hSubst = List.combine hForms hActs in
+    let hSubst = Utils.safeCombine "app hSubst" hForms hActs in
 
     (* Log.log1 "t11 0 [%s]\n" (prettyStrTyp t11); *)
 
@@ -1401,7 +1401,7 @@ and tsELetAppTryBoxes cap g curHeap (tActs,lActs,hActs) v1 v2 boxes =
         | []  -> ([], ([],[]))
         | _   -> failwith "app: >1 heap arg nyi"
     in
-    let hSubst = List.combine hForms [hAct] in
+    let hSubst = Utils.safeCombine "app hSubst 2" hForms [hAct] in
 
     let (nFromHInst,g) =
       List.fold_left (fun (n,g) (x,t) ->

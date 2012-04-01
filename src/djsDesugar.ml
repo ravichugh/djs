@@ -62,6 +62,7 @@ let rec foo curFunc lexScope varScope = function
   | E.HintExpr (_, _, e) -> foo curFunc lexScope varScope e
   | E.BracketExpr (_, e1, e2)
   | E.InfixExpr (_, _, e1, e2) -> fooFold curFunc lexScope varScope [e1;e2]
+  (* 3/31 TODO need to add k into scope *)
   | E.ForInExpr (_, _, e1, e2)
   | E.WhileExpr (_, e1, e2)
   | E.DoWhileExpr (_, e1, e2) ->
@@ -1094,7 +1095,16 @@ let rec ds (env:env) = function
   | E.DoWhileExpr _ ->
       Log.printParseErr "EJS always wraps while and do/while with %break label"
 
-  | E.ForInExpr _ -> failwith "forin"
+  | E.HintExpr (_, s, E.SeqExpr (_,
+      init_e,
+      E.LabelledExpr (_, bl, E.SeqExpr (_,
+        E.ForInExpr (_, k, obj, E.LabelledExpr (_, cl, body)),
+        E.ConstExpr (_, J.CUndefined)))))
+          when isBreakLabel bl && isContLabel cl ->
+      if StrSet.mem cl !jumpedTo then failwith "forin has continue"
+      else eSeq [ds env init_e; dsForIn env bl k obj body (parseWhile s)]
+
+  | E.ForInExpr (p, x, obj, body) -> failwith "forin"
 
 (*
   | ForInExpr (p, x, obj, body) ->
@@ -1414,6 +1424,22 @@ and dsFor env breakL continueL test body incr frame =
     ParseUtils.mkLetRec f u
       (EIf (ds env test,
             eSeq [body; ds env incr; loop ()],
+            EVal vUndef))
+      (loop ()) in
+  if StrSet.mem breakL !jumpedTo
+  then ELabel (breakL, Some frame, fixloop)
+  else fixloop
+
+and dsForIn env breakL k obj body frame =
+  let (hs,e1,(t2,e2)) = frame in
+  let f = freshVar "forin" in
+  let loop () = mkApp f [EVal vUndef] in
+  let u = (([],[],hs), freshVar "dummy", tyAny, e1, t2, e2) in
+  let body = ds env body in
+  let fixloop =
+    ParseUtils.mkLetRec f u
+      (EIf (objOp [] [] "hasElem" [ds env obj; EDeref (eVar (dsVar k))],
+            eSeq [body; loop ()],
             EVal vUndef))
       (loop ()) in
   if StrSet.mem breakL !jumpedTo
