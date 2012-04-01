@@ -1746,6 +1746,15 @@ and tcExp_ g h goal = function
 
 (***** Entry point ************************************************************)
 
+let assertIntegerness e =
+  (* TODO might want to also walk inside the types inside expressions, which
+     foldExp currently doesn't do *)
+  let fE acc = function EBase(Int(i)) -> Utils.IntSet.add i acc | _ -> acc in
+  let fV acc = function VBase(Int(i)) -> Utils.IntSet.add i acc | _ -> acc in
+  let ints = foldExp fE fV Utils.IntSet.empty e in
+  Utils.IntSet.iter (fun i -> Zzz.assertFormula (integer (wInt i))) ints;
+  ()
+
 let addSkolems g =
   let n = Utils.IdTable.size idSkolems in
   let rec foo acc i =
@@ -1770,6 +1779,7 @@ let initialEnvs () =
     (g, h)
 
 let typecheck e =
+  assertIntegerness e;
   let (g,h) = initialEnvs () in
   try begin
     ignore (tsExp g h e);

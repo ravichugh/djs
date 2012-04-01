@@ -272,6 +272,51 @@ let mapExp fE e =
   in fooExp e
 
 
+(***** Fold Exp ***************************************************************)
+
+let foldExp fE fV init e =
+  let rec fooExp acc exp = match exp with
+    | EVal(v) -> fE (fooVal acc v) exp
+    | EBase(bv) -> fE acc exp
+    | EVar(x) -> fE acc exp
+    | EDict(es) ->
+        let acc = List.fold_left
+                    (fun acc (e1,e2) -> fooExp (fooExp acc e1) e2) acc es in
+        fE acc exp
+    | EArray(t,es) -> fE (List.fold_left fooExp acc es) exp
+    | EFun(poly,x,inWorld,e) -> fE (fooExp acc e) exp
+    | EIf(e1,e2,e3) -> fE (List.fold_left fooExp acc [e1;e2;e3]) exp
+    | EApp(poly,e1,e2) -> fE (List.fold_left fooExp acc [e1;e2]) exp
+    | ELet(x,fo,e1,e2) -> fE (List.fold_left fooExp acc [e1;e2]) exp
+    | EExtern(x,t,e) -> fE (fooExp acc e) exp
+    | ETcFail(s,e) -> fE (fooExp acc e) exp
+    | EAs(s,e,f) -> fE (fooExp acc e) exp
+    | EAsW(s,e,w) -> fE (fooExp acc e) exp
+    | ENewref(l,e) -> fE (fooExp acc e) exp
+    | EDeref(e) -> fE (fooExp acc e) exp
+    | ESetref(e1,e2) -> fE (List.fold_left fooExp acc [e1;e2]) exp
+    | EFreeze(l,x,e) -> fE (fooExp acc e) exp
+    | EThaw(l,e) -> fE (fooExp acc e) exp
+    | EWeak(l,e) -> fE (fooExp acc e) exp
+    | ELabel(l,fo,e) -> fE (fooExp acc e) exp
+    | EBreak(l,e) -> fE (fooExp acc e) exp
+    | EThrow(e) -> fE (fooExp acc e) exp
+    | ETryCatch(e1,x,e2) -> fE (List.fold_left fooExp acc [e1;e2]) exp
+    | ETryFinally(e1,e2) -> fE (List.fold_left fooExp acc [e1;e2]) exp
+    | ENewObj(e1,l1,e2,l2) -> fE (List.fold_left fooExp acc [e1;e2]) exp
+    | ELoadSrc(s,e) -> fE (fooExp acc e) exp
+    | ELoadedSrc(s,e) -> fE (fooExp acc e) exp
+  and fooVal acc value = match value with
+    | VBase(bv) -> fV acc value
+    | VVar(x) -> fV acc value
+    | VEmpty -> fV acc value
+    | VNewObjRef(i) -> fV acc value
+    | VExtend(v1,v2,v3) -> fV (List.fold_left fooVal acc [v1;v2;v3]) value
+    | VArray(t,vs) -> fV (List.fold_left fooVal acc vs) value
+    | VFun(poly,x,inWorld,e) -> fV (fooExp acc e) value
+  in fooExp init e
+
+
 (***** Helpers for Abstract Syntax Programming ********************************)
 
 let tag w         = WApp ("tag", [w])

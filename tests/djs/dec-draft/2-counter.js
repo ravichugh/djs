@@ -1,4 +1,4 @@
-/*: #define ty_toNum [[x:Top]] -> Int */ '#define';
+/*: #define ty_toNum [[x:Top]] -> Num */ '#define';
 
 var toNum = function(x) /*: ty_toNum */ {
   if (typeof(x) == "number")       { return x; }
@@ -9,7 +9,7 @@ var toNum = function(x) /*: ty_toNum */ {
 /*: #define ty_getCount
     [;Lt,Ltp;] [[t:Ref(Lt), c:Str]]
              / [Lt |-> (_:Dict, Ltp), &toNum |-> _:ty_toNum]
-            -> Int / same */ '#define';
+            -> Num / same */ '#define';
 
 var getCount = function(t,c) /*: ty_getCount */ {
   if (c in t) {
@@ -25,7 +25,7 @@ var getCount = function(t,c) /*: ty_getCount */ {
                 &toNum |-> blah1:ty_toNum,
                 &getCount |-> blah2:ty_getCount]
             -> Top
-             / [Lt |-> (_:{(and (eqmod v dt {c}) ((sel v c) : Int))}, Ltp),
+             / [Lt |-> (_:{(and (eqmod v dt {c}) ((sel v c) : Num))}, Ltp),
                 &toNum |-> same,
                 &getCount |-> same] */ "#define";
 

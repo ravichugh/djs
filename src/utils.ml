@@ -12,6 +12,10 @@ module StrSet =
   Set.Make (struct type t = string let compare = compare end)
 
 
+module IntSet =
+  Set.Make (struct type t = int let compare = compare end)
+
+
 (* TODO this only works well with strings that have no newlines *)
 let clipLeadingWhitespace s =
   if Str.string_match (Str.regexp "^[ ]*\\(.*\\)*$") s 0 then

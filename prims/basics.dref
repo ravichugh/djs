@@ -51,14 +51,21 @@ val js_eek :: (* == *)
 val js_threek :: (* === *)
   [[xx:Top, yy:{(= (tag v) (tag xx))}]] -> {Bool|(iff (= v true) (= xx yy))}
 
-(* TODO for eek and threek, might need to special case numbers and only
-   have equality for integers. might need to special case reference
-   values also. *)
+val js_lt :: [[xx:Num, yy:Num]]
+          -> {Bool|(implies (and (integer xx) (integer yy))
+                            (iff (= v true) (< xx yy)))}
 
-val js_lt :: [[xx:Int, yy:Int]] -> {Bool|(iff (= v true) (< xx yy))}
-val js_le :: [[xx:Int, yy:Int]] -> {Bool|(iff (= v true) (<= xx yy))}
-val js_gt :: [[xx:Int, yy:Int]] -> {Bool|(iff (= v true) (> xx yy))}
-val js_ge :: [[xx:Int, yy:Int]] -> {Bool|(iff (= v true) (>= xx yy))}
+val js_le :: [[xx:Num, yy:Num]]
+          -> {Bool|(implies (and (integer xx) (integer yy))
+                            (iff (= v true) (<= xx yy)))}
+
+val js_gt :: [[xx:Num, yy:Num]]
+          -> {Bool|(implies (and (integer xx) (integer yy))
+                            (iff (= v true) (> xx yy)))}
+
+val js_ge :: [[xx:Num, yy:Num]]
+          -> {Bool|(implies (and (integer xx) (integer yy))
+                            (iff (= v true) (>= xx yy)))}
 
 
 (***** recursion **************************************************************)

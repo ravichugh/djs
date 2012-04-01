@@ -2,7 +2,7 @@ var x = /*: lx */ {f:1, g:true};
 var k;
 var sum = 0;
 
-/*: [&sum |-> _:Int,
+/*: [&sum |-> _:Num,
      &x   |-> _:Ref(lx),
      &k   |-> _:Str,
      lx   |-> (_:Dict, lObjectProto)] -> sameType */

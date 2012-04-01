@@ -51,6 +51,8 @@ val foldForm : ('a -> formula -> 'a) -> 'a -> typ -> 'a
 
 val mapExp : (exp -> exp) -> exp -> exp
 
+val foldExp : ('a -> exp -> 'a) -> ('a -> value -> 'a) -> 'a -> exp -> 'a
+
 
 (***** Helpers for Abstract Syntax Programming ********************************)
 

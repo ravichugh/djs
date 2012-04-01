@@ -826,6 +826,8 @@ let rec ds (env:env) = function
           | "*"   -> "js_mult"
           | "=="  -> "js_eek"
           | "===" -> "js_threek"
+          | ">"   -> "js_gt"
+          | ">="  -> "js_ge"
           | "<="  -> "js_le"
           | "<"   -> "js_lt"
           | "&&"  -> "js_and"

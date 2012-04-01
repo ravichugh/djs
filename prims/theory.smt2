@@ -54,14 +54,14 @@
 
 (declare-fun tag (DVal) DVal)
 (declare-funs
-  ((TagInt DVal) (TagBool DVal) (TagStr DVal) (TagDict DVal)
+  ((TagNum DVal) (TagBool DVal) (TagStr DVal) (TagDict DVal)
    (TagFun DVal) (TagBot DVal)
    (TagObj DVal) (TagUndef DVal)
    (TagRef DVal) (TagArray DVal)))
 
 ; these ids have to match idStrings table in langUtils.ml
 (assert (= TagDict  (VStr 1)))
-(assert (= TagInt   (VStr 2)))
+(assert (= TagNum   (VStr 2)))
 (assert (= TagBool  (VStr 3)))
 (assert (= TagStr   (VStr 4)))
 (assert (= TagFun   (VStr 5)))
@@ -97,11 +97,12 @@
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;; source-level integers
+;;;;; source-level numbers
 ;;;;;
 
-(assert (forall (i Int) (= (tag (VInt i)) TagInt)))
-(assert (forall (i Int) (integer (VInt i))))
+(assert (forall (i Int) (= (tag (VInt i)) TagNum)))
+; 4/1 removed this, because don't want the skolemized ones to be integer
+;(assert (forall (i Int) (integer (VInt i))))
 
 ; TODO 9/24 added wrappers around arithmetic operators
 ; TODO once these symbols aren't even mentioned when not using integer
