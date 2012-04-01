@@ -20,10 +20,14 @@ function TreeNode(left,right,item)
   return self;
 };
 
-var tree = new (/*: [;l;] lTreeNodeProto */ TreeNode)(null, null, 10);
+////////////////////////////////////////////////////////////////////////////////
 
-/*: tree lThwd1 */ "#thaw";
+var tree1 = new (/*: [;lTree1;] lTreeNodeProto */ TreeNode)(null, null, 10);
+var tree2 = new (/*: [;lTree2;] lTreeNodeProto */ TreeNode)(null, null, 20);
+var tree3 = new (/*: [;lTree2;] lTreeNodeProto */ TreeNode)(tree1, tree2, 30);
 
-var i = tree.item;
+/*: tree1 lThwd1 */ "#thaw";
+
+var i = tree1.item;
 
 assert (/*: Int */ i);
