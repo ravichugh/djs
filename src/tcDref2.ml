@@ -338,6 +338,76 @@ let arrowTermsOf g t =
         TypeTerms.elements (Sub.mustFlow g t ~filter)
 
 
+(**** Join for T-If ***********************************************************)
+
+let stripExists t =
+  let rec foo acc = function
+    | TExists(x,t,s) -> foo ((x,t)::acc) s
+    | s              -> (acc, s)
+  in
+  let (l,s) = foo [] t in
+  (List.rev l, s)
+
+let heapBindings cs =
+  List.fold_left
+     (fun acc -> function
+        | (_,HConc(y,t)) | (_,HConcObj(y,t,_)) -> (y,t)::acc
+        | (_,HWeakTok _) -> acc
+     ) [] cs
+
+let joinHeaps v heap1 heap2 =
+  if heap1 = heap2 then (heapBindings (snd heap1), heap1)
+  else if heap1 = botHeap then (heapBindings (snd heap2), heap2)
+  else if heap2 = botHeap then (heapBindings (snd heap1), heap1)
+  else begin
+    let hs = List.filter (fun h -> List.mem h (fst heap2)) (fst heap1) in
+    let l12 = heapBindings (snd heap1) @ heapBindings (snd heap2) in
+    let (l3,cs) =
+      List.fold_left (fun (acc1,acc2) (loc,hc) ->
+        match hc, findHeapCell loc heap2 with
+          | HConc(x1,_), Some(HConc(x2,_)) ->
+              let x = freshVar "join" in
+              let t = ty (pIte (pGuard v true)
+                         (eq theV (wVar x1))
+                         (eq theV (wVar x2))) in
+              ((x,t)::acc1, (loc,HConc(x,t))::acc2)
+          | HConcObj(x1,_,loc'), Some(HConcObj(x2,_,loc'')) when loc' = loc'' ->
+              let x = freshVar "join" in
+              let t = ty (pIte (pGuard v true)
+                         (eq theV (wVar x1))
+                         (eq theV (wVar x2))) in
+              ((x,t)::acc1, (loc,HConcObj(x,t,loc'))::acc2)
+          | _ ->
+              (acc1, acc2)
+      ) ([],[]) (snd heap1)
+    in
+    (l12@l3, (hs,cs))
+  end
+
+let joinTypes v t1 t2 =
+  let (l1,s1) = stripExists t1 in
+  let (l2,s2) = stripExists t2 in
+  let x = freshVar "_ret_if" in
+  let p = pIte (pGuard v true) (applyTyp s1 (wVar x)) (applyTyp s2 (wVar x)) in
+  (l1 @ l2, TRefinement(x,p))
+
+(* 3/31 *)
+let joinWorlds v (t1,heap1) (t2,heap2) =
+  let (l1,s) = joinTypes v t1 t2 in
+  let (l2,h) = joinHeaps v heap1 heap2 in
+  (mkExists s (l1 @ l2), h)
+
+(*
+let joinWorlds v w1 w2 =
+  let w = joinWorlds v w1 w2 in
+  Log.log0 "joinWorlds\n\n";
+  Log.log1 "%s\n\n" (prettyStr strWorld w1);
+  Log.log1 "%s\n\n" (prettyStr strWorld w2);
+  Log.log1 "%s\n\n" (prettyStr strWorld w);
+  w
+*)
+  
+
 (***** TC helpers *************************************************************)
 
 let applyFrame hAct (ls,h1,(t2,h2)) =
@@ -959,6 +1029,9 @@ and tsExp_ g h = function
       Zzz.pushForm (pFalsy (WVal v));
       let (s2,h2) = tsExp g h e2 in (* same g, since no new bindings *)
       Zzz.popForm ();
+      (* 3/31 *)
+      joinWorlds v (s1,h1) (s2,h2)
+(*
       (* TODO better join for heaps *)
       let h12 = Sub.simpleHeapJoin v h1 h2 in
       let x = freshVar "_ret_if" in
@@ -981,6 +1054,7 @@ and tsExp_ g h = function
              | (_,HWeakTok _) -> acc
           ) [] (snd h12) in
       (mkExists t (List.rev heapbindings), h12)
+*)
     end
 
   | EExtern(x,s,e) -> begin

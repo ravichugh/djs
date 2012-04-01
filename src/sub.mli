@@ -11,9 +11,7 @@ val meetAll : TypeTerms.t -> typterm option
 
 val joinAll : TypeTerms.t -> typterm option
 
-(* TODO *)
-
-val simpleHeapJoin : value -> heap -> heap -> heap
+(* val simpleHeapJoin : value -> heap -> heap -> heap *)
 
 (***** Extraction *************************************************************)
 

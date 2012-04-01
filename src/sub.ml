@@ -149,6 +149,7 @@ let canFlow_ usedBoxes ?filter:(f=(fun _ -> true)) g t =
 
 (***** Heap Manipulation ******************************************************)
 
+(*
 let simpleHeapJoin v h1 h2 =
   if h1 = h2 then h1
   (* TODO added 12/1 *)
@@ -175,6 +176,7 @@ let simpleHeapJoin v h1 h2 =
   Log.log1 "  %s\n" (prettyStrHeap h2);
   Log.log1 "  %s\n" (prettyStrHeap h);
   h
+*)
 
 
 (* TODO for now, copied and simplified from TcDref *)
