@@ -34,7 +34,12 @@ for top, _, files in os.walk(djsdir + benchdir):
         bench = re.sub("-","",bench)
         f = os.path.join(top, nm)
         tBegin = time.time()
-        os.system("./system-d -djs -fast %s > /dev/null" % (f))
+        # TODO the no-false-check optimization breaks on typeOf right now, so run
+        # it in the slower mode
+        if bench == 'typeOf':
+            os.system("./system-d -djs -fast %s -doFalseChecks > /dev/null" % (f))
+        else:
+            os.system("./system-d -djs -fast %s > /dev/null" % (f))
         tDiff = time.time() - tBegin
         numQueriesFile = open(djsdir + '/src/out/num-queries.txt')
         try:

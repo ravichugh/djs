@@ -40,6 +40,8 @@ let argSpecs = [
           "          use theory of linear arithmetic");
   ("-tryAllBoxes", Arg.Set S.tryAllBoxesHack,
         "            try all boxes, in case typeTerms misses some");
+  ("-doFalseChecks", Arg.Set S.doFalseChecks,
+        "            do false checks, which is a _de-optimization_");
   ("-djsLite", Arg.Set S.djsMode,
         "            Dependent JavaScript (simple dictionaries)");
   ("-djs", Arg.Unit (fun () -> S.djsMode := true; S.fullObjects := true),

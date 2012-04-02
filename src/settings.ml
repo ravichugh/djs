@@ -16,6 +16,7 @@ let printAllTypes = ref false
 let useTheoryLA = ref true
 let marshalOutEnv = ref false
 let marshalInEnv = ref false
+let doFalseChecks = ref false
 
 let tryAllBoxesHack = ref false
 

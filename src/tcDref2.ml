@@ -828,24 +828,22 @@ let inferTypLocParams cap g tForms lForms tForm hForm tActs lActs vAct hAct =
 
 let initHeapSet = ref false
 
-let checkFalse = false
-
 (***** Initial trivial checks *****)
 
 let rec tsVal g h e =
-  if checkFalse && Zzz.falseIsProvable "tsVal" then tyFls
+  if !Settings.doFalseChecks && Zzz.falseIsProvable "tsVal" then tyFls
   else tsVal_ g h e
 
 and tsExp g h e =
-  if checkFalse && Zzz.falseIsProvable "tsExp" then (tyFls, botHeap)
+  if !Settings.doFalseChecks && Zzz.falseIsProvable "tsExp" then (tyFls, botHeap)
   else tsExp_ g h e
 
 and tcVal g h s e =
-  if checkFalse && Zzz.falseIsProvable "tcVal" then ()
+  if !Settings.doFalseChecks && Zzz.falseIsProvable "tcVal" then ()
   else tcVal_ g h s e
 
 and tcExp g h w e =
-  if checkFalse && Zzz.falseIsProvable "tcExp" then ()
+  if !Settings.doFalseChecks && Zzz.falseIsProvable "tcExp" then ()
   else tcExp_ g h w e
 
 
