@@ -1,6 +1,6 @@
 #!/usr/bin/python
 #
-# Running                            ./gen-benchmark-table.py
+# Running                            ./gen-benchmark-linecounts.py
 # produces an intermediate file in   $DJS_DIR/src/out/bench.out
 # and a bunch of LaTeX macros in     $DJS_DIR/src/out/linecounts.tex
 #

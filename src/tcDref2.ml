@@ -1781,6 +1781,7 @@ let initialEnvs () =
     (g, h)
 
 let typecheck e =
+  let oc_num_q = open_out (Settings.out_dir ^ "num-queries.txt") in
   assertIntegerness e;
   let (g,h) = initialEnvs () in
   try begin
@@ -1788,6 +1789,7 @@ let typecheck e =
     Sub.writeCacheStats ();
     Zzz.writeQueryStats ();
     let s = spr "OK! %d queries." !Zzz.queryCount in
+    fpr oc_num_q "%d" !Zzz.queryCount;
     Log.log1 "\n%s\n" (Utils.greenString s);
     if not !Log.printToStdout then Printf.printf "\n%s\n" (Utils.greenString s);
   end with Tc_error(s) ->

@@ -1,0 +1,38 @@
+#!/usr/bin/python
+#
+# Requires that djs writes the number of Z3 queries in out/num-queries.txt
+
+import os, re, sys, time, math
+
+benchdir = '/tests/apr-benchmarks/v0'
+djsdir = os.getenv('DJS_DIR')
+latexfile = '/src/out/runningtime.tex'
+
+def nearestInt(f):
+    if f - math.floor(f) < 0.5: i = int(math.floor(f))
+    else: i = int(math.ceil(f))
+    if i == 0: return 1
+    return i
+
+oc = open(djsdir + latexfile, 'w+')
+for top, _, files in os.walk(djsdir + benchdir):
+    for nm in files:       
+        bench = re.sub("[.]js", "", nm)
+        bench = bench.strip()
+        # LaTeX macros don't like '-' characters, so remove them
+        bench = re.sub("-","",bench)
+        f = os.path.join(top, nm)
+        tBegin = time.time()
+        os.system("./system-d -djs -fast %s > /dev/null" % (f))
+        tDiff = time.time() - tBegin
+        numQueriesFile = open(djsdir + '/src/out/num-queries.txt')
+        try:
+            numQueries = int(numQueriesFile.readline())
+        except:
+            numQueries = -1
+        iTime = nearestInt(tDiff)
+        oc.write('\\newcommand{\\benchQueries%s}{%d}\n' % (bench, numQueries))
+        oc.write('\\newcommand{\\benchTime%s}{%d}\n' % (bench, iTime))
+        oc.flush()
+        print bench, numQueries, nearestInt(tDiff)
+
