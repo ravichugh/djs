@@ -612,10 +612,10 @@ heapcell :
  | l=loc MAPSTO x=thawstate { (l,HWeakTok(x)) }
 
 rheapcell :
- | heapcell           { $1 }
- | l=loc MAPSTO SAME  { (l, sameCell true l) }
- | l=loc MAPSTO SAME_EXACT  { Log.printParseErr "todo sameExact" }
- | l=loc MAPSTO SAME_TYPE   { Log.printParseErr "todo sameType" }
+ | heapcell                 { $1 }
+ | l=loc MAPSTO SAME        { (l, sameCell true l) }
+ | l=loc MAPSTO SAME_EXACT  { (l, sameCell true l) }
+ | l=loc MAPSTO SAME_TYPE   { (l, sameCell false l) }
  (* TODO add weak obj *)
 
 weakloc :
