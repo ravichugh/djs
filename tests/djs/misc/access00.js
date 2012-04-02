@@ -30,6 +30,8 @@ function Body(x,y,z,vx,vy,vz,mass) /*: new ctorBody */ {
    return this;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
 /*: #define tyOffsetMomentum
     [;L] [[this:Ref(L), px:Num, py:Num, pz:Num]]
        / [L |-> (_:tyBody, lBodyProto), &SOLAR_MASS |-> _:Num]
@@ -41,4 +43,3 @@ Body.prototype.offsetMomentum = function(px,py,pz) /*: tyOffsetMomentum */ {
    this.vz = -pz / SOLAR_MASS;
    return this;
 };
-

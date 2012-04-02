@@ -826,22 +826,24 @@ let inferTypLocParams cap g tForms lForms tForm hForm tActs lActs vAct hAct =
 
 let initHeapSet = ref false
 
+let checkFalse = false
+
 (***** Initial trivial checks *****)
 
 let rec tsVal g h e =
-  if Zzz.falseIsProvable "tsVal" then tyFls
+  if checkFalse && Zzz.falseIsProvable "tsVal" then tyFls
   else tsVal_ g h e
 
 and tsExp g h e =
-  if Zzz.falseIsProvable "tsExp" then (tyFls, botHeap)
+  if checkFalse && Zzz.falseIsProvable "tsExp" then (tyFls, botHeap)
   else tsExp_ g h e
 
 and tcVal g h s e =
-  if Zzz.falseIsProvable "tcVal" then ()
+  if checkFalse && Zzz.falseIsProvable "tcVal" then ()
   else tcVal_ g h s e
 
 and tcExp g h w e =
-  if Zzz.falseIsProvable "tcExp" then ()
+  if checkFalse && Zzz.falseIsProvable "tcExp" then ()
   else tcExp_ g h w e
 
 
@@ -1022,6 +1024,7 @@ and tsExp_ g h = function
     end
 
   | EIf(EVal(v),e1,e2) -> begin 
+      (* TODO check if false is provable? *)
       (* tcVal g h tyBool v; *)
       tcVal g h tyAny v;
       (* Zzz.pushForm (pGuard v true); *)
@@ -1669,6 +1672,7 @@ and tcExp_ g h goal = function
     end
 
   | EIf(EVal(v),e1,e2) -> begin
+      (* TODO check if false is provable? *)
       (* tcVal g h tyBool v; *)
       (* Zzz.pushForm (pGuard v true); *)
       tcVal g h tyAny v;

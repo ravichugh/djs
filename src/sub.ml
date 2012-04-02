@@ -333,7 +333,7 @@ and checkFormula errList usedBoxes g p =
 (* small optimization: qForm is qs lifted to a formula, since qForm is
    already computed by checkFormula for printing purposes *)
 and checkUnPreds errList usedBoxes g (qs,qForm) =
-  if Zzz.checkValid "" qForm then ()
+  if Zzz.checkValid "I-Valid" qForm then ()
   else if List.exists (checkUnPred errList usedBoxes g) qs then ()
   else err (errList @ ["Cannot discharge this clause."])
 

@@ -614,7 +614,8 @@ heapcell :
 rheapcell :
  | heapcell           { $1 }
  | l=loc MAPSTO SAME  { (l, sameCell true l) }
- (* TODO add same token sugar back in here *)
+ | l=loc MAPSTO SAME_EXACT  { Log.printParseErr "todo sameExact" }
+ | l=loc MAPSTO SAME_TYPE   { Log.printParseErr "todo sameType" }
  (* TODO add weak obj *)
 
 weakloc :
