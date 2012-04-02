@@ -69,7 +69,6 @@ SplayTree.Node.prototype.traverse_ = function traverse_()
     var left = current.left;
     /*: current (~lNode, thwd lThaw2) */ "#freeze";
 
-    // TODO need better heap join
     if (left) traverse_.apply(left);
 
     /*: current lThaw3 */ "#thaw";

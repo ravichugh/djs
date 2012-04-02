@@ -377,6 +377,8 @@ let joinHeaps v heap1 heap2 =
                          (eq theV (wVar x1))
                          (eq theV (wVar x2))) in
               ((x,t)::acc1, (loc,HConcObj(x,t,loc'))::acc2)
+          | HWeakTok(ts1), Some(HWeakTok(ts2)) when ts1 = ts2 ->
+              (acc1, (loc,HWeakTok(ts1))::acc2)
           | _ ->
               (acc1, acc2)
       ) ([],[]) (snd heap1)
