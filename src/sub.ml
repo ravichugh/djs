@@ -100,6 +100,7 @@ let mustFlow_ usedBoxes ?filter:(f=(fun _ -> true)) g t =
   let boxes = TypeTerms.filter f boxes in
   (* let boxes = TypeTerms.add UNull boxes in (* 3/15 *) *)
   let x = setUpExtract t usedBoxes in
+(*
   let extracted =
     TypeTerms.fold
       (fun ut acc ->
@@ -108,6 +109,19 @@ let mustFlow_ usedBoxes ?filter:(f=(fun _ -> true)) g t =
            else acc)
       boxes
       TypeTerms.empty
+  in
+*)
+  (* 4/1: once a Ref term is extracted, don't try any more *)
+  let (_,extracted) =
+    TypeTerms.fold
+      (fun ut (stop,acc) ->
+         if not stop && Zzz.checkValid "mustFlow" (hastyp (wVar x) ut) then
+           let stop = match ut with URef _ -> true | _ -> false in
+           (stop, TypeTerms.add ut acc)
+         else
+           (stop, acc))
+      boxes
+      (false, TypeTerms.empty)
   in
   tearDownExtract ();
   let il = boxNumbers extracted in

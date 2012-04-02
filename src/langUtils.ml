@@ -234,8 +234,6 @@ let foldTT fTT init t =
 let mapExp fE e =
   let rec fooExp = function
     | EVal(v) -> fE (EVal (fooVal v))
-    | EBase(bv) -> fE (EBase bv)
-    | EVar(x) -> fE (EVar x)
     | EDict(es) ->
         fE (EDict (List.map (fun (e1,e2) -> (fooExp e1, fooExp e2)) es))
     | EArray(t,es) -> fE (EArray (t, List.map fooExp es))
@@ -277,8 +275,6 @@ let mapExp fE e =
 let foldExp fE fV init e =
   let rec fooExp acc exp = match exp with
     | EVal(v) -> fE (fooVal acc v) exp
-    | EBase(bv) -> fE acc exp
-    | EVar(x) -> fE acc exp
     | EDict(es) ->
         let acc = List.fold_left
                     (fun acc (e1,e2) -> fooExp (fooExp acc e1) e2) acc es in

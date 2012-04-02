@@ -2,7 +2,8 @@
 /*: [~lTreeNode |-> (tyTreeNode, lTreeNodeProto)] */ "#weak";
 
 /*: #define tyTreeNode
-    {Dict|(and ((sel v "item"):Int)
+    {Dict|(and (dom v {"item","left","right"})
+               ((sel v "item"):Int)
                ((sel v "left"):Ref(~lTreeNode))
                ((sel v "right"):Ref(~lTreeNode)))} */ "#define";
 

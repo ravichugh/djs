@@ -51,9 +51,7 @@ type pat =
 
 type exp =
   (***** core expressions *****)
-  | EVal of value (* these get created by ANFer, not the parser *)
-  | EBase of basevalue
-  | EVar of vvar
+  | EVal of value
   | EDict of (exp * exp) list
   | EArray of typ * exp list
   | EFun of (tvars * lvars * hvars) * vvar * (typ * heap) option * exp

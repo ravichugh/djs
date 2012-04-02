@@ -37,8 +37,6 @@ let finish (l,e) =
 
 let rec anf = function
   | EVal(w) -> ([], EVal w)
-  | EBase(c) -> ([], EVal (VBase c))
-  | EVar(x) -> ([], eVar x)
   | EFun(l,x,t,e) -> ([], EVal (VFun (l, x, t, anfExp e)))
   | EDict(xel) ->
       let (ll,xwl) =
@@ -351,8 +349,6 @@ and strExp k exp = match exp with
       spr "%sfreeze (%s, %s, %s)" (tab k) (strLoc l) sx (clip (strVal (succ k) v))
   | EThaw(l,EVal(v)) ->
       spr "%sthaw (%s, %s)" (tab k) (strLoc l) (clip (strVal (succ k) v))
-  | EBase _        -> badAnf "EBase"
-  | EVar _         -> badAnf "EVar"
   | EFun _         -> badAnf "EFun"
   | EDict _        -> badAnf "EDict"
   | EIf _          -> badAnf "EIf"
@@ -397,8 +393,6 @@ and coerceEVal from e =
 
 and coerce = function
   | EVal(w) -> EVal w
-  | EBase(c) -> EVal (VBase c)
-  | EVar(x) -> EVal (VVar x)
   | EDict([]) -> EVal (VEmpty)
   | EDict _ -> failwith "Anf.coerce EDict: should have become calls to set"
   | EFun(l,x,t,e) -> EVal (VFun (l, x, t, coerce e))

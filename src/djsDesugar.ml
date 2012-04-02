@@ -345,6 +345,8 @@ let strJsTyp = function
 
 let oc_js_types = open_out (Settings.out_dir ^ "js-types.txt")
 
+let logJsTyp s = fpr oc_js_types "%s\n" s; flush oc_js_types
+
 (* the boolean b in binding (x,b) indicates whether x is a reference.
      if so,  [[ x ]] = deref __x
      if not, [[ x ]] = __x
@@ -365,33 +367,82 @@ let addVarType env x e =
     | _ ->
         JsTop
   in
-  fpr oc_js_types "addVarType(%s) = %s\n" x (strJsTyp t);
+  logJsTyp (spr "addVarType(%s) = %s" x (strJsTyp t));
   addType x t env
+
+let addCtorType f l1 l2 env =
+  let t = JsObject (l1, l2) in
+  logJsTyp (spr "addCtorType(%s) = %s" f (strJsTyp t));
+  addType f t env
 
 let getType env = function
   | EVal (VBase (Int _)) -> JsInt
   | EVal (VBase (Str _)) -> JsStr
-  | EDeref (EVar x) ->
+  | EVal (VVar x) | EDeref (EVal (VVar x)) ->
       if not (IdMap.mem x env.types) then
         (* Log.printParseErr (spr "DjsDesugar.getType [%s]: var not found" x) *)
-        let _ = fpr oc_js_types "getType(%s) = NOT FOUND\n" x in
+        let _ = logJsTyp (spr "getType(%s) = NOT FOUND" x) in
         JsTop
       else
         let t = IdMap.find x env.types in
-        let _ = fpr oc_js_types "getType(%s) = %s\n" x (strJsTyp t) in
+        let _ = logJsTyp (spr "getType(%s) = %s" x (strJsTyp t)) in
         t
-  | _ -> JsTop
+  (* 4/1: optimistically assuming that x is a constructor function and its
+     prototype field has not been overwritten. sensitive to
+     ParseUtils.mkTupleExp. will be much nicer when i add ETuple.  *)
+  | EApp(_, EVal (VVar "getPropObj"),
+         EDict([(EVal(VBase(Str"0")),EDeref(EVal(VVar(x))));
+                (EVal(VBase(Str"1")),EVal(VBase(Str"prototype")))])) ->
+      let t =
+        (* not doing these three built ins, because their not modeled
+           as constructor functions right now *)
+        if x = "__Object" then JsTop
+        else if x = "__Array" then JsTop
+        else if x = "__Function" then JsTop
+        else  JsObject (LocConst (spr "l%sProto" (undoDsVar x)), lObjectPro) in
+      let _ = logJsTyp (spr "getType(%s.prototype) = %s" x (strJsTyp t)) in
+      t
+  | _ ->
+      JsTop
 
 (* useful for thaw/freeze *)
 let updateVarType env x l =
   let (b,t) =
-    match getType env (EDeref (EVar x)) with
+    match getType env (EDeref (eVar x)) with
       | JsObject(_,l2)  -> (true, JsObject (l, l2))
       | JsArray(t,_,l2) -> (true, JsArray (t, l, l2))
       | t               -> (false, t)
   in
-  if b then fpr oc_js_types "updateVarType(%s) = %s\n" x (strJsTyp t);
+  if b then logJsTyp (spr "updateVarType(%s) = %s" x (strJsTyp t));
   addType x t env
+
+(* basically copied from TcDref2 for now *)
+let findHeapCell l cs =
+  try Some (snd (List.find (fun (l',_) -> l = l') cs))
+  with Not_found -> None
+
+let addFormals t env =
+  match t with (* looking for a single arrow *)
+  | THasTyp([UArr(_,_,TTuple(ts),(_,cs),_,_)],_) ->
+      List.fold_left (fun env (x,t) ->
+        match t with (* could look for optional strong ref if need be *)
+        | THasTyp([URef(l1)],_) -> begin
+            match findHeapCell l1 cs with
+            | Some(HConcObj(_,THasTyp([UArray(t)],_),l2)) ->
+                (* TODO just waiting to enable this case *)
+                let _ = failwith "addFormals JsArray" in
+                let t = JsArray (t, l1, l2) in
+                let _ = logJsTyp (spr "addFormalType(%s) = %s" x (strJsTyp t)) in
+                addType x t env
+            | Some(HConcObj(_,_,l2)) ->
+                let t = JsObject (l1, l2) in
+                let _ = logJsTyp (spr "addFormalType(%s) = %s" x (strJsTyp t)) in
+                addType x t env
+            | _ -> env
+          end
+        | _ -> env
+      ) env ts
+  | _ -> env
 
 
 (***** Desugaring types *******************************************************)
@@ -686,13 +737,13 @@ let rec ds (env:env) = function
       try 
         if IdMap.find x env.flags then
           (* var-lifting would have introduced a binding for x. *)
-          EDeref (EVar x)
+          EDeref (eVar x)
         else
-          EVar x
+          eVar x
       with Not_found ->
         (* TODO *)
         let _ = failwith (spr "rkc: think about top-level VarExpr [%s]" x) in
-        mkApp "get" [EDeref (EVar "global"); eStr x]
+        mkApp "get" [EDeref (eVar "global"); eStr x]
     end
 
 (** these were the get cases from v0
@@ -824,6 +875,7 @@ let rec ds (env:env) = function
           | "+"   -> "js_plus"
           | "-"   -> "js_minus"
           | "*"   -> "js_mult"
+          | "/"   -> "js_div"
           | "=="  -> "js_eek"
           | "===" -> "js_threek"
           | ">"   -> "js_gt"
@@ -968,6 +1020,13 @@ let rec ds (env:env) = function
       let x = dsVar x in
       EExtern (x, desugarTypHint s, ds (addFlag x false env) e2)
 
+(*
+  | E.SeqExpr (_,
+      E.AssignExpr (_, E.PropLValue (_, obj, key),
+        E.HintExpr (_, s, E.ConstExpr (_, J.CString "#extern"))), e2) ->
+      failwith "TODO"
+*)
+
   | E.SeqExpr (_, E.HintExpr (_, s, E.ConstExpr (_, J.CString "#weak")), e2) ->
       let (m,t,l) = parseWeakLoc s in
       EWeak ((m, dsTyp t, l), ds env e2)
@@ -1004,10 +1063,17 @@ let rec ds (env:env) = function
     when !Settings.fullObjects ->
       let fOrig = f in
       let f = dsVar f in
+(*
       let code =
         EAs ("DjsDesugarCtor",
              dsFunc true env p args body,
              s |> desugarCtorHint |> ParseUtils.typToFrame) in
+*)
+      let t = desugarCtorHint s in
+      let env = addFormals t env in
+      let code =
+        EAs ("DjsDesugarCtor", dsFunc true env p args body,
+             ParseUtils.typToFrame t) in
       let proto =
         ENewObj (EVal VEmpty, LocConst (spr "l%sProto" fOrig),
                  eObjectPro, lObjectPro) in
@@ -1035,11 +1101,14 @@ let rec ds (env:env) = function
         objOp [] [lObj; lFunctionPro]
           "setPropObj" [eObj; eStr "prototype"; proto] in
 
+      let env = addFlag f true env in
+      let env = addCtorType f lObj lFunctionPro env in
+
       ELet (xObj, None, freshObj,
       ELet (freshVar "setCode", None, setCode,
       ELet (freshVar "setProto", None, setProto,
       ELet (f, None, ENewref (LocConst (spr "&%s" fOrig), eObj),
-            ds (addFlag f true env) e2))))
+            ds env e2))))
 
 (*
   (* rkc: turning this into a letrec *)
@@ -1243,6 +1312,7 @@ let rec ds (env:env) = function
       let t = desugarTypHint s in
       let f = dsVar f in
       let env = addFlag f false env in
+      let env = addFormals t env in
       let func = dsFunc false env p args body in
       EApp (([t],[],[]), eVar "fix",
         EFun (([],[],[]), f, None, func))
@@ -1277,7 +1347,9 @@ and dsAssert env s e =
   let t = desugarTypHint s in
   let e =
     match e with
-      | E.FuncExpr(p,args,body) -> dsFunc (hasThisParam t) env p args body
+      | E.FuncExpr(p,args,body) ->
+          let env = addFormals t env in
+          dsFunc (hasThisParam t) env p args body
       | _ -> ds env e
   in
   EAs ("DjsDesugar", e, ParseUtils.typToFrame t)

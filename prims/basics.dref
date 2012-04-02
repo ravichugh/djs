@@ -38,6 +38,8 @@ val js_uminus :: xx:Num
 val js_mult :: [[xx:Num, yy:Num]] -> {Num|(implies (and (integer xx) (integer yy))
                                                    (integer v))}
 
+val js_div :: [[_:Num, _:Num]] -> Num
+
 val js_or :: [[xx:Top, yy:Top]] -> {(ite (falsy xx) (= v yy) (= v xx))}
 
 val js_and :: [[xx:Top, yy:Top]] -> {(ite (truthy xx) (= v yy) (= v xx))}

@@ -2,7 +2,8 @@
 /*: [~lTreeNode |-> (tyTreeNode, lTreeNodeProto)] */ "#weak";
 
 /*: #define tyTreeNode
-    {Dict|(and ((sel v "item"):Int)
+    {Dict|(and (dom v {"item","left","right"})
+               ((sel v "item"):Int)
                ((sel v "left"):Ref(~lTreeNode))
                ((sel v "right"):Ref(~lTreeNode)))} */ "#define";
 
@@ -56,4 +57,15 @@ TreeNode.prototype.itemCheck = function itemCheck() /*: tyItemCheck */ {
     return i + itemCheck.apply(left) + itemCheck.apply(right);
   }
 };
+
+////////////////////////////////////////////////////////////////////////////////
+
+var tree1 = new (/*: [;lTree1;] lTreeNodeProto */ TreeNode)(null, null, 10);
+
+/*: tree1 lThwd1 */ "#thaw";
+var ic = tree1.itemCheck;
+/*: tree1 (~lTreeNode, thwd lThwd1) */ "#freeze";
+
+assert (/*: tyItemCheck */ ic);
+assert (/*: Int */ (ic.apply(tree1)));
 

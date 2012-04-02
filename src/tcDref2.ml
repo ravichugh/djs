@@ -285,10 +285,10 @@ let refTermsOf g = function
   | TMaybeNull(THasTyp([URef(l)],_))
   | TSelfify(TMaybeNull(THasTyp([URef(l)],_)),_) (* TODO 3/14 *)
   | THasTyp([URef(l)],_) ->
-      (* let _ = Log.log1 "don't call extract [Ref(%s)]\n" (strLoc l) in *)
+      let _ = Log.log1 "don't call extract [Ref(%s)]\n" (strLoc l) in
       [URef l]
   | t ->
-      (* let _ = Log.log1 "call extract refTermsOf [%s]\n" (prettyStrTyp t) in *)
+      let _ = Log.log1 "call extract refTermsOf [%s]\n" (prettyStrTyp t) in
       let isConcRef = function URef _ -> true | _ -> false in
       TypeTerms.elements (Sub.mustFlow g t ~filter:isConcRef)
 
@@ -1369,8 +1369,6 @@ and tsExp_ g h = function
   (* the remaining cases should not make it to type checking, so they indicate
      some failure of parsing or ANFing *)
 
-  | EBase _    -> Anf.badAnf "ts EBase"
-  | EVar _     -> Anf.badAnf "ts EVar"
   | EDict _    -> Anf.badAnf "ts EDict"
   | EFun _     -> Anf.badAnf "ts EFun"
   | EIf _      -> Anf.badAnf "ts EIf"
@@ -1733,8 +1731,6 @@ and tcExp_ g h goal = function
   (* the remaining cases should not make it to type checking, so they indicate
      some failure of parsing or ANFing *)
 
-  | EBase _    -> Anf.badAnf "tc EBase"
-  | EVar _     -> Anf.badAnf "tc EVar"
   | EDict _    -> Anf.badAnf "tc EDict"
   | EFun _     -> Anf.badAnf "tc EFun"
   | EIf _      -> Anf.badAnf "tc EIf"
@@ -1749,7 +1745,7 @@ and tcExp_ g h goal = function
 let assertIntegerness e =
   (* TODO might want to also walk inside the types inside expressions, which
      foldExp currently doesn't do *)
-  let fE acc = function EBase(Int(i)) -> Utils.IntSet.add i acc | _ -> acc in
+  let fE acc = fun _ -> acc in
   let fV acc = function VBase(Int(i)) -> Utils.IntSet.add i acc | _ -> acc in
   let ints = foldExp fE fV Utils.IntSet.empty e in
   Utils.IntSet.iter (fun i -> Zzz.assertFormula (integer (wInt i))) ints;
