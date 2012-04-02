@@ -8,17 +8,28 @@ benchdir = '/tests/apr-benchmarks/v0'
 djsdir = os.getenv('DJS_DIR')
 latexfile = '/src/out/runningtime.tex'
 
+benchmarks = ['prototypal', 'pseudoclassical', 'functional', 'parts',
+              'string-fasta', 'access-binary-trees', 'access-nbody',
+              'splay',
+              'typeOf',
+              'onto',
+              'negate', 'counter', 'dispatch']
+
 def nearestInt(f):
     if f - math.floor(f) < 0.5: i = int(math.floor(f))
     else: i = int(math.ceil(f))
     if i == 0: return 1
     return i
 
+totalQueries = 0
+totalTime = 0
+
 oc = open(djsdir + latexfile, 'w+')
 for top, _, files in os.walk(djsdir + benchdir):
     for nm in files:       
         bench = re.sub("[.]js", "", nm)
         bench = bench.strip()
+        if not bench in benchmarks: raise Exception("unexpected benchmark: " + bench)
         # LaTeX macros don't like '-' characters, so remove them
         bench = re.sub("-","",bench)
         f = os.path.join(top, nm)
@@ -35,4 +46,8 @@ for top, _, files in os.walk(djsdir + benchdir):
         oc.write('\\newcommand{\\benchTime%s}{%d}\n' % (bench, iTime))
         oc.flush()
         print bench, numQueries, nearestInt(tDiff)
+        totalQueries += numQueries
+        totalTime += iTime
 
+print "Total Queries : %10d" % totalQueries
+print "Total Time    : %10d" % totalTime
