@@ -309,19 +309,33 @@ let undoDsVar x = String.sub x 2 (String.length x - 2)
 
 (***** Object.prototype and Array.prototype ***********************************)
 
-(* to keep things simpler, when desugaring object and array literals, using
-   the initial values of Object.prototype and Array.prototype, rather than
-   retrieving them on demand. but really should be checking that they
-   haven't been overwritten, since this assumption is not sound in general.
-*)
+let objOp ts ls fn args =
+  let fn = if !Settings.fullObjects then fn else fn ^ "Lite" in
+  EApp ((ts,ls,[]), eVar fn, ParseUtils.mkTupleExp args)
 
-let eObjectPro   = eVar (dsVar "__ObjectProto")
-let eArrayPro    = EDeref (eVar (dsVar "__ArrayProto"))
-let eFunctionPro = EDeref (eVar (dsVar "__FunctionProto"))
-
+(* by using these locations when desugaring object literals, array literals,
+   and constructor functions, i'm optimistically assuming that
+   {Object|Array|Function}.prototype have not been replaced.
+   that is, Object.prototype is still Ref(lObjectProto). *)
 let lObjectPro   = lObjectPro (* defined in lang.ml *)
 let lArrayPro    = LocConst "lArrayProto"
 let lFunctionPro = LocConst "lFunctionProto"
+
+(*
+let eNativePro f l1 l2 =
+  objOp [] [LocConst l1; l2] "getPropObj"
+    [EDeref (eVar (dsVar f)); EVal (vStr "prototype")]
+
+let eObjectPro ()   = eNativePro "Object" "lObject" lObjectPro
+let eArrayPro ()    = eNativePro "Array" "lArray" lObjectPro
+let eFunctionPro () = eNativePro "Function" "lFunction" lObjectPro
+*)
+
+(* assuming {Object|Array|Function}.prototype haven't been overwritten
+   to make things a bit faster. *)
+let eObjectPro ()   = eVar (dsVar "__ObjectProto")
+let eArrayPro ()    = EDeref (eVar (dsVar "__ArrayProto"))
+let eFunctionPro () = EDeref (eVar (dsVar "__FunctionProto"))
 
 
 (***** Desugaring environments ************************************************)
@@ -425,12 +439,13 @@ let addFormals t env =
   match t with (* looking for a single arrow *)
   | THasTyp([UArr(_,_,TTuple(ts),(_,cs),_,_)],_) ->
       List.fold_left (fun env (x,t) ->
+        let x = if x = "this" then x else dsVar x in
         match t with (* could look for optional strong ref if need be *)
         | THasTyp([URef(l1)],_) -> begin
             match findHeapCell l1 cs with
-            | Some(HConcObj(_,THasTyp([UArray(t)],_),l2)) ->
-                (* TODO just waiting to enable this case *)
-                let _ = failwith "addFormals JsArray" in
+            | Some(HConcObj(_,THasTyp([UArray(t)],_),l2))
+            | Some(HConcObj(_,TRefinement("v",PConn("and",
+                  PUn(HasTyp(WVal(VVar"v"),UArray(t)))::_)),l2)) ->
                 let t = JsArray (t, l1, l2) in
                 let _ = logJsTyp (spr "addFormalType(%s) = %s" x (strJsTyp t)) in
                 addType x t env
@@ -645,10 +660,6 @@ let notAnIntStr s =
 
 (***** Desugaring calls *******************************************************)
 
-let objOp ts ls fn args =
-  let fn = if !Settings.fullObjects then fn else fn ^ "Lite" in
-  EApp ((ts,ls,[]), eVar fn, ParseUtils.mkTupleExp args)
-
 let mkApp ?(curried=false) f args =
   if curried then LangUtils.mkApp (eVar f) args
   else begin match args with
@@ -692,7 +703,7 @@ let rec ds (env:env) = function
              objOp [] [l1; lObjectPro] "setPropObj"
                [eVar obj; eStr k; ds env v]) fields
       in
-      ELet (obj, None, ENewObj (EVal VEmpty, l1, eObjectPro, lObjectPro),
+      ELet (obj, None, ENewObj (EVal VEmpty, l1, eObjectPro (), lObjectPro),
             eSeq (setFields @ [eVar obj]))
 
   | E.ObjectExpr (p, fields) when !Settings.fullObjects ->
@@ -707,11 +718,11 @@ let rec ds (env:env) = function
 
   | E.HintExpr (_, h, E.ArrayExpr (_, es)) when !Settings.fullObjects ->
       let (l,t) = parseArrLit h in
-      ENewObj (mkEArray (Some t) env es, l, eArrayPro, lArrayPro)
+      ENewObj (mkEArray (Some t) env es, l, eArrayPro (), lArrayPro)
 
   | E.ArrayExpr (_, es) when !Settings.fullObjects ->
       ENewObj (mkEArray None env es, LocConst (freshVar "arrLit"),
-               eArrayPro, lArrayPro)
+               eArrayPro (), lArrayPro)
 
   | E.HintExpr (_, h, E.ArrayExpr (_, es)) ->
       let (l,t) = parseArrLit h in
@@ -1076,7 +1087,7 @@ let rec ds (env:env) = function
              ParseUtils.typToFrame t) in
       let proto =
         ENewObj (EVal VEmpty, LocConst (spr "l%sProto" fOrig),
-                 eObjectPro, lObjectPro) in
+                 eObjectPro (), lObjectPro) in
 
       (* in v0, i used simple objects for ctor function objects
       let obj =
@@ -1093,7 +1104,7 @@ let rec ds (env:env) = function
       let eObj = eVar xObj in
       let lObj = LocConst (spr "l%sObj" fOrig) in
       let freshObj =
-        ENewObj (EVal VEmpty, lObj, eFunctionPro, lFunctionPro) in
+        ENewObj (EVal VEmpty, lObj, eFunctionPro (), lFunctionPro) in
       let setCode =
         objOp [] [lObj; lFunctionPro]
           "setPropObj" [eObj; eStr "code"; code] in
