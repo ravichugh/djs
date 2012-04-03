@@ -343,6 +343,9 @@ let eFunctionPro () = EDeref (eVar (dsVar "__FunctionProto"))
 (* 3/31 *)
 
 (* 4/3 *)
+
+type jsarrlen = int option option
+
 let pArrLen = function
   | Some(Some i) -> pAnd [packed theV; eq (arrlen theV) (wInt i)]
   | Some(None)   -> packed theV
@@ -355,10 +358,16 @@ let strArrLen = function
 
 let strVarOpt = function Some(x) -> x | None -> "_"
 
+type jsrecd = (string * typ) list * bool (* true if domain is exact *)
+
+let strJsRecd (l,b) =
+  spr "{%s (%b)}"
+    (String.concat "; "
+       (List.map (fun (x,t) -> spr "%s:%s" x (prettyStrTyp t)) l)) b
+
 type jstyp =
-  | JsObject of loc * loc
-  | JsArray of typ * loc * loc * int option option * vvar option
-                              (* array length        binder from heap *)
+  | JsObject of loc * loc * jsrecd * vvar option
+  | JsArray of typ * loc * loc * jsarrlen * vvar option (* binder from heap *)
   | JsInt of bool (* true if >= 0 *)
   | JsLen of vvar (* length of an array *)
   | JsNum
@@ -371,7 +380,9 @@ let strJsTyp = function
   | JsStr -> "str"
   | JsTop -> "top"
   | JsLen(x) -> spr "len(%s)" x
-  | JsObject(l1,l2) -> spr "object %s %s" (strLoc l1) (strLoc l2)
+  | JsObject(l1,l2,r,xo) ->
+      spr "object %s %s %s %s" (strLoc l1) (strLoc l2)
+        (strJsRecd r) (strVarOpt xo)
   | JsArray(t,l1,l2,al,xo) ->
       spr "array %s %s %s %s %s" (prettyStrTyp t) (strLoc l1) (strLoc l2)
         (strArrLen al) (strVarOpt xo)
@@ -397,7 +408,7 @@ let rec getType env = function
   | EApp (_, EVal (VVar "js_uminus"), EVal (VBase (Int i))) -> JsInt (not(i>=0))
   | EVal (VVar sk) when Utils.strPrefix sk "_skolem_" -> JsNum
   | ELet (_, None, ENewObj (EVal VEmpty, l1, _, l2), _) when l2 = lObjectPro ->
-      JsObject (l1, l2)
+      JsObject (l1, l2, ([],false), None)
   | ENewObj (EArray (t, elts), l1, _, l2) when l2 = lArrayPro ->
       JsArray (t, l1, l2, Some (Some (List.length elts)), None)
   | EVal (VVar x) | EDeref (EVal (VVar x)) ->
@@ -421,7 +432,8 @@ let rec getType env = function
         if x = "__Object" then JsTop
         else if x = "__Array" then JsTop
         else if x = "__Function" then JsTop
-        else  JsObject (LocConst (spr "l%sProto" (undoDsVar x)), lObjectPro) in
+        else  JsObject (LocConst (spr "l%sProto" (undoDsVar x)), lObjectPro,
+                        ([],false), None) in
       let _ = logJsTyp (spr "getType(%s.prototype) = %s" x (strJsTyp t)) in
       t
   (* 4/3: TODO might want to look for getProp and getElem also *)
@@ -442,7 +454,7 @@ let addVarType env x e =
   addType x t env
 
 let addCtorType f l1 l2 env =
-  let t = JsObject (l1, l2) in
+  let t = JsObject (l1, l2, ([],false), None) in
   logJsTyp (spr "addCtorType(%s) = %s" f (strJsTyp t));
   addType f t env
 
@@ -450,7 +462,7 @@ let addCtorType f l1 l2 env =
 let updateVarType env x l =
   let (b,t) =
     match getType env (EDeref (eVar x)) with
-      | JsObject(_,l2)    -> (true, JsObject (l, l2))
+      | JsObject(_,l2,_,_)   -> (true, JsObject (l, l2, ([],false), None))
                              (* TODO preserve len or x? *)
       | JsArray(t,_,l2,al,x) -> (true, JsArray (t, l, l2, None, None))
       | t                 -> (false, t)
@@ -463,7 +475,7 @@ let findHeapCell l cs =
   try Some (snd (List.find (fun (l',_) -> l = l') cs))
   with Not_found -> None
 
-(* 4/3 obviously very sensitive to structure of formulas right now *)
+(* 4/3 optimistically assuming that all predicates are at the top-level *)
 let arrLenFromPred p =
   let isPacked =
     foldForm
@@ -478,6 +490,29 @@ let arrLenFromPred p =
 
 let arrLenFromPreds ps = arrLenFromPred (pAnd ps)
 
+(* 4/3 optimistically assuming that all predicates are at the top-level.
+   TODO obviously very dependent on structure of formulas right now. *)
+let recdTypFrom t =
+  let fields =
+    foldForm
+      (fun acc -> function
+         (* TODO this won't collect any refinements on the base type *)
+         | PEq(WApp("tag",[WApp("sel",[WVal(VVar"v");WVal(VBase(Str(f)))])]),
+               wTag) ->
+             (f, ty (eq (tag theV) wTag)) :: acc
+         | PUn(HasTyp(WApp("sel",[WVal(VVar"v");_]),_)) -> failwith "sweeet"
+         | _ -> acc)
+      [] t in
+  let wFields = List.map wStr (List.map fst fields) in
+  let dom =
+    foldForm
+      (fun acc -> function
+         | PDomEq(WVal(VVar"v"),ws) ->
+             List.sort compare ws = List.sort compare wFields
+         | _ -> acc)
+      false t in
+  (fields, dom)
+
 let addFormals t env =
   match t with (* looking for a single arrow *)
   | THasTyp([UArr(_,_,TTuple(ts),(_,cs),_,_)],_) ->
@@ -486,7 +521,7 @@ let addFormals t env =
         match t with (* could look for optional strong ref if need be *)
         | THasTyp([URef(l1)],_) -> begin
             match findHeapCell l1 cs with
-            (* 4/3 unfortunately had to split the following to cases because
+            (* 4/3 unfortunately had to split the following two cases because
                p and ps are different types *)
             | Some(HConcObj(a,THasTyp([UArray(t)],p),l2)) ->
                 let t = JsArray (t, l1, l2, arrLenFromPred p, Some a) in
@@ -497,8 +532,8 @@ let addFormals t env =
                 let t = JsArray (t, l1, l2, arrLenFromPreds ps, Some a) in
                 let _ = logJsTyp (spr "addFormalType(%s) = %s" x (strJsTyp t)) in
                 addType x t env
-            | Some(HConcObj(_,_,l2)) ->
-                let t = JsObject (l1, l2) in
+            | Some(HConcObj(d,t,l2)) ->
+                let t = JsObject (l1, l2, recdTypFrom t, Some d) in
                 let _ = logJsTyp (spr "addFormalType(%s) = %s" x (strJsTyp t)) in
                 addType x t env
             | _ -> env
@@ -512,31 +547,62 @@ let tyPosInt = TBaseRefine ("v", tagNum, pAnd [integer theV; ge theV (wInt 0)])
 let tyLenOfArr a =
   TBaseRefine ("v", tagNum, pAnd [integer theV; eq theV (arrlen (wVar a))])
 
+let tyJsRecd (fields,b) =
+  let wFields = List.map wStr (List.map fst fields) in
+  let dom = if b then PDomEq (theV, wFields) else PHas (theV, wFields) in
+  let types = List.map (fun (f,t) -> applyTyp t (sel theV (wStr f))) fields in
+  ty (pAnd (pDict :: dom :: types))
+
 let envToFrame env =
   let cs =
     IdMap.fold (fun x t acc ->
-      let lx = LocConst (spr "&%s" (undoDsVar x)) in
       let tmp () = freshVar "frameinf" in
-      match t with
-        | JsInt(b) -> (lx, HConc (tmp(), if b then tyPosInt else tyInt)) :: acc
-        | JsStr -> (lx, HConc (tmp(), tyStr)) :: acc
-        | JsNum -> (lx, HConc (tmp(), tyNum)) :: acc
-        | JsLen(a) -> (lx, HConc (tmp(), tyLenOfArr a)) :: acc
-        | JsArray(t,l1,l2,alen,None) ->
-            (lx, HConc (tmp(), tyRef l1)) ::
-            (l1, HConcObj (tmp(), THasTyp ([UArray t], pArrLen alen), l2)) :: acc
-        (* TODO this assumes that array is unmodified by the loop, so that
-           len() can refer to the binder for the formal. instead, should probably
-           have length refer to the binder generated by envToFrame ... *)
-        | JsArray(t,l1,l2,alen,Some(a)) ->
-            (lx, HConc (tmp(), tyRef l1)) ::
-            (l1, HConcObj (tmp(), ty (eq theV (wVar a)), l2)) :: acc
-        | _ -> acc
+      if x = "this" then begin
+        match t with
+          (* same as case below, but not an extra level of indirection
+             because "this" is not a mutable variable *)
+          | JsObject(l1,l2,r,_) ->
+              (l1, HConcObj (tmp(), tyJsRecd r, l2)) :: acc
+          | _ -> acc
+      end
+      (* TODO built ins *)
+      else if x = dsVar "Object" then acc 
+      else if x = dsVar "Array" then acc 
+      else if x = dsVar "Function" then acc 
+      else if x = dsVar "__FunctionProto" then acc 
+      else if x = dsVar "__ArrayProto" then acc 
+      else begin
+        let lx = LocConst (spr "&%s" (undoDsVar x)) in
+        match t with
+          | JsInt(b) -> (lx, HConc (tmp(), if b then tyPosInt else tyInt)) :: acc
+          | JsStr -> (lx, HConc (tmp(), tyStr)) :: acc
+          | JsNum -> (lx, HConc (tmp(), tyNum)) :: acc
+          | JsLen(a) -> (lx, HConc (tmp(), tyLenOfArr a)) :: acc
+          | JsArray(t,l1,l2,alen,None) ->
+              (lx, HConc (tmp(), tyRef l1)) ::
+              (l1, HConcObj (tmp(), THasTyp ([UArray t], pArrLen alen), l2)) :: acc
+          (* TODO this assumes that array is unmodified by the loop, so that
+             len() can refer to the binder for the formal. instead, should probably
+             have length refer to the binder generated by envToFrame ... *)
+          | JsArray(t,l1,l2,alen,Some(a)) ->
+              (lx, HConc (tmp(), tyRef l1)) ::
+              (l1, HConcObj (tmp(), ty (eq theV (wVar a)), l2)) :: acc
+(*
+          (* TODO probably don't want to selfify *)
+          | JsObject(l1,l2,_,Some(d)) ->
+              (lx, HConc (tmp(), tyRef l1)) ::
+              (l1, HConcObj (tmp(), ty (eq theV (wVar d)), l2)) :: acc
+*)
+          | JsObject(l1,l2,r,_) ->
+              (lx, HConc (tmp(), tyRef l1)) ::
+              (l1, HConcObj (tmp(), tyJsRecd r, l2)) :: acc
+          | _ -> acc
+        end
     ) env.types []
   in
   let h = freshHVar () in
   let f = ([h], ([h],cs), (tyAny,([h],cs))) in (* TODO output cs *)
-  logJsTyp (spr "envToFrame(...) = %s" (prettyStr strFrame f));
+  logJsTyp (spr "\nenvToFrame(...) = %s\n" (prettyStr strFrame f));
   f
 
 
@@ -867,10 +933,10 @@ let rec ds (env:env) = function
         let e1 = ds env e1 in
         let e2 = ds env e2 in
         match getType env e1, getType env e2 with
-          | JsObject(l1,l2), JsInt _ -> Log.printParseErr
+          | JsObject(l1,l2,_,_), JsInt _ -> Log.printParseErr
                                          "object.integer will definitely fail"
-          | JsObject(l1,l2), JsStr  -> objOp [] [l1;l2] "getPropObj" [e1;e2]
-          | JsObject(l1,l2), _      -> objOp [] [l1;l2] "getPropObj" [e1;e2]
+          | JsObject(l1,l2,_,_), JsStr  -> objOp [] [l1;l2] "getPropObj" [e1;e2]
+          | JsObject(l1,l2,_,_), _      -> objOp [] [l1;l2] "getPropObj" [e1;e2]
           | JsArray(t,l1,l2,_,_), JsStr -> objOp [t] [l1;l2] "getPropArr" [e1;e2]
           | JsArray(t,l1,l2,_,_), JsInt _ -> objOp [t] [l1;l2] "getIdx" [e1;e2]
           | JsArray(t,l1,l2,_,_), _     -> objOp [t] [l1;l2] "getElem" [e1;e2]
@@ -1060,10 +1126,10 @@ let rec ds (env:env) = function
         let e2 = ds env e2 in
         let e3 = ds env e3 in
         match getType env e1, getType env e2 with
-          | JsObject(l1,l2), JsInt _ -> Log.printParseErr
+          | JsObject(l1,l2,_,_), JsInt _ -> Log.printParseErr
                                          "object.integer will definitely fail"
-          | JsObject(l1,l2), JsStr  -> objOp [] [l1;l2] "setPropObj" [e1;e2;e3]
-          | JsObject(l1,l2), _      -> objOp [] [l1;l2] "setPropObj" [e1;e2;e3]
+          | JsObject(l1,l2,_,_), JsStr  -> objOp [] [l1;l2] "setPropObj" [e1;e2;e3]
+          | JsObject(l1,l2,_,_), _      -> objOp [] [l1;l2] "setPropObj" [e1;e2;e3]
           | JsArray(t,l1,l2,_,_), JsStr -> objOp [t] [l1;l2] "setPropArrLen" [e1;e2;e3]
           | JsArray(t,l1,l2,_,_), JsInt _ -> objOp [t] [l1;l2] "setIdx" [e1;e2;e3]
           | JsArray(t,l1,l2,_,_), _     -> objOp [t] [l1;l2] "setElem" [e1;e2;e3]
