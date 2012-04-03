@@ -345,12 +345,15 @@ let eFunctionPro () = EDeref (eVar (dsVar "__FunctionProto"))
 type jstyp =
   | JsObject of loc * loc
   | JsArray of typ * loc * loc
-  | JsInt
+  | JsPosInt
+  | JsInt of bool (* true if >= 0 *)
+  | JsNum
   | JsStr
   | JsTop
 
 let strJsTyp = function
-  | JsInt -> "int"
+  | JsInt(b) -> if b then "int >= 0" else "int"
+  | JsNum -> "num"
   | JsStr -> "str"
   | JsTop -> "top"
   | JsObject(l1,l2) -> spr "object %s %s" (strLoc l1) (strLoc l2)
@@ -372,26 +375,15 @@ let addType x t env = { env with types = IdMap.add x t env.types }
 
 let emptyEnv = { flags = IdMap.empty; types = IdMap.empty }
 
-let addVarType env x e =
-  let t = match e with
-    | ELet (_, None, ENewObj (EVal VEmpty, l1, _, l2), _) when l2 = lObjectPro ->
-        JsObject (l1, l2)
-    | ENewObj (EArray (t, _), l1, _, l2) when l2 = lArrayPro ->
-        JsArray (t, l1, l2)
-    | _ ->
-        JsTop
-  in
-  logJsTyp (spr "addVarType(%s) = %s" x (strJsTyp t));
-  addType x t env
-
-let addCtorType f l1 l2 env =
-  let t = JsObject (l1, l2) in
-  logJsTyp (spr "addCtorType(%s) = %s" f (strJsTyp t));
-  addType f t env
-
 let getType env = function
-  | EVal (VBase (Int _)) -> JsInt
   | EVal (VBase (Str _)) -> JsStr
+  | EVal (VBase (Int i)) -> JsInt (i>=0)
+  | EApp (_, EVal (VVar "js_uminus"), EVal (VBase (Int i))) -> JsInt (not(i>=0))
+  | EVal (VVar sk) when Utils.strPrefix sk "_skolem_" -> JsNum
+  | ELet (_, None, ENewObj (EVal VEmpty, l1, _, l2), _) when l2 = lObjectPro ->
+      JsObject (l1, l2)
+  | ENewObj (EArray (t, _), l1, _, l2) when l2 = lArrayPro ->
+      JsArray (t, l1, l2)
   | EVal (VVar x) | EDeref (EVal (VVar x)) ->
       if not (IdMap.mem x env.types) then
         (* Log.printParseErr (spr "DjsDesugar.getType [%s]: var not found" x) *)
@@ -418,6 +410,16 @@ let getType env = function
       t
   | _ ->
       JsTop
+
+let addVarType env x e =
+  let t = getType env e in
+  logJsTyp (spr "addVarType(%s) = %s" x (strJsTyp t));
+  addType x t env
+
+let addCtorType f l1 l2 env =
+  let t = JsObject (l1, l2) in
+  logJsTyp (spr "addCtorType(%s) = %s" f (strJsTyp t));
+  addType f t env
 
 (* useful for thaw/freeze *)
 let updateVarType env x l =
@@ -458,6 +460,29 @@ let addFormals t env =
         | _ -> env
       ) env ts
   | _ -> env
+
+let tyInt = TInt
+let tyPosInt = TBaseRefine ("v", tagNum, pAnd [integer theV; ge theV (wInt 0)])
+
+let envToFrame env =
+  let cs =
+    IdMap.fold (fun x t acc ->
+      let lx = LocConst (spr "&%s" (undoDsVar x)) in
+      let y = freshVar "frameinf" in
+      let hco = 
+        match t with
+          | JsInt(b) -> Some (HConc (y, if b then tyPosInt else tyInt))
+          | JsStr -> Some (HConc (y, tyStr))
+          | JsNum -> Some (HConc (y, tyNum))
+          | _ -> None
+      in
+      match hco with Some(hc) -> ((lx,hc)::acc) | None -> acc
+    ) env.types []
+  in
+  let h = freshHVar () in
+  let f = ([h], ([h],cs), (tyAny,([h],cs))) in (* TODO output cs *)
+  logJsTyp (spr "envToFrame(...) = %s" (prettyStr strFrame f));
+  f
 
 
 (***** Desugaring types *******************************************************)
@@ -787,15 +812,15 @@ let rec ds (env:env) = function
         let e1 = ds env e1 in
         let e2 = ds env e2 in
         match getType env e1, getType env e2 with
-          | JsObject(l1,l2), JsInt  -> Log.printParseErr
+          | JsObject(l1,l2), JsInt _ -> Log.printParseErr
                                          "object.integer will definitely fail"
           | JsObject(l1,l2), JsStr  -> objOp [] [l1;l2] "getPropObj" [e1;e2]
           | JsObject(l1,l2), _      -> objOp [] [l1;l2] "getPropObj" [e1;e2]
           | JsArray(t,l1,l2), JsStr -> objOp [t] [l1;l2] "getPropArr" [e1;e2]
-          | JsArray(t,l1,l2), JsInt -> objOp [t] [l1;l2] "getIdx" [e1;e2]
+          | JsArray(t,l1,l2), JsInt _ -> objOp [t] [l1;l2] "getIdx" [e1;e2]
           | JsArray(t,l1,l2), _     -> objOp [t] [l1;l2] "getElem" [e1;e2]
           | JsTop, JsStr            -> objOp ts ls "getProp" [e1;e2] 
-          | JsTop, JsInt            -> objOp ts ls "getIdx"  [e1;e2] 
+          | JsTop, JsInt _          -> objOp ts ls "getIdx"  [e1;e2] 
           | JsTop, JsTop            -> objOp ts ls "getElem" [e1;e2] 
       end else begin
         match e2 with
@@ -980,15 +1005,15 @@ let rec ds (env:env) = function
         let e2 = ds env e2 in
         let e3 = ds env e3 in
         match getType env e1, getType env e2 with
-          | JsObject(l1,l2), JsInt  -> Log.printParseErr
+          | JsObject(l1,l2), JsInt _ -> Log.printParseErr
                                          "object.integer will definitely fail"
           | JsObject(l1,l2), JsStr  -> objOp [] [l1;l2] "setPropObj" [e1;e2;e3]
           | JsObject(l1,l2), _      -> objOp [] [l1;l2] "setPropObj" [e1;e2;e3]
           | JsArray(t,l1,l2), JsStr -> objOp [t] [l1;l2] "setPropArrLen" [e1;e2;e3]
-          | JsArray(t,l1,l2), JsInt -> objOp [t] [l1;l2] "setIdx" [e1;e2;e3]
+          | JsArray(t,l1,l2), JsInt _ -> objOp [t] [l1;l2] "setIdx" [e1;e2;e3]
           | JsArray(t,l1,l2), _     -> objOp [t] [l1;l2] "setElem" [e1;e2;e3]
           | JsTop, JsStr            -> objOp ts ls "setProp" [e1;e2;e3] 
-          | JsTop, JsInt            -> objOp ts ls "setIdx"  [e1;e2;e3] 
+          | JsTop, JsInt _          -> objOp ts ls "setIdx"  [e1;e2;e3] 
           | JsTop, JsTop            -> objOp ts ls "setElem" [e1;e2;e3] 
       end else begin
         match e2 with
@@ -1164,9 +1189,16 @@ let rec ds (env:env) = function
     end
 
   | E.LabelledExpr (_, bl, E.WhileExpr (_, test, e2)) when isBreakLabel bl ->
-    begin
-      failwith "djsDesugar: unannotated while or for"
-    end
+      if !Settings.typedDesugaring then begin
+        match e2 with
+          | E.LabelledExpr(_,cl,body) when isContLabel cl ->
+              dsWhile env bl cl test body (envToFrame env)
+          | E.SeqExpr(_,E.LabelledExpr(_,cl,body),incr) when isContLabel cl ->
+              dsFor env bl cl test body incr (envToFrame env)
+          | _ ->
+              Log.printParseErr "desugar EJS unannotated while fail"
+      end else
+        failwith "djsDesugar: unannotated while or for"
 
   | E.LabelledExpr (_, bl, E.DoWhileExpr (_, e1, test)) when isBreakLabel bl ->
     begin
