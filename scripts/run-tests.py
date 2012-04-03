@@ -3,13 +3,14 @@
 import sys, re, os
 
 def usage():
-    print "Usage: ./run-tests.py (djs|djsLite|functional|imperative)/path"
+    print "Usage: ./run-tests.py (djs|djsLite|functional|imperative)/path <system-d-options>"
     sys.exit()
 
-if len(sys.argv) != 2:
+if len(sys.argv) < 2: # != 2:
     usage()
 
 path = sys.argv[1]
+systemdoptions = ' '.join(sys.argv[2:])
 
 if re.match("^djs", path): mode = "-djs"
 elif re.match("^djsLite", path): mode = "-djsLite"
@@ -33,8 +34,8 @@ def iterate(positive):
                 b = not b
             if b and nm[0] != '.':
                 f = os.path.join(top, nm)
-                os.system("echo -n '%s  ' && ./system-d %s %s | tail -1"
-                          % (strip_test_dir(f), mode, f))
+                os.system("echo -n '%s  ' && ./system-d %s %s %s | tail -1"
+                          % (strip_test_dir(f), mode, systemdoptions, f))
 
 print '\033[91m'
 print "***************************************************************"

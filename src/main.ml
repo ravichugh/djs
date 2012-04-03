@@ -51,13 +51,17 @@ let argSpecs = [
   ("-implicitGlobal", Arg.Bool (fun b -> S.doImplicitGlobal := b),
                    " <bool> (default is false)");
   ("-argsArray", Arg.Set S.doArgsArray,
-                   " desugar lambdas/calls with arguments tuple");
+              "      desugar lambdas/calls with arguments tuple");
   ("-untypedDs", Arg.Unit (fun () -> S.typedDesugaring := false),
-                   " untyped desugaring");
+              "      untyped desugaring");
+  ("-inferFrames", Arg.Set S.inferFrames,
+                "    desugaring should infer frames");
+  ("-monotonicHeaps", Arg.Set S.monotonicHeaps,
+                   " desugaring should thread types through heaps");
   ("-marshalOutEnv", Arg.Set S.marshalOutEnv,
-                   " marshal output environments in out/world.world");
+                  "  marshal output environments in out/world.world");
   ("-marshalInEnv", Arg.Set S.marshalInEnv,
-                   " use out/env.env as initial environments for typing");
+                 "   use out/env.env as initial environments for typing");
 ]
 
 let anonArgFun s =

@@ -33,6 +33,7 @@ for top, _, files in os.walk(djsdir + benchdir):
         # LaTeX macros don't like '-' characters, so remove them
         bench = re.sub("-","",bench)
         f = os.path.join(top, nm)
+        print bench,
         tBegin = time.time()
         # TODO the no-false-check optimization breaks on typeOf right now, so run
         # it in the slower mode
@@ -50,7 +51,7 @@ for top, _, files in os.walk(djsdir + benchdir):
         oc.write('\\newcommand{\\benchQueries%s}{%d}\n' % (bench, numQueries))
         oc.write('\\newcommand{\\benchTime%s}{%d}\n' % (bench, iTime))
         oc.flush()
-        print bench, numQueries, nearestInt(tDiff)
+        print numQueries, nearestInt(tDiff)
         totalQueries += numQueries
         totalTime += iTime
 

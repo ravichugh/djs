@@ -373,6 +373,7 @@ type jstyp =
   | JsNum
   | JsStr
   | JsTop
+  | JsAnnotate of typ (* these come from annotations, dsAssert *)
 
 let strJsTyp = function
   | JsInt(b) -> if b then "int >= 0" else "int"
@@ -386,6 +387,7 @@ let strJsTyp = function
   | JsArray(t,l1,l2,al,xo) ->
       spr "array %s %s %s %s %s" (prettyStrTyp t) (strLoc l1) (strLoc l2)
         (strArrLen al) (strVarOpt xo)
+  | JsAnnotate(t) -> spr "annotate (...)"
 
 let oc_js_types = open_out (Settings.out_dir ^ "js-types.txt")
 
@@ -445,6 +447,9 @@ let rec getType env = function
          | JsArray(_,_,_,Some(None),Some(a)) -> JsLen a
          | JsArray(_,_,_,Some(None),None)    -> JsInt false
          | _ -> JsTop)
+  (* undoing the ParseUtils.typToFrame that dsAssert inserts *)
+  | EAs("DjsDesugar",_,([h],([h'],[]),(t,([h''],[])))) when h = h' && h = h'' ->
+      JsAnnotate t
   | _ ->
       JsTop
 
@@ -500,9 +505,11 @@ let recdTypFrom t =
          | PEq(WApp("tag",[WApp("sel",[WVal(VVar"v");WVal(VBase(Str(f)))])]),
                wTag) ->
              (f, ty (eq (tag theV) wTag)) :: acc
-         | PUn(HasTyp(WApp("sel",[WVal(VVar"v");_]),_)) -> failwith "sweeet"
-         | _ -> acc)
-      [] t in
+         | PUn(HasTyp(WApp("sel",[WVal(VVar"v");WVal(VBase(Str(f)))]),u)) ->
+             (f, THasTyp ([u], PTru)) :: acc
+         | _ ->
+             acc
+      ) [] t in
   let wFields = List.map wStr (List.map fst fields) in
   let dom =
     foldForm
@@ -605,6 +612,44 @@ let envToFrame env =
   logJsTyp (spr "\nenvToFrame(...) = %s\n" (prettyStr strFrame f));
   f
 
+let threadStuff env (l,xIn,t1,(h1,cs1),t2,(h2,cs2)) =
+  let (more1,more2) =
+    IdMap.fold (fun x t (acc1,acc2) ->
+      let lx = LocConst (spr "&%s" (undoDsVar x)) in
+      (* if the location is already mentioned explicitly, don't do anything *)
+      if List.mem_assoc lx cs1 then (acc1,acc2)
+      (* TODO built ins *)
+      else if x = dsVar "Object" then (acc1,acc2) 
+      else if x = dsVar "Array" then (acc1,acc2) 
+      else if x = dsVar "Function" then (acc1,acc2) 
+      else if x = dsVar "__FunctionProto" then (acc1,acc2) 
+      else if x = dsVar "__ArrayProto" then (acc1,acc2) 
+      else begin
+        (* TODO factor with envToFrame *)
+        let tmp () = freshVar "frameinf" in
+        match t with
+          | JsInt(b) ->
+              let acc1 = (lx, HConc (tmp(), if b then tyPosInt else tyInt)) :: acc1 in
+              let acc2 = (lx, HConc (tmp(), if b then tyPosInt else tyInt)) :: acc2 in
+              (acc1,acc2)
+(*
+          | JsStr -> (lx, HConc (tmp(), tyStr)) :: acc
+          | JsNum -> (lx, HConc (tmp(), tyNum)) :: acc
+*)
+          | JsAnnotate(t) ->
+              let acc1 = (lx, HConc (tmp(), t)) :: acc1 in
+              let acc2 = (lx, HConc (tmp(), t)) :: acc2 in
+              (acc1, acc2)
+          | _ -> (acc1,acc2) (* TODO more cases *)
+      end
+    ) env.types ([],[])
+  in
+  (l, xIn, t1, (h1, cs1 @ more1), t2, (h2, cs2 @ more2))
+
+let threadStuffThrough env = function
+  | THasTyp([UArr(arr)],p) -> THasTyp ([UArr (threadStuff env arr)], p)
+  | t -> t
+
 
 (***** Desugaring types *******************************************************)
 
@@ -700,13 +745,15 @@ let dsArrow arr =
   else dsArrowWithoutArgsArray arr
 
 (* TODO desugar variables to add __ *)
-let dsTyp t =
+let dsTyp t env =
   let fTT = function
     | UArr(arr) -> UArr (dsArrow arr)
     | u         -> u in
-  mapTyp ~fTT t
+  let t = mapTyp ~fTT t in
+  let t = if !Settings.monotonicHeaps then threadStuffThrough env t else t in
+  t
 
-let desugarTypHint hint =
+let desugarTypHint hint env =
   (* let err x = printParseErr (spr "desugarScm\n\n%s\n\n%s" cap x) in *)
   match maybeParseTcFail hint with
     | Some(s) -> Log.printParseErr "TODO DJS failure annotations not implemented"
@@ -714,14 +761,15 @@ let desugarTypHint hint =
         fpr oc_desugar_hint "%s\n" (String.make 80 '-');
         fpr oc_desugar_hint "hint: [%s]\n\n" hint;
         let t = parseTyp hint in
-        let t' = dsTyp t in
+        let t' = dsTyp t env in
         if t <> t' then fpr oc_desugar_hint "%s\n\n" (prettyStr strTyp t');
         t'
       end
 
-let desugarCtorHint hint =
+let desugarCtorHint hint env =
   let arr = parseCtorTyp hint in
-  dsTyp (THasTyp ([UArr arr], PTru))
+  dsTyp (THasTyp ([UArr arr], PTru)) env
+  (* TODO track constructors differently in env *)
 
 (* TODO for now, not allowing intersections of arrows *)
 let hasThisParam = function
@@ -731,12 +779,14 @@ let hasThisParam = function
   | THasTyp([UArr(_,_,TTuple(("this",_)::_),_,_,_)],PTru) -> true
   | _ -> false
 
+(*
 let dsHeap (hs,cs) =
   (hs, List.map (fun (l,hc) ->
          (l, match hc with
                | HConc(x,t) -> HConc (x, dsTyp t)
                | HConcObj(x,t,l') -> HConcObj (x, dsTyp t, l')
                | HWeakTok(tok) -> HWeakTok tok)) cs)
+*)
 
 
 (***** Misc *******************************************************************)
@@ -1175,7 +1225,7 @@ let rec ds (env:env) = function
         E.HintExpr (_, s, E.ConstExpr (_, J.CString "#extern"))), e2) ->
       (* TODO could addVarType here for Ref(lObjectProto) *)
       let x = dsVar x in
-      EExtern (x, desugarTypHint s, ds (addFlag x false env) e2)
+      EExtern (x, desugarTypHint s env, ds (addFlag x false env) e2)
 
 (*
   | E.SeqExpr (_,
@@ -1186,7 +1236,8 @@ let rec ds (env:env) = function
 
   | E.SeqExpr (_, E.HintExpr (_, s, E.ConstExpr (_, J.CString "#weak")), e2) ->
       let (m,t,l) = parseWeakLoc s in
-      EWeak ((m, dsTyp t, l), ds env e2)
+      (* TODO store weak locs differently in env *)
+      EWeak ((m, dsTyp t env, l), ds env e2)
 
   (* rkc: 3/15 match this case if i wanted to look for recursive functions as
          var fact = function f(n) /*: ... */ {};
@@ -1226,7 +1277,7 @@ let rec ds (env:env) = function
              dsFunc true env p args body,
              s |> desugarCtorHint |> ParseUtils.typToFrame) in
 *)
-      let t = desugarCtorHint s in
+      let t = desugarCtorHint s env in
       let env = addFormals t env in
       let code =
         EAs ("DjsDesugarCtor", dsFunc true env p args body,
@@ -1310,7 +1361,7 @@ let rec ds (env:env) = function
     end
 
   | E.LabelledExpr (_, bl, E.WhileExpr (_, test, e2)) when isBreakLabel bl ->
-      if !Settings.typedDesugaring then begin
+      if !Settings.inferFrames then begin
         match e2 with
           | E.LabelledExpr(_,cl,body) when isContLabel cl ->
               dsWhile env bl cl test body (envToFrame env)
@@ -1473,7 +1524,7 @@ let rec ds (env:env) = function
            (String.concat ", " args))
 
   | E.HintExpr (_, s, E.FuncStmtExpr (p, f, args, body)) ->
-      let t = desugarTypHint s in
+      let t = desugarTypHint s env in
       let f = dsVar f in
       let env = addFlag f false env in
       let env = addFormals t env in
@@ -1508,7 +1559,7 @@ and mkEArray topt env es =
 (* for FuncExprs, this is an annotation.
    for all other expressions, it's an assert *)
 and dsAssert env s e =
-  let t = desugarTypHint s in
+  let t = desugarTypHint s env in
   let e =
     match e with
       | E.FuncExpr(p,args,body) ->
