@@ -520,6 +520,9 @@ formula :
  | LPAREN TRUTHY x=walue RPAREN                 { pTruthy x }
  | LPAREN FALSY x=walue RPAREN                  { pFalsy x }
 
+ | LPAREN OBJSEL ds=waluelist k=walue h=heap l=loc COLON t=typ RPAREN
+     { pAnd [PObjHas(ds,k,h,l); applyTyp t (WObjSel(ds,k,h,l))] }
+
 formulas :
  | formula                               { [$1] }
  | formulas formula                      { $1 @ [$2] }
