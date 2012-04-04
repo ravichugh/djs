@@ -374,6 +374,21 @@ type jstyp =
   | JsStr
   | JsTop
   | JsAnnotate of typ (* these come from annotations, dsAssert *)
+  (* NOTE if i end up dealing with ctor/prototype objects in the
+     macro pre-pass, then there's no real benefit to keep JsCtor
+     separate for JsObject during desugaring *)
+  | JsCtor of vvar * typ * loc * loc
+      (* name of constructor,
+         type of constructor function,
+         location of constructor object (always lFooObj),
+         location of ctor object's parent (always lFunctionProto) *)
+(*
+  | JsProto of vvar * (string * typ) list * loc * loc
+      (* name of constructor this "prototype" corresponds to,
+         fields it definitely has,
+         location (always lFooProto),
+         location of its parent (always lObjectProto) *)
+*)
 
 let strJsTyp = function
   | JsInt(b) -> if b then "int >= 0" else "int"
@@ -388,6 +403,15 @@ let strJsTyp = function
       spr "array %s %s %s %s %s" (prettyStrTyp t) (strLoc l1) (strLoc l2)
         (strArrLen al) (strVarOpt xo)
   | JsAnnotate(t) -> spr "annotate (...)"
+  | JsCtor(f,t,l1,l2) ->
+      spr "constructor %s ... ... %s %s" f (strLoc l1) (strLoc l2)
+(*
+  | JsProto(f,_,l1,l2) ->
+      spr "prototype %s ... %s %s" f (strLoc l1) (strLoc l2)
+*)
+
+(* using this name to store a binding in the type env for Foo.prototype *)
+let myProtoVar f = spr "My%sProto" f
 
 let oc_js_types = open_out (Settings.out_dir ^ "js-types.txt")
 
@@ -422,6 +446,7 @@ let rec getType env = function
         let t = IdMap.find x env.types in
         let _ = logJsTyp (spr "getType(%s) = %s" x (strJsTyp t)) in
         t
+(*
   (* 4/1: optimistically assuming that x is a constructor function and its
      prototype field has not been overwritten. sensitive to
      ParseUtils.mkTupleExp. will be much nicer when i add ETuple.  *)
@@ -438,6 +463,30 @@ let rec getType env = function
                         ([],false), None) in
       let _ = logJsTyp (spr "getType(%s.prototype) = %s" x (strJsTyp t)) in
       t
+*)
+  (* 4/3: redoing the above case by calling getType, looking for JsCtor
+     instead of arbitrary JsObject, and producing a JsPrototype instead
+     of an arbitrary JsObject.  *)
+  | EApp(_, EVal (VVar "getPropObj"),
+         EDict([(EVal(VBase(Str"0")),obj);
+                (EVal(VBase(Str"1")),EVal(VBase(Str"prototype")))])) ->
+      begin match getType env obj with
+        | JsCtor(f,_,_,_) ->
+            (* 4/4 since not correctly threading prototypes through
+               macros yet, returning a vanilla object instead of JsProto *)
+            JsObject (LocConst (spr "l%sProto" (undoDsVar f)), lObjectPro,
+                      ([],false), None)
+(*
+            let fProto = myProtoVar f in
+            if IdMap.mem fProto env.types then
+              IdMap.find fProto env.types
+            else
+              Log.printParseErr (spr "getType(%s).prototype" f)
+*)
+        | _ ->
+            let _ = logJsTyp "getType(???.prototype) = top" in
+            JsTop
+      end
   (* 4/3: TODO might want to look for getProp and getElem also *)
   | EApp(_, EVal (VVar "getPropArr"),
          EDict([(EVal(VBase(Str"0")),arr);
@@ -458,10 +507,45 @@ let addVarType env x e =
   logJsTyp (spr "addVarType(%s) = %s" x (strJsTyp t));
   addType x t env
 
-let addCtorType f l1 l2 env =
-  let t = JsObject (l1, l2, ([],false), None) in
-  logJsTyp (spr "addCtorType(%s) = %s" f (strJsTyp t));
-  addType f t env
+(* 4/3 switched from JsObject to JsCtor *)
+let addCtorType foo tyCtor env =
+  (* let t = JsObject (l1, l2, ([],false), None) in *)
+  (* these loc args are the same as from the constructor case *)
+  let fooOrig = undoDsVar foo in
+(*
+  let fooProto = myProtoVar foo in
+  let lFooProto = spr "l%sProto" fooOrig in
+*)
+  let lFooObj = spr "l%sObj" fooOrig in
+  let t1 = JsCtor (foo, tyCtor, LocConst lFooObj, lFunctionPro) in
+(*
+  let t2 = JsProto (foo, [], LocConst lFooProto, lObjectPro) in
+  logJsTyp (spr "addCtorType(%s) = %s" foo (strJsTyp t1));
+  logJsTyp (spr "addProtoType(%s) = %s" fooProto (strJsTyp t2));
+  addType fooProto t2 (addType foo t1 env)
+*)
+  logJsTyp (spr "addCtorType(%s) = %s" foo (strJsTyp t1));
+  addType foo t1 env
+
+(*
+(* strongly updating Foo.prototype object *)
+let updateProtoType foo newField newFieldType env =
+  let fooProto = myProtoVar foo in
+  if not (IdMap.mem fooProto env.types) then
+    Log.printParseErr (spr "updateProtoType [%s]: proto var not found" foo) 
+  else
+    match IdMap.find fooProto env.types with
+      | JsProto(_,fields,l1,l2) ->
+          if List.mem newField (List.map fst fields) then
+            Log.printParseErr (spr "updateProtoType [%s]: already has field" foo) 
+          else
+            let t = JsProto (foo, fields @ [(newField,newFieldType)], l1, l2) in
+            let _ = logJsTyp (spr "\nupdateProtoType(%s) = with field %s : %s\n"
+               fooProto newField (prettyStrTyp newFieldType)) in
+            addType fooProto t env
+      | _ ->
+          Log.printParseErr (spr "updateProtoType [%s]: should be JsProto" foo) 
+*)
 
 (* useful for thaw/freeze *)
 let updateVarType env x l =
@@ -550,7 +634,9 @@ let addFormals t env =
   | _ -> env
 
 let tyInt = TInt
+
 let tyPosInt = TBaseRefine ("v", tagNum, pAnd [integer theV; ge theV (wInt 0)])
+
 let tyLenOfArr a =
   TBaseRefine ("v", tagNum, pAnd [integer theV; eq theV (arrlen (wVar a))])
 
@@ -559,6 +645,10 @@ let tyJsRecd (fields,b) =
   let dom = if b then PDomEq (theV, wFields) else PHas (theV, wFields) in
   let types = List.map (fun (f,t) -> applyTyp t (sel theV (wStr f))) fields in
   ty (pAnd (pDict :: dom :: types))
+
+let tyProtoDict fields =
+  let types = List.map (fun (f,t) -> applyTyp t (sel theV (wStr f))) fields in
+  ty (pAnd (pDict :: types))
 
 let envToFrame env =
   let cs =
@@ -613,6 +703,7 @@ let envToFrame env =
   f
 
 let threadStuff env (l,xIn,t1,(h1,cs1),t2,(h2,cs2)) =
+  Printf.printf "threadStuff called\n";
   let (more1,more2) =
     IdMap.fold (fun x t (acc1,acc2) ->
       let lx = LocConst (spr "&%s" (undoDsVar x)) in
@@ -640,15 +731,45 @@ let threadStuff env (l,xIn,t1,(h1,cs1),t2,(h2,cs2)) =
               let acc1 = (lx, HConc (tmp(), t)) :: acc1 in
               let acc2 = (lx, HConc (tmp(), t)) :: acc2 in
               (acc1, acc2)
-          | _ -> (acc1,acc2) (* TODO more cases *)
+(*
+          | JsCtor(f,_,lFooObj,_) ->
+              let acc1 = (lx, HConc (tmp(), tyRef lFooObj)) :: acc1 in
+              let acc2 = (lx, HConc (tmp(), tyRef lFooObj)) :: acc2 in
+              (acc1, acc2)
+*)
+(*
+          | JsProto(_,fields,lFooProto,lObjP) ->
+              if List.mem_assoc lFooProto cs1 then (acc1,acc2)
+              else
+                (* for prototype object, important that output is exact.
+                   can't track domain explicitly, since then won't be
+                   able to call it later after extension. *)
+                let y = tmp () in
+                let acc1 = (lFooProto, HConcObj (y, tyProtoDict fields, lObjP))
+                           :: acc1 in
+                let acc2 = (lFooProto, HConcObj (tmp(), ty (eq theV (wVar y)), lObjP))
+                           :: acc2 in
+                (acc1, acc2)
+*)
+          | _ ->
+              (acc1,acc2) (* TODO more cases *)
       end
     ) env.types ([],[])
   in
   (l, xIn, t1, (h1, cs1 @ more1), t2, (h2, cs2 @ more2))
 
+let threadStuff env arr =
+  let arr = threadStuff env arr in
+  logJsTyp (spr "\nthreadStuff(...) = %s\n" (prettyStrTT (UArr(arr))));
+  arr
+
 let threadStuffThrough env = function
   | THasTyp([UArr(arr)],p) -> THasTyp ([UArr (threadStuff env arr)], p)
   | t -> t
+
+(*
+let isJsProto = function JsProto _ -> true | _ -> false
+*)
 
 
 (***** Desugaring types *******************************************************)
@@ -987,6 +1108,10 @@ let rec ds (env:env) = function
                                          "object.integer will definitely fail"
           | JsObject(l1,l2,_,_), JsStr  -> objOp [] [l1;l2] "getPropObj" [e1;e2]
           | JsObject(l1,l2,_,_), _      -> objOp [] [l1;l2] "getPropObj" [e1;e2]
+          | JsCtor(_,_,l1,l2), _      -> objOp [] [l1;l2] "getPropObj" [e1;e2]
+(*
+          | JsProto(_,_,l1,l2), _      -> objOp [] [l1;l2] "getPropObj" [e1;e2]
+*)
           | JsArray(t,l1,l2,_,_), JsStr -> objOp [t] [l1;l2] "getPropArr" [e1;e2]
           | JsArray(t,l1,l2,_,_), JsInt _ -> objOp [t] [l1;l2] "getIdx" [e1;e2]
           | JsArray(t,l1,l2,_,_), _     -> objOp [t] [l1;l2] "getElem" [e1;e2]
@@ -1164,6 +1289,29 @@ let rec ds (env:env) = function
                                                  ds env e2; 
 **)
 
+(*
+  (* 4/3 adding a special sequence case to strongly update the
+     Foo.prototype object of a constructor Foo.
+     TODO this case is obviously redo-ing a bunch of work, but
+     no matter. *)
+  | E.SeqExpr (_, E.AssignExpr (p1, E.PropLValue (p2, e1, e2), e3), eNext)
+        when !Settings.typedDesugaring &&
+             isJsProto (getType env (ds env e1)) ->
+      begin match getType env (ds env e1), e2, ds env e3 with
+        | JsProto(f,_,_,_),
+          E.ConstExpr (_, J.CString newField),
+          EAs(_,_,([h],([h'],[]),(t,([h''],[])))) when h = h' && h = h'' ->
+          (* this should handle function types and constants wrapped with dsAssert *)
+            let env' = updateProtoType f newField t env in
+            let e123 = E.AssignExpr (p1, E.PropLValue (p2, e1, e2), e3) in
+            eSeq [ds env e123; ds env' eNext]
+        | _ ->
+            let _ = failwith "no" in
+            let e123 = E.AssignExpr (p1, E.PropLValue (p2, e1, e2), e3) in
+            eSeq [ds env e123; ds env eNext]
+    end
+*)
+
   | E.AssignExpr (_, E.PropLValue (_, e1, e2), e3) -> begin
       let e2 = if !Settings.fullObjects then e2 else undoDotExp e2 in
       let ((ts,ls,hs),e1) =
@@ -1180,6 +1328,10 @@ let rec ds (env:env) = function
                                          "object.integer will definitely fail"
           | JsObject(l1,l2,_,_), JsStr  -> objOp [] [l1;l2] "setPropObj" [e1;e2;e3]
           | JsObject(l1,l2,_,_), _      -> objOp [] [l1;l2] "setPropObj" [e1;e2;e3]
+          | JsCtor(_,_,l1,l2), _      -> objOp [] [l1;l2] "setPropObj" [e1;e2;e3]
+(*
+          | JsProto(_,_,l1,l2), _      -> objOp [] [l1;l2] "setPropObj" [e1;e2;e3]
+*)
           | JsArray(t,l1,l2,_,_), JsStr -> objOp [t] [l1;l2] "setPropArrLen" [e1;e2;e3]
           | JsArray(t,l1,l2,_,_), JsInt _ -> objOp [t] [l1;l2] "setIdx" [e1;e2;e3]
           | JsArray(t,l1,l2,_,_), _     -> objOp [t] [l1;l2] "setElem" [e1;e2;e3]
@@ -1310,7 +1462,7 @@ let rec ds (env:env) = function
           "setPropObj" [eObj; eStr "prototype"; proto] in
 
       let env = addFlag f true env in
-      let env = addCtorType f lObj lFunctionPro env in
+      let env = addCtorType f t env in
 
       ELet (xObj, None, freshObj,
       ELet (freshVar "setCode", None, setCode,
