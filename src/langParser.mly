@@ -307,6 +307,8 @@ typ :
  | LBRACE SUGAR_INT PIPE p=formula RBRACE
      { TBaseRefine ("v", tagNum, pAnd [integer theV; p]) }
 
+ | LBRACE u=typ_term PIPE p=formula RBRACE            { THasTyp([u],p) }
+
  (***** syntactic macros *****)
 
  | SUGAR_INTORBOOL                        { tyIntOrBool }

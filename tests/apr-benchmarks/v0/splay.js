@@ -1,8 +1,6 @@
 
 /*: #define tyNode
-    {(and (= (tag v) "Dict")
-          ((sel v "key")   : Int)
-          ((sel v "value") : Str)
+    {(and (= (tag v) "Dict") ((sel v "key") : Int) ((sel v "value") : Str)
           (implies (has v "left")  ((sel v "left")  : Ref(~lNode)))
           (implies (has v "right") ((sel v "right") : Ref(~lNode))))}
 */ "#define";
@@ -29,30 +27,14 @@ SplayTree.Node.prototype.left = null;
 
 SplayTree.Node.prototype.right = null;
 
-////////////////////////////////////////////////////////////////////////////////
-
 /*: #define leftAndRight
     {Dict|(and ((sel v "left") :: Ref(~lNode))
                ((sel v "right") :: Ref(~lNode)))} */ "#define";
 
-// not writing (= (sel v "left") null) in this macro, because then when
-// doing a read, would get either v::Ref(~lNode) or v::Null, which does _not_
-// imply v::Ref(~lNode) without doing CanFlow. so, basically doing the
-// upcast explicitly here.
-
-// this version, unlike the original, just visits each node, rather than
-// applying a function f at each node
-
 SplayTree.Node.prototype.traverse_ = function traverse_()
-/*: [[this:Ref(~lNode)]]
-  / [~lNode |-> frzn, lNodeProto |-> (_:leftAndRight , lObjectProto)]
+/*: [[this:Ref(~lNode)]] / [~lNode |-> frzn, lNodeProto |-> (_:leftAndRight , lObjectProto)]
  -> Top / same */
 {
-  // to support the original version       while(current)
-  // need to add thaw/freeze around
-  // the guard. in the meantime, using
-  // a temporary variable b.
-
   var current = this;
 
   /*: current lThaw1 */ "#thaw";

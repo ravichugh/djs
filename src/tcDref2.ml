@@ -951,6 +951,7 @@ and tsExp_ g h = function
       match findHeapCell l h with
         | Some(HConc(y,s)) -> (selfifyVar g y, h)
         | Some(HConcObj _) -> err ([cap; "not handling ConcObj cell"])
+        | Some(HWeakTok _) -> err ([cap; "weak tok"])
         | None -> err ([cap; spr "unbound loc [%s]" (strLoc l)])
     end
 

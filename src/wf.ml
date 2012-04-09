@@ -50,8 +50,10 @@ let varBoundInH x h =
 
 let varBoundInH x h =
   List.exists
-    (function HConc(y,t) | HConcObj(y,t,_) ->
-       x = y || varBoundInG x (depTupleBindersEnv t))
+    (function
+       | HConc(y,t) | HConcObj(y,t,_) ->
+           x = y || varBoundInG x (depTupleBindersEnv t)
+       | HWeakTok _ -> false)
     (List.map snd (snd h))
   
 let varBound x g h = varBoundInG x g || varBoundInH x h

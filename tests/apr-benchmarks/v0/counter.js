@@ -6,10 +6,9 @@ var toNum = function(x) /*: ty_toNum */ {
   else                             { return -1; }
 };
 
-/*: #define ty_getCount
-    [;Lt,Ltp;] [[t:Ref(Lt), c:Str]]
-             / [Lt |-> (_:Dict, Ltp), &toNum |-> _:ty_toNum]
-            -> Num / same */ '#define';
+/*: #define ty_getCount [;Lt,Ltp;]
+      [[t:Ref(Lt), c:Str]] / [Lt |-> (_:Dict, Ltp), &toNum |-> _:ty_toNum]
+   -> Num / same */ '#define';
 
 var getCount = function(t,c) /*: ty_getCount */ {
   if (c in t) {
@@ -19,15 +18,11 @@ var getCount = function(t,c) /*: ty_getCount */ {
   }
 };
 
-/*: #define ty_incCount
-    [;Lt,Ltp;] [[t:Ref(Lt), c:Str]]
-             / [Lt |-> (dt:Dict, Ltp),
-                &toNum |-> blah1:ty_toNum,
-                &getCount |-> blah2:ty_getCount]
-            -> Top
-             / [Lt |-> (_:{(and (eqmod v dt {c}) ((sel v c) : Num))}, Ltp),
-                &toNum |-> same,
-                &getCount |-> same] */ "#define";
+/*: #define ty_incCount [;Lt,Ltp;]
+    [[t:Ref(Lt), c:Str]]
+  / [Lt |-> (dt:Dict, Ltp), &toNum |-> blah1:ty_toNum, &getCount |-> blah2:ty_getCount]
+ -> Top / [Lt |-> (_:{(and (eqmod v dt {c}) ((sel v c) : Num))}, Ltp),
+           &toNum |-> same, &getCount |-> same] */ "#define";
 
 var incCount = function(t,c) /*: ty_incCount */ {
   var i = getCount(t,c);

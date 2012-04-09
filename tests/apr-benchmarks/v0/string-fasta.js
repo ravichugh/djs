@@ -1,7 +1,5 @@
-var makeCumulative = function(table)
-/*: [;L1,L2] [[table:Ref(L1)]] / [L1 |-> (_:Dict, L2)]
-          -> Top / [L1 |-> (_:Dict, L2)] */
-{
+var makeCumulative = function(table) /*: [;L1,L2]
+   [[table:Ref(L1)]] / [L1 |-> (_:Dict, L2)] -> Top / [L1 |-> (_:Dict, L2)] */ {
   var last = null;
   var c;
   /*: [Heap] [Heap ++
@@ -13,9 +11,6 @@ var makeCumulative = function(table)
      -> Top / sameType */
   for (c in table) {
     if (last) {
-      // this is pretty cute. can omit the tag-test for table[last]
-      // becaues the invariant captures that if last is non-null, then
-      // it's bound to a number in the dictionary
       if ((typeof table[c]) == "number") {
         table[c] = table[c] + table[last];
         last = c;

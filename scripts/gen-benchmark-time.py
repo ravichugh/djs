@@ -12,8 +12,7 @@ benchmarks = ['prototypal', 'pseudoclassical', 'functional', 'parts',
               'string-fasta', 'access-binary-trees', 'access-nbody',
               'splay',
               'typeOf',
-              'onto',
-              'negate', 'counter', 'dispatch']
+              'negate', 'counter', 'dispatch', 'passengers']
 
 def nearestInt(f):
     if f - math.floor(f) < 0.5: i = int(math.floor(f))

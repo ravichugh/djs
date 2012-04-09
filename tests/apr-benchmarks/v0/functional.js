@@ -22,8 +22,7 @@ var mammal = function(priv) /*: ty_init_mammal */ {
          Lnew |-> (dNew:ty_mam, lObjectProto)] */ '#define';
 
 /*: #define ty_mam
-    {(and (= (tag v) "Dict")
-          (dom v {"get_name"})
+    {(and (= (tag v) "Dict") (dom v {"get_name"})
           ((sel v "get_name") : ty_get_name))} */ '#define';
 
 /*: #define ty_get_name
@@ -33,23 +32,16 @@ var mammal = function(priv) /*: ty_init_mammal */ {
      -> {(= v (objsel [ePriv] "name" [Heap] lObjectProto))}
       / same */ '#define';
 
-//////////////////////////////////////////////////////////////////////////////
-
 var herbPriv = /*: lHerbPriv */ {name: "Herb"};
 var herb     = /*: [;lHerb,lHerbPriv;] */ mammal(herbPriv);
 var oldName  = herb.get_name();
 
 /*: {(= v "Herb")} */ oldName;
 
-//////////////////////////////////////////////////////////////////////////////
-
- 
 herbPriv.name = "Herbert";
 var newName   = herb.get_name();
 
 /*: {(= v "Herbert")} */ newName;
-
-//////////////////////////////////////////////////////////////////////////////
 
 
 var cat = function(priv2) /*: ty_init_cat */ {
@@ -72,8 +64,7 @@ var cat = function(priv2) /*: ty_init_cat */ {
                  Lnew    |-> (dNew:ty_cat, lObjectProto)] */ '#define';
 
 /*: #define ty_cat
-    {(and (= (tag v) "Dict")
-          (dom v {"get_name","purr"})
+    {(and (= (tag v) "Dict") (dom v {"get_name","purr"})
           ((sel v "get_name") : ty_get_name)
           ((sel v "purr") : ty_sound))} */ '#define';
 

@@ -4,8 +4,7 @@
 # produces an intermediate file in   $DJS_DIR/src/out/bench.out
 # and a bunch of LaTeX macros in     $DJS_DIR/src/out/linecounts.tex
 #
-# TODO DJS files contain assert() and "#define" statements, which get
-# counted as code lines. should subtract only lines like this.
+# this version computes Un from un-foo.js and Ann from foo.js
 #
 
 import os, re, sys
@@ -37,14 +36,22 @@ for line in open(djsdir + outfile):
   m = re.match("^.*/(.*)[.]js$", bench)
   if m:
     bench = m.group(1)
-    if not bench in benchmarks: raise Exception("unexpected benchmark: " + bench)
-    # LaTeX macros don't like '-' characters, so remove them
-    bench = re.sub("-","",bench)
-    iComments, iCode = int(comments), int(code)
-    oc.write('\\newcommand{\\benchUn%s}{%d}\n' % (bench, iCode))
-    oc.write('\\newcommand{\\benchAnn%s}{%d}\n' % (bench, iComments + iCode))
-    totalUn += iCode
-    totalAnn += iComments + iCode
+    if bench[0:3] == "un-":
+      bench = bench[3:]
+      if not bench in benchmarks: raise Exception("unexpected benchmark: " + bench)
+      # LaTeX macros don't like '-' characters, so remove them
+      bench = re.sub("-","",bench)
+      iCode = int(code)
+      oc.write('\\newcommand{\\benchUn%s}{%d}\n' % (bench, iCode))
+      totalUn += iCode
+    else:
+      if not bench in benchmarks: raise Exception("unexpected benchmark: " + bench)
+      # LaTeX macros don't like '-' characters, so remove them
+      bench = re.sub("-","",bench)
+      iComments, iCode = int(comments), int(code)
+      oc.write('\\newcommand{\\benchAnn%s}{%d}\n' % (bench, iComments + iCode))
+      totalAnn += iComments + iCode
+
 print "Processed %s and wrote LaTeX commands to %s" % (outfile, latexfile)
 
 print "Total Un  : %10d" % totalUn

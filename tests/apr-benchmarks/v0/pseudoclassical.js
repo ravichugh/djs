@@ -29,11 +29,9 @@ function Cat(name) /*: ty_mammal */ {
   return this;
 };
 
-Cat.prototype = new /*: [;lCatPro,lMammalProto;] lMammalProto */
-  Mammal("__dummy__");
+Cat.prototype = new /*: [;lCatPro,lMammalProto;] lMammalProto */ Mammal("__dummy__");
 
-var henrietta = new /*: [;lHenrietta,lCatPro;] lCatPro */
-  Cat("Henrietta");
+var henrietta = new /*: [;lHenrietta,lCatPro;] lCatPro */ Cat("Henrietta");
 
 var s = henrietta.get_name();
 

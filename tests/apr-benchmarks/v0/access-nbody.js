@@ -30,7 +30,6 @@ function Body(x,y,z,vx,vy,vz,mass) /*: new ctorBody */ {
    return this;
 }
 
-////////////////////////////////////////////////////////////////////////////////
 
 /*: #define tyOffsetMomentum
     [;L] [[this:Ref(L), px:Num, py:Num, pz:Num]]
@@ -44,7 +43,6 @@ Body.prototype.offsetMomentum = function(px,py,pz) /*: tyOffsetMomentum */ {
    return this;
 };
 
-////////////////////////////////////////////////////////////////////////////////
 
 /*: #define objBodyIn
       &Body |-> _:Ref(lBodyObj)
@@ -131,11 +129,9 @@ var Sun = function()
    return new /*: [;L] lBodyProto */ Body(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, SOLAR_MASS);
 };
 
-////////////////////////////////////////////////////////////////////////////////
 
 /*: [~lBody |-> (tyBody, lBodyProto)] */ "#weak";
 
-////////////////////////////////////////////////////////////////////////////////
 
 /*: #define tyNBodySystem
     {Dict|(and (dom v {"bodies"})
