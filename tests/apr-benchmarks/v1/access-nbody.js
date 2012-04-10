@@ -153,7 +153,7 @@ function NBodySystem(bodies) /*: new ctorNBodySystem */ {
    /*: [&this |-> _:Ref(Lnew), Lnew |-> (_:tyNBodySystem, lNBodySystemProto),
         Lbodies |-> (_:{(= v aBodies)}, lArrayProto) ] -> sameType */
    for (; i<size; i++){
-      var b = this.bodies[i];
+      var b = /*: Ref(~lBody) */ (this.bodies[i]);
       /*: b lThaw1 */ "#thaw";
       var m = b.mass;
       px += b.vx * m;
@@ -168,8 +168,6 @@ function NBodySystem(bodies) /*: new ctorNBodySystem */ {
    return this;
 }
 
-// TODO advance. more of this.
-
 var sqrt = function(n) /*: [[n:Num]] -> Num */ { return n; };
 
 /*: #define tyAdvance
@@ -177,8 +175,7 @@ var sqrt = function(n) /*: [[n:Num]] -> Num */ { return n; };
          [[this:Ref(L), dt:Num]]
        / [L |-> (thisD:tyNBodySystem, lNBodySystemProto),
           Lbodies |-> (aBodies:{(and (v::Arr(Ref(~lBody)))
-                                     (packed v)
-                                     (> (len v) 0))}, lArrayProto)]
+                                     (packed v) (> (len v) 0))}, lArrayProto)]
       -> Top / same */ "#define";
 
 NBodySystem.prototype.advance = function(dt) /*: tyAdvance */ {
@@ -196,45 +193,53 @@ NBodySystem.prototype.advance = function(dt) /*: tyAdvance */ {
            Lbodies |-> (_:{(= v aBodies)}, lArrayProto)] -> sameType */
       for (; j<size; j++) {
          var bodyj = this.bodies[j];
-         assert (/*: Ref(~lBody) */ bodyj);
 
-         //// original:
-         ////   dx = bodyi.x - bodyj.x;
-         ////   dy = bodyi.y - bodyj.y;
-         ////   dz = bodyi.z - bodyj.z;
-
-         var tmpi, tmpj;
          /*: bodyi lBodyi1 */ "#thaw";
-         tmpi = bodyi.x;
+         var ix = bodyi.x, iy = bodyi.y, iz = bodyi.z;
          /*: bodyi (~lBody, thwd lBodyi1) */ "#freeze";
+
          /*: bodyj lBodyj1 */ "#thaw";
-         tmpj = bodyj.x;
+         dx = ix - bodyj.x;
+         dy = iy - bodyj.y;
+         dz = iz - bodyj.z;
          /*: bodyj (~lBody, thwd lBodyj1) */ "#freeze";
-         dx = tmpi - tmpj;
 
-         //// not doing the rest manually like this ...
-         
-         // distance = sqrt(dx*dx + dy*dy + dz*dz);
-         // mag = dt / (distance * distance * distance);
+         distance = sqrt(dx*dx + dy*dy + dz*dz);
+         mag = dt / (distance * distance * distance);
 
-         // bodyi.vx -= dx * bodyj.mass * mag;
-         // bodyi.vy -= dy * bodyj.mass * mag;
-         // bodyi.vz -= dz * bodyj.mass * mag;
+         /*: bodyj lBodyj2 */ "#thaw";
+         var jm = bodyj.mass;
+         /*: bodyj (~lBody, thwd lBodyj2) */ "#freeze";
 
-         // bodyj.vx += dx * bodyi.mass * mag;
-         // bodyj.vy += dy * bodyi.mass * mag;
-         // bodyj.vz += dz * bodyi.mass * mag;
+         /*: bodyi lBodyi2 */ "#thaw";
+         bodyi.vx = bodyi.vx - dx * jm * mag;
+         bodyi.vy = bodyi.vy - dy * jm * mag;
+         bodyi.vz = bodyi.vz - dz * jm * mag;
+         /*: bodyi (~lBody, thwd lBodyi2) */ "#freeze";
+
+         /*: bodyi lBodyi2 */ "#thaw";
+         var im = bodyi.mass;
+         /*: bodyi (~lBody, thwd lBodyi2) */ "#freeze";
+
+         /*: bodyj lBodyj2 */ "#thaw";
+         bodyj.vx = bodyj.vx + dx * im * mag;
+         bodyj.vy = bodyj.vy + dy * im * mag;
+         bodyj.vz = bodyj.vz + dz * im * mag;
+         /*: bodyj (~lBody, thwd lBodyj2) */ "#freeze";
+
       }
    }
 
-   // i=0;
-   // /*: [] -> [] */
-   // for (; i<size; i++) {
-   //    var body = this.bodies[i];
-   //    body.x += dt * body.vx;
-   //    body.y += dt * body.vy;
-   //    body.z += dt * body.vz;
-   // }
+   i=0;
+   /*: [&this |-> _:Ref(L), L |-> (_:{(= v thisD)}, lNBodySystemProto),
+        Lbodies |-> (_:{(= v aBodies)}, lArrayProto)] -> sameType */
+   for (; i<size; i++) {
+      var body = this.bodies[i];
+      /*: body lBody */ "#thaw";
+      body.x = body.x + dt * body.vx;
+      body.y = body.y + dt * body.vy;
+      body.z = body.z + dt * body.vz;
+      /*: body (~lBody, thwd lBody) */ "#freeze";
+   }
 };
 
-// TODO energy

@@ -430,6 +430,15 @@ let addType x t env = { env with types = IdMap.add x t env.types }
 
 let emptyEnv = { flags = IdMap.empty; types = IdMap.empty }
 
+
+(* 4/9: add m |-> frzn to pre and post conditions for all functions *)
+let weakLocs = ref []
+
+let locProOfWeak cap m = 
+  if List.mem_assoc m !weakLocs then List.assoc m !weakLocs
+  else failwith (spr "locProOfWeak: greedy %s" cap)
+
+
 let rec getType env = function
   | EVal (VBase (Str _)) -> JsStr
   | EVal (VBase (Int i)) -> JsInt (i>=0)
@@ -555,10 +564,13 @@ let updateProtoType foo newField newFieldType env =
 (* useful for thaw/freeze *)
 let updateVarType env x l =
   let (b,t) =
+    if isWeakLoc l then (true, JsWeakObj l) else
     match getType env (EDeref (eVar x)) with
-      | JsObject(_,l2,_,_)   -> (true, JsObject (l, l2, ([],false), None))
-                             (* TODO preserve len or x? *)
+      | JsObject(l1,l2,_,_) -> (true, JsObject (l, l2, ([],false), None))
+      (* TODO preserve len or x? *)
       | JsArray(t,_,l2,al,x) -> (true, JsArray (t, l, l2, None, None))
+      (* 4/10 *)
+      | JsWeakObj(m) -> (true, JsObject (l, locProOfWeak "update" m, ([],false), None))
       | t                 -> (false, t)
   in
   if b then logJsTyp (spr "updateVarType(%s) = %s" x (strJsTyp t));
@@ -688,7 +700,8 @@ let jsTypToTyp = function
 (* TODO 4/8-4/9. combine this with check vars *)
 
 let rec fvExp env acc = function
-  | E.VarExpr (_, x) -> if IdMap.mem x env.flags then acc else IdSet.add x acc
+  | E.VarExpr (_, x) | E.IdExpr (_, x) ->
+      if IdMap.mem x env.flags then acc else IdSet.add x acc
   | E.FuncExpr (_, l, e) ->
       failwith "a"
   | E.FuncStmtExpr (_, f, l, e) ->
@@ -703,7 +716,6 @@ let rec fvExp env acc = function
   | E.ObjectExpr (_, ps) ->
       let es = List.map (fun (_,_,e) -> e) ps in
       List.fold_left (fvExp env) acc es
-  | E.IdExpr _ -> failwith "fvExp idexpr"
   | E.NewExpr (_, c, args) -> List.fold_left (fvExp env) acc (c::args)
   | E.PrefixExpr (_, _, e) -> fvExp env acc e
   | E.HintExpr (_, _, e) -> fvExp env acc e
@@ -715,7 +727,9 @@ let rec fvExp env acc = function
   | E.IfExpr (_, e1, e2, e3) -> List.fold_left (fvExp env) acc [e1;e2;e3]
   | E.AssignExpr (_, l, e) -> fvExp env (fvLv env acc l) e
   | E.AppExpr (_, f, args) -> List.fold_left (fvExp env) acc (f::args)
-  | E.LetExpr (_, x, e1, e2) -> failwith "fvexp let"
+  | E.LetExpr (_, x, e1, e2) ->
+      let acc = fvExp env acc e1 in
+      fvExp (addFlag x true env) acc e2
   | E.SeqExpr (_, E.VarDeclExpr (_, x, e), e2) ->
       fvExp (addFlag x true env) (fvExp env acc e) e2
   | E.SeqExpr (_, e1, e2) -> List.fold_left (fvExp env) acc [e1;e2]
@@ -803,12 +817,9 @@ let augmentHeap cs env freeVars =
                      | (l,HWeakTok(ts))     -> (l, HWeakTok ts)) newCs1 in
   (newCs1, newCs2)
 
-(* 4/9: add m |-> frzn to pre and post conditions for all functions *)
-let weakLocs = ref []
-
 let augmentHeap cs env freeVars =
   let (cs1,cs2) = augmentHeap cs env freeVars in
-  List.fold_left (fun (acc1,acc2) m ->
+  List.fold_left (fun (acc1,acc2) (m,_) ->
     if List.mem_assoc m cs then (acc1,acc2)
     else begin
       logJsTyp (spr "  %s |-> %s" (strLoc m) (strThawState Frzn));
@@ -1331,8 +1342,9 @@ let rec ds (env:env) = function
                      let loc = LocConst (freshVar "lThaw") in
                      let tmp = freshVar "thawTmp" in
                      let ex = eVar (dsVar x) in
+                     let locpro = locProOfWeak "get" m in 
                      ELet (freshVar "seq", None, ESetref (ex, EThaw (loc, EDeref ex)),
-                     ELet (tmp, None, objOp ts ls "getProp" [e1;e2], 
+                     ELet (tmp, None, objOp [] [loc;locpro] "getProp" [e1;e2], 
                      ELet (freshVar "seq", None,
                            ESetref (ex, EFreeze (m, Thwd loc, EDeref ex)),
                            eVar tmp)))
@@ -1569,8 +1581,9 @@ let rec ds (env:env) = function
                      let loc = LocConst (freshVar "lThaw") in
                      let tmp = freshVar "thawTmp" in
                      let ex = eVar (dsVar x) in
+                     let locpro = locProOfWeak "set" m in 
                      ELet (freshVar "seq", None, ESetref (ex, EThaw (loc, EDeref ex)),
-                     ELet (tmp, None, objOp ts ls "setProp" [e1;e2;e3], 
+                     ELet (tmp, None, objOp [] [loc;locpro] "setProp" [e1;e2;e3], 
                      ELet (freshVar "seq", None,
                            ESetref (ex, EFreeze (m, Thwd loc, EDeref ex)),
                            eVar tmp)))
@@ -1632,7 +1645,7 @@ let rec ds (env:env) = function
   | E.SeqExpr (_, E.HintExpr (_, s, E.ConstExpr (_, J.CString "#weak")), e2) ->
       let (m,t,l) = parseWeakLoc s in
       (* TODO store weak locs differently in env *)
-      let _ = weakLocs := m :: !weakLocs in
+      let _ = weakLocs := (m,l) :: !weakLocs in
       EWeak ((m, dsTyp t env, l), ds env e2)
 
   (* rkc: 3/15 match this case if i wanted to look for recursive functions as

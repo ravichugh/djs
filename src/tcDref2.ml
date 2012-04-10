@@ -276,10 +276,11 @@ let finishLet cap g y l (s,h) =
 (***** Misc operations ********************************************************)
 
 (* TODO when adding abstract refs, revisit these two *)
+(* 4/10 adding strong param to refsTermsOf, to use different filtering funcs *)
 
 (* TODO might want a separate version for local inf, where maybenulls should be
    considered, and a version for type checking, where they shouldn't *)
-let refTermsOf g = function
+let refTermsOf g ?(strong=None) = function
   (* 3/14 the MaybeNull case is so that thawed references can be passed
      to the object primitives *)
   | TMaybeNull(THasTyp([URef(l)],_))
@@ -289,11 +290,19 @@ let refTermsOf g = function
       [URef l]
   | t ->
       let _ = Log.log1 "call extract refTermsOf [%s]\n" (prettyStrTyp t) in
+      let filter = function
+        | URef(l) -> (match strong with
+                        | None -> true
+                        | Some(b) -> if b then not (isWeakLoc l) else isWeakLoc l)
+        | _       -> false in
+      TypeTerms.elements (Sub.mustFlow g t ~filter)
+(*
       let isConcRef = function URef _ -> true | _ -> false in
       TypeTerms.elements (Sub.mustFlow g t ~filter:isConcRef)
+*)
 
 let singleRefTermOf ?(strong=None) cap g t =
-  match refTermsOf g t, strong with
+  match refTermsOf g ~strong t, strong with
     | [URef(l)], None -> l
     | [URef(l)], Some(true) ->
         if isStrongLoc l then l
