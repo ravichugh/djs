@@ -187,6 +187,7 @@ NBodySystem.prototype.advance = function(dt) /*: tyAdvance */ {
    for (; i<size; i++) {
       var bodyi = /*: Ref(~lBody) */ (this.bodies[i]);
       var j = /*: {Int|(>= v 0)} */ (i+1);
+
       /*: [&this |-> _:Ref(L), L |-> (_:{(= v thisD)}, lNBodySystemProto),
            Lbodies |-> (_:{(= v aBodies)}, lArrayProto)] -> sameType */
       for (; j<size; j++) {
@@ -226,4 +227,42 @@ NBodySystem.prototype.advance = function(dt) /*: tyAdvance */ {
    }
 };
 
-// TODO energy
+/*: #define tyEnergy
+    [;L,Lbodies]
+         [[this:Ref(L)]]
+       / [L |-> (thisD:tyNBodySystem, lNBodySystemProto),
+          Lbodies |-> (aBodies:{(and (v::Arr(Ref(~lBody)))
+                                     (packed v) (> (len v) 0))}, lArrayProto)]
+      -> Top / same */ "#define";
+
+NBodySystem.prototype.energy = function() /*: tyEnergy */ {
+   var dx = 0.0, dy = 0.0, dz = 0.0, distance = 0.0;
+   var e = 0.0;
+   var size = /*: {Int|(= v (len aBodies))} */ (this.bodies.length);
+   var i = 0;
+
+   /*: [&this |-> _:Ref(L), L |-> (_:{(= v thisD)}, lNBodySystemProto),
+        Lbodies |-> (_:{(= v aBodies)}, lArrayProto)] -> sameType */
+   for (; i<size; i++) {
+      var bodyi = /*: Ref(~lBody) */ (this.bodies[i]);
+
+      e = e + 0.5 * bodyi.mass * ( bodyi.vx * bodyi.vx
+                                 + bodyi.vy * bodyi.vy
+                                 + bodyi.vz * bodyi.vz );
+
+      var j = /*: {Int|(>= v 0)} */ (i+1);
+
+      /*: [&this |-> _:Ref(L), L |-> (_:{(= v thisD)}, lNBodySystemProto),
+           Lbodies |-> (_:{(= v aBodies)}, lArrayProto)] -> sameType */
+      for (; j<size; j++) {
+         var bodyj = /*: Ref(~lBody) */ bodyi;
+         dx = bodyi.x - bodyj.x;
+         dy = bodyi.y - bodyj.y;
+         dz = bodyi.z - bodyj.z;
+
+         distance = sqrt(dx*dx + dy*dy + dz*dz);
+         e = e - ((bodyi.mass * bodyj.mass) / distance);
+      }
+   }
+   return e;
+};
