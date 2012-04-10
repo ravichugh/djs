@@ -7,20 +7,18 @@
                ((sel v "left"):Ref(~lTreeNode))
                ((sel v "right"):Ref(~lTreeNode)))} */ "#define";
 
-/*: #define ctorTreeNode
-        [;Lthis]
-        [[this:Ref(Lthis), left:Ref(~lTreeNode), right:Ref(~lTreeNode), item:Int]]
-      / [Lthis |-> (d:Empty, lTreeNodeProto), ~lTreeNode |-> frzn]
-     -> Ref(~lTreeNode) / [~lTreeNode |-> same] */ "#define";
+/*: #define ctorTreeNode [;Lthis]
+    [[this:Ref(Lthis), left:Ref(~lTreeNode), right:Ref(~lTreeNode), item:Int]]
+  / [Lthis |-> (d:Empty, lTreeNodeProto), ~lTreeNode |-> frzn]
+ -> Ref(~lTreeNode) / [~lTreeNode |-> same] */ "#define";
 
 function TreeNode(left,right,item) /*: new ctorTreeNode */ {
   this.left = left;
   this.right = right;
   this.item = item;
 
-  var self = this;
-  /*: self (~lTreeNode, frzn) */ "#freeze";
-  return self;
+  /*: this (~lTreeNode, frzn) */ "#freeze";
+  return this;
 };
 
 
@@ -40,23 +38,22 @@ assert (/*: Int */ i);
 
 TreeNode.prototype.itemCheck = function itemCheck() /*: tyItemCheck */ {
   var i;
-  var self = this;
-  /*: self lSelf1 */ "#thaw";
-  var b = self.left == null;
-  /*: self (~lTreeNode, thwd lSelf1) */ "#freeze";
+  /*: this lThis1 */ "#thaw";
+  var b = this.left == null;
+  /*: this (~lTreeNode, thwd lThis1) */ "#freeze";
 
   if (b) {
-    /*: self lSelf2 */ "#thaw";
-    i = self.item;
-    /*: self (~lTreeNode, thwd lSelf2) */ "#freeze";
+    /*: this lThis2 */ "#thaw";
+    i = this.item;
+    /*: this (~lTreeNode, thwd lThis2) */ "#freeze";
     return i;
   }
   else {
-    /*: self lSelf3 */ "#thaw";
-    i = self.item;
-    var left = self.left;
-    var right = self.right;
-    /*: self (~lTreeNode, thwd lSelf3) */ "#freeze";
+    /*: this lThis3 */ "#thaw";
+    i = this.item;
+    var left = this.left;
+    var right = this.right;
+    /*: this (~lTreeNode, thwd lThis3) */ "#freeze";
     return i + itemCheck.apply(left) + itemCheck.apply(right);
   }
 };

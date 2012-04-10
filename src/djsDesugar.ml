@@ -608,7 +608,10 @@ let addFormals t env =
   match t with (* looking for a single arrow *)
   | THasTyp([UArr(_,_,TTuple(ts),(_,cs),_,_)],_) ->
       List.fold_left (fun env (x,t) ->
+(*
         let x = if x = "this" then x else dsVar x in
+*)
+        let x = dsVar x in
         match t with (* could look for optional strong ref if need be *)
         | THasTyp([URef(l1)],_) -> begin
             match findHeapCell l1 cs with
@@ -681,6 +684,9 @@ let rec fvExp env acc = function
       fvExp env acc e
   | E.ConstExpr _ -> acc
   | E.ThisExpr _ -> IdSet.add "this" acc
+(*
+  | E.ThisExpr p -> fvExp env acc (E.VarExpr (p, "this"))
+*)
   | E.ArrayExpr (_, es) -> List.fold_left (fvExp env) acc es
   | E.ObjectExpr (_, ps) ->
       let es = List.map (fun (_,_,e) -> e) ps in
@@ -731,6 +737,7 @@ let augmentHeap cs env freeVars =
   IdSet.fold (fun x acc ->
     let lx = LocConst (spr "&%s" x) in
 
+(*
     (* TODO if i switch this to a ref, to facilitate thaw inf, then can
        get rid of this special case *)
     if x = "this" then begin
@@ -744,8 +751,9 @@ let augmentHeap cs env freeVars =
         | JsArray _ -> failwith "augmentheap this array"
         | _ -> acc)
     end
+*)
 
-    else if List.mem_assoc lx cs then acc
+    if List.mem_assoc lx cs then acc
     else if IdMap.mem (dsVar x) env.types then
       (match IdMap.find (dsVar x) env.types with
          | JsArray(t,l1,l2,alen,ao) ->
@@ -758,7 +766,9 @@ let augmentHeap cs env freeVars =
                    (lx, HConc (tmp(), tyRef l1)) ::
                    (l1, HConcObj (tmp(), ty (eq theV (wVar a)), l2)) :: acc)
          | JsObject(l1,l2,r,_) -> (* not using binder, so fields can be written *)
-             if List.mem_assoc l1 cs then acc
+             if List.mem_assoc l1 cs then
+               acc
+               (* (lx, HConc (tmp(), tyRef l1)) :: acc *) (* TODO *)
              else
                (lx, HConc (tmp(), tyRef l1)) ::
                (l1, HConcObj (tmp(), tyJsRecd r, l2)) :: acc
@@ -1227,11 +1237,15 @@ let rec ds (env:env) = function
   | E.ArrayExpr (_, es) ->
       ENewref (LocConst (freshVar "arrLit"), mkEArray None env es)
 
+(*
   | E.ThisExpr p -> 
       (* In JavaScript, 'this' is a reserved word.  Hence, we are certain that
          the the bound identifier is not captured by existing bindings. *)
       if !Settings.fullObjects then eVar "this"
       else Log.printParseErr "\"this\" not allowed in djsLite mode"
+*)
+  (* 4/9 switched to a __this reference cell *)
+  | E.ThisExpr p -> EDeref (eVar (dsVar "this"))
 
   (* TODO 3/15
   | E.IdExpr (p, x) -> let _ = failwith "rkc: ds idexpr" in EVar x
@@ -1883,8 +1897,9 @@ let rec ds (env:env) = function
          it too
       let env = List.fold_left (fun env arg -> addFlag arg true env) env args in
       let t = augmentType t env (fvExps "dsFuncExpr recursive" env [body]) in
-      *)
       let func = dsFunc false env p args body in
+      *)
+      let func = dsFunc (hasThisParam t) env p args body in
       EApp (([t],[],[]), eVar "fix",
         EFun (([],[],[]), f, None, func))
 
@@ -1951,13 +1966,15 @@ and dsMethCall env ts ls obj prop args =
     will not work in general *)
   mkCall ts ls func (Some obj) (List.map (ds env) args)
 
-and dsFunc isCtor env p args body =
+and dsFunc thisParam env p args body =
   if !Settings.doArgsArray
-  then dsFuncWithArgsArray isCtor env p args body
-  else dsFuncWithoutArgsArray isCtor env p args body
+  then dsFuncWithArgsArray thisParam env p args body
+  else dsFuncWithoutArgsArray thisParam env p args body
 
 (* 3/30 *)
-and dsFuncWithoutArgsArray isCtor env p args body =
+and dsFuncWithoutArgsArray thisParam env p args body =
+  (* 4/9: starting to use a __this reference cell to facilitate thaw/freeze *)
+  let args = if thisParam then ("this"::args) else args in
   let env =
     List.fold_left (fun env x -> addFlag (dsVar x) true env) env args in
   let body =
@@ -1965,12 +1982,16 @@ and dsFuncWithoutArgsArray isCtor env p args body =
       let _x = dsVar x in
       ELet (_x, None, ENewref (LocConst (spr "&%s" x), eVar x), acc)
     ) (ds env body) args in
-  if isCtor
+  eLambdaSimple args body
+(*
+  if thisParam
     then eLambdaSimple ("this"::args) body
     else eLambdaSimple args body
+*)
 
 (* rkc: based on LamJS E.FuncExpr case *)
-and dsFuncWithArgsArray isCtor env p args body =
+and dsFuncWithArgsArray thisParam env p args body =
+  failwith "dsFuncWithArgsArray: update this to __this";
   let args = List.map dsVar args in
   let init_var x exp =
 (*
@@ -2014,7 +2035,7 @@ and dsFuncWithArgsArray isCtor env p args body =
                mkApp ~curried:true "get_curried" [EDeref (eVar "arguments")],
                body)
   in
-  if isCtor
+  if thisParam
     then eLambda ["this"; "arguments"] body
     else eLambda ["arguments"] body
 

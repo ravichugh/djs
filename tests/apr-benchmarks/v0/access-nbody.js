@@ -160,13 +160,14 @@ function NBodySystem(bodies) /*: new ctorNBodySystem */ {
    var pz = 0.0;
    var size = this.bodies.length;
    var i = 0;
-   /*: [&i |-> _:{Int|(>= v 0)}, &px |-> _:Num, &py |-> _:Num, &pz |-> _:Num,
+   /*: [&this |-> _:Ref(Lnew),
+        &i |-> _:{Int|(>= v 0)}, &px |-> _:Num, &py |-> _:Num, &pz |-> _:Num,
         &size |-> _:{Int|(= v (len aBodies))},
         Lnew |-> (_:tyNBodySystem, lNBodySystemProto),
         Lbodies |-> (_:{(= v aBodies)}, lArrayProto),
         ~lBody |-> frzn
        ] -> [&i |-> sameType, &px |-> sameType, &py |-> sameType, &pz |-> sameType,
-             &size |-> sameExact,
+             &size |-> sameExact, &this |-> sameType,
              Lnew |-> sameExact,
              Lbodies |-> sameExact,
              ~lBody |-> frzn] */
@@ -209,14 +210,16 @@ NBodySystem.prototype.advance = function(dt) /*: tyAdvance */ {
 
    var i = 0;
 
-   /*: [&i |-> _:{Int|(>= v 0)},
+   /*: [&this |-> _:Ref(L),
+        &i |-> _:{Int|(>= v 0)},
         L |-> (_:{(= v thisD)}, lNBodySystemProto),
         Lbodies |-> (_:{(= v aBodies)}, lArrayProto),
         &size |-> _:{Int|(= v (len aBodies))},
         ~lBody |-> frzn,
         &dx |-> _:Num
        ]
-    -> [&i |-> sameType,
+    -> [&this |-> sameType,
+        &i |-> sameType,
         L |-> sameType,
         Lbodies |-> sameType,
         &size |-> sameType,
@@ -227,7 +230,8 @@ NBodySystem.prototype.advance = function(dt) /*: tyAdvance */ {
       var bodyi = this.bodies[i];
       assert (/*: Ref(~lBody) */ bodyi);
       var j = i+1;
-      /*: [&j |-> _:{Int|(>= v 0)},
+      /*: [&this |-> _:Ref(L),
+           &j |-> _:{Int|(>= v 0)},
            &size |-> _:{Int|(= v (len aBodies))},
            L |-> (_:{(= v thisD)}, lNBodySystemProto),
            Lbodies |-> (_:{(= v aBodies)}, lArrayProto),
@@ -235,7 +239,8 @@ NBodySystem.prototype.advance = function(dt) /*: tyAdvance */ {
            ~lBody |-> frzn,
            &dx |-> _:Num
           ]
-       -> [&j |-> sameType,
+       -> [&this |-> sameType,
+           &j |-> sameType,
            &size |-> sameType,
            L |-> sameType,
            Lbodies |-> sameType,

@@ -150,7 +150,7 @@ function NBodySystem(bodies) /*: new ctorNBodySystem */ {
    var pz = 0.0;
    var size = /*: {Int|(= v (len aBodies))} */ (this.bodies.length);
    var i = 0;
-   /*: [Lnew |-> (_:tyNBodySystem, lNBodySystemProto),
+   /*: [&this |-> _:Ref(Lnew), Lnew |-> (_:tyNBodySystem, lNBodySystemProto),
         Lbodies |-> (_:{(= v aBodies)}, lArrayProto) ] -> sameType */
    for (; i<size; i++){
       var b = this.bodies[i];
@@ -187,12 +187,12 @@ NBodySystem.prototype.advance = function(dt) /*: tyAdvance */ {
 
    var i = 0;
 
-   /*: [L |-> (_:{(= v thisD)}, lNBodySystemProto),
+   /*: [&this |-> _:Ref(L), L |-> (_:{(= v thisD)}, lNBodySystemProto),
         Lbodies |-> (_:{(= v aBodies)}, lArrayProto)] -> sameType */
    for (; i<size; i++) {
       var bodyi = /*: Ref(~lBody) */ (this.bodies[i]);
       var j = /*: {Int|(>= v 0)} */ (i+1);
-      /*: [L |-> (_:{(= v thisD)}, lNBodySystemProto),
+      /*: [&this |-> _:Ref(L), L |-> (_:{(= v thisD)}, lNBodySystemProto),
            Lbodies |-> (_:{(= v aBodies)}, lArrayProto)] -> sameType */
       for (; j<size; j++) {
          var bodyj = this.bodies[j];

@@ -28,7 +28,8 @@ for top, _, files in os.walk(djsdir + benchdir):
     for nm in files:       
         bench = re.sub("[.]js", "", nm)
         bench = bench.strip()
-        if not bench in benchmarks: raise Exception("unexpected benchmark: " + bench)
+        if bench[0:3] == "un-": continue
+        elif not bench in benchmarks: raise Exception("unexpected benchmark: " + bench)
         # LaTeX macros don't like '-' characters, so remove them
         bench = re.sub("-","",bench)
         f = os.path.join(top, nm)
