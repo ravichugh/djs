@@ -102,3 +102,104 @@ function NBodySystem(bodies) /*: new ctorNBodySystem */ {
    /*: b0 (~lBody, thwd lThaw2) */ "#freeze";
    return this;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+
+var Math = {};
+Math.sqrt = function(n) /*: [[n:Num]] -> Num */ { return n; };
+
+/*: #define tyAdvance
+    [;L,Lbodies]
+         [[this:Ref(L), dt:Num]]
+       / [L |-> (thisD:tyNBodySystem, lNBodySystemProto),
+          Lbodies |-> (aBodies:{(and (v::Arr(Ref(~lBody)))
+                                     (packed v)
+                                     (> (len v) 0))}, lArrayProto),
+          ~lBody |-> frzn]
+      -> Top / same
+*/ "#define";
+
+NBodySystem.prototype.advance = function(dt) /*: tyAdvance */ {
+   // originals didn't initialize
+   var dx = 0, dy, dz, distance, mag;
+   var size = this.bodies.length;
+
+   var i = 0;
+
+   /*: [&i |-> _:{Int|(>= v 0)},
+        L |-> (_:{(= v thisD)}, lNBodySystemProto),
+        Lbodies |-> (_:{(= v aBodies)}, lArrayProto),
+        &size |-> _:{Int|(= v (len aBodies))},
+        ~lBody |-> frzn,
+        &dx |-> _:Num
+       ]
+    -> [&i |-> sameType,
+        L |-> sameType,
+        Lbodies |-> sameType,
+        &size |-> sameType,
+        ~lBody |-> frzn,
+        &dx |-> sameType
+       ] */
+   for (; i<size; i++) {
+      var bodyi = this.bodies[i];
+      assert (/*: Ref(~lBody) */ bodyi);
+      var j = i+1;
+      /*: [&j |-> _:{Int|(>= v 0)},
+           &size |-> _:{Int|(= v (len aBodies))},
+           L |-> (_:{(= v thisD)}, lNBodySystemProto),
+           Lbodies |-> (_:{(= v aBodies)}, lArrayProto),
+           &bodyi |-> _:Ref(~lBody),
+           ~lBody |-> frzn,
+           &dx |-> _:Num
+          ]
+       -> [&j |-> sameType,
+           &size |-> sameType,
+           L |-> sameType,
+           Lbodies |-> sameType,
+           ~lBody |-> frzn,
+           &dx |-> sameType
+          ] */
+      for (; j<size; j++) {
+         var bodyj = this.bodies[j];
+         assert (/*: Ref(~lBody) */ bodyj);
+
+         //// original:
+         ////   dx = bodyi.x - bodyj.x;
+         ////   dy = bodyi.y - bodyj.y;
+         ////   dz = bodyi.z - bodyj.z;
+
+         var tmpi, tmpj;
+         /*: bodyi lBodyi1 */ "#thaw";
+         tmpi = bodyi.x;
+         /*: bodyi (~lBody, thwd lBodyi1) */ "#freeze";
+         /*: bodyj lBodyj1 */ "#thaw";
+         tmpj = bodyj.x;
+         /*: bodyj (~lBody, thwd lBodyj1) */ "#freeze";
+         dx = tmpi - tmpj;
+
+         //// not doing the rest manually like this ...
+         
+         // distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+         // mag = dt / (distance * distance * distance);
+
+         // bodyi.vx -= dx * bodyj.mass * mag;
+         // bodyi.vy -= dy * bodyj.mass * mag;
+         // bodyi.vz -= dz * bodyj.mass * mag;
+
+         // bodyj.vx += dx * bodyi.mass * mag;
+         // bodyj.vy += dy * bodyi.mass * mag;
+         // bodyj.vz += dz * bodyi.mass * mag;
+      }
+   }
+
+   // i=0;
+   // /*: [] -> [] */
+   // for (; i<size; i++) {
+   //    var body = this.bodies[i];
+   //    body.x += dt * body.vx;
+   //    body.y += dt * body.vy;
+   //    body.z += dt * body.vz;
+   // }
+};
+
+

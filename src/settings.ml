@@ -29,6 +29,9 @@ let doArgsArray = ref false
 
 (* TODO rename this since it only applies to desugaring obj prims *)
 let typedDesugaring = ref true
+(*
 let inferFrames = ref false
 let monotonicHeaps = ref false
+*)
+let augmentHeaps = ref false
 

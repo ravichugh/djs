@@ -629,7 +629,13 @@ let addFormals t env =
                 addType x t env
             | _ -> env
           end
-        | _ -> env
+        (* TODO 4/9 adding more cases here besides references *)
+        | TBaseUnion(["number"]) ->
+            let t = JsNum in
+            let _ = logJsTyp (spr "addFormalType(%s) = %s" x (strJsTyp t)) in
+            addType x t env
+        | _ ->
+            env
       ) env ts
   | _ -> env
 
@@ -649,6 +655,172 @@ let tyJsRecd (fields,b) =
 let tyProtoDict fields =
   let types = List.map (fun (f,t) -> applyTyp t (sel theV (wStr f))) fields in
   ty (pAnd (pDict :: types))
+
+(* TODO 4/9 *)
+let jsTypToTyp = function
+  | JsInt(b) -> if b then tyPosInt else tyInt
+  | JsLen(x) -> ty (eq theV (arrlen (wVar x)))
+  | JsNum -> tyNum
+  | JsStr -> tyStr
+  | JsTop -> tyAny
+  | JsAnnotate(t) -> t
+  | JsObject _ -> failwith "jsTypToTyp object"
+  | JsArray _ -> failwith "jsTypToTyp array"
+  | JsCtor _ -> failwith "jsTypToTyp ctor"
+
+
+(***** Typed DS - Free Vars ***************************************************)
+(* TODO 4/8-4/9. combine this with check vars *)
+
+let rec fvExp env acc = function
+  | E.VarExpr (_, x) -> if IdMap.mem x env.flags then acc else IdSet.add x acc
+  | E.FuncExpr (_, l, e) ->
+      failwith "a"
+  | E.FuncStmtExpr (_, f, l, e) ->
+      let env = List.fold_left (fun env x -> addFlag x true env) env (f::l) in
+      fvExp env acc e
+  | E.ConstExpr _ -> acc
+  | E.ThisExpr _ -> IdSet.add "this" acc
+  | E.ArrayExpr (_, es) -> List.fold_left (fvExp env) acc es
+  | E.ObjectExpr (_, ps) ->
+      let es = List.map (fun (_,_,e) -> e) ps in
+      List.fold_left (fvExp env) acc es
+  | E.IdExpr _ -> failwith "fvExp idexpr"
+  | E.NewExpr (_, c, args) -> List.fold_left (fvExp env) acc (c::args)
+  | E.PrefixExpr (_, _, e) -> fvExp env acc e
+  | E.HintExpr (_, _, e) -> fvExp env acc e
+  | E.BracketExpr (_, e1, e2)
+  | E.InfixExpr (_, _, e1, e2)
+  | E.ForInExpr (_, _, e1, e2)
+  | E.WhileExpr (_, e1, e2)
+  | E.DoWhileExpr (_, e1, e2) -> List.fold_left (fvExp env) acc [e1;e2]
+  | E.IfExpr (_, e1, e2, e3) -> List.fold_left (fvExp env) acc [e1;e2;e3]
+  | E.AssignExpr (_, l, e) -> fvExp env (fvLv env acc l) e
+  | E.AppExpr (_, f, args) -> List.fold_left (fvExp env) acc (f::args)
+  | E.LetExpr (_, x, e1, e2) -> failwith "fvexp let"
+  | E.SeqExpr (_, E.VarDeclExpr (_, x, e), e2) ->
+      fvExp (addFlag x true env) (fvExp env acc e) e2
+  | E.SeqExpr (_, e1, e2) -> List.fold_left (fvExp env) acc [e1;e2]
+  | E.LabelledExpr (_, _, e) -> fvExp env acc e
+  | E.BreakExpr (_, _, e) -> fvExp env acc e
+  | E.VarDeclExpr (_, x, e) -> fvExp env acc e
+(*
+  | E.ThrowExpr (_, e)
+  | E.TryCatchExpr (_, e1, _, e2) -> (* TODO catch bound identifiers *)
+      fvFold env acc [e1;e2]
+  | E.TryFinallyExpr (_, e1, e2) ->
+      fvFold env acc [e1;e2]
+*)
+
+and fvLv env acc = function
+  | E.VarLValue (_, x) -> if IdMap.mem x env.flags then acc else IdSet.add x acc
+  | E.PropLValue (_, e1, e2) -> List.fold_left (fvExp env) acc [e1;e2]
+
+let fvExps cap env exprs =
+  if not !Settings.augmentHeaps then IdSet.empty
+  else begin
+    let freeVars = List.fold_left (fvExp env) IdSet.empty exprs in
+    let s = IdSet.fold (fun x acc -> spr "%s %s" acc x) freeVars "" in
+    logJsTyp (spr "\nfreeVars %s {%s }" cap s);
+    freeVars
+  end
+
+let augmentHeap cs env freeVars =
+  let tmp () = freshVar "augheap" in
+  let newCs1 =
+  IdSet.fold (fun x acc ->
+    let lx = LocConst (spr "&%s" x) in
+
+    (* TODO if i switch this to a ref, to facilitate thaw inf, then can
+       get rid of this special case *)
+    if x = "this" then begin
+      if not (IdMap.mem x env.types) then acc
+      else (match IdMap.find x env.types with
+        (* same as case below, but not an extra level of indirection
+           because "this" is not a mutable variable *)
+        | JsObject(l1,l2,r,_) ->
+            if List.mem_assoc l1 cs then acc
+            else (l1, HConcObj (tmp(), tyJsRecd r, l2)) :: acc
+        | JsArray _ -> failwith "augmentheap this array"
+        | _ -> acc)
+    end
+
+    else if List.mem_assoc lx cs then acc
+    else if IdMap.mem (dsVar x) env.types then
+      (match IdMap.find (dsVar x) env.types with
+         | JsArray(t,l1,l2,alen,ao) ->
+             if List.mem_assoc l1 cs then acc
+             else (match ao with
+               | None ->
+                   (lx, HConc (tmp(), tyRef l1)) ::
+                   (l1, HConcObj (tmp(), THasTyp ([UArray t], pArrLen alen), l2)) :: acc
+               | Some(a) ->
+                   (lx, HConc (tmp(), tyRef l1)) ::
+                   (l1, HConcObj (tmp(), ty (eq theV (wVar a)), l2)) :: acc)
+         | JsObject(l1,l2,r,_) -> (* not using binder, so fields can be written *)
+             if List.mem_assoc l1 cs then acc
+             else
+               (lx, HConc (tmp(), tyRef l1)) ::
+               (l1, HConcObj (tmp(), tyJsRecd r, l2)) :: acc
+         | t ->
+             (lx, HConc (tmp(), jsTypToTyp t)) :: acc)
+    else
+      acc
+  ) freeVars []
+  in
+  if newCs1 <> [] then begin
+    logJsTyp "augmentHeap added:";
+    List.iter (fun (l,hc) ->
+      logJsTyp (spr "  %s |-> %s" (strLoc l) (prettyStr strHeapCell hc))
+    ) newCs1;
+  end;
+  (* TODO for now, implementing "sameType" with fresh binders *)
+  let newCs2 =
+    List.map (function (l,HConc(_,s))       -> (l, HConc (tmp(), s))
+                     | (l,HConcObj(_,s,l')) -> (l, HConcObj (tmp(), s, l'))
+                     | (l,HWeakTok(ts))     -> (l, HWeakTok ts)) newCs1 in
+  (newCs1, newCs2)
+
+(* 4/9: add m |-> frzn to pre and post conditions for all functions *)
+let weakLocs = ref []
+
+let augmentHeap cs env freeVars =
+  let (cs1,cs2) = augmentHeap cs env freeVars in
+  List.fold_left (fun (acc1,acc2) m ->
+    if List.mem_assoc m cs then (acc1,acc2)
+    else begin
+      logJsTyp (spr "  %s |-> %s" (strLoc m) (strThawState Frzn));
+      ((m, HWeakTok Frzn) :: acc1, (m, HWeakTok Frzn) :: acc2)
+    end
+  ) (cs1,cs2) !weakLocs
+
+(* 4/9 looking for a single arrow. if so, then add omitted locations. based
+   on envToFrame/threadStuff from last week. *)
+let augmentType t env freeVars =
+  if not !Settings.augmentHeaps then t else
+  match t with
+    | THasTyp([UArr(l,x,t1,(h1,cs1),t2,(h2,cs2))],p) ->
+        let (newCs1,newCs2) = augmentHeap cs1 env freeVars in
+        THasTyp ([UArr (l,x,t1,(h1,cs1@newCs1),t2,(h2,cs2@newCs2))], p)
+    | t ->
+        failwith (spr "augmentType %s" (prettyStrTyp t))
+
+(*
+(* TODO this is what a loop annotation should be *)
+type preframe = hvars * heap
+*)
+
+let augmentFrame frame env freeVars =
+  if not !Settings.augmentHeaps then frame
+  else let (hvars,(h1,cs1),(t2,(h2,cs2))) = frame in
+       let (newCs1,newCs2) = augmentHeap cs1 env freeVars in
+       (hvars, (h1, cs1 @ newCs1), (t2, (h2, cs2 @ newCs2)))
+
+let dummyFrame = ParseUtils.typToFrame tyAny
+
+(*
+
+(***** Typed DS - Frame Inf ***************************************************)
 
 let envToFrame env =
   let cs =
@@ -701,6 +873,10 @@ let envToFrame env =
   let f = ([h], ([h],cs), (tyAny,([h],cs))) in (* TODO output cs *)
   logJsTyp (spr "\nenvToFrame(...) = %s\n" (prettyStr strFrame f));
   f
+*)
+
+(*
+(***** Typed DS - Monotonic Heaps *********************************************)
 
 let threadStuff env (l,xIn,t1,(h1,cs1),t2,(h2,cs2)) =
   Printf.printf "threadStuff called\n";
@@ -771,6 +947,7 @@ let threadStuffThrough env = function
 let isJsProto = function JsProto _ -> true | _ -> false
 *)
 
+*)
 
 (***** Desugaring types *******************************************************)
 
@@ -871,7 +1048,9 @@ let dsTyp t env =
     | UArr(arr) -> UArr (dsArrow arr)
     | u         -> u in
   let t = mapTyp ~fTT t in
+(*
   let t = if !Settings.monotonicHeaps then threadStuffThrough env t else t in
+*)
   t
 
 let desugarTypHint hint env =
@@ -1118,6 +1297,8 @@ let rec ds (env:env) = function
           | JsTop, JsStr            -> objOp ts ls "getProp" [e1;e2] 
           | JsTop, JsInt _          -> objOp ts ls "getIdx"  [e1;e2] 
           | JsTop, JsTop            -> objOp ts ls "getElem" [e1;e2] 
+          (* TODO 4/9 *)
+          | _ -> objOp ts ls "getElem" [e1;e2]
       end else begin
         match e2 with
           | E.ConstExpr (_, J.CInt i) ->
@@ -1389,6 +1570,7 @@ let rec ds (env:env) = function
   | E.SeqExpr (_, E.HintExpr (_, s, E.ConstExpr (_, J.CString "#weak")), e2) ->
       let (m,t,l) = parseWeakLoc s in
       (* TODO store weak locs differently in env *)
+      let _ = weakLocs := m :: !weakLocs in
       EWeak ((m, dsTyp t env, l), ds env e2)
 
   (* rkc: 3/15 match this case if i wanted to look for recursive functions as
@@ -1431,6 +1613,12 @@ let rec ds (env:env) = function
 *)
       let t = desugarCtorHint s env in
       let env = addFormals t env in
+
+      (* 4/9: unfortunate that have to call addFlag here, since dsFunc does
+         it too *)
+      let env = List.fold_left (fun env arg -> addFlag arg true env) env args in
+      let t = augmentType t env (fvExps "dsFuncExpr recursive" env [body]) in
+
       let code =
         EAs ("DjsDesugarCtor", dsFunc true env p args body,
              ParseUtils.typToFrame t) in
@@ -1513,14 +1701,25 @@ let rec ds (env:env) = function
     end
 
   | E.LabelledExpr (_, bl, E.WhileExpr (_, test, e2)) when isBreakLabel bl ->
-      if !Settings.inferFrames then begin
+      if !Settings.augmentHeaps then begin
         match e2 with
           | E.LabelledExpr(_,cl,body) when isContLabel cl ->
-              dsWhile env bl cl test body (envToFrame env)
+              dsWhile env bl cl test body dummyFrame
           | E.SeqExpr(_,E.LabelledExpr(_,cl,body),incr) when isContLabel cl ->
-              dsFor env bl cl test body incr (envToFrame env)
+              dsFor env bl cl test body incr dummyFrame
           | _ ->
               Log.printParseErr "desugar EJS unannotated while fail"
+(*
+      end else if !Settings.inferFrames then begin
+        let _ = failwith "-augmentHeaps is now the way to go" in
+        match e2 with
+          | E.LabelledExpr(_,cl,body) when isContLabel cl ->
+              dsWhile env bl cl test body (envToFrame env [test;body])
+          | E.SeqExpr(_,E.LabelledExpr(_,cl,body),incr) when isContLabel cl ->
+              dsFor env bl cl test body incr (envToFrame env [test;body;incr])
+          | _ ->
+              Log.printParseErr "desugar EJS unannotated while fail"
+*)
       end else
         failwith "djsDesugar: unannotated while or for"
 
@@ -1680,6 +1879,11 @@ let rec ds (env:env) = function
       let f = dsVar f in
       let env = addFlag f false env in
       let env = addFormals t env in
+      (* 4/9: unfortunate that have to call addFlag here, since dsFunc does
+         it too
+      let env = List.fold_left (fun env arg -> addFlag arg true env) env args in
+      let t = augmentType t env (fvExps "dsFuncExpr recursive" env [body]) in
+      *)
       let func = dsFunc false env p args body in
       EApp (([t],[],[]), eVar "fix",
         EFun (([],[],[]), f, None, func))
@@ -1711,13 +1915,18 @@ and mkEArray topt env es =
 (* for FuncExprs, this is an annotation.
    for all other expressions, it's an assert *)
 and dsAssert env s e =
-  let t = desugarTypHint s env in
-  let e =
+  let (e,t) =
     match e with
       | E.FuncExpr(p,args,body) ->
+          let t = desugarTypHint s env in
           let env = addFormals t env in
-          dsFunc (hasThisParam t) env p args body
-      | _ -> ds env e
+
+          let env = List.fold_left (fun env arg -> addFlag arg true env) env args in
+
+          let t = augmentType t env (fvExps "dsFuncExpr" env [body]) in
+          (dsFunc (hasThisParam t) env p args body, t)
+      | _ ->
+          (ds env e, desugarTypHint s env)
   in
   EAs ("DjsDesugar", e, ParseUtils.typToFrame t)
 (*
@@ -1811,6 +2020,8 @@ and dsFuncWithArgsArray isCtor env p args body =
 
 (* rkc: based on LamJS E.WhileExpr case *)
 and dsWhile env breakL continueL test body frame =
+  let free = fvExps "dsWhile" emptyEnv [test;body] in (* notice emptyEnv *)
+  let frame = augmentFrame frame env free in
   let (hs,e1,(t2,e2)) = frame in
   let f = freshVar "while" in
   let loop () = mkApp f [EVal vUndef] in
@@ -1830,6 +2041,8 @@ and dsWhile env breakL continueL test body frame =
 
 (* rkc: based on LamJS E.DoWhileExpr case *)
 and dsDoWhile env breakL continueL test body frame =
+  let free = fvExps "dsDoWhile" emptyEnv [test;body] in (* notice emptyEnv *)
+  let frame = augmentFrame frame env free in
   let (hs,e1,(t2,e2)) = frame in
   let f = freshVar "dowhile" in
   let loop () = mkApp f [EVal vUndef] in
@@ -1852,6 +2065,8 @@ and dsDoWhile env breakL continueL test body frame =
      the rest of the for statement. see notes on desugaring.
 *)
 and dsFor env breakL continueL test body incr frame =
+  let free = fvExps "dsFor" emptyEnv [test;body;incr] in (* notice emptyEnv *)
+  let frame = augmentFrame frame env free in
   let (hs,e1,(t2,e2)) = frame in
   let f = freshVar "forwhile" in
   let loop () = mkApp f [EVal vUndef] in

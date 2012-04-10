@@ -1,17 +1,13 @@
 // SunSpider access-nbody.js
 
 var PI = 3.141592653589793;
-var SOLAR_MASS = 4 * PI * PI;
+var SOLAR_MASS = /*: Num */ (4 * PI * PI);
 var DAYS_PER_YEAR = 365.24;
 
 /*: #define tyBody
     {Dict|(and (dom v {"x","y","z","vx","vy","vz","mass"})
-               ((sel v "x") : Num)
-               ((sel v "y") : Num)
-               ((sel v "z") : Num)
-               ((sel v "vx") : Num)
-               ((sel v "vy") : Num)
-               ((sel v "vz") : Num)
+               ((sel v "x") : Num) ((sel v "y") : Num) ((sel v "z") : Num)
+               ((sel v "vx") : Num) ((sel v "vy") : Num) ((sel v "vz") : Num)
                ((sel v "mass") : Num))} */ "#define";
 
 /*: #define ctorBody
@@ -32,8 +28,7 @@ function Body(x,y,z,vx,vy,vz,mass) /*: new ctorBody */ {
 
 
 /*: #define tyOffsetMomentum
-    [;L] [[this:Ref(L), px:Num, py:Num, pz:Num]]
-       / [L |-> (_:tyBody, lBodyProto), &SOLAR_MASS |-> _:Num]
+    [;L] [[this:Ref(L), px:Num, py:Num, pz:Num]] / [L |-> (_:tyBody, lBodyProto)]
       -> Ref(L) / sameType */ "#define";
 
 Body.prototype.offsetMomentum = function(px,py,pz) /*: tyOffsetMomentum */ {
@@ -62,20 +57,20 @@ Body.prototype.offsetMomentum = function(px,py,pz) /*: tyOffsetMomentum */ {
     , &SOLAR_MASS |-> same
 */ "#define";
 
-var Jupiter = function()
-/*: [;L] [[]]   / [objBodyIn]
-      -> Ref(L) / [L |-> (_:tyBody, lBodyProto), objBodyOut] */
-{
-   return new /*: [;L] lBodyProto */ Body(
-      4.84143144246472090e+00,
-      -1.16032004402742839e+00,
-      -1.03622044471123109e-01,
-      1.66007664274403694e-03 * DAYS_PER_YEAR,
-      7.69901118419740425e-03 * DAYS_PER_YEAR,
-      -6.90460016972063023e-05 * DAYS_PER_YEAR,
-      9.54791938424326609e-04 * SOLAR_MASS
-   );
-};
+///// var Jupiter = function()
+///// /*: [;L] [[]]   / [objBodyIn]
+/////       -> Ref(L) / [L |-> (_:tyBody, lBodyProto), objBodyOut] */
+///// {
+/////    return new /*: [;L] lBodyProto */ Body(
+/////       4.84143144246472090e+00,
+/////       -1.16032004402742839e+00,
+/////       -1.03622044471123109e-01,
+/////       1.66007664274403694e-03 * DAYS_PER_YEAR,
+/////       7.69901118419740425e-03 * DAYS_PER_YEAR,
+/////       -6.90460016972063023e-05 * DAYS_PER_YEAR,
+/////       9.54791938424326609e-04 * SOLAR_MASS
+/////    );
+///// };
 
 // var Saturn = function()
 // /*: [;L] [[]]   / [objBodyIn]
@@ -122,12 +117,12 @@ var Jupiter = function()
 //    );
 // };
 
-var Sun = function()
-/*: [;L] [[]]   / [objBodyIn]
-      -> Ref(L) / [L |-> (_:tyBody, lBodyProto), objBodyOut] */
-{
-   return new /*: [;L] lBodyProto */ Body(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, SOLAR_MASS);
-};
+///// var Sun = function()
+///// /*: [;L] [[]]   / [objBodyIn]
+/////       -> Ref(L) / [L |-> (_:tyBody, lBodyProto), objBodyOut] */
+///// {
+/////    return new /*: [;L] lBodyProto */ Body(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, SOLAR_MASS);
+///// };
 
 
 /*: [~lBody |-> (tyBody, lBodyProto)] */ "#weak";
@@ -139,18 +134,13 @@ var Sun = function()
 
 /*: #define ctorNBodySystem
     [;Lnew,Lbodies]
-            [[this:Ref(Lnew),bodies:Ref(Lbodies)]]
-          / [Lnew |-> (_:Empty, lNBodySystemProto),
-             Lbodies |-> (aBodies:{(and (v::Arr(Ref(~lBody))) (packed v) (> (len v) 0))}, lArrayProto),
-             ~lBody |-> frzn,
-             lBodyProto |-> (_:{Dict|((sel v "offsetMomentum") : tyOffsetMomentum)}, lObjectProto),
-             &SOLAR_MASS |-> _:Num]
-         -> Ref(Lnew)
-          / [Lnew |-> (_:tyNBodySystem, lNBodySystemProto),
-             Lbodies |-> same,
-             ~lBody |-> frzn,
-             lBodyProto |-> sameExact,
-             &SOLAR_MASS |-> sameType] */ "#define";
+    [[this:Ref(Lnew),bodies:Ref(Lbodies)]]
+  / [Lnew |-> (_:Empty, lNBodySystemProto),
+     Lbodies |-> (aBodies:{(and (v::Arr(Ref(~lBody))) (packed v) (> (len v) 0))}, lArrayProto),
+     lBodyProto |-> (_:{Dict|((sel v "offsetMomentum") : tyOffsetMomentum)}, lObjectProto)]
+ -> Ref(Lnew)
+  / [Lnew |-> (_:tyNBodySystem, lNBodySystemProto),
+     Lbodies |-> same, lBodyProto |-> sameExact] */ "#define";
 
 
 function NBodySystem(bodies) /*: new ctorNBodySystem */ {
@@ -158,18 +148,10 @@ function NBodySystem(bodies) /*: new ctorNBodySystem */ {
    var px = 0.0;
    var py = 0.0;
    var pz = 0.0;
-   var size = this.bodies.length;
+   var size = /*: {Int|(= v (len aBodies))} */ (this.bodies.length);
    var i = 0;
-   /*: [&i |-> _:{Int|(>= v 0)}, &px |-> _:Num, &py |-> _:Num, &pz |-> _:Num,
-        &size |-> _:{Int|(= v (len aBodies))},
-        Lnew |-> (_:tyNBodySystem, lNBodySystemProto),
-        Lbodies |-> (_:{(= v aBodies)}, lArrayProto),
-        ~lBody |-> frzn
-       ] -> [&i |-> sameType, &px |-> sameType, &py |-> sameType, &pz |-> sameType,
-             &size |-> sameExact,
-             Lnew |-> sameExact,
-             Lbodies |-> sameExact,
-             ~lBody |-> frzn] */
+   /*: [Lnew |-> (_:tyNBodySystem, lNBodySystemProto),
+        Lbodies |-> (_:{(= v aBodies)}, lArrayProto) ] -> sameType */
    for (; i<size; i++){
       var b = this.bodies[i];
       /*: b lThaw1 */ "#thaw";
@@ -188,8 +170,7 @@ function NBodySystem(bodies) /*: new ctorNBodySystem */ {
 
 // TODO advance. more of this.
 
-var Math = {};
-Math.sqrt = function(n) /*: [[n:Num]] -> Num */ { return n; };
+var sqrt = function(n) /*: [[n:Num]] -> Num */ { return n; };
 
 /*: #define tyAdvance
     [;L,Lbodies]
@@ -197,51 +178,22 @@ Math.sqrt = function(n) /*: [[n:Num]] -> Num */ { return n; };
        / [L |-> (thisD:tyNBodySystem, lNBodySystemProto),
           Lbodies |-> (aBodies:{(and (v::Arr(Ref(~lBody)))
                                      (packed v)
-                                     (> (len v) 0))}, lArrayProto),
-          ~lBody |-> frzn]
-      -> Top / same
-*/ "#define";
+                                     (> (len v) 0))}, lArrayProto)]
+      -> Top / same */ "#define";
 
 NBodySystem.prototype.advance = function(dt) /*: tyAdvance */ {
-   // originals didn't initialize
-   var dx = 0, dy, dz, distance, mag;
-   var size = this.bodies.length;
+   var dx = 0.0, dy, dz, distance, mag;
+   var size = /*: {Int|(= v (len aBodies))} */ (this.bodies.length);
 
    var i = 0;
 
-   /*: [&i |-> _:{Int|(>= v 0)},
-        L |-> (_:{(= v thisD)}, lNBodySystemProto),
-        Lbodies |-> (_:{(= v aBodies)}, lArrayProto),
-        &size |-> _:{Int|(= v (len aBodies))},
-        ~lBody |-> frzn,
-        &dx |-> _:Num
-       ]
-    -> [&i |-> sameType,
-        L |-> sameType,
-        Lbodies |-> sameType,
-        &size |-> sameType,
-        ~lBody |-> frzn,
-        &dx |-> sameType
-       ] */
+   /*: [L |-> (_:{(= v thisD)}, lNBodySystemProto),
+        Lbodies |-> (_:{(= v aBodies)}, lArrayProto)] -> sameType */
    for (; i<size; i++) {
-      var bodyi = this.bodies[i];
-      assert (/*: Ref(~lBody) */ bodyi);
-      var j = i+1;
-      /*: [&j |-> _:{Int|(>= v 0)},
-           &size |-> _:{Int|(= v (len aBodies))},
-           L |-> (_:{(= v thisD)}, lNBodySystemProto),
-           Lbodies |-> (_:{(= v aBodies)}, lArrayProto),
-           &bodyi |-> _:Ref(~lBody),
-           ~lBody |-> frzn,
-           &dx |-> _:Num
-          ]
-       -> [&j |-> sameType,
-           &size |-> sameType,
-           L |-> sameType,
-           Lbodies |-> sameType,
-           ~lBody |-> frzn,
-           &dx |-> sameType
-          ] */
+      var bodyi = /*: Ref(~lBody) */ (this.bodies[i]);
+      var j = /*: {Int|(>= v 0)} */ (i+1);
+      /*: [L |-> (_:{(= v thisD)}, lNBodySystemProto),
+           Lbodies |-> (_:{(= v aBodies)}, lArrayProto)] -> sameType */
       for (; j<size; j++) {
          var bodyj = this.bodies[j];
          assert (/*: Ref(~lBody) */ bodyj);
@@ -262,7 +214,7 @@ NBodySystem.prototype.advance = function(dt) /*: tyAdvance */ {
 
          //// not doing the rest manually like this ...
          
-         // distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+         // distance = sqrt(dx*dx + dy*dy + dz*dz);
          // mag = dt / (distance * distance * distance);
 
          // bodyi.vx -= dx * bodyj.mass * mag;

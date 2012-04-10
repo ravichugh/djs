@@ -54,10 +54,14 @@ let argSpecs = [
               "      desugar lambdas/calls with arguments tuple");
   ("-untypedDs", Arg.Unit (fun () -> S.typedDesugaring := false),
               "      untyped desugaring");
+(*
   ("-inferFrames", Arg.Set S.inferFrames,
                 "    desugaring should infer frames");
   ("-monotonicHeaps", Arg.Set S.monotonicHeaps,
                    " desugaring should thread types through heaps");
+*)
+  ("-augmentHeaps", Arg.Set S.augmentHeaps,
+                "    desugaring should add locations to heaps for enclosing refs");
   ("-marshalOutEnv", Arg.Set S.marshalOutEnv,
                   "  marshal output environments in out/world.world");
   ("-marshalInEnv", Arg.Set S.marshalInEnv,

@@ -34,41 +34,41 @@ var Jupiter = function() {
    );
 };
 
-var Saturn = function() {
-   return new Body(
-      8.34336671824457987e+00,
-      4.12479856412430479e+00,
-      -4.03523417114321381e-01,
-      -2.76742510726862411e-03 * DAYS_PER_YEAR,
-      4.99852801234917238e-03 * DAYS_PER_YEAR,
-      2.30417297573763929e-05 * DAYS_PER_YEAR,
-      2.85885980666130812e-04 * SOLAR_MASS
-   );
-};
-
-var Uranus = function() {
-   return new Body(
-      1.28943695621391310e+01,
-      -1.51111514016986312e+01,
-      -2.23307578892655734e-01,
-      2.96460137564761618e-03 * DAYS_PER_YEAR,
-      2.37847173959480950e-03 * DAYS_PER_YEAR,
-      -2.96589568540237556e-05 * DAYS_PER_YEAR,
-      4.36624404335156298e-05 * SOLAR_MASS
-   );
-};
-
-var Neptune = function() {
-   return new Body(
-      1.53796971148509165e+01,
-      -2.59193146099879641e+01,
-      1.79258772950371181e-01,
-      2.68067772490389322e-03 * DAYS_PER_YEAR,
-      1.62824170038242295e-03 * DAYS_PER_YEAR,
-      -9.51592254519715870e-05 * DAYS_PER_YEAR,
-      5.15138902046611451e-05 * SOLAR_MASS
-   );
-};
+// var Saturn = function() {
+//    return new Body(
+//       8.34336671824457987e+00,
+//       4.12479856412430479e+00,
+//       -4.03523417114321381e-01,
+//       -2.76742510726862411e-03 * DAYS_PER_YEAR,
+//       4.99852801234917238e-03 * DAYS_PER_YEAR,
+//       2.30417297573763929e-05 * DAYS_PER_YEAR,
+//       2.85885980666130812e-04 * SOLAR_MASS
+//    );
+// };
+// 
+// var Uranus = function() {
+//    return new Body(
+//       1.28943695621391310e+01,
+//       -1.51111514016986312e+01,
+//       -2.23307578892655734e-01,
+//       2.96460137564761618e-03 * DAYS_PER_YEAR,
+//       2.37847173959480950e-03 * DAYS_PER_YEAR,
+//       -2.96589568540237556e-05 * DAYS_PER_YEAR,
+//       4.36624404335156298e-05 * SOLAR_MASS
+//    );
+// };
+// 
+// var Neptune = function() {
+//    return new Body(
+//       1.53796971148509165e+01,
+//       -2.59193146099879641e+01,
+//       1.79258772950371181e-01,
+//       2.68067772490389322e-03 * DAYS_PER_YEAR,
+//       1.62824170038242295e-03 * DAYS_PER_YEAR,
+//       -9.51592254519715870e-05 * DAYS_PER_YEAR,
+//       5.15138902046611451e-05 * SOLAR_MASS
+//    );
+// };
 
 var Sun = function() {
    return new Body(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, SOLAR_MASS);
@@ -90,6 +90,61 @@ function NBodySystem(bodies){
    this.bodies[0].offsetMomentum(px,py,pz);
 }
 
-// TODO advance
-// TODO energy
-// TODO main loop
+NBodySystem.prototype.advance = function(dt){
+   var dx, dy, dz, distance, mag;
+   var size = this.bodies.length;
+
+   for (var i=0; i<size; i++) {
+      var bodyi = this.bodies[i];
+      for (var j=i+1; j<size; j++) {
+         var bodyj = this.bodies[j];
+         dx = bodyi.x - bodyj.x;
+         dy = bodyi.y - bodyj.y;
+         dz = bodyi.z - bodyj.z;
+
+         distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+         mag = dt / (distance * distance * distance);
+
+         bodyi.vx -= dx * bodyj.mass * mag;
+         bodyi.vy -= dy * bodyj.mass * mag;
+         bodyi.vz -= dz * bodyj.mass * mag;
+
+         bodyj.vx += dx * bodyi.mass * mag;
+         bodyj.vy += dy * bodyi.mass * mag;
+         bodyj.vz += dz * bodyi.mass * mag;
+      }
+   }
+
+   for (var i=0; i<size; i++) {
+      var body = this.bodies[i];
+      body.x += dt * body.vx;
+      body.y += dt * body.vy;
+      body.z += dt * body.vz;
+   }
+}
+
+NBodySystem.prototype.energy = function(){
+   var dx, dy, dz, distance;
+   var e = 0.0;
+   var size = this.bodies.length;
+
+   for (var i=0; i<size; i++) {
+      var bodyi = this.bodies[i];
+
+      e += 0.5 * bodyi.mass *
+         ( bodyi.vx * bodyi.vx
+         + bodyi.vy * bodyi.vy
+         + bodyi.vz * bodyi.vz );
+
+      for (var j=i+1; j<size; j++) {
+         var bodyj = this.bodies[j];
+         dx = bodyi.x - bodyj.x;
+         dy = bodyi.y - bodyj.y;
+         dz = bodyi.z - bodyj.z;
+
+         distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+         e -= (bodyi.mass * bodyj.mass) / distance;
+      }
+   }
+   return e;
+}
