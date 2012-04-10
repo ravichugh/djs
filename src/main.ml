@@ -62,6 +62,8 @@ let argSpecs = [
 *)
   ("-augmentHeaps", Arg.Set S.augmentHeaps,
                 "    desugaring should add locations to heaps for enclosing refs");
+  ("-greedyThaws", Arg.Set S.greedyThaws,
+                "    desugaring inserts thaw/freeze greedily around weak locs");
   ("-marshalOutEnv", Arg.Set S.marshalOutEnv,
                   "  marshal output environments in out/world.world");
   ("-marshalInEnv", Arg.Set S.marshalInEnv,

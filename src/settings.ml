@@ -34,4 +34,5 @@ let inferFrames = ref false
 let monotonicHeaps = ref false
 *)
 let augmentHeaps = ref false
+let greedyThaws = ref false
 

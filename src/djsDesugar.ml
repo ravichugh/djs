@@ -373,6 +373,7 @@ type jstyp =
   | JsNum
   | JsStr
   | JsTop
+  | JsWeakObj of loc
   | JsAnnotate of typ (* these come from annotations, dsAssert *)
   (* NOTE if i end up dealing with ctor/prototype objects in the
      macro pre-pass, then there's no real benefit to keep JsCtor
@@ -402,6 +403,7 @@ let strJsTyp = function
   | JsArray(t,l1,l2,al,xo) ->
       spr "array %s %s %s %s %s" (prettyStrTyp t) (strLoc l1) (strLoc l2)
         (strArrLen al) (strVarOpt xo)
+  | JsWeakObj(l) -> spr "weak object %s" (strLoc l)
   | JsAnnotate(t) -> spr "annotate (...)"
   | JsCtor(f,t,l1,l2) ->
       spr "constructor %s ... ... %s %s" f (strLoc l1) (strLoc l2)
@@ -498,7 +500,10 @@ let rec getType env = function
          | _ -> JsTop)
   (* undoing the ParseUtils.typToFrame that dsAssert inserts *)
   | EAs("DjsDesugar",_,([h],([h'],[]),(t,([h''],[])))) when h = h' && h = h'' ->
-      JsAnnotate t
+      (* 4/9: specially looking for weak obj case *)
+      (match t with
+         | THasTyp([URef(m)],_) when isWeakLoc m -> JsWeakObj m
+         | _ -> JsAnnotate t)
   | _ ->
       JsTop
 
@@ -613,8 +618,13 @@ let addFormals t env =
 *)
         let x = dsVar x in
         match t with (* could look for optional strong ref if need be *)
-        | THasTyp([URef(l1)],_) -> begin
-            match findHeapCell l1 cs with
+        | THasTyp([URef(l1)],_) ->
+          if isWeakLoc l1 then 
+            let t = JsWeakObj l1 in
+            let _ = logJsTyp (spr "addFormalType(%s) = %s" x (strJsTyp t)) in
+            addType x t env
+          else
+          begin match findHeapCell l1 cs with
             (* 4/3 unfortunately had to split the following two cases because
                p and ps are different types *)
             | Some(HConcObj(a,THasTyp([UArray(t)],p),l2)) ->
@@ -630,6 +640,7 @@ let addFormals t env =
                 let t = JsObject (l1, l2, recdTypFrom t, Some d) in
                 let _ = logJsTyp (spr "addFormalType(%s) = %s" x (strJsTyp t)) in
                 addType x t env
+            | Some(HConc _) -> failwith "a"
             | _ -> env
           end
         (* TODO 4/9 adding more cases here besides references *)
@@ -667,6 +678,7 @@ let jsTypToTyp = function
   | JsStr -> tyStr
   | JsTop -> tyAny
   | JsAnnotate(t) -> t
+  | JsWeakObj(m) -> THasTyp ([URef m], PTru)
   | JsObject _ -> failwith "jsTypToTyp object"
   | JsArray _ -> failwith "jsTypToTyp array"
   | JsCtor _ -> failwith "jsTypToTyp ctor"
@@ -683,10 +695,10 @@ let rec fvExp env acc = function
       let env = List.fold_left (fun env x -> addFlag x true env) env (f::l) in
       fvExp env acc e
   | E.ConstExpr _ -> acc
-  | E.ThisExpr _ -> IdSet.add "this" acc
 (*
-  | E.ThisExpr p -> fvExp env acc (E.VarExpr (p, "this"))
+  | E.ThisExpr _ -> IdSet.add "this" acc
 *)
+  | E.ThisExpr p -> fvExp env acc (E.VarExpr (p, "this"))
   | E.ArrayExpr (_, es) -> List.fold_left (fvExp env) acc es
   | E.ObjectExpr (_, ps) ->
       let es = List.map (fun (_,_,e) -> e) ps in
@@ -1287,6 +1299,7 @@ let rec ds (env:env) = function
       "Lite" when in lite mode. *)
 
   | E.BracketExpr (_, e1, e2) -> begin
+      let (e1Orig,e2Orig) = (e1, e2) in
       let e2 = if !Settings.fullObjects then e2 else undoDotExp e2 in
       let ((ts,ls,hs),e1) =
         match e1 with
@@ -1312,6 +1325,21 @@ let rec ds (env:env) = function
           | JsTop, JsInt _          -> objOp ts ls "getIdx"  [e1;e2] 
           | JsTop, JsTop            -> objOp ts ls "getElem" [e1;e2] 
           (* TODO 4/9 *)
+          | JsWeakObj(m), JsStr when !Settings.greedyThaws ->
+              (match e1Orig with
+                 | E.VarExpr(_,x) ->
+                     let loc = LocConst (freshVar "lThaw") in
+                     let tmp = freshVar "thawTmp" in
+                     let ex = eVar (dsVar x) in
+                     ELet (freshVar "seq", None, ESetref (ex, EThaw (loc, EDeref ex)),
+                     ELet (tmp, None, objOp ts ls "getProp" [e1;e2], 
+                     ELet (freshVar "seq", None,
+                           ESetref (ex, EFreeze (m, Thwd loc, EDeref ex)),
+                           eVar tmp)))
+                 (* better to abstract out the functionality above, but for now
+                    shoving "this" inside a VarExpr *)
+                 | E.ThisExpr p -> ds env (E.BracketExpr (p, E.VarExpr (p, "this"), e2Orig))
+                 | _ -> objOp ts ls "getElem" [e1;e2])
           | _ -> objOp ts ls "getElem" [e1;e2]
       end else begin
         match e2 with
@@ -1508,6 +1536,7 @@ let rec ds (env:env) = function
 *)
 
   | E.AssignExpr (_, E.PropLValue (_, e1, e2), e3) -> begin
+      let e1Orig = e1 in
       let e2 = if !Settings.fullObjects then e2 else undoDotExp e2 in
       let ((ts,ls,hs),e1) =
         match e1 with
@@ -1533,6 +1562,25 @@ let rec ds (env:env) = function
           | JsTop, JsStr            -> objOp ts ls "setProp" [e1;e2;e3] 
           | JsTop, JsInt _          -> objOp ts ls "setIdx"  [e1;e2;e3] 
           | JsTop, JsTop            -> objOp ts ls "setElem" [e1;e2;e3] 
+          (* 4/9 *)
+          | JsWeakObj(m), JsStr when !Settings.greedyThaws ->
+              (match e1Orig with
+                 | E.VarExpr(_,x) ->
+                     let loc = LocConst (freshVar "lThaw") in
+                     let tmp = freshVar "thawTmp" in
+                     let ex = eVar (dsVar x) in
+                     ELet (freshVar "seq", None, ESetref (ex, EThaw (loc, EDeref ex)),
+                     ELet (tmp, None, objOp ts ls "setProp" [e1;e2;e3], 
+                     ELet (freshVar "seq", None,
+                           ESetref (ex, EFreeze (m, Thwd loc, EDeref ex)),
+                           eVar tmp)))
+                 (* better to abstract out the functionality above, but for now
+                    shoving "this" inside a VarExpr *)
+(* TODO
+                 | E.ThisExpr p -> ds env (E.BracketExpr (p, E.VarExpr (p, "this"), e2Orig))
+*)
+                 | _ -> objOp ts ls "getElem" [e1;e2])
+          | _                       -> objOp ts ls "setElem" [e1;e2;e3] 
       end else begin
         match e2 with
           | E.ConstExpr (_, J.CInt i) ->
@@ -1895,10 +1943,13 @@ let rec ds (env:env) = function
       let env = addFormals t env in
       (* 4/9: unfortunate that have to call addFlag here, since dsFunc does
          it too
-      let env = List.fold_left (fun env arg -> addFlag arg true env) env args in
-      let t = augmentType t env (fvExps "dsFuncExpr recursive" env [body]) in
-      let func = dsFunc false env p args body in
       *)
+      let env = List.fold_left (fun env arg -> addFlag arg true env) env args in
+      let env = if hasThisParam t then addFlag "this" true env else env in
+      let t = augmentType t env (fvExps "dsFuncExpr recursive" env [body]) in
+(*
+      let func = dsFunc false env p args body in
+*)
       let func = dsFunc (hasThisParam t) env p args body in
       EApp (([t],[],[]), eVar "fix",
         EFun (([],[],[]), f, None, func))

@@ -11,7 +11,7 @@
         [;Lthis]
         [[this:Ref(Lthis), left:Ref(~lTreeNode), right:Ref(~lTreeNode), item:Int]]
       / [Lthis |-> (d:Empty, lTreeNodeProto), ~lTreeNode |-> frzn]
-     -> Ref(~lTreeNode) / [~lTreeNode |-> same] */ "#define";
+     -> Ref(~lTreeNode) / [~lTreeNode |-> frzn] */ "#define";
 
 function TreeNode(left,right,item) /*: new ctorTreeNode */ {
   this.left = left;
@@ -23,55 +23,28 @@ function TreeNode(left,right,item) /*: new ctorTreeNode */ {
 };
 
 
-var tree1 = new (/*: [;lTree1;] lTreeNodeProto */ TreeNode)(null, null, 10);
+var tree1 = /*: Ref(~lTreeNode) */ (new (/*: [;lTree1;] lTreeNodeProto */ TreeNode)(null, null, 10));
 var tree2 = new (/*: [;lTree2;] lTreeNodeProto */ TreeNode)(null, null, 20);
 var tree3 = new (/*: [;lTree2;] lTreeNodeProto */ TreeNode)(tree1, tree2, 30);
 
-/*: tree1 lThwd1 */ "#thaw";
 var i = tree1.item;
-/*: tree1 (~lTreeNode, thwd lThwd1) */ "#freeze";
-
-assert (/*: Int */ i);
+assert (typeof i === "number");
 
 
-/*: #define tyItemCheck
-    [[this:Ref(~lTreeNode)]] / [~lTreeNode |-> frzn] -> Int / same */ "#define";
+/*: #define tyItemCheck [[this:Ref(~lTreeNode)]] -> Int */ "#define";
 
 TreeNode.prototype.itemCheck = function itemCheck() /*: tyItemCheck */ {
-  var i;
-  /*: this lThis1 */ "#thaw";
-  var b = this.left == null;
-  /*: this (~lTreeNode, thwd lThis1) */ "#freeze";
-
-  if (b) {
-    /*: this lThis2 */ "#thaw";
-    i = this.item;
-    /*: this (~lTreeNode, thwd lThis2) */ "#freeze";
-    return i;
-  }
-  else {
-    /*: this lThis3 */ "#thaw";
-    i = this.item;
-    var left = this.left;
-    var right = this.right;
-    /*: this (~lTreeNode, thwd lThis3) */ "#freeze";
-    return i + itemCheck.apply(left) + itemCheck.apply(right);
-  }
+  if (this.left == null) { return this.item; }
+  else { return this.item + itemCheck.apply(this.left) + itemCheck.apply(this.right); }
 };
 
-
-/*: tree1 lThwd2 */ "#thaw";
-var ic = tree1.itemCheck;
-/*: tree1 (~lTreeNode, thwd lThwd2) */ "#freeze";
-
-assert (/*: tyItemCheck */ ic);
-assert (/*: Int */ (ic.apply(tree1)));
+var j = (tree1.itemCheck).apply(tree1);
+assert (typeof j === "number");
 
 
 /*: #define tyBottomUpTree
        [[item:Int, depth:Int]]
-     / [~lTreeNode |-> frzn,
-        &TreeNode |-> _:Ref(lTreeNodeObj),
+     / [~lTreeNode |-> frzn, &TreeNode |-> _:Ref(lTreeNodeObj),
         lTreeNodeObj |-> (_:{Dict|
            (and ((sel v "code") : ctorTreeNode)
                 ((sel v "prototype") : Ref(lTreeNodeProto)))}, lFunctionProto),
@@ -92,11 +65,7 @@ var bottomUpTree = function foo(item,depth) /*: tyBottomUpTree */ {
 };
 
 
-var tree4 = bottomUpTree(0,42);
-/*: tree4 lThwd4 */ "#thaw";
-ic = tree4.itemCheck;
-/*: tree4 (~lTreeNode, thwd lThwd4) */ "#freeze";
-
-assert (/*: tyItemCheck*/ ic);
-assert (/*: Int */ (ic.apply(tree4)));
+var tree4 = /*: Ref(~lTreeNode) */ (bottomUpTree(0,42));
+var k = (tree4.itemCheck).apply(tree4);
+assert (typeof k === "number");
 
