@@ -1341,6 +1341,17 @@ let rec ds (env:env) = function
                  | E.VarExpr(_,x) ->
                      let loc = LocConst (freshVar "lThaw") in
                      let tmp = freshVar "thawTmp" in
+                     let obj = freshVar "thawObj" in
+                     let ex = eVar (dsVar x) in
+                     let locpro = locProOfWeak "get" m in 
+                     ELet (obj, None, ESetref (ex, EThaw (loc, EDeref ex)),
+                     ELet (tmp, None, objOp [] [loc;locpro] "getProp" [eVar obj;e2], 
+                     ELet (freshVar "seq", None,
+                           ESetref (ex, EFreeze (m, Thwd loc, eVar obj)),
+                           eVar tmp)))
+(*
+                     let loc = LocConst (freshVar "lThaw") in
+                     let tmp = freshVar "thawTmp" in
                      let ex = eVar (dsVar x) in
                      let locpro = locProOfWeak "get" m in 
                      ELet (freshVar "seq", None, ESetref (ex, EThaw (loc, EDeref ex)),
@@ -1348,6 +1359,7 @@ let rec ds (env:env) = function
                      ELet (freshVar "seq", None,
                            ESetref (ex, EFreeze (m, Thwd loc, EDeref ex)),
                            eVar tmp)))
+*)
                  (* better to abstract out the functionality above, but for now
                     shoving "this" inside a VarExpr *)
                  | E.ThisExpr p -> ds env (E.BracketExpr (p, E.VarExpr (p, "this"), e2Orig))
@@ -1580,6 +1592,19 @@ let rec ds (env:env) = function
                  | E.VarExpr(_,x) ->
                      let loc = LocConst (freshVar "lThaw") in
                      let tmp = freshVar "thawTmp" in
+                     let obj = freshVar "thawObj" in
+                     let rhs = freshVar "thawRhs" in
+                     let ex = eVar (dsVar x) in
+                     let locpro = locProOfWeak "set" m in 
+                     ELet (rhs, None, e3,
+                     ELet (obj, None, ESetref (ex, EThaw (loc, EDeref ex)),
+                     ELet (tmp, None, objOp [] [loc;locpro] "setProp" [eVar obj;e2;eVar rhs], 
+                     ELet (freshVar "seq", None,
+                           ESetref (ex, EFreeze (m, Thwd loc, eVar obj)),
+                           eVar tmp))))
+(*
+                     let loc = LocConst (freshVar "lThaw") in
+                     let tmp = freshVar "thawTmp" in
                      let ex = eVar (dsVar x) in
                      let locpro = locProOfWeak "set" m in 
                      ELet (freshVar "seq", None, ESetref (ex, EThaw (loc, EDeref ex)),
@@ -1587,6 +1612,7 @@ let rec ds (env:env) = function
                      ELet (freshVar "seq", None,
                            ESetref (ex, EFreeze (m, Thwd loc, EDeref ex)),
                            eVar tmp)))
+*)
                  (* better to abstract out the functionality above, but for now
                     shoving "this" inside a VarExpr *)
 (* TODO

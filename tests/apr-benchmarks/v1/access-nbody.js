@@ -154,14 +154,12 @@ function NBodySystem(bodies) /*: new ctorNBodySystem */ {
         Lbodies |-> (_:{(= v aBodies)}, lArrayProto) ] -> sameType */
    for (; i<size; i++){
       var b = /*: Ref(~lBody) */ (this.bodies[i]);
-      /*: b lThaw1 */ "#thaw";
       var m = b.mass;
       px += b.vx * m;
       py += b.vy * m;
       pz += b.vz * m;
-      /*: b (~lBody, thwd lThaw1) */ "#freeze";
    }
-   var b0 = this.bodies[0];
+   var b0 = /*" Ref(~lBody) */ (this.bodies[0]);
    /*: b0 lThaw2 */ "#thaw";
    b0.offsetMomentum(px,py,pz);
    /*: b0 (~lBody, thwd lThaw2) */ "#freeze";
@@ -192,41 +190,28 @@ NBodySystem.prototype.advance = function(dt) /*: tyAdvance */ {
       /*: [&this |-> _:Ref(L), L |-> (_:{(= v thisD)}, lNBodySystemProto),
            Lbodies |-> (_:{(= v aBodies)}, lArrayProto)] -> sameType */
       for (; j<size; j++) {
-         var bodyj = this.bodies[j];
+         var bodyj = /*: Ref(~lBody) */ (this.bodies[j]);
 
-         /*: bodyi lBodyi1 */ "#thaw";
          var ix = bodyi.x, iy = bodyi.y, iz = bodyi.z;
-         /*: bodyi (~lBody, thwd lBodyi1) */ "#freeze";
 
-         /*: bodyj lBodyj1 */ "#thaw";
          dx = ix - bodyj.x;
          dy = iy - bodyj.y;
          dz = iz - bodyj.z;
-         /*: bodyj (~lBody, thwd lBodyj1) */ "#freeze";
 
          distance = sqrt(dx*dx + dy*dy + dz*dz);
          mag = dt / (distance * distance * distance);
 
-         /*: bodyj lBodyj2 */ "#thaw";
          var jm = bodyj.mass;
-         /*: bodyj (~lBody, thwd lBodyj2) */ "#freeze";
 
-         /*: bodyi lBodyi2 */ "#thaw";
          bodyi.vx = bodyi.vx - dx * jm * mag;
          bodyi.vy = bodyi.vy - dy * jm * mag;
          bodyi.vz = bodyi.vz - dz * jm * mag;
-         /*: bodyi (~lBody, thwd lBodyi2) */ "#freeze";
 
-         /*: bodyi lBodyi2 */ "#thaw";
          var im = bodyi.mass;
-         /*: bodyi (~lBody, thwd lBodyi2) */ "#freeze";
 
-         /*: bodyj lBodyj2 */ "#thaw";
          bodyj.vx = bodyj.vx + dx * im * mag;
          bodyj.vy = bodyj.vy + dy * im * mag;
          bodyj.vz = bodyj.vz + dz * im * mag;
-         /*: bodyj (~lBody, thwd lBodyj2) */ "#freeze";
-
       }
    }
 
@@ -234,12 +219,11 @@ NBodySystem.prototype.advance = function(dt) /*: tyAdvance */ {
    /*: [&this |-> _:Ref(L), L |-> (_:{(= v thisD)}, lNBodySystemProto),
         Lbodies |-> (_:{(= v aBodies)}, lArrayProto)] -> sameType */
    for (; i<size; i++) {
-      var body = this.bodies[i];
-      /*: body lBody */ "#thaw";
+      var body = /*: Ref(~lBody) */ (this.bodies[i]);
       body.x = body.x + dt * body.vx;
       body.y = body.y + dt * body.vy;
       body.z = body.z + dt * body.vz;
-      /*: body (~lBody, thwd lBody) */ "#freeze";
    }
 };
 
+// TODO energy
