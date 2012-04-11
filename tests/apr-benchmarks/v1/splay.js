@@ -7,8 +7,7 @@
 
 /*: [~lNode |-> (tyNode, lNodeProto)] */ "#weak";
 
-function Node(key, value)
- /*: new [;Lnew]
+function Node(key, value) /*: new [;Lnew]
      [[this:Ref(Lnew), key:Int, value:Str]] / [Lnew |-> (_:Empty, lNodeProto)]
   -> Ref(~lNode) / [] */
 {

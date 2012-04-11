@@ -4,9 +4,7 @@ var makeCumulative = function(table) /*: [;L1,L2]
   var c;
   /*: [Heap] [Heap ++
         &last |-> _:{(implies (not (= v null))
-                              (and (v : Str)
-                                   (objhas d v Heap L2)
-                                  ((objsel d v Heap L2) : Num)))},
+                              (and (v : Str) (objsel [d] v Heap L2 : Num)))},
         &c |-> _:Str, &table |-> _:Ref(L1), L1 |-> (d:Dict, L2)]
      -> Top / sameType */
   for (c in table) {
