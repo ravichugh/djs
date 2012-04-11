@@ -1945,6 +1945,12 @@ let rec ds (env:env) = function
       let funcObj = ds env constr in
       let ctor =
         objOp [] [lFunctionPro] "getPropObj" [funcObj; eStr "code"] in
+      (* 4/11 *)
+      let ctor =
+        match !Settings.assistCtor, getType env funcObj with
+          | true, JsCtor(_,t,_,_) ->
+              EAs ("DjsAssistCtor", ctor, ParseUtils.typToFrame t)
+          | _ -> ctor in
       let proto =
         objOp [] [lFunctionPro] "getPropObj" [funcObj; eStr "prototype"] in
 

@@ -35,4 +35,5 @@ let monotonicHeaps = ref false
 *)
 let augmentHeaps = ref false
 let greedyThaws = ref false
+let assistCtor = ref false
 
