@@ -1,26 +1,4 @@
 
-(***** DJS tag-test ***********************************************************)
-
-(*
-val js_typeof1 :: [[xx:{(or (= (tag v) "number")
-                            (= (tag v) "boolean")
-                            (= (tag v) "string")
-                            (= v undefined) (= v null))}]]
-  -> {Str|(ite (= v null) (= v "object") (= v (tag xx)))}
-
-(* note: not treating functions as objects right now *)
-val js_typeof2 :: [;Loc1,Loc2]
-  [[_:Ref(Loc1)]] / [Loc1 |-> (_:Top, Loc2)] -> {(= v "object")} / same
-
-val js_typeof :: {(and (type js_typeof1) (type js_typeof2))}
-*)
-
-(* 3/19 stopgap for 2-counter. sensitive to order...
-val js_typeof3 :: [[x:Top]] -> {(= v (tag x))}
-val js_typeof :: {(and (type js_typeof3) (type js_typeof1) (type js_typeof2))}
-*)
-
-
 (***** Objects / Arrays *******************************************************)
 
 (**    [[ x.f    ]] = getProp ([[x]],  "f" )                                 **)

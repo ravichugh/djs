@@ -22,7 +22,7 @@ Requirements
      This older version Linux binary should be available at:
      http://research.microsoft.com/projects/z3/z3-x64-2.16.tar.gz
 
-  // In case it is not, we've included a 64-bit z3 v2.16 binary in this folder.
+     In case it is not, we've included a 64-bit z3 v2.16 binary in bin/
 
   2) ocamlbuild
 
@@ -43,74 +43,48 @@ Building System D
 --------------------------------------------------------------------------------
 Examples
 
-  A quick way to run the type checker on the examples from the ECOOP paper:
+  The OOPSLA benchmarks (unannotated and annotated) are in:
+    tests/apr-benchmarks/un/
+    tests/apr-benchmarks/v1/
 
-  # scripts/ecoop.sh
+  To generate stats for line counts and type checking, cd to the src/ directory 
+  and run:
 
-  Take a look at the script to see the basic flags for running the tool.
-  Some other sets of test cases (some of which don't work yet), can be run by:
+    ../scripts/gen-benchmark-linecounts-3.py
+    ../scripts/gen-benchmark-time.py
 
-  # scripts/djsLite.sh
-  # scripts/djs.sh
-
-  And tests cases written directly in System !D (as opposed to DJS):
-
-  # scripts/all-core.sh
-  # scripts/all-refs.sh
-  # scripts/all-obj.sh
+  Additional examples can be found in the tests/djs/ directory.
 
 --------------------------------------------------------------------------------
 Standard Prelude
 
-  A standard prelude of built-in primitive functions and some common library
-  functions can be found in prims/prims.ml and prims/pervasives.ml, and is
-  loaded every time the type checker is run.
+  A standard prelude of built-in System !D primitive functions and native
+  JavaScript functions are in:
+
+    prims/basics.dref
+    prims/objects.dref
+    prims/prelude.js
+
+  These three files are loaded along with every program.
 
 --------------------------------------------------------------------------------
-NOTE: rest of README is unchanged from original System D implementation.
---------------------------------------------------------------------------------
+Running DJS
 
---------------------------------------------------------------------------------
-Running System D
-
-  # ./system-d tests/simple/map01.ml
+  # ./system-d -djs ../tests/djs/objects/simple00.js
   ...
-  Type checking succeeded! Made 1991 queries.
+  OK! 478 queries.
 
---------------------------------------------------------------------------------
-Debugging an ill-typed System D program
+  Each DJS program is desugared to System !D and then converted into A-normal
+  form, stored in out/anfExp.dref. To run System !D on this file, which
+  already contains the standard prelude from the previous run, use the -raw
+  flag so that the file is processed directly.
 
-  When type checking fails, there are several places that are useful to look.
-  The type checker logs several output files in the out/ directory.
+  # ./system-d -raw out/anfExp.dref
+  ...
+  OK! 478 queries.
 
-  Since the compiler converts source-level programs into A-normal form, it
-  is help to actually to see the ANF version of your program, which is
-  stored in out/anfExp.ml.
-
-  By default, the type checker prints (to stdout) types for top-level
-  definitions that have successfully type checked. When debugging a type
-  error, it is helpful to see the types of _all_ bindings, enabled with
-  the following flag:
-
-  # ./system-d -printAllTypes tests/simple/map01.ml
-
-  If desired, the ANF version of the program can be tweaked and sent
-  back through the type checker. Since the ANFed output already contains
-  the standard prelude, and is already in ANF, the following flag
-  must be used when running on an ANF source file:
-
-  # ./system-d -raw out/anfExp.ml
-
-  When debugging, it might be useful to see what the type system can prove
-  at a particular program point. This is simple, since you can just write
-  the property p you want to check in a type annotation:
-
-    let sanity_check :: {p} = 0 in ...
-
-  If you suspect there is a bug in the type-checker, then you might want
-  to play directly with the SMT queries it is making. All of the queries
-  are saved in out/queries.lisp in the SMT-LIB2 format, and can be
-  run directly through z3:
+  All of the queries dispatched to Z3 are saved in out/queries.lisp in
+  (a precursor to) the SMT-LIB2 format, and can be run directly through z3.
 
   # z3 -smt2 out/queries.lisp | cat -n 
 
