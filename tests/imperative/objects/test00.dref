@@ -1,0 +1,5 @@
+val ____ObjectProto :: Ref(lObjectProto)
+let x = new ({"f" = 100}, lx, ____ObjectProto, lObjectProto) in
+let _ = ([;lx,lObjectProto;] getPropObj) (x, "f") in
+let _ :: {(= v 100)} = ([;lx,lObjectProto;] getPropObj) (x, "f") in
+0

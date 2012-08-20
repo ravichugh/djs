@@ -47,7 +47,8 @@ let dummyBinder =
   let c = ref 0 in
   fun () ->
     incr c;
-    spr "%s_%d" "_dummy" !c
+    (* spr "%s_%d" "_dummy" !c *)
+    spr "%s_%d" "_underscore" !c
 
 (*
 let addHeapPrefixVar ts ls x t cs1 t2 cs2 =
@@ -82,9 +83,13 @@ let popDHeap () =
 let copyCell exact x s =
   if exact then ty (PEq (theV, wVar x)) else s
 
+(* 8/14 could try to avoid unnecessary binders when using same* tokens *)
+
 let freshenCell exact = function
-  | HConc(x,s) -> HConc (freshVar x, copyCell exact x s)
-  | HConcObj(x,s,l') -> HConcObj (freshVar x, copyCell exact x s, l')
+  | HConc(None,s) -> printParseErr "freshenCell"
+  | HConcObj(None,s,l') -> printParseErr "freshenCell"
+  | HConc(Some(x),s) -> HConc (Some (freshVar x), copyCell exact x s)
+  | HConcObj(Some(x),s,l') -> HConcObj (Some (freshVar x), copyCell exact x s, l')
   | HWeakTok(tok) -> HWeakTok tok
 
 let sameHeap exact =
@@ -145,7 +150,7 @@ let sameCell exact l =
 %type <Lang.vvar * Lang.loc> jsThaw
 %type <Lang.loc * Lang.loc option> jsObjLocs
 %type <Lang.frame> jsWhile
-%type <Lang.uarr> jsCtor
+%type <Lang.uarrow> jsCtor
 %type <(Lang.typs * Lang.locs * Lang.heaps) * Lang.loc> jsNew
 %type <Lang.loc * Lang.typ> jsArrLit
 %type <Lang.heap> jsHeap
@@ -174,7 +179,7 @@ baseval :
  | NULL            { Null }
  | UNDEF           { Undef }
 
-value :
+value_ :
  | x=baseval                                   { VBase x }
  | x=VAR                                       { VVar x }
  | EMPTY                                       { VEmpty }
@@ -182,8 +187,11 @@ value :
  (* quick hack: using begin/end to avoid conflicts *)
  | BEGIN e=lambda END
      { match Anf.coerce e with (* no grammar for ANF exps, so coerce *)
-         | EVal(v) -> v 
+         | EVal(v) -> v.value
          | _ -> printParseErr "coerce lambda"}
+
+value :
+ | v=value_ { { pos=pos0; value=v } }
 
 exp :
  | exp1                                   { $1 }
@@ -193,10 +201,7 @@ exp :
  (* | LET REC VAR DCOLON scm EQ exp IN exp  { ParseUtils.mkLetRec $3 $5 $7 $9 } *)
  | EXTERN VAR DCOLON typ exp             { EExtern($2,$4,$5) }
  | HEAP w=weakloc e=exp                  { EWeak(w,e) }
- | x=LBL LBRACE e=exp RBRACE             { ELabel(x,None,e) }
-(*
- | x=LBL DCOLON a=ann LBRACE e=exp RBRACE { ELabel($1,Some($3),$5) }
-*)
+ | x=LBL LBRACE e=exp RBRACE             { ELabel(x,e) }
  | BREAK LBL exp                         { EBreak($2,$3) }
  | THROW exp                             { EThrow($2) }
  | TRY LBRACE exp RBRACE
@@ -362,22 +367,22 @@ typ_term :
 arrow_typ :
 
  | xt=arrow_dom ARROW t2=typ
-     { UArr (ParseUtils.maybeAddHeapPrefixVar
-               (([],[],[]),fst xt,snd xt,emp,t2,emp)) }
+     { UArrow (ParseUtils.maybeAddHeapPrefixVar
+                 (([],[],[]),fst xt,snd xt,emp,t2,emp)) }
 
  | l=poly_formals xt=arrow_dom ARROW t2=typ
-     { UArr (ParseUtils.maybeAddHeapPrefixVar
-               (l,fst xt,snd xt,emp,t2,emp)) }
+     { UArrow (ParseUtils.maybeAddHeapPrefixVar
+                 (l,fst xt,snd xt,emp,t2,emp)) }
 
  | xt=arrow_dom DIV h1=dheap ARROW t2=typ DIV h2=rheap
      { popDHeap ();
-       UArr (ParseUtils.maybeAddHeapPrefixVar
-               (([],[],[]),fst xt,snd xt,h1,t2,h2)) }
+       UArrow (ParseUtils.maybeAddHeapPrefixVar
+                 (([],[],[]),fst xt,snd xt,h1,t2,h2)) }
 
  | l=poly_formals xt=arrow_dom DIV h1=dheap ARROW t2=typ DIV h2=rheap
      { popDHeap ();
-       UArr (ParseUtils.maybeAddHeapPrefixVar
-               (l,fst xt,snd xt,h1,t2,h2)) }
+       UArrow (ParseUtils.maybeAddHeapPrefixVar
+                 (l,fst xt,snd xt,h1,t2,h2)) }
 
 
 
@@ -607,9 +612,9 @@ pats_ :
  | pat COMMA pats_           { $1 :: $3 }
 
 heapcell :
- | l=loc MAPSTO x=varopt COLON t=typ { (l,HConc(x,t)) }
+ | l=loc MAPSTO x=varopt COLON t=typ { (l, HConc (Some x,t)) }
  | l=loc MAPSTO LPAREN x=varopt COLON t=typ COMMA l2=loc RPAREN
-     { (l,HConcObj(x,t,l2)) }
+     { (l, HConcObj (Some x,t,l2)) }
 (*
  | l=loc MAPSTO LPAREN x=thawstate COMMA t=typ COMMA l2=loc RPAREN
      { (l,HWeakObj(x,t,l2)) }
@@ -781,7 +786,7 @@ jsObjLocs :
  (* | LPAREN l=loc COMMA l2=loc RPAREN EOF  { (l, Some l2) } *)
 
 jsCtor: NEW u=arrow_typ EOF { match u with
-                                | UArr(arr) -> arr
+                                | UArrow(arr) -> arr
                                 | _ -> printParseErr "jsCtor: impossible"  }
 
 jsNew : x=poly_actuals y=loc EOF  { (x,y) }

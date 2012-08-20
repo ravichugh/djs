@@ -1,0 +1,4 @@
+let a = ref loc1 0 in
+let _ = a := 1 in
+let _ :: {(= v 0)} = !a in
+0

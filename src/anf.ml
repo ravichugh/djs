@@ -37,7 +37,7 @@ let finish (l,e) =
 
 let rec anf = function
   | EVal(w) -> ([], EVal w)
-  | EFun(l,x,t,e) -> ([], EVal (VFun (l, x, t, anfExp e)))
+  | EFun(l,x,t,e) -> ([], EVal (wrapVal pos0 (VFun (l, x, t, anfExp e))))
   | EDict(xel) ->
       let (ll,xwl) =
         xel |> List.map (fun (e1,e2) ->
@@ -50,8 +50,8 @@ let rec anf = function
       in
       let vdict =
         List.fold_left
-          (fun acc (w1,w2) -> VExtend (acc, w1, w2))
-          VEmpty xwl
+          (fun acc (w1,w2) -> wrapVal pos0 (VExtend (acc, w1, w2)))
+          (wrapVal pos0 VEmpty) xwl
       in
       finish (List.concat ll, EVal vdict)
 (* TODO want to use this version, but the special let rule in TcDref
@@ -65,7 +65,7 @@ let rec anf = function
       let vl =
         List.map
           (function EVal(v) -> v | _ -> failwith "anf: expr in arr?") vl in
-      finish (List.concat ll, EVal (VArray (t, vl)))
+      finish (List.concat ll, EVal ({pos=pos0; value=VArray (t, vl)}))
   | EIf(e1,e2,e3) ->
       let (l1,e1') = anf e1 in
       let z1 = freshTmp () in
@@ -78,7 +78,7 @@ let rec anf = function
       let (l2,e2) = anfAndTmp e2 in
       finish (l1 @ l2, EApp (appargs, e1, e2))
   | ELet(x,ao,e1,e2) ->
-      if false then
+      if true then (* 8/14: set this back to true *)
         (* original and 11/1 version: maintains same lexical scoping *)
         ([], ELet (x, ao, anfExp e1, anfExp e2))
       else if true then
@@ -105,7 +105,7 @@ let rec anf = function
       let (l2,e2) = anfAndTmp e2 in
       finish (l1 @ l2, ESetref (e1, e2))
   | EWeak(h,e) -> ([], EWeak (h, anfExp e))
-  | ELabel(x,ao,e) -> ([], ELabel (x, ao, anfExp e))
+  | ELabel(x,e) -> ([], ELabel (x, anfExp e))
   | EBreak(x,e) ->
       let (l,e) = anfAndTmp e in
       (l, EBreak (x, e))
@@ -139,7 +139,11 @@ and anfExp e = mkExp (anf e)
        e2
 *)
 let removeUselessLet = function
+(*
   | ELet(x,None,e1,ELet(y,None,EVal(VVar(x')),e2)) when x = x' && x.[0] = '_' ->
+*)
+  | ELet(x,None,e1,ELet(y,None,EVal({value=VVar(x')}),e2))
+    when x = x' && x.[0] = '_' ->
       ELet (y, None, e1, e2)
   | e -> e
 
@@ -161,7 +165,7 @@ let clip = Utils.clip
 
 let tab k = String.make (2 * k) ' '
 
-let rec strVal k = function
+let rec strVal_ k = function
   | VVar(x) -> spr "%s%s" (tab k) x
 (*
   | VFun([],x,None,e) when !Settings.langMode = Settings.D -> strLam k x e
@@ -207,6 +211,8 @@ let rec strVal k = function
       (* let st = spr " as %s" (strTyp t) in *)
       let svs = List.map (fun s -> clip (strVal k s)) vs in
       spr "%s<%s>%s" (tab k) (String.concat ", " svs) st 
+
+and strVal k v = strVal_ k v.value
 
 (*
 and strLam k sarg e =
@@ -313,19 +319,9 @@ and strExp k exp = match exp with
       let s2 = strExp k e2 in
       spr "%s%s := %s" (tab k) (clip s1) (clip s2)
   | EWeak(h,e) -> spr "%sweak %s\n\n%s" (tab k) (strWeakLoc h) (strExp k e)
-  | ELabel(x,None,e) ->
+  | ELabel(x,e) ->
       let se = strExp (succ k) e in
       spr "%s#%s {\n%s\n%s}" (tab k) x se (tab k)
-  | ELabel(x,ao,e) ->
-      failwith "strexp elabel todo"
-(*
-      let sao =
-        match ao with
-          | None -> ""
-          | Some(a) -> spr " :: %s " (strAnnotation a) in
-      let se = strExp (succ k) e in
-      spr "%s#%s%s {\n%s\n%s}" (tab k) x sao se (tab k)
-*)
   | EBreak(x,e) ->
       let s = strExp (succ k) e in
       spr "%sbreak #%s %s" (tab k) x (clip s)
@@ -393,10 +389,10 @@ and coerceEVal from e =
 
 and coerce = function
   | EVal(w) -> EVal w
-  | EDict([]) -> EVal (VEmpty)
+  | EDict([]) -> EVal (wrapVal pos0 VEmpty)
   | EDict _ -> failwith "Anf.coerce EDict: should have become calls to set"
-  | EFun(l,x,t,e) -> EVal (VFun (l, x, t, coerce e))
-  | EArray(t,es) -> EVal (VArray (t, List.map coerceVal es))
+  | EFun(l,x,t,e) -> EVal (wrapVal pos0 (VFun (l, x, t, coerce e)))
+  | EArray(t,es) -> EVal (wrapVal pos0 (VArray (t, List.map coerceVal es)))
   | EIf(e1,e2,e3) -> EIf (coerceEVal "if" e1, coerce e2, coerce e3)
   | EApp(l,e1,e2) -> EApp (l, coerceEVal "app1" e1, coerceEVal "app2" e2)
   | ELet(x,ao,e1,e2) -> ELet (x, ao, coerce e1, coerce e2)
@@ -407,7 +403,7 @@ and coerce = function
   | EDeref(e) -> EDeref (coerceEVal "deref" e)
   | ESetref(e1,e2) -> ESetref (coerceEVal "setref1" e1, coerceEVal "setref2" e2)
   | EWeak(h,e) -> EWeak (h, coerce e)
-  | ELabel(x,ao,e) -> ELabel (x, ao, coerce e)
+  | ELabel(x,e) -> ELabel (x, coerce e)
   | EBreak(x,e) -> EBreak (x, coerceEVal "break" e)
   | EThrow(e) -> EThrow (coerceEVal "throw" e)
   | ETryCatch(e1,x,e2) -> ETryCatch (coerce e1, x, coerce e2)

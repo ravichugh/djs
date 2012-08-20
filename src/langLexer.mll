@@ -154,7 +154,9 @@ rule token = parse
   | "_"            { UNDERSCORE }
 
   | digit+ as s         { INT (int_of_string s) }
-  | ident as s          { VAR s }
+  (* | ident as s          { VAR s } *)
+  | ident as s          { let s = Str.global_replace (Str.regexp "'") "_prime" s
+                          in VAR s }
   | tyvar as s          { TVAR s }
   | ('~'ident) as s     { VAR s }
   | ('~'tyvar) as s     { TVAR s }

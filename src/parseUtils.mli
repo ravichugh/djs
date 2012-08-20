@@ -20,11 +20,11 @@ val addLets : exp -> (vvar * exp) list -> exp
 
 val mkPatFun : (tvars * lvars * hvars) -> pat -> exp -> exp
 
-val maybeAddHeapPrefixVar : uarr -> uarr
+val maybeAddHeapPrefixVar : uarrow -> uarrow
 
 val typToFrame : typ -> frame
 
-val mkLetRec : vvar -> uarr -> exp -> exp -> exp
+val mkLetRec : vvar -> uarrow -> exp -> exp -> exp
 
 val doIntersectionHack : vvar -> formula
 

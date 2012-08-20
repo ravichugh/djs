@@ -48,6 +48,7 @@ let varBoundInH x h =
    so, when looking up a variable binder in H, also need to walk dep
    tuple binders *)
 
+(*
 let varBoundInH x h =
   List.exists
     (function
@@ -57,6 +58,11 @@ let varBoundInH x h =
     (List.map snd (snd h))
   
 let varBound x g h = varBoundInG x g || varBoundInH x h
+*)
+
+(* TODO 8/13 keeping h heapenv param as dummy. remove it everywhere *)
+
+let varBound = varBoundInG
 
 let noDupeFormal errList s l =
   match Utils.someDupe l with
@@ -65,8 +71,10 @@ let noDupeFormal errList s l =
 
 let heapBinders (_,cs) =
   List.fold_left (fun acc -> function
-    | (_,HConc(x,t))
-    | (_,HConcObj(x,t,_)) ->
+    | (_,HConc(None,t))
+    | (_,HConcObj(None,t,_)) -> failwith "wf heapbinders none"
+    | (_,HConc(Some(x),t))
+    | (_,HConcObj(Some(x),t,_)) ->
         Var(x,tyAny) :: depTupleBindersEnv t @ acc
     | (_,HWeakTok _) -> acc
   ) [] cs
@@ -86,7 +94,7 @@ let envToStrings g =
 
 (***** Well-formedness checks *************************************************)
 
-let rec checkType errList g h t =
+let rec checkType errList g t =
   let errList = errList @ [spr "Wf.checkType: %s" (prettyStrTyp t)] in
   match t with
     | TTop | TBot | TInt | TBaseUnion _ -> ()
@@ -94,71 +102,71 @@ let rec checkType errList g h t =
     | THasTyp(u) -> checkTypeTerm errList g h u
 *)
     | THasTyp(us,p) ->
-        let _ = List.iter (checkTypeTerm errList g h) us in
-        checkFormula errList g h p
-    | TNonNull(t) | TMaybeNull(t) -> checkType errList g h t
-    | TSelfify(t,p) -> (checkType errList g h t; checkFormula errList g h p)
+        let _ = List.iter (checkTypeTerm errList g) us in
+        checkFormula errList g p
+    | TNonNull(t) | TMaybeNull(t) -> checkType errList g t
+    | TSelfify(t,p) -> (checkType errList g t; checkFormula errList g p)
     | TRefinement(x,p) | TBaseRefine(x,_,p) ->
-        checkFormula errList (Var(x,tyAny)::g) h p
+        checkFormula errList (Var(x,tyAny)::g) p
     | TTuple(l) ->
         let (vars,typs) = List.split l in
         let g = List.fold_left (fun acc x -> Var(x,tyAny)::acc) g vars in
-        List.iter (checkType errList g h) typs
+        List.iter (checkType errList g) typs
     | TExists(x,t,s) ->
-        checkType errList (Var(x,t)::g) h s
+        checkType errList (Var(x,t)::g) s
 
-and checkFormula errList g h p =
+and checkFormula errList g p =
   match p with
     | PTru | PFls         -> ()
-    | PEq(w1,w2)          -> List.iter (checkWalue errList g h) [w1;w2]
-    | PApp(_,ws)          -> List.iter (checkWalue errList g h) ws
-    | PConn(_,ps)         -> List.iter (checkFormula errList g h) ps
+    | PEq(w1,w2)          -> List.iter (checkWalue errList g) [w1;w2]
+    | PApp(_,ws)          -> List.iter (checkWalue errList g) ws
+    | PConn(_,ps)         -> List.iter (checkFormula errList g) ps
     | PHas(w,ws)
-    | PDomEq(w,ws)        -> List.iter (checkWalue errList g h) (w::ws)
-    | PEqMod(w1,w2,ws)    -> List.iter (checkWalue errList g h) (w1::w2::ws)
-    | PUn(HasTyp(w,u))    -> (checkWalue errList g h w;
-                              checkTypeTerm errList g h u)
+    | PDomEq(w,ws)        -> List.iter (checkWalue errList g) (w::ws)
+    | PEqMod(w1,w2,ws)    -> List.iter (checkWalue errList g) (w1::w2::ws)
+    | PUn(HasTyp(w,u))    -> (checkWalue errList g w;
+                              checkTypeTerm errList g u)
     | PHeapHas(h',l,w)    -> (checkHeap errList g h'; (* h not used *)
-                              checkLoc errList g h l;
-                              checkWalue errList g h w)
-    | PObjHas(ds,k,h',l)  -> (List.iter (checkWalue errList g h) (k::ds);
+                              checkLoc errList g l;
+                              checkWalue errList g w)
+    | PObjHas(ds,k,h',l)  -> (List.iter (checkWalue errList g) (k::ds);
                               checkHeap errList g h';
-                              checkLoc errList g h l)
+                              checkLoc errList g l)
     | PAll _              -> failwith "wfForm: PAll shouldn't appear"
 
-and checkWalue errList g h w =
+and checkWalue errList g w =
   match w with
     | WBot               -> ()
-    | WVal(v)            -> checkValue errList g h v
-    | WApp(_,ws)         -> List.iter (checkWalue errList g h) ws
+    | WVal(v)            -> checkValue errList g v
+    | WApp(_,ws)         -> List.iter (checkWalue errList g) ws
     | WHeapSel(h',l,w)   -> (checkHeap errList g h'; (* h not used *)
-                             checkLoc errList g h l;
-                             checkWalue errList g h w)
-    | WObjSel(ds,k,h',l) -> (List.iter (checkWalue errList g h) (k::ds);
+                             checkLoc errList g l;
+                             checkWalue errList g w)
+    | WObjSel(ds,k,h',l) -> (List.iter (checkWalue errList g) (k::ds);
                              checkHeap errList g h';
-                             checkLoc errList g h l)
+                             checkLoc errList g l)
 
-and checkValue errList g h v =
-  match v with
+and checkValue errList g v =
+  match v.value with
     | VVar(x) ->
-        if varBound x g h then ()
+        if varBound x g then ()
         (* else err (errList @ [spr "unbound variable: [%s]" x] @ envToStrings g) *)
         else err (errList @ [spr "unbound variable: [%s]" x])
     | VBase _ | VEmpty -> ()
     | VNewObjRef _ -> ()
-    | VExtend(v1,v2,v3) -> List.iter (checkValue errList g h) [v1;v2;v3]
+    | VExtend(v1,v2,v3) -> List.iter (checkValue errList g) [v1;v2;v3]
     | VFun _ -> () (* not recursing, since lambdas don't appear in formulas *)
 
-and checkTypeTerm errList g h u =
+and checkTypeTerm errList g u =
   let errList = errList @ [spr "Wf.checkTypeTerm: %s" (prettyStrTT u)] in
   match u with
     | UNull   -> ()
-    | URef(l) -> checkLoc errList g h l
-    | UArray(t) -> checkType errList g h t
+    | URef(l) -> checkLoc errList g l
+    | UArray(t) -> checkType errList g t
     | UVar(x) ->
         if List.exists (function TVar(y) -> x = y | _ -> false) g then ()
         else err (errList @ [spr "unbound type variable: [%s]" x])
-    | UArr((ts,ls,hs),x,t1,e1,t2,e2) -> begin
+    | UArrow((ts,ls,hs),x,t1,e1,t2,e2) -> begin
         noDupeFormal errList "type" ts;
         noDupeFormal errList "loc" ls;
         noDupeFormal errList "heap" hs;
@@ -187,21 +195,21 @@ and checkHeap errList g h =
 and checkConstraints errList g h = function
   | [] -> ()
   | (l,HConc(x,s))::rest -> begin
-      checkLoc errList g h l;
+      checkLoc errList g l;
       (if List.exists (function (l',_) -> l = l') rest
        then err (errList @ [spr "loc [%s] bound multiple times" (strLoc l);
          "perhaps you are running into the cap-avoiding subst bug..."])
        else ());
-      checkType errList g h s;
+      checkType errList g s;
       checkConstraints errList g h rest
     end
   | (l,HConcObj(x,s,l'))::rest -> begin
-      checkLoc errList g h l';
+      checkLoc errList g l';
       checkConstraints errList g h ((l,HConc(x,s))::rest)
     end
   | (l,HWeakTok(tok))::rest -> begin
-      checkLoc errList g h l;
-      (match tok with Frzn -> () | Thwd(l') -> checkLoc errList g h l');
+      checkLoc errList g l;
+      (match tok with Frzn -> () | Thwd(l') -> checkLoc errList g l');
       checkConstraints errList g h rest;
     end
 
@@ -212,9 +220,17 @@ and checkWorld errList g (t,h) =
 *)
 and checkWorld errList g = function
   | (TExists(x,t,s),h) -> checkWorld errList (Var(x,t)::g) (s,h)
-  | (t,h) -> (checkHeap errList g h; checkType errList g h t)
+  | (t,h) -> (checkHeap errList g h; checkType errList g t)
 
-and checkLoc errList g h = function
+and checkLoc errList g = function
+  (* TODO 8/13 want to check weaklocs also, but they go out of scope since
+     EWeak is a binding form *)
+(*
+  | LocConst _ as l ->
+      if isStrongLoc l then ()
+      else if List.exists (function WeakLoc(l',_,_) -> l = l' | _ -> false) g then ()
+      else err (errList @ [spr "unbound weak location: [%s]" (strLoc l)])
+*)
   | LocConst _ -> ()
   | LocVar(x) ->
       if List.exists (function LVar(y) -> x = y | _ -> false) g then ()

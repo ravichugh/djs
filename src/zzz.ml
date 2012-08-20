@@ -5,8 +5,10 @@ open LangUtils
 let doingExtract = ref false
 
 let z3read, z3write =
-  let zin, zout = Unix.open_process "z3 -smt2 -in" in
-  let zlog      = open_out (Settings.out_dir ^ "queries.lisp") in
+  (* let zin, zout = Unix.open_process "z3 -smt2 -in" in *)
+  (* let zin, zout = Unix.open_process "z3 -smtc SOFT_TIMEOUT=1000 -in" in *)
+  let zin, zout = Unix.open_process "z3 -smtc -in MBQI=false" in
+  let zlog      = open_out (Settings.out_dir ^ "queries.smtc") in
   let reader () = input_line zin in
   let writer s  = fpr zlog "%s" s; flush zlog; fpr zout "%s" s; flush zout in
     (reader, writer)
@@ -118,21 +120,23 @@ let addBinding ?isNew:(isNew=true) x f =
       Log.warn (spr "already in scope in logic: %s\n" x);
     curScope := x::!curScope;
   end;
-  if f <> PTru then
+  if f <> PTru then begin
+    let f = removeExtraTrues f in (* TODO why is there still and for 1? *)
     let s = strForm (embedForm f) in
     dump (spr "(assert\n%s  %s)" (indent()) s)
-  else
-    ()
+  end;
+  if Str.string_match (Str.regexp "^end_of_") x 0 then begin
+    dump "";
+    dump (String.make 80 ';');
+    dump (String.make 80 ';');
+    dump (String.make 80 ';');
+    dump "";
+  end;
+  ()
 
 let removeBinding () =
   try curScope := List.tl !curScope
   with Failure("tl") -> Log.warn "why is curScope empty?\n"
-
-let addTypeVar x =
-  (* dump (spr "(declare-preds ((%s DVal))) ; %d" x !depth); *)
-  dump (spr "(declare-fun %s (DVal) Bool) ; %d" x !depth);
-  curScope := x::!curScope;
-  ()
 
 
 (***** Public push/pop ********************************************************)

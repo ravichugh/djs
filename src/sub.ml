@@ -8,9 +8,7 @@ let maxJoinSize   = ref 1 (* anything <= 1 means not doing joins *)
 
 (***** Collecting type terms, or "boxes" **************************************)
 
-(* TODO better way to compute this *)
-
-let typeTermsTyp acc t =
+let typeTermsTyp acc t = (* naive way to compute this *)
   foldForm (fun acc -> function
     | PUn(HasTyp(_,u)) -> TypeTerms.add u acc
     | _                -> acc
@@ -51,9 +49,9 @@ let join u1 u2 = failwith "join nyi"
 let combineArrows f boxes =
   TypeTerms.fold (fun ut acc ->
     match ut, acc with
-      | UArr _, None    -> Some ut
-      | UArr _, Some(u) -> Some (f ut u)
-      | _               -> acc
+      | UArrow _, None    -> Some ut
+      | UArrow _, Some(u) -> Some (f ut u)
+      | _                 -> acc
   ) boxes None
 
 let meetAll = combineArrows meet
@@ -64,19 +62,10 @@ let joinAll = combineArrows join
 
 let boxNumbers s = 
   let l = TypeTerms.elements s in
-(*
-  let il = List.map (Utils.IdTable.getId idTypTerms) l in
-*)
   let il =
     List.map (function ut ->
       try Utils.IdTable.getId idTypTerms ut
       with Not_found -> failwith (spr "Sub.boxNumbers:\n\n %s" (prettyStrTT ut))
-(*
-      with Not_found -> begin
-        Log.warn (spr "adding box from Sub: %s\n" (prettyStrTT ut));
-        Utils.IdTable.process idTypTerms ut
-      end
-*)
     ) l in
   il
 
@@ -98,7 +87,7 @@ let mustFlow_ usedBoxes ?filter:(f=(fun _ -> true)) g t =
   (* Log.smallTitle "MustFlow"; *)
   let boxes = TypeTerms.diff (typeTerms g) usedBoxes in
   let boxes = TypeTerms.filter f boxes in
-  (* let boxes = TypeTerms.add UNull boxes in (* 3/15 *) *)
+  let boxes = TypeTerms.add UNull boxes in (* 3/15 *)
   let x = setUpExtract t usedBoxes in
 (*
   let extracted =
@@ -137,9 +126,6 @@ let canFlow_ usedBoxes ?filter:(f=(fun _ -> true)) g t =
   let boxes = TypeTerms.diff (typeTerms g) usedBoxes in
   let boxes = TypeTerms.filter f boxes in
   let x = setUpExtract t usedBoxes in
-(*
-  (* subsets of size 2 to !maxJoinSize in increasing order of size *)
-*)
   (* subsets of size 1 to !maxJoinSize in increasing order of size *)
   let subsets =
     boxes
@@ -162,36 +148,6 @@ let canFlow_ usedBoxes ?filter:(f=(fun _ -> true)) g t =
 
 
 (***** Heap Manipulation ******************************************************)
-
-(*
-let simpleHeapJoin v h1 h2 =
-  if h1 = h2 then h1
-  (* TODO added 12/1 *)
-  else if h1 = botHeap then h2
-  else if h2 = botHeap then h1
-  else
-  (* TODO 3/15 for factorial, there are different bindings on each branch.
-     so, try returning the heap vars...
-  printTcErr [(spr "simpleheapjoin:\n\n%s\n\n%s"
-    (prettyStrHeap h1) (prettyStrHeap h2))]
-  *)
-    let (hs1,cs1) = h1 in
-    let (hs2,cs2) = h2 in
-    if hs1 <> hs2 then
-      Log.printTcErr [
-        spr "simpleheapjoin:\n\n%s\n\n%s" (prettyStrHeap h1) (prettyStrHeap h2);
-        "heap vars not the same"]
-    else (hs1,[]) (* TODO dropping _all_ constraints... *)
-
-let simpleHeapJoin v h1 h2 =
-  let h = simpleHeapJoin v h1 h2 in
-  Log.log0 "simpleHeapJoin\n";
-  Log.log1 "  %s\n" (prettyStrHeap h1);
-  Log.log1 "  %s\n" (prettyStrHeap h2);
-  Log.log1 "  %s\n" (prettyStrHeap h);
-  h
-*)
-
 
 (* TODO for now, copied and simplified from TcDref *)
 
@@ -216,13 +172,15 @@ let simpleSnapshot cap g h =
   if l <> [] then Zzz.dump (spr "; snapshot added some bindings [%s]" cap);
   let (n,g1) = 
     List.fold_left (fun (k,acc) -> function
-      | HConc(x,_) | HConcObj(x,_,_) -> (k+1, simpleTcAddBinding x tyAny acc)
+      | HConc(None,_) | HConcObj(None,_,_) -> failwith "simpleSnapshot"
+      | HConc(Some(x),_) | HConcObj(Some(x),_,_) -> (k+1, simpleTcAddBinding x tyAny acc)
       | HWeakTok _ -> (k, acc)
     ) (0,g) l
   in
   let g2 = 
     List.fold_left (fun acc -> function
-      | HConc(x,s) | HConcObj(x,s,_) -> simpleTcAddBinding ~isNew:false x s acc
+      | HConc(None,_) | HConcObj(None,_,_) -> failwith "simpleSnapshot"
+      | HConc(Some(x),s) | HConcObj(Some(x),s,_) -> simpleTcAddBinding ~isNew:false x s acc
       | HWeakTok _ -> acc
     ) g1 l
   in
@@ -231,10 +189,36 @@ let simpleSnapshot cap g h =
 
 (***** Helpers ****************************************************************)
 
+let rec findLocInHeapEnv l = function
+  | (l',hc)::rest -> if l = l' then Some hc else findLocInHeapEnv l rest
+  | []            -> None
+
+let die_ errList finalMsgs = err (errList @ finalMsgs)
+let die  errList finalMsg  = err (errList @ [finalMsg])
+
 let checkLength s errList l1 l2 =
   if List.length l1 <> List.length l2
-  then err (errList @ [spr "different number of %s args" s])
+  then die errList (spr "different number of %s args" s)
   else ()
+
+let strHeapSat (hs1,cs1) (hs2,cs2) =
+  let s0 = spr "  %s |= %s" (String.concat "++" hs1) (String.concat "++" hs2) in
+  let l1 = List.map (fun (l,hc) ->
+             spr "  %s |-> %s |= %s" (strLoc l)
+               (if List.mem_assoc l cs1
+                then prettyStr strHeapEnvCell (List.assoc l cs1)
+                else "MISSING")
+               (prettyStr strHeapCell hc)) cs2 in
+  let l2 = List.map (fun (l,hc) ->
+            if List.mem_assoc l cs2 then ""
+            else spr "  %s |-> %s |= MISSING"
+                   (strLoc l) (prettyStr strHeapEnvCell hc)) cs1 in
+  let l2 = List.filter (fun s -> s <> "") l2 in
+  String.concat "\n" [s0; String.concat "\n" l1; String.concat "\n" l2]
+  
+
+(* TODO move this helper into checkHeaps and/or factor common parts with
+   checkHeapSat *)
 
 type obligation =
   | OConc of loc * vvar * typ
@@ -245,46 +229,29 @@ let heapSubstAndObligations errList cs1 cs2 =
     try begin
       let hc1 = snd (List.find (fun (l',_) -> l = l') cs1) in
       match hc1, hc2 with
-        | HConc(y1,_), HConc(y2,s2) ->
+        | HConc(None,_), HConc(None,_)
+        | HConcObj(None,_,_), HConcObj(None,_,_) ->
+            failwith "heapSubstAndObligations"
+        | HConc(Some(y1),_), HConc(Some(y2),s2) ->
             ((y2, wVar y1) :: acc1, OConc (l, y2, s2) :: acc2)
-        | HConcObj(y1,_,l1'), HConcObj(y2,s2,l2') ->
+        | HConcObj(Some(y1),_,l1'), HConcObj(Some(y2),s2,l2') ->
             if l1' = l2' then
               ((y2, wVar y1) :: acc1, OConc (l, y2, s2) :: acc2)
             else
-              err (errList @ [spr "proto links for [%s] differ:" (strLoc l);
-                              spr "  %s" (strLoc l1');
-                              spr "  %s" (strLoc l2')])
-(*
-        | HWeakObj(ts1,t1,l1), HWeakObj(ts2,t2,l2) ->
-            (*
-            if ts1 = ts2 && t1 = t2 && l1 = l2 then (acc1, acc2)
-            else err (errList @ [spr
-                   "constraints for [%s]\n\n[%s]\n\n[%s]" (strLoc l)
-                   (prettyStr strHeapCell hc1) (prettyStr strHeapCell hc2)])
-            *)
-            if l1 <> l2 then
-              err (errList @ [spr
-                "proto-links for [%s] differ: [%s] [%s]" (strLoc l)
-                   (strLoc l1) (strLoc l2)])
-            else if ts1 <> ts2 then
-              err (errList @ [spr
-                "thaw states for [%s] differ: [%s] [%s]" (strLoc l)
-                   (strThawState ts1) (strThawState ts2)])
-            else if t1 = t2 then
-              (acc1, acc2)
-            else 
-              (acc1, OWeak (t1, t2) :: acc2)
-*)
+              die_ errList
+                [spr "proto links for [%s] differ:" (strLoc l);
+                 spr "  %s" (strLoc l1');
+                 spr "  %s" (strLoc l2')]
         | HWeakTok(x), HWeakTok(y) ->
             if x = y then (acc1, acc2)
-            else err (errList @ [spr
+            else die errList (spr
                    "thaw states for [%s] differ: [%s] [%s] "
-                   (strLoc l) (strThawState x) (strThawState y)])
+                   (strLoc l) (strThawState x) (strThawState y))
         | _ ->
-            err (errList @ [spr
-              "constraints for [%s] have different shape" (strLoc l)])
+            die errList (spr
+              "constraints for [%s] have different shape" (strLoc l))
     end with Not_found ->
-      err (errList @ [spr "no location constraint for [%s]" (strLoc l)])
+      die errList (spr "no location constraint for [%s]" (strLoc l))
   in
   List.fold_left foo ([],[]) cs2
 
@@ -301,17 +268,28 @@ let filterObligations obligations = function
 
 (***** Subtyping **************************************************************)
 
+let rec bindExistentials errList = function
+  | TExists(x,s1,s2) ->
+      (match s1 with
+         | TExists _ -> die errList "Sub.bindExistentials: not prenex form"
+         | _ ->
+             let _ = Log.log2 "bindExistential %s :: %s\n" x (prettyStrTyp s1) in
+             let _ = Zzz.addBinding x (applyTyp s1 (wVar x)) in
+             bindExistentials errList s2)
+  | s -> s
+
 let rec checkTypes errList usedBoxes g t1 t2 =
+  let errList =
+    errList @ [spr "Sub.checkTypes:\n   t1 = %s\n   t2 = %s"
+                 (prettyStrTyp t1) (prettyStrTyp t2)] in
+  let _ =
+    match t2 with
+      | TExists _ -> die errList "existential type on the right"
+      | _ -> () in
+  Zzz.pushScope ();
+  let t1 = bindExistentials errList t1 in
   let v = freshVar "v" in
   let (p1,p2) = (applyTyp t1 (wVar v), applyTyp t2 (wVar v)) in
-  let (st1,st2) = (prettyStrTyp t1, prettyStrTyp t2) in
-  let (sp1,sp2) = (prettyStrForm p1, prettyStrForm p2) in
-  let errList =
-    (* errList @ [spr "Sub.checkTypes:\n   t1 = %s\n   t2 = %s" st1 st2; *)
-    errList @ [spr "Sub.checkTypes:\n   %s\n < %s" st1 st2;
-               spr "Need to prove the implication:\n   %s\n=> %s" sp1 sp2]
-  in
-  Zzz.pushScope ();
   Zzz.addBinding v p1;
   checkFormula errList usedBoxes g p2;
   Zzz.popScope ()
@@ -335,7 +313,7 @@ and checkFormula errList usedBoxes g p =
 and checkUnPreds errList usedBoxes g (qs,qForm) =
   if Zzz.checkValid "I-Valid" qForm then ()
   else if List.exists (checkUnPred errList usedBoxes g) qs then ()
-  else err (errList @ ["Cannot discharge this clause."])
+  else die errList "Cannot discharge this clause."
 
 and checkUnPred errList usedBoxes g = function
   | HasTyp(w,u) -> checkHasTyp errList usedBoxes g w u 
@@ -350,8 +328,8 @@ and checkHasTyp errList usedBoxes g w u =
     let mustFlowBoxes = mustFlow_ usedBoxes g (ty(PEq(theV,w))) in
     let usedBoxes = TypeTerms.union usedBoxes mustFlowBoxes in
     let n = TypeTerms.cardinal mustFlowBoxes in
-    if n = 0 then err (errList @ [spr "0 boxes must-flow to %s" (prettyStrWal w)])
-    else if n > 0 && !doMeet then err (errList @ ["meet nyi"])
+    if n = 0 then die errList (spr "0 boxes must-flow to %s" (prettyStrWal w))
+    else if n > 0 && !doMeet then die errList "meet nyi"
     else TypeTerms.exists
            (function u' -> checkTypeTerms errList usedBoxes g u' u)
            mustFlowBoxes
@@ -359,7 +337,7 @@ and checkHasTyp errList usedBoxes g w u =
   end else begin
     let smallestCanFlowSet = canFlow_ usedBoxes g (ty(PEq(theV,w))) in
     ignore smallestCanFlowSet;
-    err (errList @ ["join nyi!"])
+    die errList "join nyi!"
   end
 
 and checkTypeTerms errList usedBoxes g u1 u2 =
@@ -373,7 +351,7 @@ and checkTypeTerms errList usedBoxes g u1 u2 =
     | URef(x), URef(y) -> x = y
     (* 3/15 *)
     | UNull, URef(y)   -> isWeakLoc y
-    | UArr(arr1), UArr(arr2) -> checkArrow errList usedBoxes g arr1 arr2
+    | UArrow(arr1), UArrow(arr2) -> checkArrow errList usedBoxes g arr1 arr2
     | UArray(t1), UArray(t2) ->
        (try (* TODO 3/10 ideally want a version that returns bool instead
                of failing *)
@@ -382,7 +360,7 @@ and checkTypeTerms errList usedBoxes g u1 u2 =
          true
        with Tc_error _ ->
          false)
-    | _ -> err (errList @ ["Syntactic types don't match up."])
+    | _ -> die errList "Syntactic types don't match up."
 
 and checkArrow errList usedBoxes g
       ((ts1,ls1,hs1),x1,t11,e11,t12,e12) ((ts2,ls2,hs2),x2,t21,e21,t22,e22) =
@@ -404,8 +382,8 @@ and checkArrow errList usedBoxes g
      List.combine hs1 (List.map (fun x -> ([x],[])) hs2)) in
 
   let subst = ([], tSubst, lSubst, hSubst) in
-  let t11 = masterSubstTyp subst t11 in
-  let e11 = masterSubstHeap subst e11 in
+  let t11 = substTyp subst t11 in
+  let e11 = substHeap subst e11 in
 
   (* TODO redo this, since not using worlds *)
 
@@ -418,8 +396,8 @@ and checkArrow errList usedBoxes g
   let vSubst = (x1, wVar x2)::vSubst in
 
   let subst = (vSubst, tSubst, lSubst, hSubst) in
-  let t12 = masterSubstTyp subst t12 in
-  let e12 = masterSubstHeap subst e12 in
+  let t12 = substTyp subst t12 in
+  let e12 = substHeap subst e12 in
 
   let errList' =
     errList @ [spr "output worlds:\n   %s\n / %s\n < %s\n / %s"
@@ -440,16 +418,20 @@ and checkHeaps errList ?(locsOpt=None) usedBoxes g h1 h2 =
   let errList =
     errList @ [spr "checkHeaps:\n  %s\n< %s"
                  (prettyStrHeap h1) (prettyStrHeap h2)] in
+(*
   if h1 = botHeap then botSubst
   else if h1 = h2 then []
+*)
+  if h1 = h2 then []
   else begin
 
     (* check heap variables *)
     let ((hs1,cs1),(hs2,cs2)) = (h1, h2) in
     let (hs1,hs2) = (List.sort compare hs1, List.sort compare hs2) in
     if hs1 <> hs2 then
-      err (errList @ [spr "heap variables not the same:\n   %s\n!= %s"
-                      (String.concat "," hs1) (String.concat "," hs2)]);
+      die errList (spr
+        "heap variables not the same:\n   %s\n!= %s"
+        (String.concat "," hs1) (String.concat "," hs2));
 
     (* check location constraints *)
     let (binderSubst,obligations) = heapSubstAndObligations errList cs1 cs2 in
@@ -459,7 +441,7 @@ and checkHeaps errList ?(locsOpt=None) usedBoxes g h1 h2 =
     ignore (List.fold_left (fun errList -> function
       | OConc(l,x2,s2) ->
           let p = applyTyp s2 (wVar x2) in
-          let p = masterSubstForm (binderSubst,[],[],[]) p in
+          let p = substForm (binderSubst,[],[],[]) p in
           let errList' =
             errList @ [spr "Checking location [%s] ..." (strLoc l)] in
           let _ = checkFormula errList' usedBoxes g p in
@@ -484,18 +466,88 @@ and checkWorlds errList usedBoxes g (t1,h1) (t2,h2) =
   let subst = checkHeaps errList usedBoxes g h1 h2 in
   Zzz.pushScope ();
   let (n,g) = simpleSnapshot "check-worlds" g h1 in
-  checkTypes errList usedBoxes g t1 (masterSubstTyp (subst,[],[],[]) t2);
+  checkTypes errList usedBoxes g t1 (substTyp (subst,[],[],[]) t2);
   simpleTcRemoveBindingN n;
   Zzz.popScope ();
   subst
 
+(* 8/14 adding checkHeapSat and checkWorldSat. try to factor common
+   parts with checkHeaps and checkWorlds. *)
+
+let checkHeapSat errList usedBoxes g heapEnv heapTyp =
+  let errList =
+    errList @ [spr "Sub.checkHeapSat:\n%s" (strHeapSat heapEnv heapTyp)] in
+
+  (* step 1: check heap variables *)
+  let ((hs1,cs1),(hs2,cs2)) = (heapEnv, heapTyp) in
+  let (hs1,hs2) = (List.sort compare hs1, List.sort compare hs2) in
+  if hs1 <> hs2 then
+    die errList (spr
+      "heap variables not the same:\n   %s\n!= %s"
+      (String.concat "," hs1) (String.concat "," hs2));
+
+  (* step 2: check structure of bindings and compute substitution *)
+  let (subst,obligations) =
+    List.fold_left (fun (acc1,acc2) (l,hc2) ->
+      match findLocInHeapEnv l (snd heapEnv) with
+        | None -> die errList (spr "location not found: %s" (strLoc l))
+        | Some(hc1) ->
+            begin match hc1, hc2 with
+              (* simple locations *)
+              | HEConc(v),HConc(Some(x),t) ->
+                  ((x, WVal v) :: acc1, (l, x, t) :: acc2)
+              | HEConc(v),HConc(None,t) ->
+                  begin match maybeValOfSingleton t with
+                    | Some(v') when v = v' -> (acc1, acc2)
+                    | _ -> let x = freshVar "heapSatTemp" in
+                           ((x, WVal v) :: acc1, (l, x, t) :: acc2)
+                  end
+              (* object locations *)
+              | HEConcObj(_,l'),HConcObj(_,_,l'') when l' <> l'' ->
+                  die errList (spr "proto links differ: %s" (strLoc l))
+              | HEConcObj(v,_),HConcObj(Some(x),t,_) ->
+                  ((x, WVal v) :: acc1, (l, x, t) :: acc2)
+              | HEConcObj(v,_),HConcObj(None,t,_) ->
+                  begin match maybeValOfSingleton t with
+                    | Some(v') when v = v' -> (acc1, acc2)
+                    | _ -> let x = freshVar "heapSatTemp" in
+                           ((x, WVal v) :: acc1, (l, x, t) :: acc2)
+                  end
+              (* weak locations *)
+              | HEWeakTok(x),HWeakTok(x') ->
+                  if x = x' then (acc1, acc2) else
+                  die errList (spr
+                    "thaw states differ: %s %s"
+                    (strThawState x) (strThawState x'))
+              | _ ->
+                  die errList (spr "wrong shape for: %s" (strLoc l))
+            end
+      ) ([],[]) (snd heapTyp)
+  in
+
+  (* TODO when existential locations are added, don't allow any
+     locations to be dropped *)
+
+  (* step 3: check the type of each binding *)
+  List.iter (fun (l,x,t) ->
+    let p = applyTyp t (wVar x) in
+    let p = substForm (subst,[],[],[]) p in
+    let errList' = errList @ [spr "Checking location [%s] ..." (strLoc l)] in
+    checkFormula errList' usedBoxes g p
+  ) obligations;
+
+  subst
+
+let checkWorldSat errList usedBoxes g (t,heapEnv) (s,heapTyp) =
+  checkTypes errList usedBoxes g t s;
+  checkHeapSat errList usedBoxes g heapEnv heapTyp
+
 
 (***** Entry point ************************************************************)
 
-let types cap  = checkTypes  [spr "Sub.types: %s" cap]  TypeTerms.empty
-let worlds cap = checkWorlds [spr "Sub.worlds: %s" cap] TypeTerms.empty
-let heaps cap ?(locsOpt=None) =
-  checkHeaps ~locsOpt [spr "Sub.heaps: %s" cap]  TypeTerms.empty
+let types cap = checkTypes [spr "Sub.types: %s" cap] TypeTerms.empty
+let heapSat cap = checkHeapSat [spr "Sub.heapSat: %s" cap] TypeTerms.empty
+let worldSat cap = checkWorldSat [spr "Sub.worldSat: %s" cap] TypeTerms.empty
 
 let mustFlow   = mustFlow_ TypeTerms.empty
 

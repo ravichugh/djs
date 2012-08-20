@@ -30,14 +30,14 @@ val mapTyp :
   ?fForm:(formula -> formula) ->
   ?fTT:(typterm -> typterm) ->
   ?fWal:(walue -> walue) ->
-  ?fVal:(value -> value) ->
+  ?fVal:(value_ -> value_) ->
   ?onlyTopForm:bool -> typ -> typ
 
 val mapForm :
   ?fForm:(formula -> formula) ->
   ?fTT:(typterm -> typterm) ->
   ?fWal:(walue -> walue) ->
-  ?fVal:(value -> value) ->
+  ?fVal:(value_ -> value_) ->
   ?onlyTopForm:bool -> formula -> formula
 
 val foldTyp :
@@ -51,7 +51,7 @@ val foldForm : ('a -> formula -> 'a) -> 'a -> typ -> 'a
 
 val mapExp : (exp -> exp) -> exp -> exp
 
-val foldExp : ('a -> exp -> 'a) -> ('a -> value -> 'a) -> 'a -> exp -> 'a
+val foldExp : ('a -> exp -> 'a) -> ('a -> value_ -> 'a) -> 'a -> exp -> 'a
 
 
 (***** Helpers for Abstract Syntax Programming ********************************)
@@ -84,6 +84,10 @@ val vStr : string -> value
 val vInt : int -> value
 val vNull : value
 val vUndef : value
+val vVar : vvar -> value
+val vEmpty : value
+val vBase : basevalue -> value
+val vNewObjRef : int -> value
 
 val wBool : bool -> walue
 val wStr : string -> walue
@@ -164,6 +168,7 @@ val strFormExpanded : string -> formula list -> string
 val strTTFlat : typterm -> string
 val strHeap : heap -> string
 val strHeapCell : heapconstraint -> string
+val strHeapEnvCell : heapenvconstraint -> string
 val strWeakLoc : weakloc -> string
 val strWorld : world -> string
 val strFrame : frame -> string
@@ -175,6 +180,7 @@ val prettyStrForm : formula -> string
 val prettyStrTyp : typ -> string
 val prettyStrTT : typterm -> string
 val prettyStrHeap : heap -> string
+val prettyStrHeapEnv : heapenv -> string
 
 (***** Type substitution ******************************************************)
 
@@ -187,9 +193,11 @@ module MasterSubst : sig
   type t = vsubst * tsubst * lsubst * hsubst
 end
 
-val masterSubstForm : MasterSubst.t -> formula -> formula
-val masterSubstTyp  : MasterSubst.t -> typ     -> typ
-val masterSubstHeap : MasterSubst.t -> heap    -> heap
+val substForm : MasterSubst.t -> formula -> formula
+val substTyp  : MasterSubst.t -> typ     -> typ
+val substHeap : MasterSubst.t -> heap    -> heap
+val substWal  : MasterSubst.t -> walue   -> walue
+val substLoc  : MasterSubst.t -> loc     -> loc
 
 val applyTyp : typ -> walue -> formula
 
@@ -211,4 +219,10 @@ val idSkolems : float Utils.IdTable.t
 val depTupleBinders : typ -> vvar list
 
 val newObjId : unit -> int
+
+val valToSingleton : value -> typ
+val valOfSingleton : typ -> value
+val maybeValOfSingleton : typ -> value option
+
+val removeExtraTrues : formula -> formula
 

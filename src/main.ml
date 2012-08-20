@@ -29,7 +29,7 @@ let argSpecs = [
               ()),
          "           don't check CNF conversion, ");
   ("-checkCNF", Arg.Set Cnf.checkConversion,
-         "           check CNF conversion");
+             "       check CNF conversion");
   ("-printAllTypes", Arg.Set S.printAllTypes,
                   "  default is just top-level definitions");
   ("-meet", Arg.Set Sub.doMeet,
@@ -39,11 +39,11 @@ let argSpecs = [
   ("-useLA", Arg.Unit (fun () -> S.useTheoryLA := true),
           "          use theory of linear arithmetic");
   ("-tryAllBoxes", Arg.Set S.tryAllBoxesHack,
-        "            try all boxes, in case typeTerms misses some");
+                "    try all boxes, in case typeTerms misses some");
   ("-doFalseChecks", Arg.Set S.doFalseChecks,
-        "            do false checks, which is a _de-optimization_");
+                  "  do false checks, which is a _de-optimization_");
   ("-djsLite", Arg.Set S.djsMode,
-        "            Dependent JavaScript (simple dictionaries)");
+            "        Dependent JavaScript (simple dictionaries)");
   ("-djs", Arg.Unit (fun () -> S.djsMode := true; S.fullObjects := true),
         "            Dependent JavaScript");
   ("-varLifting", Arg.Bool (fun b -> S.doVarLifting := b),
@@ -61,7 +61,7 @@ let argSpecs = [
                    " desugaring should thread types through heaps");
 *)
   ("-augmentHeaps", Arg.Set S.augmentHeaps,
-                "    desugaring should add locations to heaps for enclosing refs");
+                 "   desugaring should add locations to heaps for enclosing refs");
   ("-greedyThaws", Arg.Set S.greedyThaws,
                 "    desugaring inserts thaw/freeze greedily around weak locs");
   ("-assistCtor", Arg.Set S.assistCtor,
@@ -231,7 +231,7 @@ let _ =
   if !Sub.maxJoinSize > 1 then failwith "join not implemented in dref/djs";
 
   Zzz.emitPreamble ();
-  TcDref2.typecheck e;
+  TcDref3.typecheck e;
   BNstats.print (open_out (Settings.out_dir ^ "stats.txt")) "";
   ()
   

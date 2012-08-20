@@ -34,7 +34,7 @@ def iterate(positive):
                 b = not b
             if b and nm[0] != '.':
                 f = os.path.join(top, nm)
-                os.system("echo -n '%s  ' && ./system-d %s %s %s | tail -1"
+                os.system("echo -n '%s  ' && ./system-dref %s %s %s | tail -1"
                           % (strip_test_dir(f), mode, systemdoptions, f))
 
 print '\033[91m'

@@ -25,8 +25,14 @@ val writeCacheStats : unit -> unit
 
 val types : string -> env -> typ -> typ -> unit
 
+val heapSat : string -> env -> heapenv -> heap -> LangUtils.vsubst
+
+val worldSat : string -> env -> typ * heapenv -> world -> LangUtils.vsubst
+
+(*
 val heaps : string -> ?locsOpt:(loc list option) -> env -> heap -> heap
   -> LangUtils.vsubst
 
 val worlds : string -> env -> world -> world -> LangUtils.vsubst
+*)
 

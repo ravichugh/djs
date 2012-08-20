@@ -440,15 +440,17 @@ let locProOfWeak cap m =
 
 
 let rec getType env = function
-  | EVal (VBase (Str _)) -> JsStr
-  | EVal (VBase (Int i)) -> JsInt (i>=0)
-  | EApp (_, EVal (VVar "js_uminus"), EVal (VBase (Int i))) -> JsInt (not(i>=0))
-  | EVal (VVar sk) when Utils.strPrefix sk "_skolem_" -> JsNum
-  | ELet (_, None, ENewObj (EVal VEmpty, l1, _, l2), _) when l2 = lObjectPro ->
+  | EVal ({value=VBase (Str _)}) -> JsStr
+  | EVal ({value=VBase (Int i)}) -> JsInt (i>=0)
+  | EApp (_, EVal ({value=VVar "js_uminus"}),
+             EVal ({value=VBase (Int i)})) -> JsInt (not(i>=0))
+  | EVal ({value=VVar sk}) when Utils.strPrefix sk "_skolem_" -> JsNum
+  | ELet (_, None, ENewObj (EVal {value=VEmpty}, l1, _, l2), _)
+    when l2 = lObjectPro ->
       JsObject (l1, l2, ([],false), None)
   | ENewObj (EArray (t, elts), l1, _, l2) when l2 = lArrayPro ->
       JsArray (t, l1, l2, Some (Some (List.length elts)), None)
-  | EVal (VVar x) | EDeref (EVal (VVar x)) ->
+  | EVal ({value=VVar x}) | EDeref (EVal ({value=VVar x})) ->
       if not (IdMap.mem x env.types) then
         (* Log.printParseErr (spr "DjsDesugar.getType [%s]: var not found" x) *)
         let _ = logJsTyp (spr "getType(%s) = NOT FOUND" x) in
@@ -478,9 +480,11 @@ let rec getType env = function
   (* 4/3: redoing the above case by calling getType, looking for JsCtor
      instead of arbitrary JsObject, and producing a JsPrototype instead
      of an arbitrary JsObject.  *)
-  | EApp(_, EVal (VVar "getPropObj"),
-         EDict([(EVal(VBase(Str"0")),obj);
-                (EVal(VBase(Str"1")),EVal(VBase(Str"prototype")))])) ->
+  | EApp(_, EVal ({value=VVar "getPropObj"}),
+         EDict([(EVal({value=VBase(Str"0")}),
+                 obj);
+                (EVal({value=VBase(Str"1")}),
+                 EVal({value=VBase(Str"prototype")}))])) ->
       begin match getType env obj with
         | JsCtor(f,_,_,_) ->
             (* 4/4 since not correctly threading prototypes through
@@ -499,9 +503,11 @@ let rec getType env = function
             JsTop
       end
   (* 4/3: TODO might want to look for getProp and getElem also *)
-  | EApp(_, EVal (VVar "getPropArr"),
-         EDict([(EVal(VBase(Str"0")),arr);
-                (EVal(VBase(Str"1")),EVal(VBase(Str"length")))])) ->
+  | EApp(_, EVal ({value=VVar "getPropArr"}),
+         EDict([(EVal({value=VBase(Str"0")}),
+                 arr);
+                (EVal({value=VBase(Str"1")}),
+                 EVal({value=VBase(Str"length")}))])) ->
       (match getType env arr with
          | JsArray(_,_,_,Some(Some(i)),_)    -> JsInt (i>=0)
          | JsArray(_,_,_,Some(None),Some(a)) -> JsLen a
@@ -603,10 +609,12 @@ let recdTypFrom t =
     foldForm
       (fun acc -> function
          (* TODO this won't collect any refinements on the base type *)
-         | PEq(WApp("tag",[WApp("sel",[WVal(VVar"v");WVal(VBase(Str(f)))])]),
+         | PEq(WApp("tag",[WApp("sel",[WVal({value=VVar"v"});
+                                       WVal({value=VBase(Str(f))})])]),
                wTag) ->
              (f, ty (eq (tag theV) wTag)) :: acc
-         | PUn(HasTyp(WApp("sel",[WVal(VVar"v");WVal(VBase(Str(f)))]),u)) ->
+         | PUn(HasTyp(WApp("sel",[WVal({value=VVar"v"});
+                                  WVal({value=VBase(Str(f))})]),u)) ->
              (f, THasTyp ([u], PTru)) :: acc
          | _ ->
              acc
@@ -615,7 +623,7 @@ let recdTypFrom t =
   let dom =
     foldForm
       (fun acc -> function
-         | PDomEq(WVal(VVar"v"),ws) ->
+         | PDomEq(WVal({value=VVar"v"}),ws) ->
              List.sort compare ws = List.sort compare wFields
          | _ -> acc)
       false t in
@@ -623,7 +631,7 @@ let recdTypFrom t =
 
 let addFormals t env =
   match t with (* looking for a single arrow *)
-  | THasTyp([UArr(_,_,TTuple(ts),(_,cs),_,_)],_) ->
+  | THasTyp([UArrow(_,_,TTuple(ts),(_,cs),_,_)],_) ->
       List.fold_left (fun env (x,t) ->
 (*
         let x = if x = "this" then x else dsVar x in
@@ -637,18 +645,22 @@ let addFormals t env =
             addType x t env
           else
           begin match findHeapCell l1 cs with
+            | Some(HConcObj(None,_,_)) ->
+                failwith "addFormals None 1"
+            | Some(HConcObj(None,t,l2)) ->
+                failwith "addFormals None 3"
             (* 4/3 unfortunately had to split the following two cases because
                p and ps are different types *)
-            | Some(HConcObj(a,THasTyp([UArray(t)],p),l2)) ->
+            | Some(HConcObj(Some(a),THasTyp([UArray(t)],p),l2)) ->
                 let t = JsArray (t, l1, l2, arrLenFromPred p, Some a) in
                 let _ = logJsTyp (spr "addFormalType(%s) = %s" x (strJsTyp t)) in
                 addType x t env
-            | Some(HConcObj(a,TRefinement("v",PConn("and",
-                  PUn(HasTyp(WVal(VVar"v"),UArray(t)))::ps)),l2)) ->
+            | Some(HConcObj(Some(a),TRefinement("v",PConn("and",
+                  PUn(HasTyp(WVal({value=VVar"v"}),UArray(t)))::ps)),l2)) ->
                 let t = JsArray (t, l1, l2, arrLenFromPreds ps, Some a) in
                 let _ = logJsTyp (spr "addFormalType(%s) = %s" x (strJsTyp t)) in
                 addType x t env
-            | Some(HConcObj(d,t,l2)) ->
+            | Some(HConcObj(Some(d),t,l2)) ->
                 let t = JsObject (l1, l2, recdTypFrom t, Some d) in
                 let _ = logJsTyp (spr "addFormalType(%s) = %s" x (strJsTyp t)) in
                 addType x t env
@@ -758,7 +770,7 @@ let fvExps cap env exprs =
   end
 
 let augmentHeap cs env freeVars =
-  let tmp () = freshVar "augheap" in
+  let tmp () = Some (freshVar "augheap") in
   let newCs1 =
   IdSet.fold (fun x acc ->
     let lx = LocConst (spr "&%s" x) in
@@ -832,9 +844,9 @@ let augmentHeap cs env freeVars =
 let augmentType t env freeVars =
   if not !Settings.augmentHeaps then t else
   match t with
-    | THasTyp([UArr(l,x,t1,(h1,cs1),t2,(h2,cs2))],p) ->
+    | THasTyp([UArrow(l,x,t1,(h1,cs1),t2,(h2,cs2))],p) ->
         let (newCs1,newCs2) = augmentHeap cs1 env freeVars in
-        THasTyp ([UArr (l,x,t1,(h1,cs1@newCs1),t2,(h2,cs2@newCs2))], p)
+        THasTyp ([UArrow (l,x,t1,(h1,cs1@newCs1),t2,(h2,cs2@newCs2))], p)
     | t ->
         failwith (spr "augmentType %s" (prettyStrTyp t))
 
@@ -1051,12 +1063,12 @@ let dsArrowWithArgsArray arr =
     (String.concat "" (List.map (fun (x,w) -> spr "  %s |-> %s\n"
        x (prettyStrWal w)) formalSubst));
 
-  let argsCell  = (LocVar lArgs, HConc (cArgs, tIn)) in
+  let argsCell  = (LocVar lArgs, HConc (Some cArgs, tIn)) in
 
   let subst = (formalSubst, [], [], []) in
-  let inC   = snd (masterSubstHeap subst ([],inC)) @ [argsCell] in
-  let outC  = snd (masterSubstHeap subst ([],outC)) @ [] in
-  let tRet  = masterSubstTyp subst tRet in
+  let inC   = snd (substHeap subst ([],inC)) @ [argsCell] in
+  let outC  = snd (substHeap subst ([],outC)) @ [] in
+  let tRet  = substTyp subst tRet in
 
   (* let tyArgs = [("arguments", tyRef (LocVar lArgs))] in *)
   let tyArgs = [("arguments", tyRef (LocVar lArgs))] in
@@ -1078,8 +1090,8 @@ let dsArrow arr =
 (* TODO desugar variables to add __ *)
 let dsTyp t env =
   let fTT = function
-    | UArr(arr) -> UArr (dsArrow arr)
-    | u         -> u in
+    | UArrow(arr) -> UArrow (dsArrow arr)
+    | u           -> u in
   let t = mapTyp ~fTT t in
 (*
   let t = if !Settings.monotonicHeaps then threadStuffThrough env t else t in
@@ -1101,7 +1113,7 @@ let desugarTypHint hint env =
 
 let desugarCtorHint hint env =
   let arr = parseCtorTyp hint in
-  dsTyp (THasTyp ([UArr arr], PTru)) env
+  dsTyp (THasTyp ([UArrow arr], PTru)) env
   (* TODO track constructors differently in env *)
 
 (* TODO for now, not allowing intersections of arrows *)
@@ -1109,7 +1121,7 @@ let hasThisParam = function
 (*
   | THasTyp(UArr(_,_,TTuple(("this",_)::_),_,_,_)) -> true
 *)
-  | THasTyp([UArr(_,_,TTuple(("this",_)::_),_,_,_)],PTru) -> true
+  | THasTyp([UArrow(_,_,TTuple(("this",_)::_),_,_,_)],PTru) -> true
   | _ -> false
 
 (*
@@ -1125,11 +1137,11 @@ let dsHeap (hs,cs) =
 (***** Misc *******************************************************************)
 
 let convertConst = function
-  | J.CString(s) -> EVal (VBase (Str s))
-  | J.CInt(i)    -> EVal (VBase (Int i))
-  | J.CBool(b)   -> EVal (VBase (Bool b))
-  | J.CNull      -> EVal (VBase Null)
-  | J.CUndefined -> EVal (VBase Undef)
+  | J.CString(s) -> EVal (wrapVal pos0 (VBase (Str s)))
+  | J.CInt(i)    -> EVal (wrapVal pos0 (VBase (Int i)))
+  | J.CBool(b)   -> EVal (wrapVal pos0 (VBase (Bool b)))
+  | J.CNull      -> EVal (wrapVal pos0 (VBase Null))
+  | J.CUndefined -> EVal (wrapVal pos0 (VBase Undef))
   | J.CNum(f)    -> eVar (spr "_skolem_%d" (Utils.IdTable.process idSkolems f))
   | J.CRegexp _  -> failwith "convert CRegexp"
 
@@ -1232,7 +1244,7 @@ let rec ds (env:env) = function
              objOp [] [l1; lObjectPro] "setPropObj"
                [eVar obj; eStr k; ds env v]) fields
       in
-      ELet (obj, None, ENewObj (EVal VEmpty, l1, eObjectPro (), lObjectPro),
+      ELet (obj, None, ENewObj (EVal (wrapVal pos0 VEmpty), l1, eObjectPro (), lObjectPro),
             eSeq (setFields @ [eVar obj]))
 
   | E.ObjectExpr (p, fields) when !Settings.fullObjects ->
@@ -1724,7 +1736,7 @@ let rec ds (env:env) = function
         EAs ("DjsDesugarCtor", dsFunc true env p args body,
              ParseUtils.typToFrame t) in
       let proto =
-        ENewObj (EVal VEmpty, LocConst (spr "l%sProto" fOrig),
+        ENewObj (EVal (wrapVal pos0 VEmpty), LocConst (spr "l%sProto" fOrig),
                  eObjectPro (), lObjectPro) in
 
       (* in v0, i used simple objects for ctor function objects
@@ -1742,7 +1754,7 @@ let rec ds (env:env) = function
       let eObj = eVar xObj in
       let lObj = LocConst (spr "l%sObj" fOrig) in
       let freshObj =
-        ENewObj (EVal VEmpty, lObj, eFunctionPro (), lFunctionPro) in
+        ENewObj (EVal (wrapVal pos0 VEmpty), lObj, eFunctionPro (), lFunctionPro) in
       let setCode =
         objOp [] [lObj; lFunctionPro]
           "setPropObj" [eObj; eStr "code"; code] in
@@ -1859,7 +1871,7 @@ let rec ds (env:env) = function
 *)
 
   (* rkc: fall through to original Lam JS case *)
-  | E.LabelledExpr (_, l, e) -> ELabel (trimLabel l, None, ds env e)
+  | E.LabelledExpr (_, l, e) -> ELabel (trimLabel l, ds env e)
 
   | E.BreakExpr (_, l, e) -> EBreak (trimLabel l, ds env e)
 
@@ -1960,7 +1972,7 @@ let rec ds (env:env) = function
           | lObj::_ -> lObj
           | _ -> Log.printParseErr "new annot: must have at least 1 loc arg"
       in
-      let obj = ENewObj (EVal VEmpty, lObj, proto, lProto) in
+      let obj = ENewObj (EVal (wrapVal pos0 VEmpty), lObj, proto, lProto) in
       mkCall ts ls ctor (Some obj) (List.map (ds env) args)
     end
 
@@ -2153,7 +2165,10 @@ and dsWhile env breakL continueL test body frame =
       (EIf (ds env test, eSeq [body; loop ()], EVal vUndef))
       (loop ()) in
   if StrSet.mem breakL !jumpedTo
+  (*
   then ELabel (breakL, Some frame, fixloop)
+  *)
+  then failwith "use world and label"
   else fixloop
 
 (* rkc: based on LamJS E.DoWhileExpr case *)
@@ -2174,7 +2189,10 @@ and dsDoWhile env breakL continueL test body frame =
       (eSeq [body; EIf (ds env test, loop (), EVal vUndef)])
       (loop ()) in
   if StrSet.mem breakL !jumpedTo
+  (*
   then ELabel (breakL, Some frame, fixloop)
+  *)
+  then failwith "use world and label"
   else fixloop
 
 (* rkc: based on EJS case for J.ForStmt
@@ -2200,7 +2218,10 @@ and dsFor env breakL continueL test body incr frame =
             EVal vUndef))
       (loop ()) in
   if StrSet.mem breakL !jumpedTo
+  (*
   then ELabel (breakL, Some frame, fixloop)
+  *)
+  then failwith "use world and label"
   else fixloop
 
 and dsForIn env breakL k obj body frame =
@@ -2218,7 +2239,10 @@ and dsForIn env breakL k obj body frame =
             EVal vUndef))
       (eSeq [writeStr (); loop ()]) in
   if StrSet.mem breakL !jumpedTo
+  (*
   then ELabel (breakL, Some frame, fixloop)
+  *)
+  then failwith "use world and label"
   else fixloop
 
 (* rkc: creates a traditional lexically-scoped let-binding to a reference *)

@@ -153,7 +153,7 @@ let mkPatFun polyFormals pat e =
 
 (***** Misc *******************************************************************)
 
-let maybeAddHeapPrefixVar : uarr -> uarr = function
+let maybeAddHeapPrefixVar : uarrow -> uarrow = function
   | ((ts,ls,[]),x,t,([],cs1),t2,([],cs2)) ->
       let h = freshHVar () in
       ((ts,ls,[h]), x, t, ([h],cs1), t2, ([h],cs2))
@@ -240,7 +240,7 @@ let rec mkLetRec f s e1 e2 =
 *)
 let mkLetRec f uarr e1 e2 =
   let (_,x,_,_,_,_) = uarr in
-  let t = THasTyp ([UArr uarr], PTru) in
+  let t = THasTyp ([UArrow uarr], PTru) in
   ELet (f, Some (typToFrame t),
         EApp (([t],[],[]), eVar "fix",
           EFun (([],[],[]), f, None,
@@ -254,7 +254,8 @@ let doIntersectionHack x = pNot (PEq (wStr "type hack", wStr x))
 
 let undoIntersectionHack g t =
   let fForm = function
-    | PConn("not",[PEq(WVal(VBase(Str("type hack"))),WVal(VBase(Str(x))))]) ->
+    | PConn("not",[PEq(WVal({value=VBase(Str("type hack"))}),
+                       WVal({value=VBase(Str(x))}))]) ->
       begin
         try begin
           match List.find (function Var(y,_) -> x = y | _ -> false) g with
@@ -274,7 +275,7 @@ let undoIntersectionHack g t =
         let boxes_opt =
           List.fold_left (fun acc p ->
             match acc, p with
-              | Some(l), PUn(HasTyp(WVal(VVar"v"),u)) -> Some(u::l)
+              | Some(l), PUn(HasTyp(WVal({value=VVar"v"}),u)) -> Some(u::l)
               | _ -> None
           ) (Some []) ps in
         begin match boxes_opt with

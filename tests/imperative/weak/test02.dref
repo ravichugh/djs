@@ -8,6 +8,4 @@ let thaw_obj_1 = thaw (lThaw1, weak_obj) in
 
 let _ :: Int = ([;lThaw1,lObjectProto;] getPropObj) (thaw_obj_1, "f") in
 
-let _ :: Int = getPropObj (thaw_obj_1, "f") in
-
 0

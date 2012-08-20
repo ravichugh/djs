@@ -25,7 +25,7 @@ val pushForm : formula -> unit
 (* TODO remove? *)
 val popForm : unit -> unit
 
-val addTypeVar : string -> unit
+(* val addTypeVar : string -> unit *)
 
 (* TODO combine add and push versions *)
 

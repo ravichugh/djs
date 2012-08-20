@@ -17,6 +17,9 @@ let bigindent () = String.make (4 * !depth) ' '
 
 (*****************************************************************************)
 
+type pos = Lexing.position * Lexing.position
+let pos0 = (Lexing.dummy_pos, Lexing.dummy_pos)
+
 type tag = string
 
 let tagDict  = "Dict"      (* for internal functional dictionaries *)
@@ -70,7 +73,7 @@ type exp =
   | EThaw of loc * exp
   | EWeak of weakloc * exp
   (***** control operators *****)
-  | ELabel of lbl * frame option * exp (* TODO get rid of annotation? *)
+  | ELabel of lbl * exp
   | EBreak of lbl * exp
   | EThrow of exp
   | ETryCatch of exp * vvar * exp
@@ -83,7 +86,7 @@ type exp =
   (***** abstract sugar *****)
   (* TODO add tuples, DJS App nodes, ... ***)
 
-and value =
+and value_ =
   | VBase of basevalue
   | VVar of vvar
   | VEmpty
@@ -91,6 +94,8 @@ and value =
   | VArray of typ * value list (* TODO okay to drop typ? *)
   | VFun of (tvars * lvars * hvars) * vvar * (typ * heap) option * exp
   | VNewObjRef of int
+
+and value = { pos: pos; value: value_ }
 
 and basevalue =
   | Int of int
@@ -151,23 +156,21 @@ and typ =
   (***** created during type checking *****)
   | TExists of vvar * typ * typ
 
-(* TODO add weak heap *)
-and uarr = (tvars * lvars * hvars) * vvar * typ * heap * typ * heap
+and uarrow = (tvars * lvars * hvars) * vvar * typ * heap * typ * heap
 
 and typterm =
-  | UArr  of uarr
-  (* TODO maybe add a DJS sugared arrow type. rename UArr to UArrow *)
-  | UVar  of tvar
-  | URef  of loc
+  | UArrow  of uarrow
+  | UVar    of tvar
+  | URef    of loc
   | UNull
-  | UArray of typ
+  | UArray  of typ
 
 and heapconstraint =
-  | HConc    of vvar * typ       (* [l |-> x:S] *)
-  | HConcObj of vvar * typ * loc (* [l |-> (x:S, l')] *)
-  | HWeakTok of thawstate        (* [m |-> 0] *)
+  | HConc    of vvar option * typ        (* [l |-> x:S]       *)
+  | HConcObj of vvar option * typ * loc  (* [l |-> (x:S, l')] *)
+  | HWeakTok of thawstate                (* [m |-> 0]         *)
 
-and heap  = hvar list * (loc * heapconstraint) list
+and heap  = hvars * (loc * heapconstraint) list
 and world = typ * heap
 and frame = hvars * heap * world
 and typs  = typ list
@@ -191,6 +194,13 @@ type envbinding =
 
 type env = envbinding list
 
+and heapenvconstraint =
+  | HEConc    of value        (* [l |-> v]      *)
+  | HEConcObj of value * loc  (* [l |-> (v,l')] *)
+  | HEWeakTok of thawstate    (* [m |-> 0]      *)
+
+type heapenv = hvars * (loc * heapenvconstraint) list
+
 type clause = formula * unpred list
 
 module TypeTerms =
@@ -199,10 +209,7 @@ module TypeTerms =
 let mkTypeTerms l =
   List.fold_left (fun acc ut -> TypeTerms.add ut acc) TypeTerms.empty l
 
-(* TODO *)
-let botHeapConstraints = [(LocConst "blubber", HConc ("dummyHAbs", TBot))]
-let botHeap = ([], botHeapConstraints)
-let botSubst = [("dummySubst", WVal (VVar "blah"))]
+let wrapVal pos value = { pos = pos; value = value }
 
 let lRoot = LocConst "lROOT"
 let lObjectPro = LocConst "lObjectProto"
