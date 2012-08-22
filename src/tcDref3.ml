@@ -1,10 +1,14 @@
 
 open Lang
 open LangUtils
-(* open TcUtils *)
 
 
 let oc_elim = open_out (Settings.out_dir ^ "elim.txt")
+
+let checkBinder cap g x =
+  if List.exists (function Var(y,_) -> x = y | _ -> false) g then
+    err [cap; "variable already in scope, so please use a different name."]
+
 
 (**** Selfify *****************************************************************)
 
@@ -48,40 +52,6 @@ let printBinding (x,s) =
     ()
   end
 
-(* TODO check this *)
-let addDepTupleBindings g t =
-  let rec foo (accN,accG) = function
-    | TTuple(l) ->
-        List.fold_left (fun (accN,accG) (x,s) ->
-          Zzz.addBinding ~isNew:true x PTru;
-          (succ accN, Var(x,s) :: accG)
-        ) (accN,accG) l
-    | TNonNull(t) | TMaybeNull(t) -> foo (accN, accG) t
-    | _ -> (accN, accG)
-  in
-  let rec bar = function
-    | TTuple(l) ->
-        List.iter (fun (x,s) ->
-          Zzz.addBinding ~isNew:false x (applyTyp s (wVar x));
-          printBinding (x,s);
-        ) l
-    | TNonNull(t) | TMaybeNull(t) -> bar t
-    | _ -> ()
-  in
-(*
-  let rec baz g = function
-    | TTuple(l) -> List.iter (tryUnfold g) l
-    | TNonNull(t) | TMaybeNull(t) -> baz g t
-    | _ -> ()
-  in
-*)
-  let (n,g) = foo (0,g) t in (* first, get all vars in scope *)
-  bar t;                     (* second, assert all their types *)
-(*
-  baz g t;                   (* finally, try to do non-det unfold *)
-*)
-  (n, g)
-
 let printHeapEnv (hs,cs) =
   if (!Settings.printAllTypes || !depth = 0) then begin
     Log.log1 "\n/ %s ++\n" (String.concat "++" hs);
@@ -92,36 +62,30 @@ let printHeapEnv (hs,cs) =
                                  (strLoc l) (prettyStrVal v) (strLoc l')) cs;
   end
 
-(* no longer prints heap, so must typing rules should manually print heap *)
-let rec tcAddBinding ?(isNew=true) g x = function
-  | TExists(y,t1,t2) ->
-      let (n,g) = tcAddBinding ~isNew:true g y t1 in
-      let (m,g) = tcAddBinding ~isNew g x t2 in
-      (n + m, g)
+(* TODO *)
+let bindingsAreRecursive l =
+  true
+
+let rec tcAddBinding g x = function
+  | TExists(y,t1,t2) -> tcAddBinding (tcAddBinding g y t1) x t2
   | s ->
-      let (n,g) = addDepTupleBindings g s in (* TODO 8/16 check this *)
-      let g = Var(x,s) :: g in
-      let _ = Zzz.addBinding ~isNew x (applyTyp s (wVar x)) in
+      let g =
+        match s with
+          | TTuple(l) -> tcAddBindings g l
+          | _         -> g in
+      let _ = Zzz.addBinding x s in
       let _ = printBinding (x,s) in
-      (n + 1, g)
+      Var(x,s) :: g
 
-(* the list l of bindings may mutually refer to each other so
-   make a first pass to get all binders in scope in the logic and then
-   make a second pass to push their real types and convert to heap env *)
-(* TODO only do first pass if the bindings are not well-scoped left to right *)
-let tcAddManyBindings l g =
-  let (n,g) =
-    List.fold_left (fun (n,g) (x,t) ->
-      let (k,g) = tcAddBinding ~isNew:true g x tyAny in (n + k, g)
-    ) (0,g) l in
-  let g =
-    List.fold_left (fun g (x,t) ->
-      snd (tcAddBinding ~isNew:false g x t)
-    ) g l in
-  (n, g)
+and tcAddBindings g l =
+  if bindingsAreRecursive l then
+    let g = List.fold_left tcAddBindingUn g l in
+    let _ = List.iter (fun (x,t) -> Zzz.assertFormula (applyTyp t(wVar x))) l in
+    g (* might want to print the asserted formulas *)
+  else
+    List.fold_left tcAddBindingUn g l
 
-let tcRemoveBindingN n =
-  for i = 1 to n do Zzz.removeBinding () done
+and tcAddBindingUn g (x,t) = tcAddBinding g x t
 
 let findWeakLoc g m =
   try
@@ -1012,8 +976,10 @@ and tsExp_ g h = function
      annotation is for a function type or not. *)
 
   | ELet(x,Some(frame),e1,e2) when frameIsNonArrowType frame -> begin
+      let gInit = g in
       let ruleName = "TS-Let-Ann-Not-Arrow" in
       let cap = spr "%s: let %s = ..." ruleName x in
+      checkBinder cap g x;
       let (s1,h1) = Zzz.inNewScope (fun () -> tsExp g h e1) in
       let (s1,h1) = elimSingletonExistentials (s1,h1) in
       let tGoal = destructNonArrowTypeFrame frame in
@@ -1022,40 +988,44 @@ and tsExp_ g h = function
       (* synthesizing x:s1, _not_ the goal tGoal, since need to bring all the
          binders in scope, since they may refered to in h1. so the tGoal
          annotation is simply a check rather than an abstraction. *)
-      let (n,g1) = tcAddBinding g x s1 in
+      let g = tcAddBinding g x s1 in
       Log.log2 "%s :: %s\n"
         (String.make (String.length x) ' ') (prettyStrTyp tGoal);
-      let (s2,h2) = tsExp g1 h1 e2 in
-      tcRemoveBindingN n;
-      finishLet cap g x [(x,s1)] (s2,h2)
+      let (s2,h2) = tsExp g h1 e2 in
+      (* tcRemoveBindingN n; *)
+      finishLet cap gInit x [(x,s1)] (s2,h2)
     end
 
   | ELet(x,Some(frame),e1,e2) (* when not (frameIsNonArrowType frame) *) -> begin
+      let gInit = g in
       let ruleName = "TS-Let-Ann-Arrow" in
       let cap = spr "%s: let %s = ..." ruleName x in
+      checkBinder cap g x;
       let (s1,h1) = applyFrame h frame in
       Zzz.inNewScope (fun () -> tcExp g h (s1,h1) e1);
       let (bindings,h1) = heapEnvOfHeap h1 in
-      let (m,g1) = tcAddManyBindings bindings g in
       if h1 <> h then printHeapEnv h1;
-      let (n,g1) = tcAddBinding g x s1 in
-      let (s2,h2) = tsExp g1 h1 e2 in
-      tcRemoveBindingN (n + m);
-      finishLet cap g x [(x,s1)] (s2,h2)
+      let g = tcAddBindings g bindings in
+      let g = tcAddBinding g x s1 in
+      let (s2,h2) = tsExp g h1 e2 in
+      (* tcRemoveBindingN (n + m); *)
+      finishLet cap gInit x [(x,s1)] (s2,h2)
     end
 
   | ELet(x,None,e1,e2) -> begin
+      let gInit = g in
       let ruleName = "TS-Let-Bare" in
       let cap = spr "%s: let %s = ..." ruleName x in
+      checkBinder cap g x;
       let (s1,h1) = Zzz.inNewScope (fun () -> tsExp g h e1) in
       let (s1,h1) = elimSingletonExistentials (s1,h1) in
       let (l1,s1) = stripExists s1 in
       if h1 <> h then printHeapEnv h1;
-      let (m,g1) = tcAddManyBindings l1 g in
-      let (n,g1) = tcAddBinding g1 x s1 in
-      let (s2,h2) = tsExp g1 h1 e2 in
-      tcRemoveBindingN (m + n);
-      finishLet cap g x (l1 @ [(x,s1)]) (s2,h2)
+      let g = tcAddBindings g l1 in
+      let g = tcAddBinding g x s1 in
+      let (s2,h2) = tsExp g h1 e2 in
+      (* tcRemoveBindingN (m + n); *)
+      finishLet cap gInit x (l1 @ [(x,s1)]) (s2,h2)
     end
 
   | EIf(EVal(v),e1,e2) -> begin 
@@ -1072,9 +1042,9 @@ and tsExp_ g h = function
       if !depth > 0 then err [spr "extern [%s] not at top-level" x];
       let s = ParseUtils.undoIntersectionHack g s in
       Wf.typ (spr "ts extern %s" x) g s;
-      let (n,g1) = tcAddBinding g x s in
+      let g1 = tcAddBinding g x s in
       let (s2,h2) = tsExp g1 h e in
-      tcRemoveBindingN n;
+      (* tcRemoveBindingN n; *)
       finishLet (spr "%s: let %s = ..." "TS-Extern" x) g x [(x,s)] (s2,h2)
     end
 
@@ -1342,6 +1312,7 @@ and tcVal_ g h goal = function
       let ruleName = "TC-Fun-Bare" in
       let g = removeLabels g in
       let checkOne (((ts,ls,hs),y,t1,h1,t2,h2) as arr) =
+        checkBinder (spr "%s: formal %s" ruleName y) g y;
         let u = UArrow arr in
         Wf.typeTerm (spr "%s: arrow:\n  %s" ruleName (prettyStrTT u)) g u;
         let (ts,ls,hs) =
@@ -1358,11 +1329,12 @@ and tcVal_ g h goal = function
         let g = List.fold_left (fun acc x -> HVar(x)::acc) g hs in
         Zzz.inNewScope (fun () ->
           (* since input heap can refer to arg binders, need to process t1 first *)
-          let (m,g) = tcAddBinding g x t1 in
+          let g = tcAddBinding g x t1 in
           let (bindings,h) = heapEnvOfHeap h1 in
-          let (n,g) = tcAddManyBindings bindings g in
+          let g = tcAddBindings g bindings in
           tcExp g h (t2,h2) e;
-          tcRemoveBindingN (n + m))
+          (* tcRemoveBindingN (n + m) *)
+        )
       in
       match isArrows goal with 
         | Some(l) -> List.iter checkOne l
@@ -1420,6 +1392,8 @@ and tcExp_ g h goal = function
   (* 9/21: special case added when trying to handle ANFed ifs *)
   (* 11/25: added this back in *)
   | ELet(x,None,e1,EVal({value=VVar(x')})) when x = x' ->
+      let cap = spr "TS-Let-Bare-Special: let %s = ..." x in
+      let _ = checkBinder cap g x in
       let _ = tcExp g h goal e1 in
       printBinding (x, fst goal)
 
@@ -1536,7 +1510,7 @@ let addSkolems g =
   let rec foo acc i =
     if i > n then acc
     else let sk = spr "_skolem_%d" i in
-         foo (snd (tcAddBinding acc sk tyNum)) (i+1)
+         foo (tcAddBinding acc sk tyNum) (i+1)
   in
   foo g 1
 
@@ -1549,9 +1523,9 @@ let initialEnvs () =
   else
     let h_init = "H_emp" in
     let g = [HVar h_init] in
-    let (_,g) = tcAddBinding g "v" tyAny in
+    let g = tcAddBinding g "v" tyAny in
     let g = addSkolems g in
-    let (_,g) = tcAddBinding g "dObjectProto" tyEmpty in
+    let g = tcAddBinding g "dObjectProto" tyEmpty in
     let h = ([h_init], [(lObjectPro, HEConcObj (vVar "dObjectProto", lRoot))]) in
     let _ = printHeapEnv h in
     (g, h)

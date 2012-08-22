@@ -13,17 +13,11 @@ val doingExtract : bool ref
 
 val dump : ?nl:bool -> ?tab:bool -> string -> unit
 
-(* val pushScope : unit -> unit *)
-
-(* val popScope : unit -> unit *)
-
 val inNewScope : (unit -> 'a) -> 'a
 
 val assertFormula : formula -> unit
 
-val addBinding : ?isNew:bool -> string -> formula -> unit
-
-val removeBinding : unit -> unit
+val addBinding : string -> typ -> unit
 
 val falseIsProvable : string -> bool
 

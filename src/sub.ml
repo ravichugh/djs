@@ -72,14 +72,14 @@ let boxNumbers s =
 let setUpExtract t usedBoxes =
   let x = freshVar "extract" in
   (* Zzz.pushScope (); *)
-  Zzz.addBinding x (applyTyp t (wVar x));
+  Zzz.addBinding x t;
   Zzz.dump (spr "; off limits: %s" (Utils.strIntList (boxNumbers usedBoxes)));
   Zzz.doingExtract := true;
   x
 
 let tearDownExtract () =
   Zzz.doingExtract := false;
-  Zzz.removeBinding ();
+  (* Zzz.removeBinding (); *)
   (* Zzz.popScope (); *)
   ()
 
@@ -283,7 +283,7 @@ let rec bindExistentials errList = function
          | TExists _ -> die errList "Sub.bindExistentials: not prenex form"
          | _ ->
              (* let _ = Log.log2 "bind %s :: %s\n" x (prettyStrTyp s1) in *)
-             let _ = Zzz.addBinding x (applyTyp s1 (wVar x)) in
+             let _ = Zzz.addBinding x s1 in
              let (n,s) = bindExistentials errList s2 in
              (1 + n, s))
   | s -> (0, s)
@@ -299,12 +299,13 @@ let rec checkTypes errList usedBoxes g t1 t2 =
   Zzz.inNewScope (fun () ->
     let (n,t1) = bindExistentials errList t1 in
     let v = freshVar "v" in
-    let (p1,p2) = (applyTyp t1 (wVar v), applyTyp t2 (wVar v)) in
-    Zzz.addBinding v p1;
-    checkFormula errList usedBoxes g p2;
+    Zzz.addBinding v t1;
+    checkFormula errList usedBoxes g (applyTyp t2 (wVar v));
+(*
     (* remove v and existential binders from curScope *)
     Zzz.removeBinding ();
     for i = 1 to n do Zzz.removeBinding () done;
+*)
     ()
   )
 

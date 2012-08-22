@@ -27,22 +27,37 @@ let emitPreamble () =
       else ()
   end
 
-(* let _ = emitPreamble () *)
-
 let dump ?nl:(nl=true) ?tab:(tab=true) s =
   let pre = if tab then indent () else "" in
   let suf = if nl then "\n" else "" in
   z3write (spr "%s%s%s" pre s suf)
 
+
+(***** Scoping ****************************************************************)
+
+let curVars = Stack.create ()
+
+let _ = Stack.push [] curVars
+
+let varInScope x =
+  let b = ref false in
+  Stack.iter (fun l -> if List.mem x l then b := true) curVars;
+  !b
+
 let pushScope () =
   dump ~nl:(not !doingExtract) "(push) ";
   incr depth;
+  Stack.push [] curVars;
   ()
 
 let popScope () =
-  decr depth;
   dump "(pop)";
+  decr depth;
+  ignore (Stack.pop curVars);
   ()
+
+let inNewScope f =
+  pushScope (); let x = f () in popScope (); x
 
 
 (***** Stats ******************************************************************)
@@ -107,24 +122,20 @@ let falseIsProvable cap =
   checkValid (spr "is false provable? %s" cap) PFls
 
 
-(***** Adding/removing bindings ***********************************************)
+(***** Adding variables and formulas ******************************************)
 
-let curScope = ref []
-
-let addBinding ?isNew:(isNew=true) x f =
-  let sort = "DVal" in
-  if isNew then begin
-    (* dump (spr "(declare-funs ((%s %s))) ; depth %d" x sort !depth); *)
-    dump (spr "(declare-fun %s () %s) ; depth %d" x sort !depth);
-    if List.mem x !curScope then
-      Log.warn (spr "already in scope in logic: %s\n" x);
-    curScope := x::!curScope;
-  end;
+let assertFormula f =
   if f <> PTru then begin
     let f = removeExtraTrues f in (* TODO why is there still and for 1? *)
     let s = strForm (embedForm f) in
     dump (spr "(assert\n%s  %s)" (indent()) s)
-  end;
+  end
+
+let addBinding x t =
+  dump (spr "(declare-fun %s () DVal) ; depth %d" x !depth);
+  if varInScope x then Log.warn (spr "already in scope in logic: %s\n" x);
+  Stack.push (x :: Stack.pop curVars) curVars;
+  assertFormula (applyTyp t (wVar x));
   if Str.string_match (Str.regexp "^end_of_") x 0 then begin
     dump "";
     dump (String.make 80 ';');
@@ -133,21 +144,4 @@ let addBinding ?isNew:(isNew=true) x f =
     dump "";
   end;
   ()
-
-(* This should be called for every call to addBinding where ~isNew is true. *)
-let removeBinding () =
-  try curScope := List.tl !curScope
-  with Failure("tl") -> Log.warn "why is curScope empty?\n"
-
-let assertFormula f =
-  let s = strForm (embedForm f) in
-  dump (spr "(assert\n%s  %s)" (indent()) s)
-
-let inNewScope f =
-  pushScope (); let x = f () in popScope (); x
-
-(* let pushForm f      = pushScope (); assertFormula f *)
-(* let popForm ()      = popScope () *)
-(* let pushBinding x f = pushScope (); addBinding x f *)
-(* let popBinding ()   = removeBinding (); popScope () *)
 
