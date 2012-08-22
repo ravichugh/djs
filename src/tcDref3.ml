@@ -1014,17 +1014,17 @@ and tsExp_ g h = function
   | ELet(x,Some(frame),e1,e2) when frameIsNonArrowType frame -> begin
       let ruleName = "TS-Let-Ann-Not-Arrow" in
       let cap = spr "%s: let %s = ..." ruleName x in
-      let tGoal = destructNonArrowTypeFrame frame in
-      Zzz.pushScope ();
-      let (s1,h1) = tsExp g h e1 in
+      let (s1,h1) = Zzz.inNewScope (fun () -> tsExp g h e1) in
       let (s1,h1) = elimSingletonExistentials (s1,h1) in
+      let tGoal = destructNonArrowTypeFrame frame in
       Sub.types cap g s1 tGoal;
-      Zzz.popScope ();
       if h1 <> h then printHeapEnv h1;
       (* synthesizing x:s1, _not_ the goal tGoal, since need to bring all the
          binders in scope, since they may refered to in h1. so the tGoal
          annotation is simply a check rather than an abstraction. *)
       let (n,g1) = tcAddBinding g x s1 in
+      Log.log2 "%s :: %s\n"
+        (String.make (String.length x) ' ') (prettyStrTyp tGoal);
       let (s2,h2) = tsExp g1 h1 e2 in
       tcRemoveBindingN n;
       finishLet cap g x [(x,s1)] (s2,h2)
@@ -1033,10 +1033,8 @@ and tsExp_ g h = function
   | ELet(x,Some(frame),e1,e2) (* when not (frameIsNonArrowType frame) *) -> begin
       let ruleName = "TS-Let-Ann-Arrow" in
       let cap = spr "%s: let %s = ..." ruleName x in
-      Zzz.pushScope ();
       let (s1,h1) = applyFrame h frame in
-      tcExp g h (s1,h1) e1;
-      Zzz.popScope ();
+      Zzz.inNewScope (fun () -> tcExp g h (s1,h1) e1);
       let (bindings,h1) = heapEnvOfHeap h1 in
       let (m,g1) = tcAddManyBindings bindings g in
       if h1 <> h then printHeapEnv h1;
@@ -1049,11 +1047,9 @@ and tsExp_ g h = function
   | ELet(x,None,e1,e2) -> begin
       let ruleName = "TS-Let-Bare" in
       let cap = spr "%s: let %s = ..." ruleName x in
-      Zzz.pushScope ();
-      let (s1,h1) = tsExp g h e1 in
+      let (s1,h1) = Zzz.inNewScope (fun () -> tsExp g h e1) in
       let (s1,h1) = elimSingletonExistentials (s1,h1) in
       let (l1,s1) = stripExists s1 in
-      Zzz.popScope ();
       if h1 <> h then printHeapEnv h1;
       let (m,g1) = tcAddManyBindings l1 g in
       let (n,g1) = tcAddBinding g1 x s1 in
@@ -1065,12 +1061,10 @@ and tsExp_ g h = function
   | EIf(EVal(v),e1,e2) -> begin 
       (* TODO check if false is provable? *)
       tcVal g h tyAny v;
-      Zzz.pushForm (pTruthy (WVal v));
-      let (s1,h1) = tsExp g h e1 in
-      Zzz.popForm ();
-      Zzz.pushForm (pFalsy (WVal v));
-      let (s2,h2) = tsExp g h e2 in
-      Zzz.popForm ();
+      let (s1,h1) = Zzz.inNewScope (fun () ->
+        Zzz.assertFormula (pTruthy (WVal v)); tsExp g h e1) in
+      let (s2,h2) = Zzz.inNewScope (fun () ->
+        Zzz.assertFormula (pFalsy (WVal v)); tsExp g h e2) in
       joinWorlds v (s1,h1) (s2,h2)
     end
 
@@ -1362,14 +1356,13 @@ and tcVal_ g h goal = function
         let g = List.fold_left (fun acc x -> TVar(x)::acc) g ts in
         let g = List.fold_left (fun acc x -> LVar(x)::acc) g ls in
         let g = List.fold_left (fun acc x -> HVar(x)::acc) g hs in
-        Zzz.pushScope ();
-        (* since input heap can refer to arg binders, need to process t1 first *)
-        let (m,g) = tcAddBinding g x t1 in
-        let (bindings,h) = heapEnvOfHeap h1 in
-        let (n,g) = tcAddManyBindings bindings g in
-        tcExp g h (t2,h2) e;
-        tcRemoveBindingN (n + m);
-        Zzz.popScope ()
+        Zzz.inNewScope (fun () ->
+          (* since input heap can refer to arg binders, need to process t1 first *)
+          let (m,g) = tcAddBinding g x t1 in
+          let (bindings,h) = heapEnvOfHeap h1 in
+          let (n,g) = tcAddManyBindings bindings g in
+          tcExp g h (t2,h2) e;
+          tcRemoveBindingN (n + m))
       in
       match isArrows goal with 
         | Some(l) -> List.iter checkOne l
@@ -1458,12 +1451,14 @@ and tcExp_ g h goal = function
   | EIf(EVal(v),e1,e2) -> begin
       (* TODO check if false is provable? *)
       tcVal g h tyAny v;
-      Zzz.pushForm (pTruthy (WVal v));
-      tcExp g h goal e1;
-      Zzz.popForm ();
-      Zzz.pushForm (pFalsy (WVal v));
-      tcExp g h goal e2;
-      Zzz.popForm ();
+      Zzz.inNewScope (fun () ->
+        Zzz.assertFormula (pTruthy (WVal v));
+        tcExp g h goal e1
+      );
+      Zzz.inNewScope (fun () ->
+        Zzz.assertFormula (pFalsy (WVal v));
+        tcExp g h goal e2
+      );
     end
 
   | EWeak(h,e) -> failwith "tc EWeak"

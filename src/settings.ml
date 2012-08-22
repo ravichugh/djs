@@ -11,7 +11,7 @@ let djs_dir =
 let out_dir  = djs_dir ^ "src/out/"
 let prim_dir = djs_dir ^ "prims/"
 
-let strictWarn = ref false
+let strictWarn = ref true
 let printAllTypes = ref false
 let useTheoryLA = ref true
 let marshalOutEnv = ref false

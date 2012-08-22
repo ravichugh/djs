@@ -18,8 +18,8 @@ let usage = "\n./system-d [options] [src_file]\n"
 
 let argSpecs = [
   ("-parseOnly", Arg.Set parseOnly, "");
-  ("-strictWarn", Arg.Set S.strictWarn,
-               "     treat warnings as errors");
+  ("-strictWarn", Arg.Bool (fun b -> S.strictWarn := b),
+               "     <bool> treat warnings as errors (default is true)");
   ("-raw", Arg.Set doRaw,
         "            don't a-normalize or use prims/pervasives");
   ("-fast", Arg.Unit (fun () ->

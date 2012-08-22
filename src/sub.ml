@@ -71,7 +71,7 @@ let boxNumbers s =
 
 let setUpExtract t usedBoxes =
   let x = freshVar "extract" in
-  Zzz.pushScope ();
+  (* Zzz.pushScope (); *)
   Zzz.addBinding x (applyTyp t (wVar x));
   Zzz.dump (spr "; off limits: %s" (Utils.strIntList (boxNumbers usedBoxes)));
   Zzz.doingExtract := true;
@@ -80,7 +80,7 @@ let setUpExtract t usedBoxes =
 let tearDownExtract () =
   Zzz.doingExtract := false;
   Zzz.removeBinding ();
-  Zzz.popScope ();
+  (* Zzz.popScope (); *)
   ()
 
 let mustFlow_ usedBoxes ?filter:(f=(fun _ -> true)) g t =
@@ -88,35 +88,36 @@ let mustFlow_ usedBoxes ?filter:(f=(fun _ -> true)) g t =
   let boxes = TypeTerms.diff (typeTerms g) usedBoxes in
   let boxes = TypeTerms.filter f boxes in
   let boxes = TypeTerms.add UNull boxes in (* 3/15 *)
-  let x = setUpExtract t usedBoxes in
-(*
-  let extracted =
-    TypeTerms.fold
-      (fun ut acc ->
-         if Zzz.checkValid "mustFlow" (hastyp (wVar x) ut)
-           then TypeTerms.add ut acc
-           else acc)
-      boxes
-      TypeTerms.empty
-  in
-*)
-  (* 4/1: once a Ref term is extracted, don't try any more *)
-  let (_,extracted) =
-    TypeTerms.fold
-      (fun ut (stop,acc) ->
-         if not stop && Zzz.checkValid "mustFlow" (hastyp (wVar x) ut) then
-           let stop = match ut with URef _ -> true | _ -> false in
-           (stop, TypeTerms.add ut acc)
-         else
-           (stop, acc))
-      boxes
-      (false, TypeTerms.empty)
-  in
-  tearDownExtract ();
-  let il = boxNumbers extracted in
-  Zzz.dump (spr "; extracted: is(%s, %s)" x (Utils.strIntList il));
-  (* Log.log (spr "%s\n" (Utils.strIntList il)); *)
-  extracted
+  Zzz.inNewScope (fun () ->
+    let x = setUpExtract t usedBoxes in
+    (*
+    let extracted =
+      TypeTerms.fold
+        (fun ut acc ->
+           if Zzz.checkValid "mustFlow" (hastyp (wVar x) ut)
+             then TypeTerms.add ut acc
+             else acc)
+        boxes
+        TypeTerms.empty
+    in
+    *)
+    (* 4/1: once a Ref term is extracted, don't try any more *)
+    let (_,extracted) =
+      TypeTerms.fold
+        (fun ut (stop,acc) ->
+           if not stop && Zzz.checkValid "mustFlow" (hastyp (wVar x) ut) then
+             let stop = match ut with URef _ -> true | _ -> false in
+             (stop, TypeTerms.add ut acc)
+           else
+             (stop, acc))
+        boxes
+        (false, TypeTerms.empty)
+    in
+    tearDownExtract ();
+    let il = boxNumbers extracted in
+    Zzz.dump (spr "; extracted: is(%s, %s)" x (Utils.strIntList il));
+    (* Log.log (spr "%s\n" (Utils.strIntList il)); *)
+    extracted)
 
 let mustFlow_ usedBoxes ?filter:(f=(fun _ -> true)) g t =
   BNstats.time "mustFlow_" (mustFlow_ usedBoxes ~filter:f g) t
@@ -125,29 +126,32 @@ let canFlow_ usedBoxes ?filter:(f=(fun _ -> true)) g t =
   (* Log.smallTitle "CanFlow"; *)
   let boxes = TypeTerms.diff (typeTerms g) usedBoxes in
   let boxes = TypeTerms.filter f boxes in
-  let x = setUpExtract t usedBoxes in
-  (* subsets of size 1 to !maxJoinSize in increasing order of size *)
-  let subsets =
-    boxes
-    |> TypeTerms.elements
-    |> Utils.powersetMaxSize !maxJoinSize
-    (* |> List.filter (fun l -> List.length l > 1) *)
-    |> List.sort (fun l1 l2 -> List.length l1 - List.length l2)
-  in
-  let extracted =
-    try
-      List.find (function subset ->
-        let upperBound = pOr (List.map (hastyp (wVar x)) subset) in
-        Zzz.checkValid "canFlow" upperBound
-      ) subsets
-    with Not_found ->
-      []
-  in
-  tearDownExtract ();
-  mkTypeTerms extracted
+  Zzz.inNewScope (fun () ->
+    let x = setUpExtract t usedBoxes in
+    (* subsets of size 1 to !maxJoinSize in increasing order of size *)
+    let subsets =
+      boxes
+      |> TypeTerms.elements
+      |> Utils.powersetMaxSize !maxJoinSize
+      (* |> List.filter (fun l -> List.length l > 1) *)
+      |> List.sort (fun l1 l2 -> List.length l1 - List.length l2)
+    in
+    let extracted =
+      try
+        List.find (function subset ->
+          let upperBound = pOr (List.map (hastyp (wVar x)) subset) in
+          Zzz.checkValid "canFlow" upperBound
+        ) subsets
+      with Not_found ->
+        []
+    in
+    tearDownExtract ();
+    mkTypeTerms extracted)
 
 
 (***** Heap Manipulation ******************************************************)
+
+(*
 
 (* TODO for now, copied and simplified from TcDref *)
 
@@ -186,6 +190,8 @@ let simpleSnapshot cap g h =
   in
   (n, g2)
 
+*)
+
 
 (***** Helpers ****************************************************************)
 
@@ -216,6 +222,7 @@ let strHeapSat (hs1,cs1) (hs2,cs2) =
   let l2 = List.filter (fun s -> s <> "") l2 in
   String.concat "\n" [s0; String.concat "\n" l1; String.concat "\n" l2]
   
+(*
 
 (* TODO move this helper into checkHeaps and/or factor common parts with
    checkHeapSat *)
@@ -265,6 +272,8 @@ let filterObligations obligations = function
         (function OConc(l,_,_) | OWeak(l,_,_) -> List.mem l locs)
         obligations
 
+*)
+
 
 (***** Subtyping **************************************************************)
 
@@ -273,10 +282,11 @@ let rec bindExistentials errList = function
       (match s1 with
          | TExists _ -> die errList "Sub.bindExistentials: not prenex form"
          | _ ->
-             let _ = Log.log2 "bindExistential %s :: %s\n" x (prettyStrTyp s1) in
+             (* let _ = Log.log2 "bind %s :: %s\n" x (prettyStrTyp s1) in *)
              let _ = Zzz.addBinding x (applyTyp s1 (wVar x)) in
-             bindExistentials errList s2)
-  | s -> s
+             let (n,s) = bindExistentials errList s2 in
+             (1 + n, s))
+  | s -> (0, s)
 
 let rec checkTypes errList usedBoxes g t1 t2 =
   let errList =
@@ -286,26 +296,30 @@ let rec checkTypes errList usedBoxes g t1 t2 =
     match t2 with
       | TExists _ -> die errList "existential type on the right"
       | _ -> () in
-  Zzz.pushScope ();
-  let t1 = bindExistentials errList t1 in
-  let v = freshVar "v" in
-  let (p1,p2) = (applyTyp t1 (wVar v), applyTyp t2 (wVar v)) in
-  Zzz.addBinding v p1;
-  checkFormula errList usedBoxes g p2;
-  Zzz.popScope ()
+  Zzz.inNewScope (fun () ->
+    let (n,t1) = bindExistentials errList t1 in
+    let v = freshVar "v" in
+    let (p1,p2) = (applyTyp t1 (wVar v), applyTyp t2 (wVar v)) in
+    Zzz.addBinding v p1;
+    checkFormula errList usedBoxes g p2;
+    (* remove v and existential binders from curScope *)
+    Zzz.removeBinding ();
+    for i = 1 to n do Zzz.removeBinding () done;
+    ()
+  )
 
 and checkFormula errList usedBoxes g p =
   let clauses = Cnf.convert p in
   let n = List.length clauses in
   Utils.iter_i
     (fun (pi,qi) i ->
-       Zzz.pushForm pi;
-       let qForm = pOr (List.map (fun q -> PUn q) qi) in
-       let (s1,s2) = (prettyStrForm pi, prettyStrForm qForm) in
-       let errList =
-         errList @ [spr "Clause %d/%d:\n   %s\n~> %s" (i+1) n s1 s2] in
-       checkUnPreds errList usedBoxes g (qi,qForm);
-       Zzz.popForm ())
+       Zzz.inNewScope (fun () ->
+         Zzz.assertFormula pi;
+         let qForm = pOr (List.map (fun q -> PUn q) qi) in
+         let (s1,s2) = (prettyStrForm pi, prettyStrForm qForm) in
+         let errList =
+           errList @ [spr "Clause %d/%d:\n   %s\n~> %s" (i+1) n s1 s2] in
+         checkUnPreds errList usedBoxes g (qi,qForm)))
     clauses
 
 (* small optimization: qForm is qs lifted to a formula, since qForm is
@@ -365,6 +379,9 @@ and checkTypeTerms errList usedBoxes g u1 u2 =
 and checkArrow errList usedBoxes g
       ((ts1,ls1,hs1),x1,t11,e11,t12,e12) ((ts2,ls2,hs2),x2,t21,e21,t22,e22) =
 
+  failwith "Sub.checkArrow"
+
+(*
 (* TODO 3/10
   checkLength "type" errList ts1 ts2;
   checkLength "loc" errList ls1 ls2;
@@ -413,7 +430,9 @@ and checkArrow errList usedBoxes g
   Zzz.popScope ();
 
   true
+*)
 
+(*
 and checkHeaps errList ?(locsOpt=None) usedBoxes g h1 h2 =
   let errList =
     errList @ [spr "checkHeaps:\n  %s\n< %s"
@@ -460,7 +479,9 @@ and checkHeaps errList ?(locsOpt=None) usedBoxes g h1 h2 =
     Zzz.popScope ();
     binderSubst
   end
+*)
 
+(*
 and checkWorlds errList usedBoxes g (t1,h1) (t2,h2) =
   let errList = errList @ ["checkWorlds:"] in
   let subst = checkHeaps errList usedBoxes g h1 h2 in
@@ -470,6 +491,7 @@ and checkWorlds errList usedBoxes g (t1,h1) (t2,h2) =
   simpleTcRemoveBindingN n;
   Zzz.popScope ();
   subst
+*)
 
 (* 8/14 adding checkHeapSat and checkWorldSat. try to factor common
    parts with checkHeaps and checkWorlds. *)

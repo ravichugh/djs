@@ -134,23 +134,20 @@ let addBinding ?isNew:(isNew=true) x f =
   end;
   ()
 
+(* This should be called for every call to addBinding where ~isNew is true. *)
 let removeBinding () =
   try curScope := List.tl !curScope
   with Failure("tl") -> Log.warn "why is curScope empty?\n"
 
+let assertFormula f =
+  let s = strForm (embedForm f) in
+  dump (spr "(assert\n%s  %s)" (indent()) s)
 
-(***** Public push/pop ********************************************************)
+let inNewScope f =
+  pushScope (); let x = f () in popScope (); x
 
-(* TODO move the tcUtils versions in here, so that tc doesn't have
-   to push/pop *)
-
-let assertFormula f = let s = strForm (embedForm f) in
-                      dump (spr "(assert\n%s  %s)" (indent()) s)
-
-let pushForm f      = pushScope (); assertFormula f
-let popForm ()      = popScope ()
-
-let pushBinding x f = pushScope (); addBinding x f
-let popBinding ()   = removeBinding (); popScope ()
-
+(* let pushForm f      = pushScope (); assertFormula f *)
+(* let popForm ()      = popScope () *)
+(* let pushBinding x f = pushScope (); addBinding x f *)
+(* let popBinding ()   = removeBinding (); popScope () *)
 
