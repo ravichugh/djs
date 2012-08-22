@@ -36,8 +36,10 @@ let argSpecs = [
          "           use meet to combine type terms");
   ("-join", Arg.Int (fun i -> Sub.maxJoinSize := i),
          "           <int> max size for CanFlow (default is 1, i.e. no join)");
+(*
   ("-useLA", Arg.Unit (fun () -> S.useTheoryLA := true),
           "          use theory of linear arithmetic");
+*)
   ("-tryAllBoxes", Arg.Set S.tryAllBoxesHack,
                 "    try all boxes, in case typeTerms misses some");
   ("-doFalseChecks", Arg.Set S.doFalseChecks,

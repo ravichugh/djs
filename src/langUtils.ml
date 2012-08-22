@@ -326,16 +326,16 @@ let has w1 w2     = PHas (w1, [w2])
 let eqmod x y zs  = PEqMod (x, y, zs)
 let hastyp w ut   = PUn (HasTyp (w, ut))
 
-let plus w1 w2    = WApp ("my_plus", [w1; w2])
-let minus w1 w2   = WApp ("my_minus", [w1; w2])
+let plus w1 w2    = WApp ("plus", [w1; w2])
+let minus w1 w2   = WApp ("minus", [w1; w2])
 
 let arrlen x      = WApp ("len", [x])
 let packed x      = PApp ("packed", [x])
 
-let lt w1 w2      = PApp ("my_lt", [w1; w2])
-let le w1 w2      = PApp ("my_le", [w1; w2])
-let gt w1 w2      = PApp ("my_gt", [w1; w2])
-let ge w1 w2      = PApp ("my_ge", [w1; w2])
+let lt w1 w2      = PApp ("lt", [w1; w2])
+let le w1 w2      = PApp ("le", [w1; w2])
+let gt w1 w2      = PApp ("gt", [w1; w2])
+let ge w1 w2      = PApp ("ge", [w1; w2])
 
 let eq w1 w2      = PEq (w1, w2)
 
@@ -618,7 +618,7 @@ let rec strValue v = match v.value with
   | VBase(c)    -> strBaseValue c
   | VVar(x)     -> x
   | VEmpty      -> "empty"
-  | VNewObjRef(i) -> spr "(VNewObjRef %d)" i
+  | VNewObjRef(i) -> spr "(VObjRef %d)" i
   | VFun _ as v -> spr "(VFun %d)" (Id.process idLamTerms v)
   | VExtend(v1,v2,v3) ->
       (* spr "(VExtend %s %s %s)" (strValue v1) (strValue v2) (strValue v3) *)
@@ -786,8 +786,8 @@ and strForm = function
   | PEq(w1,w2)      -> spr "(= %s %s)" (strWalue w1) (strWalue w2)
   | PApp(s,ws)      -> spr "(%s %s)" (strPredSym s)
                          (String.concat " " (List.map strWalue ws))
-  | PConn("and",[]) -> spr "(true)"
-  | PConn("or",[])  -> spr "(false)"
+  | PConn("and",[]) -> spr "true"
+  | PConn("or",[])  -> spr "false"
   | PConn(s,l)      -> strFormExpanded s l
   | PAll(x,p)       -> spr "(forall ((%s DVal)) %s)" x (strForm p)
   (* TODO make the call to registerBox somewhere more appropriate *)

@@ -8,20 +8,17 @@
 ;;;;; Begin Background Theory
 
 
-(define-sorts (
-  (VarId Int)
-  (BaseId Int)
-  (StrId Int)
-  (FunId Int)
-  (BoxId Int)
-  (HeapId Int)
-  (LocId Int)
-))
+(define-sort IntId   () Int)
+(define-sort StrId   () Int)
+(define-sort FunId   () Int)
+(define-sort BoxId   () Int)
+(define-sort HeapId  () Int)
+(define-sort LocId   () Int)
 
-(declare-datatypes (
+(declare-datatypes () (
   (DVal  (VTrue)
          (VFalse)
-         (VInt (VIntSel Int))
+         (VInt (VIntSel IntId))
          (VStr (VStrSel StrId))
          (VFun (FunSel FunId))
          (empty)                                          ; (VEmpty)
@@ -30,22 +27,21 @@
          (null)
          (undefined) ; added for DJS
          (VRef (VRefSel Int))
-         ;(VArray (VArraySel Int))
-         (VNewObjRef (VNewObjRefSel Int)) ; 4/1
+         (VObjRef (VObjRefSel Int)) ; 4/1
   )
 ))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;; uninterpreted System D symbols
+;;;;; uninterpreted System !D symbols
 ;;;;;
 
-(declare-preds ((hastyp DVal BoxId)))
-(declare-preds ((heaphas HeapId LocId DVal)))
+(declare-fun hastyp  (DVal BoxId) Bool)
+(declare-fun heaphas (HeapId LocId DVal) Bool)
 (declare-fun heapsel (HeapId LocId DVal) DVal)
-(declare-preds ((packed DVal)))
-(declare-fun len (DVal) DVal)
-(declare-preds ((integer DVal)))
+(declare-fun packed  (DVal) Bool)
+(declare-fun len     (DVal) DVal)
+(declare-fun integer (DVal) Bool)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -53,89 +49,107 @@
 ;;;;;
 
 (declare-fun tag (DVal) DVal)
-(declare-funs
-  ((TagNum DVal) (TagBool DVal) (TagStr DVal) (TagDict DVal)
-   (TagFun DVal) (TagBot DVal)
-   (TagObj DVal) (TagUndef DVal)
-   (TagRef DVal) (TagArray DVal)))
 
-; these ids have to match idStrings table in langUtils.ml
-(assert (= TagDict  (VStr 1)))
-(assert (= TagNum   (VStr 2)))
-(assert (= TagBool  (VStr 3)))
-(assert (= TagStr   (VStr 4)))
-(assert (= TagFun   (VStr 5)))
-(assert (= TagBot   (VStr 6)))
-(assert (= TagObj   (VStr 7)))
-(assert (= TagUndef (VStr 8)))
-(assert (= TagRef   (VStr 9)))
-; (assert (= TagArray (VStr 10)))
+; the following integer ids have to match idStrings table in langUtils.ml
+(declare-fun TagDict    () DVal) (assert (= TagDict    (VStr 1)))
+(declare-fun TagNum     () DVal) (assert (= TagNum     (VStr 2)))
+(declare-fun TagBool    () DVal) (assert (= TagBool    (VStr 3)))
+(declare-fun TagStr     () DVal) (assert (= TagStr     (VStr 4)))
+(declare-fun TagFun     () DVal) (assert (= TagFun     (VStr 5)))
+(declare-fun TagBot     () DVal) (assert (= TagBot     (VStr 6)))
+(declare-fun TagObj     () DVal) (assert (= TagObj     (VStr 7)))
+(declare-fun TagUndef   () DVal) (assert (= TagUndef   (VStr 8)))
+(declare-fun TagRef     () DVal) (assert (= TagRef     (VStr 9)))
+; (declare-fun TagArray () DVal) (assert (= TagArray (VStr 10)))
 
-; NOTE: could define closed set of tags here ...
+(assert                     (= (tag VTrue)        TagBool))
+(assert                     (= (tag VFalse)       TagBool))
+(assert                     (= (tag bot)          TagBot))
+(assert                     (= (tag null)         TagObj))
+(assert                     (= (tag undefined)    TagUndef))
+(assert (forall ((i IntId)) (= (tag (VInt i))     TagNum)))
+(assert (forall ((i StrId)) (= (tag (VStr i))     TagStr)))
+(assert (forall ((i FunId)) (= (tag (VFun i))     TagFun)))
+(assert (forall ((i Int))   (= (tag (VRef i))     TagRef))) ; 3/12
+(assert (forall ((i Int))   (= (tag (VObjRef i))  TagObj))) ; 4/1
+(assert                     (= (tag empty)        TagDict))
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;; logical bot
-;;;;;
-
-(assert (= (tag bot) TagBot))
-
-; no source-level function value can be bot
-(assert (forall (u BoxId) (not (hastyp bot u))))
+(assert (forall ((w1 DVal) (w2 DVal) (w3 DVal))
+        (= (tag (upd w1 w2 w3)) TagDict)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;; source-level booleans
+;;;;; booleans
 ;;;;;
 
-(assert (= (tag VTrue) TagBool))
-(assert (= (tag VFalse) TagBool))
-
-(assert (forall (v DVal)
+(assert (forall ((v DVal))
                 (implies (= (tag v) TagBool)
                          (or (= v VTrue) (= v VFalse)))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;; source-level numbers
+;;;;; dictionaries
 ;;;;;
 
-(assert (forall (i Int) (= (tag (VInt i)) TagNum)))
-; 4/1 removed this, because don't want the skolemized ones to be integer
-;(assert (forall (i Int) (integer (VInt i))))
+(declare-fun sel (DVal DVal) DVal)
 
-; TODO 9/24 added wrappers around arithmetic operators
-; TODO once these symbols aren't even mentioned when not using integer
-;   theory, then move these definitions to logicalmodel-integers.lisp
-(declare-fun my_plus (DVal DVal) DVal)
-(declare-fun my_minus (DVal DVal) DVal)
-(declare-fun my_uminus (DVal) DVal)
-(declare-preds
-   ((my_lt DVal DVal) (my_le DVal DVal) (my_ge DVal DVal) (my_gt DVal DVal)))
+; McCarthy axioms
+(assert (forall ((d DVal) (f DVal) (x DVal)) (= (sel (upd d f x) f) x)))
+(assert (forall ((d DVal) (f DVal) (x DVal) (g DVal))
+                (implies (not (= f g)) (= (sel (upd d f x) g) (sel d g)))))
 
-;;;;; NOTE: logicalmodel-int.lisp is conditionally loaded
+; default element
+(assert (forall ((f DVal)) (= (sel empty f) bot)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;; source-level strings
+;;;;; numbers
 ;;;;;
 
-(assert (forall (i StrId) (= (tag (VStr i)) TagStr)))
+(declare-fun uminus (DVal) DVal)
+(declare-fun minus  (DVal DVal) DVal)
+(declare-fun plus   (DVal DVal) DVal)
+(declare-fun lt     (DVal DVal) Bool)
+(declare-fun le     (DVal DVal) Bool)
+(declare-fun ge     (DVal DVal) Bool)
+(declare-fun gt     (DVal DVal) Bool)
+
+(assert (forall ((w1 DVal) (w2 DVal))
+        (and
+           (= (<  (VIntSel w1) (VIntSel w2)) (lt w1 w2))
+           (= (<= (VIntSel w1) (VIntSel w2)) (le w1 w2))
+           (= (>= (VIntSel w1) (VIntSel w2)) (ge w1 w2))
+           (= (>  (VIntSel w1) (VIntSel w2)) (gt w1 w2))
+        )))
+
+; TODO all these needed? need other axioms?
+(assert (forall ((w1 DVal) (w2 DVal))
+        (and
+           (= (le w1 w2) (not (gt w1 w2)))
+           (= (ge w1 w2) (not (lt w1 w2)))
+           (= (le w1 w2) (or (lt w1 w2) (= w1 w2)))
+           (= (ge w1 w2) (or (gt w1 w2) (= w1 w2)))
+        )))
+
+(assert (forall ((w1 DVal) (w2 DVal) (w3 DVal))
+        (= (= w1 (plus w2 w3))
+           (= (VIntSel w1) (+ (VIntSel w2) (VIntSel w3))))))
+
+(assert (forall ((w1 DVal) (w2 DVal) (w3 DVal))
+        (= (= w1 (minus w2 w3))
+           (= (VIntSel w1) (- (VIntSel w2) (VIntSel w3))))))
+
+(assert (forall ((w1 DVal) (w2 DVal))
+        (= (= w1 (uminus w2))
+           (= (VIntSel w1) (~ (VIntSel w2))))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;; source-level lambdas
+;;;;; bot, null, undefined
 ;;;;;
 
-(assert (forall (i Int) (= (tag (VFun i)) TagFun)))
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;; other DJS constants
-;;;;;
-
-(assert (= (tag null) TagObj))
-(assert (= (tag undefined) TagUndef))
+; no source-level function value can be bot
+(assert (forall ((u BoxId)) (not (hastyp bot u))))
 
 ; 3/15
 ; could either store let __null = null in initial typing environment, or
@@ -144,45 +158,7 @@
 (assert (hastyp null 1))
 
 ; 3/5
-(assert (forall (u BoxId) (not (hastyp undefined u))))
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;; source-level reference values
-;;;;;
-
-; 3/12
-(assert (forall (i Int) (= (tag (VRef i)) TagRef)))
-
-; 4/1
-(assert (forall (i Int) (= (tag (VNewObjRef i)) TagObj)))
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;; functional array values
-;;;;;
-
-;; 3/13
-;(assert (forall (i Int) (= (tag (VArray i)) TagArray)))
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;; source-level dictionaries
-;;;;;
-
-(declare-fun sel (DVal DVal) DVal)
-
-(assert (= (tag empty) TagDict))
-(assert (forall (w1 DVal) (w2 DVal) (w3 DVal)
-                (= (tag (upd w1 w2 w3)) TagDict)))
-
-; McCarthy axioms
-(assert (forall (d DVal) (f DVal) (x DVal) (= (sel (upd d f x) f) x)))
-(assert (forall (d DVal) (f DVal) (x DVal) (g DVal)
-                (implies (not (= f g)) (= (sel (upd d f x) g) (sel d g)))))
-
-; default element
-(assert (forall (f DVal) (= (sel empty f) bot)))
+(assert (forall ((u BoxId)) (not (hastyp undefined u))))
 
 
 ;;;;; End Background Theory
@@ -190,5 +166,4 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 

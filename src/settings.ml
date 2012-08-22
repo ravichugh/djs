@@ -13,7 +13,7 @@ let prim_dir = djs_dir ^ "prims/"
 
 let strictWarn = ref true
 let printAllTypes = ref false
-let useTheoryLA = ref true
+(* let useTheoryLA = ref true *)
 let marshalOutEnv = ref false
 let marshalInEnv = ref false
 let doFalseChecks = ref false

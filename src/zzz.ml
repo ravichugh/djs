@@ -2,13 +2,17 @@
 open Lang
 open LangUtils
 
+
+(* during flow queries, prevents (check-sat) from being indented and prevents
+   newline after (push) *)
 let doingExtract = ref false
 
 let z3read, z3write =
   (* let zin, zout = Unix.open_process "z3 -smt2 -in" in *)
   (* let zin, zout = Unix.open_process "z3 -smtc SOFT_TIMEOUT=1000 -in" in *)
-  let zin, zout = Unix.open_process "z3 -smtc -in MBQI=false" in
-  let zlog      = open_out (Settings.out_dir ^ "queries.smtc") in
+  (* let zin, zout = Unix.open_process "z3 -smtc -in MBQI=false" in *)
+  let zin, zout = Unix.open_process "z3 -smt2 -in MBQI=false" in
+  let zlog      = open_out (Settings.out_dir ^ "queries.smt2") in
   let reader () = input_line zin in
   let writer s  = fpr zlog "%s" s; flush zlog; fpr zout "%s" s; flush zout in
     (reader, writer)
@@ -22,9 +26,11 @@ let emitPreamble () =
     f (open_in (Settings.out_dir ^ "env.lisp"))
   else begin
     f (open_in (Settings.prim_dir ^ "theory.smt2"));
+(*
     if !Settings.useTheoryLA
       then f (open_in (Settings.prim_dir ^ "theory-int.smt2"))
       else ()
+*)
   end
 
 let dump ?nl:(nl=true) ?tab:(tab=true) s =
@@ -51,8 +57,8 @@ let pushScope () =
   ()
 
 let popScope () =
-  dump "(pop)";
   decr depth;
+  dump "(pop)";
   ignore (Stack.pop curVars);
   ()
 
@@ -80,9 +86,6 @@ let writeQueryStats () =
 
 (***** Querying ***************************************************************)
 
-(* prevents (check-sat) from being indented during flow queries *)
-let doingCheckFlow = ref false
-
 let queryCount = ref 0
 
 let checkSat cap =
@@ -94,12 +97,12 @@ let checkSat cap =
       | "success" -> readSat ()
       | s         -> z3err (spr "SAT check read weird string [%s]" s)
   in
-  let b = if !doingCheckFlow then false else true in
-  dump ~tab:b ~nl:false "(check-sat)";
+  (* always print \n after (check-sat), to make sure z3 reads from pipe *)
+  dump ~tab:(not !doingExtract) ~nl:true "(check-sat)";
   incr queryCount;
   incrQueryRootCount ();
   let (s,b) = readSat () in
-  dump ~tab:false (spr "; [%s] query %d (%s)" s !queryCount cap);
+  dump (spr "; [%s] query %d (%s)" s !queryCount cap);
   b
 
 let checkSat cap =
@@ -111,7 +114,7 @@ let checkValid cap p =
      | PFls -> dump "(assert true)"
      | _    -> let s = strForm (embedForm p) in
                if !doingExtract
-               then dump ~tab:false (spr "(assert (not %s))" s)
+               then dump ~tab:false ~nl:false (spr "(assert (not %s))" s)
                else dump (spr "(assert (not\n%s  %s))" (indent()) s)
   );
   let sat = checkSat cap in
