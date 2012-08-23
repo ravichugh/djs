@@ -10,8 +10,8 @@ let maxJoinSize   = ref 1 (* anything <= 1 means not doing joins *)
 
 let typeTermsTyp acc t = (* naive way to compute this *)
   foldForm (fun acc -> function
-    | PUn(HasTyp(_,u)) -> TypeTerms.add u acc
-    | _                -> acc
+    | PHasTyp(_,u) -> TypeTerms.add u acc
+    | _            -> acc
   ) acc t
 
 let typeTerms g =
@@ -316,24 +316,18 @@ and checkFormula errList usedBoxes g p =
     (fun (pi,qi) i ->
        Zzz.inNewScope (fun () ->
          Zzz.assertFormula pi;
-         let qForm = pOr (List.map (fun q -> PUn q) qi) in
-         let (s1,s2) = (prettyStrForm pi, prettyStrForm qForm) in
+         let (s1,s2) = (prettyStrForm pi, prettyStrForm (Cnf.orHasTyps qi)) in
          let errList =
            errList @ [spr "Clause %d/%d:\n   %s\n~> %s" (i+1) n s1 s2] in
-         checkUnPreds errList usedBoxes g (qi,qForm)))
+         checkUnPreds errList usedBoxes g qi))
     clauses
 
-(* small optimization: qForm is qs lifted to a formula, since qForm is
-   already computed by checkFormula for printing purposes *)
-and checkUnPreds errList usedBoxes g (qs,qForm) =
-  if Zzz.checkValid "I-Valid" qForm then ()
-  else if List.exists (checkUnPred errList usedBoxes g) qs then ()
+and checkUnPreds errList usedBoxes g qs =
+  if Zzz.checkValid "I-Valid" (Cnf.orHasTyps qs) then ()
+  else if List.exists (checkHasTyp errList usedBoxes g) qs then ()
   else die errList "Cannot discharge this clause."
 
-and checkUnPred errList usedBoxes g = function
-  | HasTyp(w,u) -> checkHasTyp errList usedBoxes g w u 
-
-and checkHasTyp errList usedBoxes g w u =
+and checkHasTyp errList usedBoxes g (w,u) =
 (*
   let errList =
     errList @ [spr "checkHasTyp %s :: %s" (prettyStrWal w) (prettyStrTT u)] in
@@ -548,8 +542,14 @@ let checkHeapSat errList usedBoxes g heapEnv heapTyp =
       ) ([],[]) (snd heapTyp)
   in
 
-  (* TODO when existential locations are added, don't allow any
-     locations to be dropped *)
+  (* step 2b: allow frozen scalar references to be dropped *)
+  List.iter (fun (l,hc1) ->
+    if not (List.mem_assoc l (snd heapTyp)) then begin
+      match hc1 with
+        | _ -> () (* TODO *)
+        | _ -> die errList (spr "can't drop binding for %s" (strLoc l))
+    end
+  ) (snd heapEnv);
 
   (* step 3: check the type of each binding *)
   List.iter (fun (l,x,t) ->

@@ -247,10 +247,14 @@ let refTermsOf g ?(strong=None) = function
   | TMaybeNull(THasTyp([URef(l)],_))
   | TSelfify(TMaybeNull(THasTyp([URef(l)],_)),_) (* TODO 3/14 *)
   | THasTyp([URef(l)],_) ->
+(*
       let _ = Log.log1 "don't call extract [Ref(%s)]\n" (strLoc l) in
+*)
       [URef l]
   | t ->
+(*
       let _ = Log.log1 "call extract refTermsOf [%s]\n" (prettyStrTyp t) in
+*)
       let filter = function
         | URef(l) -> (match strong with
                         | None -> true
@@ -366,7 +370,7 @@ let joinWorlds v w1 w2 =
 (***** TC application helpers *************************************************)
 
 let isArrow = function
-  | TRefinement(x,PUn(HasTyp(y,UArrow(arr)))) when y = wVar x -> Some arr
+  | TRefinement(x,PHasTyp(y,UArrow(arr))) when y = wVar x -> Some arr
 (*
   | THasTyp(UArr(arr)) -> Some arr
 *)
@@ -379,7 +383,7 @@ let isArrows t =
     | None, TRefinement(x,PConn("and",ps)) ->
         List.fold_left (fun acc p ->
           match acc, p with
-            | Some(l), PUn(HasTyp(y,UArrow(arr))) when y = wVar x -> Some(arr::l)
+            | Some(l), PHasTyp(y,UArrow(arr)) when y = wVar x -> Some(arr::l)
             | _ -> None
         ) (Some []) ps
     | _, THasTyp(us,PTru) ->
@@ -984,13 +988,13 @@ and tsExp_ g h = function
       let (s1,h1) = elimSingletonExistentials (s1,h1) in
       let tGoal = destructNonArrowTypeFrame frame in
       Sub.types cap g s1 tGoal;
-      if h1 <> h then printHeapEnv h1;
       (* synthesizing x:s1, _not_ the goal tGoal, since need to bring all the
          binders in scope, since they may refered to in h1. so the tGoal
          annotation is simply a check rather than an abstraction. *)
       let g = tcAddBinding g x s1 in
       Log.log2 "%s :: %s\n"
         (String.make (String.length x) ' ') (prettyStrTyp tGoal);
+      if h1 <> h then printHeapEnv h1;
       let (s2,h2) = tsExp g h1 e2 in
       (* tcRemoveBindingN n; *)
       finishLet cap gInit x [(x,s1)] (s2,h2)
@@ -1004,9 +1008,9 @@ and tsExp_ g h = function
       let (s1,h1) = applyFrame h frame in
       Zzz.inNewScope (fun () -> tcExp g h (s1,h1) e1);
       let (bindings,h1) = heapEnvOfHeap h1 in
-      if h1 <> h then printHeapEnv h1;
       let g = tcAddBindings g bindings in
       let g = tcAddBinding g x s1 in
+      if h1 <> h then printHeapEnv h1;
       let (s2,h2) = tsExp g h1 e2 in
       (* tcRemoveBindingN (n + m); *)
       finishLet cap gInit x [(x,s1)] (s2,h2)
@@ -1020,9 +1024,9 @@ and tsExp_ g h = function
       let (s1,h1) = Zzz.inNewScope (fun () -> tsExp g h e1) in
       let (s1,h1) = elimSingletonExistentials (s1,h1) in
       let (l1,s1) = stripExists s1 in
-      if h1 <> h then printHeapEnv h1;
       let g = tcAddBindings g l1 in
       let g = tcAddBinding g x s1 in
+      if h1 <> h then printHeapEnv h1;
       let (s2,h2) = tsExp g h1 e2 in
       (* tcRemoveBindingN (m + n); *)
       finishLet cap gInit x (l1 @ [(x,s1)]) (s2,h2)

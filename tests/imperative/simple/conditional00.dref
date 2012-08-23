@@ -1,5 +1,5 @@
 val b :: Bool
-let x = ref l 0 in
+let x = ref &x 0 in
 let _ = if b then x := 1 else x := 2 in
 let _ :: {(or (= v 1) (= v 2))} = !x in
 0

@@ -95,7 +95,7 @@ let checkSat cap =
       | "unsat"   -> "unsat", false
       | "unknown" -> "unknown", true
       | "success" -> readSat ()
-      | s         -> z3err (spr "SAT check read weird string [%s]" s)
+      | s         -> z3err (spr "Zzz.checkSat: read weird string [%s]" s)
   in
   (* always print \n after (check-sat), to make sure z3 reads from pipe *)
   dump ~tab:(not !doingExtract) ~nl:true "(check-sat)";

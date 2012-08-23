@@ -1,5 +1,5 @@
 
-let px = ref loc1 1 in
+let px = ref &px 1 in
 let _ :: {(= v 1)} = !px in
 
 (* strong update *)

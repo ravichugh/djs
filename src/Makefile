@@ -24,7 +24,7 @@ loc:
     djsDesugar.ml                                   \
     settings.ml                                     \
     langLexer.mll langParser.mly                    \
-    ../prims/*.dref* ../prims/*smt2*                         
+    ../prims/*.*
 
 clean:
 	rm -rf _build out system-dref

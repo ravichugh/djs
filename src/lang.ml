@@ -120,7 +120,7 @@ and formula =
   | PTru
   | PFls
   (***** uninterpreted predicates *****)
-  | PUn of unpred
+  | PHasTyp of hastyp
   | PHeapHas of heap * loc * walue
   (***** simple/uninterpreted predicates *****)
   | PApp of string * walue list
@@ -134,9 +134,7 @@ and formula =
   | PEqMod of walue * walue * walue list
   | PObjHas of walue list * walue * heap * loc
 
-(* TODO inline this into above type *)
-and unpred = (* uninterpreted System D predicates *)
-  | HasTyp of walue * typterm
+and hastyp = walue * typterm
 
 and rawtyp = vvar * formula (* {x|p} *)
 
@@ -201,7 +199,7 @@ and heapenvconstraint =
 
 type heapenv = hvars * (loc * heapenvconstraint) list
 
-type clause = formula * unpred list
+type clause = formula * hastyp list
 
 module TypeTerms =
   Set.Make (struct type t = typterm let compare = compare end)

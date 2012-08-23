@@ -223,7 +223,10 @@ exp1 :
  | LPAREN l=poly_actuals e1=exp1 RPAREN e2=exp2 { EApp(l,e1,e2) }
  | BANG e=exp2                   { EDeref(e) }
  | e1=exp1 ASSGN e2=exp2         { ESetref(e1,e2) }
- | NEWREF l=loc e=exp2           { ENewref(l,e) }
+ | NEWREF l=loc e=exp2
+     { match l with
+         | LocConst(x) when x.[0] = '&' -> ENewref(l,e)
+         | _ -> printParseErr (spr "ref %s isn't an & address" (strLoc l)) }
  | NEW LPAREN e1=exp COMMA l1=loc COMMA e2=exp COMMA l2=loc RPAREN
      { ENewObj(e1,l1,e2,l2) }
  | FREEZE LPAREN l=loc COMMA x=thawstate COMMA e=exp RPAREN
@@ -477,7 +480,7 @@ formula :
  | LPAREN GE x=walue y=walue RPAREN             { ge x y }
  | LPAREN GT x=walue y=walue RPAREN             { gt x y }
  (***** uninterpreted predicates *****)
- | LPAREN w=walue DCOLON u=typ_term RPAREN      { PUn(HasTyp(w,u)) }
+ | LPAREN w=walue DCOLON u=typ_term RPAREN      { PHasTyp(w,u) }
  | LPAREN w=walue DCOLON u=typ_term BANG RPAREN { pIsBang w u }
 (*
  | HEAPHAS LPAREN h=heap COMMA l=loc COMMA k=walue RPAREN { PHeapHas(h,l,k) }

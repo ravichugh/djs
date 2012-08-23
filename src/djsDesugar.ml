@@ -613,8 +613,8 @@ let recdTypFrom t =
                                        WVal({value=VBase(Str(f))})])]),
                wTag) ->
              (f, ty (eq (tag theV) wTag)) :: acc
-         | PUn(HasTyp(WApp("sel",[WVal({value=VVar"v"});
-                                  WVal({value=VBase(Str(f))})]),u)) ->
+         | PHasTyp(WApp("sel",[WVal({value=VVar"v"});
+                               WVal({value=VBase(Str(f))})]),u) ->
              (f, THasTyp ([u], PTru)) :: acc
          | _ ->
              acc
@@ -656,7 +656,7 @@ let addFormals t env =
                 let _ = logJsTyp (spr "addFormalType(%s) = %s" x (strJsTyp t)) in
                 addType x t env
             | Some(HConcObj(Some(a),TRefinement("v",PConn("and",
-                  PUn(HasTyp(WVal({value=VVar"v"}),UArray(t)))::ps)),l2)) ->
+                  PHasTyp(WVal({value=VVar"v"}),UArray(t))::ps)),l2)) ->
                 let t = JsArray (t, l1, l2, arrLenFromPreds ps, Some a) in
                 let _ = logJsTyp (spr "addFormalType(%s) = %s" x (strJsTyp t)) in
                 addType x t env

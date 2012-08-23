@@ -1,7 +1,7 @@
 
 let begin_main = 0 in
 
-let a = ref loc1 0 in
+let a = ref &a 0 in
 
 let b = !a in
 

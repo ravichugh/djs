@@ -261,7 +261,7 @@ let undoIntersectionHack g t =
           match List.find (function Var(y,_) -> x = y | _ -> false) g with
             | Var(_,s) ->
                 (match s with
-                   | THasTyp([u],PTru) -> PUn (HasTyp (theV, u))
+                   | THasTyp([u],PTru) -> PHasTyp (theV, u)
                    | _ -> Log.printTcErr [spr "0 can't expand type hack [%s]" x])
             | _ -> kill "undoIntersectionHack: impossible"
         end with Not_found ->
@@ -275,7 +275,7 @@ let undoIntersectionHack g t =
         let boxes_opt =
           List.fold_left (fun acc p ->
             match acc, p with
-              | Some(l), PUn(HasTyp(WVal({value=VVar"v"}),u)) -> Some(u::l)
+              | Some(l), PHasTyp(WVal({value=VVar"v"}),u) -> Some(u::l)
               | _ -> None
           ) (Some []) ps in
         begin match boxes_opt with

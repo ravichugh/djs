@@ -76,8 +76,8 @@ let mapTyp ?fForm:(fForm=(fun x -> x))
     | PApp(s,ws)         -> fForm (PApp (s, List.map fooWal ws))
     | PTru               -> fForm PTru
     | PFls               -> fForm PFls
-    | PUn(HasTyp(w,u))   -> let u = if onlyTopForm then u else fooTT u in
-                            fForm (PUn (HasTyp (fooWal w, u)))
+    | PHasTyp(w,u)       -> let u = if onlyTopForm then u else fooTT u in
+                            fForm (PHasTyp (fooWal w, u))
     | PHeapHas(h,l,w)    -> let h = if onlyTopForm then h else fooHeap h in
                             fForm (PHeapHas (h, l, fooWal w))
     | PConn(s,ps)        -> fForm (PConn (s, List.map fooForm ps))
@@ -172,9 +172,9 @@ let foldTyp (fForm: 'a -> formula -> 'a)
                             fForm acc (PApp (s, ws))
     | PTru               -> fForm acc PTru
     | PFls               -> fForm acc PFls
-    | PUn(HasTyp(w,u))   -> let acc = fooWal acc w in
+    | PHasTyp(w,u)       -> let acc = fooWal acc w in
                             let acc = fooTT acc u in
-                            fForm acc (PUn (HasTyp (w, u)))
+                            fForm acc (PHasTyp (w, u))
     | PHeapHas(h,l,w)    -> let acc = fooHeap acc h in
                             let acc = fooWal acc w in
                             fForm acc (PHeapHas (h, l, w))
@@ -324,7 +324,7 @@ let upd w1 w2 w3  = WApp ("upd", [w1; w2; w3])
 
 let has w1 w2     = PHas (w1, [w2])
 let eqmod x y zs  = PEqMod (x, y, zs)
-let hastyp w ut   = PUn (HasTyp (w, ut))
+let hastyp w ut   = PHasTyp (w, ut)
 
 let plus w1 w2    = WApp ("plus", [w1; w2])
 let minus w1 w2   = WApp ("minus", [w1; w2])
@@ -641,17 +641,17 @@ let rec strValue v = match v.value with
 let strFunSym s =
   if !prettyConst = false then s
   else match s with
-    | "my_plus" -> "+"
-    | "my_minus" -> "-"
+    | "plus" -> "+"
+    | "minus" -> "-"
     | _ -> s
 
 let strPredSym s =
   if !prettyConst = false then s
   else match s with
-    | "my_lt" -> "<"
-    | "my_le" -> "<="
-    | "my_gt" -> ">"
-    | "my_ge" -> ">="
+    | "lt" -> "<"
+    | "le" -> "<="
+    | "gt" -> ">"
+    | "ge" -> ">="
     | _ -> s
 
 let strStrs l = String.concat "," l
@@ -707,7 +707,7 @@ and strTyp = function
   | TSelfify(t,p)        -> spr "{(and (v:%s) %s)}" (strTyp t) (strForm p)
   | THasTyp([u],PTru)    -> strTT u
   | THasTyp(us,p) ->
-      let ps = List.map (fun u -> PUn(HasTyp(theV,u))) us in
+      let ps = List.map (fun u -> PHasTyp(theV,u)) us in
       spr "{%s}" (strForm (pAnd (ps @ [p])))
   | TTuple(l) ->
       let l = List.map (fun (x,t) -> spr "%s:%s" x (strTyp t)) l in
@@ -791,7 +791,7 @@ and strForm = function
   | PConn(s,l)      -> strFormExpanded s l
   | PAll(x,p)       -> spr "(forall ((%s DVal)) %s)" x (strForm p)
   (* TODO make the call to registerBox somewhere more appropriate *)
-  | PUn(HasTyp(w,u)) ->
+  | PHasTyp(w,u) ->
       if !printFullUT
         then spr "(%s :: %s)" (strWalue w) (strTT u)
         (*else spr "(= (hastyp %s (Box %d)) true)" (strWalue w) (registerBox u)*)
@@ -1062,7 +1062,7 @@ and freeVarsForm env = function
   | PEq(w1,w2)       -> Quad.combine (freeVarsWal env w1) (freeVarsWal env w2)
   | PApp(_,ws)       -> Quad.combineList (List.map (freeVarsWal env) ws)
   | PTru | PFls      -> Quad.empty
-  | PUn(HasTyp(w,u)) -> Quad.combine (freeVarsWal env w) (freeVarsTT env u)
+  | PHasTyp(w,u)     -> Quad.combine (freeVarsWal env w) (freeVarsTT env u)
   | PConn(_,ps)      -> Quad.combineList (List.map (freeVarsForm env) ps)
   | PHas(w,ws)       -> Quad.combineList (List.map (freeVarsWal env) (w::ws))
   | PDomEq(w,ws)     -> Quad.combineList (List.map (freeVarsWal env) (w::ws))
@@ -1232,13 +1232,13 @@ and substForm subst = function
   | PTru        -> PTru
   | PFls        -> PFls
   | PConn(s,ps) -> PConn (s, List.map (substForm subst) ps)
-  | PUn(HasTyp(w,UVar(x))) -> (* type variable instantiation *)
+  | PHasTyp(w,UVar(x)) -> (* type variable instantiation *)
       let w = substWal subst w in
       let (_,sub,_,_) = subst in
       if List.mem_assoc x sub then applyTyp (List.assoc x sub) w
-      else PUn (HasTyp (w, UVar x))
-  | PUn(HasTyp(w,u)) ->
-      PUn (HasTyp (substWal subst w, substTT subst u))
+      else PHasTyp (w, UVar x)
+  | PHasTyp(w,u) ->
+      PHasTyp (substWal subst w, substTT subst u)
   | PHeapHas(h,l,w) ->
       PHeapHas (substHeap subst h,
                 substLoc subst l,
@@ -1369,7 +1369,7 @@ and applyTyp t w =
     | TTop             -> PTru
     | TBot             -> PFls
     | TInt             -> pAnd [eq (tag w) (wStr tagNum); integer w]
-    | THasTyp(us,p)    -> let ps = List.map (fun u -> PUn (HasTyp (w, u))) us in
+    | THasTyp(us,p)    -> let ps = List.map (fun u -> PHasTyp (w, u)) us in
                           let p = substForm (["v",w],[],[],[]) p in
                           pAnd (p::ps)
     | TNonNull(t)      -> pAnd [applyTyp t w; pNot (PEq (w, wNull))]

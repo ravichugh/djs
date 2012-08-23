@@ -5,7 +5,7 @@ open LangUtils
 
 let checkConversion = ref false
 
-type clause = formula * formula list
+type cnf_formula = formula list list
 
 let oc_cnf = open_out (Settings.out_dir ^ "cnf.lisp")
 
@@ -46,10 +46,10 @@ let removeDoubleNots =
     | PConn("not",[PConn("not",[f])]) -> f
     | f                               -> f)
 
-let rec toCnfLists f =
+let rec toCnfLists (f: formula) : cnf_formula =
   match f with
     | PTru | PFls | PEq _ | PApp _
-    | PUn _ | PHeapHas _
+    | PHasTyp _ | PHeapHas _
     | PHas _ | PDomEq _ | PEqMod _ | PObjHas _ -> [[f]]
     | PConn("not",_) -> [[f]]
     | PConn("and",l) -> List.concat (List.map toCnfLists l)
@@ -59,10 +59,11 @@ let rec toCnfLists f =
     | PConn(s,_)     -> failwith (spr "toCnfLists: PConn [%s]" s)
     | PAll _         -> failwith "toCnfLists: PAll shouldn't appear"
 
-let checkCnfLists l =
+let checkCnfLists (l: cnf_formula) =
   let rec isAtomic = function
-    | PTru | PFls | PEq _ | PApp _         -> true
-    | PUn _ | PHas _ | PDomEq _ | PEqMod _ -> true
+    | PTru | PFls | PEq _ | PApp _
+    | PHasTyp _ | PHas _
+    | PDomEq _ | PEqMod _                  -> true
     | PHeapHas _ | PObjHas _               -> true
     | PConn("and",_) | PConn("or",_)       -> false
     | PConn("implies",_) | PConn("iff",_)  -> false
@@ -74,25 +75,23 @@ let checkCnfLists l =
   if List.for_all (List.for_all isAtomic) l then l
   else failwith "checkCnfLists; see cnf.lisp"
 
-let liftClauseList l =
-  pAnd (List.map (fun (p,qs) ->
-    pImp p (pOr (List.map (fun q -> PUn q) qs))) l)
+let orHasTyps (l: hastyp list) : formula =
+  pOr (List.map (fun (w,u) -> PHasTyp (w,u)) l)
+
+let liftClauseList (l: clause list) : formula =
+  pAnd (List.map (fun (p,qs) -> pImp p (orHasTyps qs)) l)
 
 
 (***** Normalize **************************************************************)
 
-let normalizeCnfClauses l =
+let normalizeCnfClauses (l: cnf_formula) : clause list =
   List.map (fun clause ->
-(*
-    let (l1,rhs) =
-      List.partition (function PIs _ -> false | _ -> true) clause in
-    let lhs = PAnd (List.map (fun p -> PNot p) l1) in
-    (lhs, rhs)
-*)
     let (lhs,rhs) =
       List.fold_left
-        (fun (l,r) -> function PUn(q) -> (l, q::r) | p -> ((pNot p)::l, r))
-        ([],[]) (List.rev clause) in
+        (fun (l,r) -> function
+           | PHasTyp(w,u) -> (          l, (w,u)::r)
+           | p            -> ((pNot p)::l,        r)
+        ) ([],[]) (List.rev clause) in
     (pAnd lhs, rhs)
   ) l
 

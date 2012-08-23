@@ -124,7 +124,7 @@ and checkFormula errList g p =
     | PHas(w,ws)
     | PDomEq(w,ws)        -> List.iter (checkWalue errList g) (w::ws)
     | PEqMod(w1,w2,ws)    -> List.iter (checkWalue errList g) (w1::w2::ws)
-    | PUn(HasTyp(w,u))    -> (checkWalue errList g w;
+    | PHasTyp(w,u)        -> (checkWalue errList g w;
                               checkTypeTerm errList g u)
     | PHeapHas(h',l,w)    -> (checkHeap errList g h'; (* h not used *)
                               checkLoc errList g l;
