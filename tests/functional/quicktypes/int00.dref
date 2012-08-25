@@ -1,0 +1,7 @@
+#use "tests/functional/quicktypes/__ops.ml"
+let i = 1 in
+let j = plus i i in
+let k = plus i j in
+let _ :: Int = k in
+let _ :: {(= v 3)} = k in
+0

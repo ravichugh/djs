@@ -63,15 +63,14 @@ let joinAll = combineArrows join
 let boxNumbers s = 
   let l = TypeTerms.elements s in
   let il =
-    List.map (function ut ->
-      try Utils.IdTable.getId idTypTerms ut
-      with Not_found -> failwith (spr "Sub.boxNumbers:\n\n %s" (prettyStrTT ut))
+    List.map (function tt ->
+      try Utils.IdTable.getId idTypTerms tt
+      with Not_found -> failwith (spr "Sub.boxNumbers:\n\n %s" (strTT tt))
     ) l in
   il
 
 let setUpExtract t usedBoxes =
   let x = freshVar "extract" in
-  (* Zzz.pushScope (); *)
   Zzz.addBinding x t;
   Zzz.dump (spr "; off limits: %s" (Utils.strIntList (boxNumbers usedBoxes)));
   Zzz.doingExtract := true;
@@ -79,8 +78,6 @@ let setUpExtract t usedBoxes =
 
 let tearDownExtract () =
   Zzz.doingExtract := false;
-  (* Zzz.removeBinding (); *)
-  (* Zzz.popScope (); *)
   ()
 
 let mustFlow_ usedBoxes ?filter:(f=(fun _ -> true)) g t =
@@ -207,18 +204,19 @@ let checkLength s errList l1 l2 =
   then die errList (spr "different number of %s args" s)
   else ()
 
+(* TODO make this function look nicer *)
 let strHeapSat (hs1,cs1) (hs2,cs2) =
   let s0 = spr "  %s |= %s" (String.concat "++" hs1) (String.concat "++" hs2) in
   let l1 = List.map (fun (l,hc) ->
              spr "  %s |-> %s |= %s" (strLoc l)
                (if List.mem_assoc l cs1
-                then prettyStr strHeapEnvCell (List.assoc l cs1)
+                then strHeapEnvCell (List.assoc l cs1)
                 else "MISSING")
-               (prettyStr strHeapCell hc)) cs2 in
+               (strHeapCell hc)) cs2 in
   let l2 = List.map (fun (l,hc) ->
             if List.mem_assoc l cs2 then ""
             else spr "  %s |-> %s |= MISSING"
-                   (strLoc l) (prettyStr strHeapEnvCell hc)) cs1 in
+                   (strLoc l) (strHeapEnvCell hc)) cs1 in
   let l2 = List.filter (fun s -> s <> "") l2 in
   String.concat "\n" [s0; String.concat "\n" l1; String.concat "\n" l2]
   
@@ -284,30 +282,52 @@ let rec bindExistentials errList = function
          | _ ->
              (* let _ = Log.log2 "bind %s :: %s\n" x (prettyStrTyp s1) in *)
              let _ = Zzz.addBinding x s1 in
-             let (n,s) = bindExistentials errList s2 in
-             (1 + n, s))
-  | s -> (0, s)
+             bindExistentials errList s2)
+  | s -> s
 
 let rec checkTypes errList usedBoxes g t1 t2 =
   let errList =
-    errList @ [spr "Sub.checkTypes:\n   t1 = %s\n   t2 = %s"
-                 (prettyStrTyp t1) (prettyStrTyp t2)] in
-  let _ =
-    match t2 with
-      | TExists _ -> die errList "existential type on the right"
-      | _ -> () in
+    let (s1,s2) = (strTyp t1, strTyp t2) in
+    errList @ [spr "Sub.checkTypes:\n   t1 = %s\n   t2 = %s" s1 s2] in
+  begin match t2 with
+    | TExists _ -> die errList "existential type on the right"
+    | _ -> ()
+  end;
   Zzz.inNewScope (fun () ->
-    let (n,t1) = bindExistentials errList t1 in
-    let v = freshVar "v" in
-    Zzz.addBinding v t1;
-    checkFormula errList usedBoxes g (applyTyp t2 (wVar v));
-(*
-    (* remove v and existential binders from curScope *)
-    Zzz.removeBinding ();
-    for i = 1 to n do Zzz.removeBinding () done;
-*)
-    ()
-  )
+    let t1 = bindExistentials errList t1 in
+    if !Settings.quickTypes && quickCheckTypes errList usedBoxes g (t1,t2)
+    then ()
+    else let v = freshVar "v" in
+         let _ = Zzz.addBinding v t1 in
+         checkFormula errList usedBoxes g (applyTyp t2 (wVar v)))
+
+  (* binding existentials even for quickCheckTypes, since it may recursively
+     call checkTypes for sub-obligations. *)
+
+and quickCheckTypes errList usedBoxes g = function
+  | TQuick(_,QBase(bt),_), TQuick(_,QBase(bt'),p) -> bt = bt' && p = pTru
+  | TQuick(_,QBase(bt),_), TBaseUnion(l) -> List.mem bt l
+  | TQuick(_,QRecd(l1,_),_), TQuick(_,QRecd(l2,_),p) when p = pTru -> begin
+      List.iter (fun (f,t2) ->
+        if List.mem_assoc f l1
+        then checkTypes errList usedBoxes g (List.assoc f l1) t2
+        else die errList (spr "Missing field \"%s\"." f)
+      ) l2;
+      true
+    end
+  | TQuick(_,QTuple(l1,_),_), TQuick(_,QTuple(l2,_),p) when p = pTru ->
+      if isDepTuple l2 then false
+      else if List.length l1 < List.length l2 then false
+      else begin
+        List.iter
+          (function (t1,t2) -> checkTypes errList usedBoxes g t1 t2)
+          (List.combine
+             (List.map snd (Utils.take (List.length l2) l1))
+             (List.map snd l2));
+        true
+      end
+  | _ ->
+      false
 
 and checkFormula errList usedBoxes g p =
   let clauses = Cnf.convert p in
@@ -316,7 +336,7 @@ and checkFormula errList usedBoxes g p =
     (fun (pi,qi) i ->
        Zzz.inNewScope (fun () ->
          Zzz.assertFormula pi;
-         let (s1,s2) = (prettyStrForm pi, prettyStrForm (Cnf.orHasTyps qi)) in
+         let (s1,s2) = (strForm pi, strForm (Cnf.orHasTyps qi)) in
          let errList =
            errList @ [spr "Clause %d/%d:\n   %s\n~> %s" (i+1) n s1 s2] in
          checkUnPreds errList usedBoxes g qi))
@@ -330,14 +350,14 @@ and checkUnPreds errList usedBoxes g qs =
 and checkHasTyp errList usedBoxes g (w,u) =
 (*
   let errList =
-    errList @ [spr "checkHasTyp %s :: %s" (prettyStrWal w) (prettyStrTT u)] in
+    errList @ [spr "checkHasTyp %s :: %s" (strWal w) (strTT u)] in
 *)
 
   if !maxJoinSize = 1 then begin
     let mustFlowBoxes = mustFlow_ usedBoxes g (ty(PEq(theV,w))) in
     let usedBoxes = TypeTerms.union usedBoxes mustFlowBoxes in
     let n = TypeTerms.cardinal mustFlowBoxes in
-    if n = 0 then die errList (spr "0 boxes must-flow to %s" (prettyStrWal w))
+    if n = 0 then die errList (spr "0 boxes must-flow to %s" (strWal w))
     else if n > 0 && !doMeet then die errList "meet nyi"
     else TypeTerms.exists
            (function u' -> checkTypeTerms errList usedBoxes g u' u)
@@ -352,8 +372,7 @@ and checkHasTyp errList usedBoxes g (w,u) =
 and checkTypeTerms errList usedBoxes g u1 u2 =
   sugarArrow := false;
   let errList =
-    errList @ [spr "checkTypeTerms:\n   %s\n<: %s"
-                 (prettyStrTT u1) (prettyStrTT u2)] in
+    errList @ [spr "checkTypeTerms:\n   %s\n<: %s" (strTT u1) (strTT u2)] in
   sugarArrow := true;
   match u1, u2 with
     | UVar(x), UVar(y) -> x = y

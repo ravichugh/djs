@@ -52,9 +52,8 @@ let mkDepTupleArrow (vars,t1) (h1,t2,h2) =
 (***** Tuple expression desugaring ********************************************)
 
 let mkTupleExp exps =
-  (* let n = List.length exps in *)
-  (* if n <= 1 then parse_err "mkTupleExp: should be at least one"; *)
-  EDict (Utils.map_i (fun e i -> (EVal (vStr (string_of_int i)), e)) exps)
+  (* EDict (Utils.map_i (fun e i -> (EVal (vStr (string_of_int i)), e)) exps) *)
+  ETuple exps
 
 
 (***** Pattern desugaring *****************************************************)
@@ -240,7 +239,7 @@ let rec mkLetRec f s e1 e2 =
 *)
 let mkLetRec f uarr e1 e2 =
   let (_,x,_,_,_,_) = uarr in
-  let t = THasTyp ([UArrow uarr], PTru) in
+  let t = tyTypTerm (UArrow uarr) in
   ELet (f, Some (typToFrame t),
         EApp (([t],[],[]), eVar "fix",
           EFun (([],[],[]), f, None,
@@ -261,7 +260,7 @@ let undoIntersectionHack g t =
           match List.find (function Var(y,_) -> x = y | _ -> false) g with
             | Var(_,s) ->
                 (match s with
-                   | THasTyp([u],PTru) -> PHasTyp (theV, u)
+                   | TQuick("v",QBoxes([u]),p) when p = pTru -> PHasTyp (theV, u)
                    | _ -> Log.printTcErr [spr "0 can't expand type hack [%s]" x])
             | _ -> kill "undoIntersectionHack: impossible"
         end with Not_found ->
@@ -279,7 +278,7 @@ let undoIntersectionHack g t =
               | _ -> None
           ) (Some []) ps in
         begin match boxes_opt with
-          | Some(us) -> THasTyp (us, PTru)
+          | Some(us) -> TQuick ("v", QBoxes us, pTru)
           | None -> t
         end
     | _ ->

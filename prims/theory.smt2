@@ -106,41 +106,41 @@
 ;;;;; numbers
 ;;;;;
 
-(declare-fun uminus (DVal) DVal)
-(declare-fun minus  (DVal DVal) DVal)
-(declare-fun plus   (DVal DVal) DVal)
-(declare-fun lt     (DVal DVal) Bool)
-(declare-fun le     (DVal DVal) Bool)
-(declare-fun ge     (DVal DVal) Bool)
-(declare-fun gt     (DVal DVal) Bool)
+(declare-fun l_uminus (DVal) DVal)
+(declare-fun l_minus  (DVal DVal) DVal)
+(declare-fun l_plus   (DVal DVal) DVal)
+(declare-fun l_lt     (DVal DVal) Bool)
+(declare-fun l_le     (DVal DVal) Bool)
+(declare-fun l_ge     (DVal DVal) Bool)
+(declare-fun l_gt     (DVal DVal) Bool)
 
 (assert (forall ((w1 DVal) (w2 DVal))
         (and
-           (= (<  (VIntSel w1) (VIntSel w2)) (lt w1 w2))
-           (= (<= (VIntSel w1) (VIntSel w2)) (le w1 w2))
-           (= (>= (VIntSel w1) (VIntSel w2)) (ge w1 w2))
-           (= (>  (VIntSel w1) (VIntSel w2)) (gt w1 w2))
+           (= (<  (VIntSel w1) (VIntSel w2)) (l_lt w1 w2))
+           (= (<= (VIntSel w1) (VIntSel w2)) (l_le w1 w2))
+           (= (>= (VIntSel w1) (VIntSel w2)) (l_ge w1 w2))
+           (= (>  (VIntSel w1) (VIntSel w2)) (l_gt w1 w2))
         )))
 
 ; TODO all these needed? need other axioms?
 (assert (forall ((w1 DVal) (w2 DVal))
         (and
-           (= (le w1 w2) (not (gt w1 w2)))
-           (= (ge w1 w2) (not (lt w1 w2)))
-           (= (le w1 w2) (or (lt w1 w2) (= w1 w2)))
-           (= (ge w1 w2) (or (gt w1 w2) (= w1 w2)))
+           (= (l_le w1 w2) (not (l_gt w1 w2)))
+           (= (l_ge w1 w2) (not (l_lt w1 w2)))
+           (= (l_le w1 w2) (or (l_lt w1 w2) (= w1 w2)))
+           (= (l_ge w1 w2) (or (l_gt w1 w2) (= w1 w2)))
         )))
 
 (assert (forall ((w1 DVal) (w2 DVal) (w3 DVal))
-        (= (= w1 (plus w2 w3))
+        (= (= w1 (l_plus w2 w3))
            (= (VIntSel w1) (+ (VIntSel w2) (VIntSel w3))))))
 
 (assert (forall ((w1 DVal) (w2 DVal) (w3 DVal))
-        (= (= w1 (minus w2 w3))
+        (= (= w1 (l_minus w2 w3))
            (= (VIntSel w1) (- (VIntSel w2) (VIntSel w3))))))
 
 (assert (forall ((w1 DVal) (w2 DVal))
-        (= (= w1 (uminus w2))
+        (= (= w1 (l_uminus w2))
            (= (VIntSel w1) (~ (VIntSel w2))))))
 
 

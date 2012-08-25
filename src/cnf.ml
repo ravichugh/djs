@@ -11,7 +11,7 @@ let oc_cnf = open_out (Settings.out_dir ^ "cnf.lisp")
 
 (* can set flag to true to output each step of translation *)
 let debugForm f =
-  if false then fpr oc_cnf "--\n\n %s\n\n" (prettyStrForm f);
+  if false then fpr oc_cnf "--\n\n %s\n\n" (strForm f);
   f
 
 
@@ -48,8 +48,7 @@ let removeDoubleNots =
 
 let rec toCnfLists (f: formula) : cnf_formula =
   match f with
-    | PTru | PFls | PEq _ | PApp _
-    | PHasTyp _ | PHeapHas _
+    | PEq _ | PApp _ | PHasTyp _ | PHeapHas _
     | PHas _ | PDomEq _ | PEqMod _ | PObjHas _ -> [[f]]
     | PConn("not",_) -> [[f]]
     | PConn("and",l) -> List.concat (List.map toCnfLists l)
@@ -61,7 +60,7 @@ let rec toCnfLists (f: formula) : cnf_formula =
 
 let checkCnfLists (l: cnf_formula) =
   let rec isAtomic = function
-    | PTru | PFls | PEq _ | PApp _
+    | PEq _ | PApp _
     | PHasTyp _ | PHas _
     | PDomEq _ | PEqMod _                  -> true
     | PHeapHas _ | PObjHas _               -> true
@@ -108,8 +107,7 @@ let convert f =
   in
   if !checkConversion then begin
     let f' = liftClauseList l in
-    fpr oc_cnf "*****\n\n %s\n\n to cnf \n\n %s\n\n"
-      (prettyStrForm f) (prettyStrForm f');
+    fpr oc_cnf "*****\n\n %s\n\n to cnf \n\n %s\n\n" (strForm f) (strForm f');
     if not (Zzz.checkValid "cnf conversion" (pIff f f')) then
       kill "bad cnf conversion; see cnf.lisp\n"
   end;

@@ -69,6 +69,7 @@ type exp =
   | ENewref of loc * exp
   | EDeref of exp
   | ESetref of exp * exp
+  | ENewObj of exp * loc * exp * loc
   | EFreeze of loc * thawstate * exp
   | EThaw of loc * exp
   | EWeak of weakloc * exp
@@ -78,22 +79,24 @@ type exp =
   | EThrow of exp
   | ETryCatch of exp * vvar * exp
   | ETryFinally of exp * exp
-  (***** create a proto-based object or array *****)
-  | ENewObj of exp * loc * exp * loc
   (***** helpers for parsing *****)
   | ELoadSrc of string * exp         (* inserted/eliminated by parsing *)
   | ELoadedSrc of string * exp       (* placeholder to indicate source file *)
-  (***** abstract sugar *****)
-  (* TODO add tuples, DJS App nodes, ... ***)
+  (***** abstract syntactic sugar *****)
+  | ETuple of exp list
+  (* TODO DJS App nodes, ... ***)
 
 and value_ =
   | VBase of basevalue
+  | VNull (* separate from basevalues to emphasize that it has-type Null *)
   | VVar of vvar
   | VEmpty
-  | VExtend of value * value * value
-  | VArray of typ * value list (* TODO okay to drop typ? *)
+  | VExtend of value * value * value (* TODO maybe switch this to VDict *)
+  | VArray of typ * value list (* TODO okay to drop typ? *) (* TODO merge w/ tuple? *)
   | VFun of (tvars * lvars * hvars) * vvar * (typ * heap) option * exp
   | VNewObjRef of int
+  (***** abstract syntactic sugar *****)
+  | VTuple of value list
 
 and value = { pos: pos; value: value_ }
 
@@ -101,7 +104,6 @@ and basevalue =
   | Int of int
   | Str of string
   | Bool of bool
-  | Null
   | Undef
 
 and walue = (* logical values *)
@@ -115,20 +117,17 @@ and walue = (* logical values *)
 and wobjsel = walue list * walue * heap * loc
 
 and formula =
-  (***** simple predicates *****)
+  (***** simple/uninterpreted predicates *****)
   | PEq of walue * walue
-  | PTru
-  | PFls
-  (***** uninterpreted predicates *****)
+  | PApp of string * walue list
+  (***** System !D uninterpreted predicates *****)
   | PHasTyp of hastyp
   | PHeapHas of heap * loc * walue
-  (***** simple/uninterpreted predicates *****)
-  | PApp of string * walue list
   (***** logical connectives *****)
   | PConn of string * formula list
   (***** quantifiers for dictionary expanding macros *****)
   | PAll of string * formula
-  (***** delayed macros *****)
+  (***** abstract syntactic sugar *****)
   | PHas of walue * walue list
   | PDomEq of walue * walue list
   | PEqMod of walue * walue * walue list
@@ -136,32 +135,33 @@ and formula =
 
 and hastyp = walue * typterm
 
-and rawtyp = vvar * formula (* {x|p} *)
-
 and typ =
-  | TRefinement of rawtyp
-  (***** delayed macros *****)
-  | TTop | TBot
-  | TBaseUnion of tag list
-  | TBaseRefine of vvar * tag * formula
-  | TInt
-  (* TODO remove the formula part, since that's what TSelfify does *)
-  | THasTyp of typterm list * formula (* {v | v::U_1 /\ ... /\ v::U_n /\ p} *)
-  | TTuple of (vvar * typ) list
-  | TNonNull of typ
-  | TMaybeNull of typ
-  | TSelfify of typ * formula (* { v | T(v) /\ p } *)
-  (***** created during type checking *****)
-  | TExists of vvar * typ * typ
+  | TRefinement of vvar * formula        (* {x|p} *)
+  | TQuick of vvar * quicktyp * formula  (* {x:Q|p} *)
+  | TExists of vvar * typ * typ          (* Exists x:T. S *)
+  | TBaseUnion of basetyp list
+  | TNonNull of typ                      (* T! *)
+  | TMaybeNull of typ                    (* T? *)
+
+and quicktyp =
+  | QBase  of basetyp
+  | QBoxes of typterm list
+  | QRecd  of (string * typ) list * bool (* true if exact domain *)
+  | QTuple of deptuple * bool            (* true if exact domain *)
+  (* TODO array *)
+
+and basetyp = BNum | BInt | BStr | BBool | BUndef
 
 and uarrow = (tvars * lvars * hvars) * vvar * typ * heap * typ * heap
 
+and deptuple = (vvar option * typ) list
+
 and typterm =
-  | UArrow  of uarrow
-  | UVar    of tvar
-  | URef    of loc
+  | UArrow of uarrow
+  | UVar   of tvar
+  | URef   of loc
   | UNull
-  | UArray  of typ
+  | UArray of typ
 
 and heapconstraint =
   | HConc    of vvar option * typ        (* [l |-> x:S]       *)

@@ -1140,7 +1140,7 @@ let convertConst = function
   | J.CString(s) -> EVal (wrapVal pos0 (VBase (Str s)))
   | J.CInt(i)    -> EVal (wrapVal pos0 (VBase (Int i)))
   | J.CBool(b)   -> EVal (wrapVal pos0 (VBase (Bool b)))
-  | J.CNull      -> EVal (wrapVal pos0 (VBase Null))
+  | J.CNull      -> EVal (wrapVal pos0 (VNull))
   | J.CUndefined -> EVal (wrapVal pos0 (VBase Undef))
   | J.CNum(f)    -> eVar (spr "_skolem_%d" (Utils.IdTable.process idSkolems f))
   | J.CRegexp _  -> failwith "convert CRegexp"

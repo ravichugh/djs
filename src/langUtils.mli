@@ -14,15 +14,6 @@ val pos0 : Lexing.position * Lexing.position
 
 val freshVar : vvar -> vvar
 val freshHVar : unit -> hvar
-(* val isTag : string -> bool *)
-
-(*
-val terminate : unit -> 'a
-val printBig : string -> string -> unit
-val printErr : string -> string -> 'a
-val printParseErr : string -> 'a
-val printTcErr : string list -> 'a
-*)
 
 (******************************************************************************)
 
@@ -101,11 +92,15 @@ val eVar : vvar -> exp
 val eStr : string -> exp
 val mkApp : exp -> exp list -> exp
 
+val simplify : formula -> formula
+
 val pNum : formula
 val pBool : formula
 val pStr : formula
 val pDict : formula
 val pGuard : value -> bool -> formula
+val pTru : formula
+val pFls : formula
 val pAnd : formula list -> formula
 val pOr : formula list -> formula
 val pImp : formula -> formula -> formula
@@ -118,6 +113,7 @@ val pFalsy : walue -> formula
 val ty : formula -> typ
 val tyAny : typ
 val tyFls : typ
+val tyInt : typ
 val tyNum : typ
 val tyBool : typ
 val tyStr : typ
@@ -128,21 +124,14 @@ val tyNumOrBool : typ
 val tyStrOrBool : typ
 val tyIntOrBool : typ
 val tyIntOrStr : typ
-(*
-val tyArr : vvar -> typ -> typ -> typ
-*)
 val tyNull : typ
-(* val tyArrImp : locs -> vvar -> typ -> heap -> typ -> heap -> typ *)
 val tyRef : loc -> typ
-val tySafeWeakRef : loc -> typ
 val tyNotUndef : typ
 val tyArrDefault : typ
 val pIsBang : walue -> typterm -> formula
-(*
-val tyIsBang : walue -> typterm -> typ
-*)
 val tyArrayTuple : typ -> typ list -> bool -> typ
 val tyTypTerm : typterm -> typ
+val tyDepTuple : (vvar * typ) list -> typ
 
 (***** Boxes ******************************************************************)
 
@@ -150,17 +139,13 @@ val idTypTerms : int ref * (int, typterm) Hashtbl.t * (typterm, int) Hashtbl.t
 
 (***** Printers ***************************************************************)
 
-val prettyConst : bool ref
-val printFullUT : bool ref
-val printFlatTyp : bool ref
-val setPretty : bool -> unit
 val sugarArrow : bool ref
 val strLoc : loc -> string
 val strLocs : locs -> string
 val strThawState : thawstate -> string
 val strBaseValue : basevalue -> string
-val strValue : value -> string
-val strWalue : walue -> string
+val strVal : value -> string
+val strWal : walue -> string
 val strTyp : typ -> string
 val strTT : typterm -> string
 val strForm : formula -> string
@@ -173,14 +158,6 @@ val strWeakLoc : weakloc -> string
 val strWorld : world -> string
 val strFrame : frame -> string
 val strBinding : vvar * typ -> string
-val prettyStr : ('a -> 'b) -> 'a -> 'b
-val prettyStrVal : value -> string
-val prettyStrWal : walue -> string
-val prettyStrForm : formula -> string
-val prettyStrTyp : typ -> string
-val prettyStrTT : typterm -> string
-val prettyStrHeap : heap -> string
-val prettyStrHeapEnv : heapenv -> string
 
 (***** Type substitution ******************************************************)
 
@@ -209,20 +186,20 @@ val substVarInExp : vvar -> vvar -> exp -> exp
 
 val expandPreTyp : typ -> typ
 val expandPreHeap : heap -> heap
-
-val embedForm : formula -> formula
+val embedForm : formula -> string
+(* val embedForm : formula -> formula *)
 
 (******************************************************************************)
 
 val idSkolems : float Utils.IdTable.t
 
+val isDepTuple : deptuple -> bool
 val depTupleBinders : typ -> vvar list
+val bindersOfDepTuple : deptuple -> vvar list
 
 val newObjId : unit -> int
 
 val valToSingleton : value -> typ
 val valOfSingleton : typ -> value
 val maybeValOfSingleton : typ -> value option
-
-val removeExtraTrues : formula -> formula
 

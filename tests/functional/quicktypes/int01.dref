@@ -1,0 +1,4 @@
+let i = 0 in
+let j = i in
+let _ :: {(= v 0)} = j in
+0

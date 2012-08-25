@@ -20,18 +20,10 @@ let z3read, z3write =
 let emitPreamble () =
   let rec f ic =
     try z3write (input_line ic ^ "\n"); f ic
-    with End_of_file -> ()
-  in
-  if !Settings.marshalInEnv then
-    f (open_in (Settings.out_dir ^ "env.lisp"))
-  else begin
-    f (open_in (Settings.prim_dir ^ "theory.smt2"));
-(*
-    if !Settings.useTheoryLA
-      then f (open_in (Settings.prim_dir ^ "theory-int.smt2"))
-      else ()
-*)
-  end
+    with End_of_file -> () in
+  if !Settings.marshalInEnv
+  then f (open_in (Settings.out_dir ^ "env.lisp"))
+  else f (open_in (Settings.prim_dir ^ "theory.smt2"))
 
 let dump ?nl:(nl=true) ?tab:(tab=true) s =
   let pre = if tab then indent () else "" in
@@ -110,29 +102,22 @@ let checkSat cap =
 
 let checkValid cap p =
   pushScope ();
-  (match p with
-     | PFls -> dump "(assert true)"
-     | _    -> let s = strForm (embedForm p) in
-               if !doingExtract
-               then dump ~tab:false ~nl:false (spr "(assert (not %s))" s)
-               else dump (spr "(assert (not\n%s  %s))" (indent()) s)
-  );
+  if p = pFls then () (* dump "(assert true)" *)
+  else if !doingExtract then
+    dump ~tab:false ~nl:false (spr "(assert (not %s))" (embedForm p))
+  else
+    dump (spr "(assert (not\n%s  %s))" (indent()) (embedForm p))
+  ;
   let sat = checkSat cap in
   popScope ();
   not sat
-
-let falseIsProvable cap =
-  checkValid (spr "is false provable? %s" cap) PFls
 
 
 (***** Adding variables and formulas ******************************************)
 
 let assertFormula f =
-  if f <> PTru then begin
-    let f = removeExtraTrues f in (* TODO why is there still and for 1? *)
-    let s = strForm (embedForm f) in
-    dump (spr "(assert\n%s  %s)" (indent()) s)
-  end
+  if f <> pTru then
+    dump (spr "(assert\n%s  %s)" (indent()) (embedForm (simplify f)))
 
 let addBinding x t =
   dump (spr "(declare-fun %s () DVal) ; depth %d" x !depth);

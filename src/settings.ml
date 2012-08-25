@@ -17,6 +17,7 @@ let printAllTypes = ref false
 let marshalOutEnv = ref false
 let marshalInEnv = ref false
 let doFalseChecks = ref false
+let quickTypes = ref true
 
 let tryAllBoxesHack = ref false
 

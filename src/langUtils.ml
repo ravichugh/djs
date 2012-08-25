@@ -55,27 +55,22 @@ let mapTyp ?fForm:(fForm=(fun x -> x))
 
   let rec fooTyp = function
     | TRefinement(x,p)   -> TRefinement (x, fooForm p)
-    | TTop               -> TTop
-    | TBot               -> TBot
-    | TInt               -> TInt
+    | TQuick(x,qt,p)     -> TQuick (x, fooQuickTyp qt, fooForm p)
     | TBaseUnion(l)      -> TBaseUnion l
-    | TBaseRefine(x,t,p) -> TBaseRefine (x, t, fooForm p)
-(*
-    | THasTyp(us,p)      -> if onlyTopForm then THasTyp (us, p)
-*)
-    | THasTyp(us,p)      -> if onlyTopForm then THasTyp (us, fooForm p)
-                            else THasTyp (List.map fooTT us, fooForm p)
-    | TTuple(l)          -> TTuple (List.map (fun (x,t) -> (x, fooTyp t)) l)
     | TNonNull(t)        -> TNonNull (fooTyp t)
     | TMaybeNull(t)      -> TMaybeNull (fooTyp t)
-    | TSelfify(t,p)      -> TSelfify (fooTyp t, fooForm p)
     | TExists _          -> failwith "mapTyp TExists"
+
+  and fooQuickTyp = function
+    | QBase(bt)   -> QBase bt
+    | QRecd(l,b)  -> QRecd (List.map (fun (f,t) -> (f, fooTyp t)) l, b)
+    | QTuple(l,b) -> QTuple (List.map (fun (f,t) -> (f, fooTyp t)) l, b)
+    | QBoxes(l)   -> if onlyTopForm then QBoxes l else QBoxes (List.map fooTT l)
+                        (* NOTE flag to guard recursing into boxes*)
 
   and fooForm = function
     | PEq(w1,w2)         -> fForm (PEq (fooWal w1, fooWal w2))
     | PApp(s,ws)         -> fForm (PApp (s, List.map fooWal ws))
-    | PTru               -> fForm PTru
-    | PFls               -> fForm PFls
     | PHasTyp(w,u)       -> let u = if onlyTopForm then u else fooTT u in
                             fForm (PHasTyp (fooWal w, u))
     | PHeapHas(h,l,w)    -> let h = if onlyTopForm then h else fooHeap h in
@@ -153,14 +148,7 @@ let foldTyp (fForm: 'a -> formula -> 'a)
 
   let rec fooTyp acc = function
     | TRefinement(_,p)   -> fooForm acc p
-    | TTop               -> acc
-    | TBot               -> acc
-    | TInt               -> acc
     | TBaseUnion _       -> acc
-    | TBaseRefine(x,t,p) -> fooForm acc p
-    | THasTyp(us,p)      -> let acc = List.fold_left fooTT acc us in
-                            fooForm acc p
-    | TTuple(l)          -> List.fold_left (fun a (x,t) -> fooTyp a t) acc l
     | TNonNull(t)        -> fooTyp acc t
     | TMaybeNull(t)      -> fooTyp acc t
     | TExists _          -> failwith "foldTyp TExists"
@@ -170,8 +158,6 @@ let foldTyp (fForm: 'a -> formula -> 'a)
                             fForm acc (PEq (w1, w2))
     | PApp(s,ws)         -> let acc = List.fold_left fooWal acc ws in
                             fForm acc (PApp (s, ws))
-    | PTru               -> fForm acc PTru
-    | PFls               -> fForm acc PFls
     | PHasTyp(w,u)       -> let acc = fooWal acc w in
                             let acc = fooTT acc u in
                             fForm acc (PHasTyp (w, u))
@@ -267,6 +253,7 @@ let mapExp fE e =
     | VNewObjRef(i) -> VNewObjRef i
     | VExtend(v1,v2,v3) -> VExtend (fooVal v1, fooVal v2, fooVal v3)
     | VArray(t,vs) -> VArray (t, List.map fooVal vs)
+    | VTuple(vs) -> VTuple (List.map fooVal vs)
     | VFun(poly,x,inWorld,e) -> VFun (poly, x, inWorld, fooExp e)
   }
   in fooExp e
@@ -311,6 +298,7 @@ let foldExp fE fV init e =
     | VNewObjRef(i) -> fV acc v.value
     | VExtend(v1,v2,v3) -> fV (List.fold_left fooVal acc [v1;v2;v3]) v.value
     | VArray(t,vs) -> fV (List.fold_left fooVal acc vs) v.value
+    | VTuple(vs) -> fV (List.fold_left fooVal acc vs) v.value
     | VFun(poly,x,inWorld,e) -> fV (fooExp acc e) v.value
   in fooExp init e
 
@@ -319,23 +307,22 @@ let foldExp fE fV init e =
 
 let tag w         = WApp ("tag", [w])
 let sel w1 w2     = WApp ("sel", [w1; w2])
-(* let upd w1 w2 w3  = failwith "LangUtils.upd" *)
 let upd w1 w2 w3  = WApp ("upd", [w1; w2; w3])
 
 let has w1 w2     = PHas (w1, [w2])
 let eqmod x y zs  = PEqMod (x, y, zs)
 let hastyp w ut   = PHasTyp (w, ut)
 
-let plus w1 w2    = WApp ("plus", [w1; w2])
-let minus w1 w2   = WApp ("minus", [w1; w2])
+let plus w1 w2    = WApp ("l_plus", [w1; w2])
+let minus w1 w2   = WApp ("l_minus", [w1; w2])
 
 let arrlen x      = WApp ("len", [x])
 let packed x      = PApp ("packed", [x])
 
-let lt w1 w2      = PApp ("lt", [w1; w2])
-let le w1 w2      = PApp ("le", [w1; w2])
-let gt w1 w2      = PApp ("gt", [w1; w2])
-let ge w1 w2      = PApp ("ge", [w1; w2])
+let lt w1 w2      = PApp ("l_lt", [w1; w2])
+let le w1 w2      = PApp ("l_le", [w1; w2])
+let gt w1 w2      = PApp ("l_gt", [w1; w2])
+let ge w1 w2      = PApp ("l_ge", [w1; w2])
 
 let eq w1 w2      = PEq (w1, w2)
 
@@ -344,12 +331,14 @@ let integer w     = PApp ("integer", [w])
 let vBool x       = {pos = pos0; value = VBase (Bool x)}
 let vStr x        = {pos = pos0; value = VBase (Str x)}
 let vInt x        = {pos = pos0; value = VBase (Int x)}
-let vNull         = {pos = pos0; value = VBase (Null)}
+let vNull         = {pos = pos0; value = VNull}
 let vUndef        = {pos = pos0; value = VBase Undef}
 let vVar x        = {pos = pos0; value = VVar x}
 let vEmpty        = {pos = pos0; value = VEmpty}
 let vBase x       = {pos = pos0; value = VBase x}
 let vNewObjRef i  = {pos = pos0; value = VNewObjRef i}
+
+let vProj i       = vStr (string_of_int i)
 
 let eStr x        = EVal (vStr x)
 let eVar x        = EVal (vVar x)
@@ -369,66 +358,71 @@ let wStr x        = WVal (vStr x)
 let wInt x        = WVal (vInt x)
 let wNull         = WVal vNull
 let wUndef        = WVal vUndef
-let wProj i       = wStr (string_of_int i)
-
-let pNum          = PEq (tag theV, wStr tagNum)
-let pBool         = PEq (tag theV, wStr tagBool)
-let pStr          = PEq (tag theV, wStr tagStr)
-let pDict         = PEq (tag theV, wStr tagDict)
-
-(*
-let pExtend a1 a2 a3 a4 =
-  PAnd [PEq (tag a1, aStr "Dict");
-        PEq (eqmod a1 a2 a3, ATru);
-        PEq (has a1 a3, ATru);
-        PEq (sel a1 a3, a4)]
-*)
-
-let pGuard x b    = PEq (WVal x, WVal (vBool b))
+let wProj i       = WVal (vProj i)
 
 let pAnd ps       = PConn ("and", ps)
 let pOr ps        = PConn ("or", ps)
+let pTru          = pAnd []
+let pFls          = pOr []
 let pImp p q      = PConn ("implies", [p; q])
 let pIff p q      = PConn ("iff", [p; q])
 let pNot p        = PConn ("not", [p])
 let pIte p q r    = pAnd [pImp p q; pImp (pNot p) r]
 
-                    (* TODO need NaN *)
+let conjunctsOf = function PConn("and",l) -> l | p -> [p]
+let disjunctsOf = function PConn("or",l)  -> l | p -> [p]
+
+let rec simplify = function
+  | PConn("and",[p]) -> p
+  | PConn("and",l) ->
+      l |> List.map conjunctsOf |> List.concat |> List.map simplify |> pAnd
+  | PConn("or",[p]) -> p
+  | PConn("or",l) ->
+      l |> List.map disjunctsOf |> List.concat |> List.map simplify |> pOr
+  | p -> p
+
+let pAnd ps       = simplify (pAnd ps)
+let pOr ps        = simplify (pOr ps)
+
 let pFalsy x      = pOr [eq x (wBool false); eq x wNull; eq x wUndef;
-                         eq x (wStr ""); eq x (wInt 0)]
+                         eq x (wStr ""); eq x (wInt 0)] (* TODO add NaN *)
 let pTruthy x     = pNot (pFalsy x)
+let pInt          = pAnd [eq (tag theV) (wStr tagNum); integer theV]
+let pNum          = PEq (tag theV, wStr tagNum)
+let pBool         = PEq (tag theV, wStr tagBool)
+let pStr          = PEq (tag theV, wStr tagStr)
+let pDict         = PEq (tag theV, wStr tagDict)
+let pGuard x b    = PEq (WVal x, WVal (vBool b))
+let pIsBang a u   = pAnd [pNot (PEq (a, wNull)); hastyp a u]
 
 let ty p          = TRefinement ("v", p)
-let tyAny         = TTop (* ty PTru *)
-let tyFls         = TBot (* ty PFls *)
-let tyNum         = ty pNum
-let tyBool        = ty pBool
-let tyStr         = ty pStr
-let tyDict        = ty pDict
+let tyAny         = ty pTru (* TTop (* ty PTru *) *)
+let tyFls         = ty pFls (* TBot (* ty PFls *) *)
+let tyInt         = TQuick ("v", QBase BInt, pTru) 
+let tyNum         = TQuick ("v", QBase BNum, pTru) (* ty pNum *)
+let tyBool        = TQuick ("v", QBase BBool, pTru) (* ty pBool *)
+let tyStr         = TQuick ("v", QBase BStr, pTru) (* ty pStr *)
+let tyDict        = TQuick ("v", QRecd ([], false), pTru) (* ty pDict *)
+let tyEmpty       = TQuick ("v", QRecd ([], true), eq theV (WVal vEmpty))
 
-let tyEmpty       = ty (PEq (theV, WVal vEmpty))
+let tyNumOrBool   = TBaseUnion [BNum; BBool] (* tagNum; tagBool] *)
+let tyStrOrBool   = TBaseUnion [BStr; BBool] (* [tagStr; tagBool] *)
+let tyIntOrBool   = TBaseUnion [BInt; BBool] (* ty (pOr [pInt; pBool]) *)
+let tyIntOrStr    = TBaseUnion [BInt; BStr] (* ty (pOr [pInt; pStr]) *)
 
-let pInt          = pAnd [eq (tag theV) (wStr tagNum); integer theV]
+let tyNull        = TQuick ("v", QBoxes [UNull], eq theV wNull)
+let tyRef l       = TQuick ("v", QBoxes [URef l], pTru)
 
-let tyNumOrBool   = TBaseUnion [tagNum; tagBool]
-let tyStrOrBool   = TBaseUnion [tagStr; tagBool] 
-let tyIntOrBool   = ty (pOr [pInt; pBool])
-let tyIntOrStr    = ty (pOr [pInt; pStr])
+let tyTypTerm = function
+  | URef(l) -> tyRef l (* so that default for references can be tweaked *)
+  | u       -> TQuick ("v", QBoxes [u], pTru)
 
-(*
-let tyArr x t t'  = ty (hastyp theV (UArr(([],[],[]),x,t,([],[]),t',([],[]))))
-let tyNull        = ty (pAnd [PEq (theV, wNull); hastyp theV UNull])
-*)
-let tyNull        = THasTyp ([UNull], eq theV wNull)
+let tyDepTuple l =
+  TQuick ("v", QTuple (List.map (fun (x,t) -> (Some x, t)) l, false), pTru)
 
-(*let tyRef l       = ty (hastyp theV (URef l))*)
-(* 3/12 added tag(v)="ref" so that strong refs are truthy *)
-(*
-let tyRef l       = THasTyp ([URef l], eq (tag theV) (wStr tagRef))
-*)
-let tyRef l       = THasTyp ([URef l], PTru)
-
-let tySafeWeakRef l   = TNonNull (THasTyp ([URef l], PTru))
+let bindersOfDepTuple l =
+  List.fold_left (fun acc -> function Some(x) -> x::acc | None -> acc)
+    [] (List.map fst l)
 
 (* setting the default for array tuple invariants to be v != undefined,
    not Top, so that packed array accesses can at least prove that the
@@ -436,23 +430,12 @@ let tySafeWeakRef l   = TNonNull (THasTyp ([URef l], PTru))
 let tyNotUndef = ty (pNot (eq theV (WVal vUndef)))
 let tyArrDefault = tyNotUndef
 
-(*
-let tyArrDefault =
-  THasTyp ([UArray (ty (pNot (eq theV (WVal vUndef))))], PTru)
-*)
-
-let tyTypTerm = function
-  | URef(l) -> tyRef l (* so that default for references can be tweaked *)
-  | u       -> THasTyp ([u], PTru)
-
-(*
-let tyArrImp l x t h t' h'  = ty (PIs (theV, UArr(l,x,t,h,t',h')))
-*)
-
-let pIsBang a u   = pAnd [pNot (PEq (a, wNull)); hastyp a u]
-(*
-let tyIsBang a u  = ty (pIsBang a u)
-*)
+let baseTypToForm = function
+  | BNum   -> pNum
+  | BInt   -> pInt
+  | BStr   -> pStr
+  | BBool  -> pBool
+  | BUndef -> eq (tag theV) (wStr tagUndef)
 
 (* maybeValOfSingleton used by TcDref3 and Sub to manipulate heap bindings with
    singleton types. can make maybeValOfWal better by "evaluating" record walues
@@ -557,23 +540,11 @@ let newObjId =
   fun () -> Utils.Counter.next c
 
 
-(***** Printing to SMT-LIB-2 format *******************************************)
+(***** Printing to SMT-LIB-2 format and stdout ********************************)
 
-(* TODO separate SMT and pretty versions and get rid of flags *)
+let pretty = ref true
 
-(* TODO make one flag *)
-let prettyConst = ref false
-let printFullUT = ref false
-let printFlatTyp = ref false
-
-(* TODO return current flags *)
-let setPretty b =
-  prettyConst := b;
-  printFullUT := b;
-  printFlatTyp := b
-
-(* TODO *)
-let sugarArrow = ref true
+let sugarArrow = ref true (* TODO is this necessary? *)
 
 let rec strPat = function
   | PLeaf(x) -> x
@@ -599,11 +570,17 @@ let strTag = function
   | "boolean" -> "Bool"
   | t         -> t
 
+let strBaseTyp = function
+  | BNum   -> "Num"
+  | BInt   -> "Int"
+  | BStr   -> "Str"
+  | BBool  -> "Bool"
+  | BUndef -> "Undef"
+
 let strBaseValue v =
-  match v, !prettyConst with
+  match v, !pretty with
     | Bool(b), true -> spr "%b" b
     | Bool(b), false -> if b then "VTrue" else "VFalse"
-    | Null, _       -> "null"
     | Undef, _      -> "undefined"
     | Int(i), true  -> spr "%d" i
     | Int(i), false -> spr "(VInt %d)" i
@@ -614,106 +591,124 @@ let strBaseValue v =
     | Str(s), true  -> spr "\"%s\"" s
     | Str(s), false -> spr "(VStr %d)" (getStringId s)
 
-let rec strValue v = match v.value with
+let rec strVal v = match v.value with
   | VBase(c)    -> strBaseValue c
+  | VNull       -> "null"
   | VVar(x)     -> x
   | VEmpty      -> "empty"
   | VNewObjRef(i) -> spr "(VObjRef %d)" i
   | VFun _ as v -> spr "(VFun %d)" (Id.process idLamTerms v)
   | VExtend(v1,v2,v3) ->
-      (* spr "(VExtend %s %s %s)" (strValue v1) (strValue v2) (strValue v3) *)
-      (* spr "(upd %s %s %s)" (strValue v1) (strValue v2) (strValue v3) *)
-      if !prettyConst then
-        spr "(%s with %s = %s)" (strValue v1) (strValue v2) (strValue v3)
+      (* spr "(VExtend %s %s %s)" (strVal v1) (strVal v2) (strVal v3) *)
+      (* spr "(upd %s %s %s)" (strVal v1) (strVal v2) (strVal v3) *)
+      if !pretty then
+        spr "(%s with %s = %s)" (strVal v1) (strVal v2) (strVal v3)
       else
-        spr "(upd %s %s %s)" (strValue v1) (strValue v2) (strValue v3)
+        spr "(upd %s %s %s)" (strVal v1) (strVal v2) (strVal v3)
   (* TODO *)
   | VArray(_,vs) ->
-      if !prettyConst then
-        spr "<%s> as Arr(_)" (String.concat " " (List.map strValue vs))
+      if !pretty then
+        spr "<%s> as Arr(_)" (String.concat " " (List.map strVal vs))
       else failwith "strVal VArray"
-(*
-      let n = List.length vs in
-      if n > 3 then err ["need to handle arbitrary arrays in theory"]
-      else spr "(arr%d %s)" n (String.concat " " (List.map strValue vs))
-*)
+  | VTuple(vs) ->
+      if !pretty then spr "(%s)" (String.concat ", " (List.map strVal vs))
+      else (* TODO morally, this should go in embedForm *)
+        strVal (Utils.fold_left_i
+                  (fun d v i -> wrapVal pos0 (VExtend (d, vProj i, v)))
+                  vEmpty vs)
 
 let strFunSym s =
-  if !prettyConst = false then s
+  if !pretty = false then s
   else match s with
-    | "plus" -> "+"
-    | "minus" -> "-"
-    | _ -> s
+    | "l_plus"  -> "+"
+    | "l_minus" -> "-"
+    | _         -> s
 
 let strPredSym s =
-  if !prettyConst = false then s
+  if !pretty = false then s
   else match s with
-    | "lt" -> "<"
-    | "le" -> "<="
-    | "gt" -> ">"
-    | "ge" -> ">="
-    | _ -> s
+    | "l_lt" -> "<"
+    | "l_le" -> "<="
+    | "l_gt" -> ">"
+    | "l_ge" -> ">="
+    | _      -> s
 
 let strStrs l = String.concat "," l
 
-let rec strWalue = function
-  | WVal(v) -> strValue v
+let rec strWal = function
+  | WVal(v) -> strVal v
   | WApp(s,ws) ->
-      spr "(%s %s)" (strFunSym s) (String.concat " " (List.map strWalue ws))
+      spr "(%s %s)" (strFunSym s) (String.concat " " (List.map strWal ws))
   | WBot -> "bot"
   | WHeapSel((h,[]),l,k) ->
-      if !prettyConst then
-        spr "(heapsel %s %s %s)" (strHeap (h,[])) (strLoc l) (strWalue k)
+      if !pretty then
+        spr "(heapsel %s %s %s)" (strHeap (h,[])) (strLoc l) (strWal k)
       else
         let ih = registerHeap (h,[]) in
         let il = registerLoc l in
-        spr "(heapsel %d %d %s)" ih il (strWalue k)
+        spr "(heapsel %d %d %s)" ih il (strWal k)
   | WHeapSel((hs,cs),l,k) ->
-      if !prettyConst then
-        spr "(heapsel %s %s %s)" (strHeap (hs,cs)) (strLoc l) (strWalue k)
+      if !pretty then
+        spr "(heapsel %s %s %s)" (strHeap (hs,cs)) (strLoc l) (strWal k)
       else
-        failwith "strWalue HeapSel: constraints not expanded"
+        failwith "strWal HeapSel: constraints not expanded"
   | WObjSel(ds,k,(h,[]),l) ->
       spr "(objsel %s %s %s %s)"
-        (strWalueList ds) (strWalue k) (strHeap (h,[])) (strLoc l)
+        (strWalList ds) (strWal k) (strHeap (h,[])) (strLoc l)
   | WObjSel(ds,k,h,l) ->
-      if !prettyConst then
+      if !pretty then
         spr "(objsel %s %s %s %s)"
-          (strWalueList ds) (strWalue k) (strHeap h) (strLoc l)
+          (strWalList ds) (strWal k) (strHeap h) (strLoc l)
       else
-        let _ = setPretty true in
+        let _ = pretty := true in
         Log.printTcErr
           ["WObjSel should not have loc constraints:\n";
            spr "WObjSel(%s, %s, %s, %s)" "..."
-             (strWalue k) (strLoc l) (strHeap h)]
+             (strWal k) (strLoc l) (strHeap h)]
 
-and strWalueSet l =
-  spr "{%s}" (String.concat "," (List.map strWalue l))
+and strWalSet l =
+  spr "{%s}" (String.concat "," (List.map strWal l))
 
-and strWalueList l =
-  spr "[%s]" (String.concat "," (List.map strWalue l))
+and strWalList l =
+  spr "[%s]" (String.concat "," (List.map strWal l))
 
 and strTyp = function
+  | t when t = tyDict    -> "Dict"
+  | t when t = tyNum     -> "Num"
+  | t when t = tyInt     -> "Int"
+  | t when t = tyBool    -> "Bool"
+  | t when t = tyStr     -> "Str"
+  | TBaseUnion(l)        -> String.concat "Or" (List.map strBaseTyp l)
   | TRefinement("v",p)   -> spr "{%s}" (strForm p)
   | TRefinement(x,p)     -> spr "{%s|%s}" x (strForm p)
-  | TTop                 -> "Top"
-  | TBot                 -> "Bot"
-  | TInt                 -> "Int"
-  | TBaseUnion(l)        -> String.concat "Or" (List.map strTag l)
-  | TBaseRefine("v",t,p) -> spr "{%s|%s}" (strTag t) (strForm p)
-  | TBaseRefine(x,t,p)   -> spr "{%s:%s|%s}" x (strTag t) (strForm p)
+  | TQuick(_,QRecd(l,true),_)  -> strQuickTyp (QRecd (l, true))
+  | TQuick(_,QTuple(l,true),_) -> strQuickTyp (QTuple (l, true))
+  | TQuick(_,QBoxes([u]),p) when p = pTru -> strTT u
+  | TQuick("v",(QBase(_) as qt),p) 
+  | TQuick("v",(QRecd(_) as qt),p) 
+  | TQuick("v",(QTuple(_) as qt),p) when p = pTru -> strQuickTyp qt
+  | TQuick("v",qt,p)     -> spr "{%s|%s}" (strQuickTyp qt) (strForm p)
+  | TQuick(x,qt,p)       -> spr "{%s:%s|%s}" x (strQuickTyp qt) (strForm p)
   | TNonNull(t)          -> spr "(%s)!" (strTyp t)
   | TMaybeNull(t)        -> spr "(%s)?" (strTyp t)
-  | TSelfify(t,p)        -> spr "{(and (v:%s) %s)}" (strTyp t) (strForm p)
-  | THasTyp([u],PTru)    -> strTT u
-  | THasTyp(us,p) ->
-      let ps = List.map (fun u -> PHasTyp(theV,u)) us in
-      spr "{%s}" (strForm (pAnd (ps @ [p])))
-  | TTuple(l) ->
-      let l = List.map (fun (x,t) -> spr "%s:%s" x (strTyp t)) l in
-      spr "[%s]" (String.concat ", " l)
-  | TExists(x,t,s) ->
-      spr "exists (%s:%s). %s" x (strTyp t) (strTyp s)
+  | TExists(x,t,s)       -> spr "exists (%s:%s). %s" x (strTyp t) (strTyp s)
+
+and strQuickTyp = function
+  | QBase(bt) -> strBaseTyp bt
+  | QBoxes(us) -> strForm (pAnd (List.map (hastyp theV) us))
+  | QRecd(l,b) ->
+      spr "[%s%s]"
+        (String.concat "; "
+          (List.map (fun (f,t) -> spr "\"%s\":%s" f (strTyp t)) l))
+        (if b then "; exact" else "")
+  | QTuple(l,b) ->
+      spr "[%s%s]"
+        (String.concat ", "
+          (List.map (function (Some(x),t) -> spr "%s:%s" x (strTyp t)
+          (* TODO remove underscore when parser allows it *)
+                            | (None   ,t) -> spr "_:%s" (strTyp t)) l))
+          (*                | (None   ,t) -> strTyp t) l)) *)
+        (if b then "; exact" else "")
 
 and strTT = function
   | UVar(x) -> x
@@ -766,7 +761,8 @@ and strArrow (polyArgs,x,t1,e1,t2,e2) =
      it's binder is trivial. i.e. assuming that the [[ ]] syntax works *)
   let strDom =
     match t1 with
-      | TTuple _ -> spr "[%s]" (strTyp t1)
+      (* | TTuple _ -> spr "[%s]" (strTyp t1) *)
+      | TQuick(_,QTuple(_),_) -> spr "[%s]" (strTyp t1)
       | _        -> spr "(%s:%s)" x (strTyp t1)
   in
   spr "%s%s%s -> %s%s" s0 strDom se1 (strTyp t2) se2
@@ -781,64 +777,63 @@ and strArrow (polyArgs,x,t1,e1,t2,e2) =
 *)
 
 and strForm = function
-  | PTru            -> if !prettyConst then "TRU" else "true"
-  | PFls            -> if !prettyConst then "FLS" else "false"
-  | PEq(w1,w2)      -> spr "(= %s %s)" (strWalue w1) (strWalue w2)
+  | p when p = pTru -> if !pretty then "TRU" else "true"
+  | p when p = pFls -> if !pretty then "FLS" else "false"
+  | PEq(w1,w2)      -> spr "(= %s %s)" (strWal w1) (strWal w2)
   | PApp(s,ws)      -> spr "(%s %s)" (strPredSym s)
-                         (String.concat " " (List.map strWalue ws))
-  | PConn("and",[]) -> spr "true"
-  | PConn("or",[])  -> spr "false"
+                         (String.concat " " (List.map strWal ws))
   | PConn(s,l)      -> strFormExpanded s l
   | PAll(x,p)       -> spr "(forall ((%s DVal)) %s)" x (strForm p)
   (* TODO make the call to registerBox somewhere more appropriate *)
   | PHasTyp(w,u) ->
-      if !printFullUT
-        then spr "(%s :: %s)" (strWalue w) (strTT u)
-        (*else spr "(= (hastyp %s (Box %d)) true)" (strWalue w) (registerBox u)*)
-        else spr "(= (hastyp %s %d) true)" (strWalue w) (registerBox u)
+      if !pretty
+        then spr "(%s :: %s)" (strWal w) (strTT u)
+        (*else spr "(= (hastyp %s (Box %d)) true)" (strWal w) (registerBox u)*)
+        else spr "(= (hastyp %s %d) true)" (strWal w) (registerBox u)
   | PHeapHas((h,[]),l,k) ->
-      if !prettyConst then
-        spr "(heaphas %s %s %s)" (strHeap (h,[])) (strLoc l) (strWalue k)
+      if !pretty then
+        spr "(heaphas %s %s %s)" (strHeap (h,[])) (strLoc l) (strWal k)
       else
         let ih = registerHeap (h,[]) in
         let il = registerLoc l in
-        spr "(heaphas %d %d %s)" ih il (strWalue k)
+        spr "(heaphas %d %d %s)" ih il (strWal k)
   | PHeapHas(h,l,k) ->
-      if !prettyConst then 
-        spr "(heaphas %s %s %s)" (strHeap h) (strLoc l) (strWalue k)
+      if !pretty then 
+        spr "(heaphas %s %s %s)" (strHeap h) (strLoc l) (strWal k)
       else
-        let _ = setPretty true in
+        let _ = pretty := true in
         Log.printTcErr
           ["PHeapHas should not have loc constraints:\n";
-           spr "HeapHas(%s, %s, %s)" (strHeap h) (strLoc l) (strWalue k)]
+           spr "HeapHas(%s, %s, %s)" (strHeap h) (strLoc l) (strWal k)]
   (* NOTE: if one of these failwiths triggers, might be because not calling
      a prettyStr* function instead of str* *)
   | PHas(w,ws) ->
-      if !printFullUT
-        then spr "(has %s %s)" (strWalue w) (strWalueSet ws)
+      if !pretty
+        then spr "(has %s %s)" (strWal w) (strWalSet ws)
         else failwith "strForm: PHas should have been expanded"
         (* else strForm (expandPHas w ws) *)
   | PDomEq(w,ws) ->
-      if !printFullUT
-        then spr "(dom %s %s)" (strWalue w) (strWalueSet ws)
+      if !pretty
+        then spr "(dom %s %s)" (strWal w) (strWalSet ws)
         else failwith "strForm: PDomEq should have been expanded"
         (* else expandPDomEq w ws *)
   | PEqMod(w1,w2,ws) ->
-      if !printFullUT
-        then spr "(eqmod %s %s %s)" (strWalue w1) (strWalue w2) (strWalueSet ws)
+      if !pretty
+        then spr "(eqmod %s %s %s)" (strWal w1) (strWal w2) (strWalSet ws)
         else failwith "strForm: PEqMod should have been expanded"
         (* else expandPEqMod w1 w2 ws *)
   | PObjHas(ds,k,h,l) ->
-      if !printFullUT
+      if !pretty
         then spr "(objhas %s %s %s %s)"
-               (strWalueList ds) (strWalue k) (strHeap h) (strLoc l)
+               (strWalList ds) (strWal k) (strHeap h) (strLoc l)
         else failwith "strForm: PObjHas should have been expanded"
 
 (* TODO reorganize options for printing *)
 and strFormExpanded conn l =
-  if !printFlatTyp then
+  if !pretty then
     spr "(%s %s)" conn (String.concat " " (List.map strForm l))
   else begin
+  incr depth;
   incr depth;
   let s =
     l |> List.map strForm
@@ -846,25 +841,29 @@ and strFormExpanded conn l =
       |> String.concat "\n"
       |> spr "(%s\n%s)" conn in
   decr depth;
+  decr depth;
   s
   end
+
+(* TODO abstract the register* functions *)
 
 and registerBox ut =
   let newBox = isNewBox ut in
   let i = Id.process idTypTerms ut in
-  (* if newBox then pr "new box %d\n  %s\n" i (strUnboxedTypFlat ut); *)
-  setPretty true;
+  let b = !pretty in
+  pretty := true;
   if newBox then fpr oc_boxes "\nbox %d\n  %s\n" i (strTTFlat ut);
-  setPretty false;
+  pretty := b;
   flush oc_boxes;
   i
 
 and registerLoc l =
   let newBox = isNewLocBox l in
   let i = Id.process idLocTerms l in
-  setPretty true;
+  let b = !pretty in
+  pretty := true;
   if newBox then fpr oc_boxes "\nloc box %d\n  %s\n" i (strLoc l);
-  setPretty false;
+  pretty := b;
   flush oc_boxes;
   i
 
@@ -872,38 +871,14 @@ and registerLoc l =
 and registerHeap h =
   let newBox = isNewHeapBox h in
   let i = Id.process idHeapTerms h in
-  setPretty true;
+  let b = !pretty in
+  pretty := true;
   if newBox then fpr oc_boxes "\nheap box %d\n  %s\n" i (strHeap h);
-  setPretty false;
+  pretty := b;
   flush oc_boxes;
   i
 
-(*
-and registerBox ?ut:(ut=None) ?h:(h=None) ?l:(l=None) =
-  setPretty true;
-  let (i,so) =
-    match uto, ho, lo with
-      | Some(ut), _, _ ->
-          let i = Id.process idTypTerms ut in
-          let so = if isNewBox then (strUnboxedTypFlat ut) else None in
-          (i, so)
-      | _ -> failwith "registerBox: call with one Some arg" in
-  setPretty false;
-  let _ =
-    match so with
-      | Some(s) -> fpr oc_boxes "\nbox %d\n  %s\n" i s  
-      | None -> () in
-  flush oc_boxes;
-  i
-
-*)
-
-and strTTFlat ut =
-  printFullUT := true;
-  let s = strTT ut in
-  let s = Str.global_replace (Str.regexp "\n") " " s in
-  printFullUT := false;
-  s
+and strTTFlat u = Str.global_replace (Str.regexp "\n") " " (strTT u)
 
 and strHeapCell = function
   | HConc(None,s)         -> spr "%s" (strTyp s)
@@ -934,8 +909,8 @@ let strFrame (l,h,w) =
 let strBinding (x,s) = spr "%s:%s" x (strTyp s)
 
 let strHeapEnvCell = function
-  | HEConc(v)      -> spr "%s" (strValue v)
-  | HEConcObj(v,l) -> spr "(%s, %s)" (strValue v) (strLoc l)
+  | HEConc(v)      -> spr "%s" (strVal v)
+  | HEConcObj(v,l) -> spr "(%s, %s)" (strVal v) (strLoc l)
   | HEWeakTok(ts)  -> strThawState ts
 
 let strHeapEnv (hs,cs) =
@@ -948,19 +923,8 @@ let strHeapEnv (hs,cs) =
     | _, [] -> spr "[%s ]" (String.concat "," hs)
     | _     -> spr "[%s ++ %s ]" (String.concat "," hs) s
 
-let prettyStr f x =
-  setPretty true;
-  let s = f x in
-  setPretty false;
-  s
-
-let prettyStrVal  = prettyStr strValue
-let prettyStrWal  = prettyStr strWalue
-let prettyStrForm = prettyStr strForm
-let prettyStrTyp  = prettyStr strTyp
-let prettyStrTT   = prettyStr strTT
-let prettyStrHeap = prettyStr strHeap
-let prettyStrHeapEnv = prettyStr strHeapEnv
+let formToSMT p =
+  pretty := false; let s = strForm p in pretty := true; s
 
 let _ = (* the ids for these boxes need to match theory.lisp *)
   assert (1 = registerBox UNull);
@@ -999,10 +963,13 @@ end
 
 let depTupleBinders t =
   let rec foo acc = function
+(*
     | TTuple(l) -> 
         let (xs,ts) = List.split l in
         let acc = List.fold_left (fun acc x -> x::acc) acc xs in
         List.fold_left foo acc ts
+*)
+    | TQuick(_,QTuple(l,_),_) -> bindersOfDepTuple l
     | TNonNull(t) | TMaybeNull(t) -> foo acc t
     | _ -> acc
   in foo [] t
@@ -1024,6 +991,8 @@ let rec freeVarsVal env v = match v.value with
   | VNewObjRef _ -> Quad.empty
   | VExtend(v1,v2,v3) ->
       Quad.combineList (List.map (freeVarsVal env) [v1;v2;v3])
+  | VArray(_,vs) | VTuple(vs) ->
+      Quad.combineList (List.map (freeVarsVal env) vs)
   | VFun _ -> Quad.empty
       (* TODO might want to recurse into lambdas if they can appear in
          formulas... *)
@@ -1040,28 +1009,27 @@ let rec freeVarsWal env = function
          freeVarsHeap env h; freeVarsLoc env l]
 
 and (* let rec *) freeVarsTyp env = function
-  | TRefinement(x,p)   -> freeVarsForm (Quad.addV x env) p
-  | TTop | TBot        -> Quad.empty
-  | TInt               -> Quad.empty
-  | TBaseUnion _       -> Quad.empty
-  | TBaseRefine(x,_,p) -> freeVarsForm (Quad.addV x env) p
-  | THasTyp(us,p)      -> let v = freeVarsForm env p in
-                          let vs = List.map (freeVarsTT env) us in
-                          Quad.combineList (v::vs)
-  | TNonNull(t)        -> freeVarsTyp env t
-  | TMaybeNull(t)      -> freeVarsTyp env t
-  | TSelfify(t,p) ->
-      Quad.combineList [freeVarsTyp env t; freeVarsForm env p]
-  | TTuple(l) ->
-      let (xs,ts) = List.split l in
-      let env = List.fold_left (fun env x -> Quad.addV x env) env xs in
-      Quad.combineList (List.map (freeVarsTyp env) ts)
-  | TExists _ -> failwith "freeVars TExists"
+  | TRefinement(x,p) -> freeVarsForm (Quad.addV x env) p
+  | TBaseUnion _     -> Quad.empty
+  | TQuick(x,qt,p)   -> let v1 = freeVarsForm env p in
+                        let v2 = freeVarsQuickTyp env qt in
+                        Quad.combineList [v1;v2]
+  | TNonNull(t)      -> freeVarsTyp env t
+  | TMaybeNull(t)    -> freeVarsTyp env t
+  | TExists _        -> failwith "freeVars TExists"
+
+and freeVarsQuickTyp env = function
+  | QBase _    -> Quad.empty
+  | QBoxes(us) -> Quad.combineList (List.map (freeVarsTT env) us)
+  | QRecd(l,_) -> Quad.combineList (List.map (freeVarsTyp env) (List.map snd l))
+  | QTuple(l,_) ->
+      let binders = bindersOfDepTuple l in
+      let env = List.fold_left (fun acc x -> Quad.addV x acc) env binders in
+      Quad.combineList (List.map (freeVarsTyp env) (List.map snd l))
 
 and freeVarsForm env = function
   | PEq(w1,w2)       -> Quad.combine (freeVarsWal env w1) (freeVarsWal env w2)
   | PApp(_,ws)       -> Quad.combineList (List.map (freeVarsWal env) ws)
-  | PTru | PFls      -> Quad.empty
   | PHasTyp(w,u)     -> Quad.combine (freeVarsWal env w) (freeVarsTT env u)
   | PConn(_,ps)      -> Quad.combineList (List.map (freeVarsForm env) ps)
   | PHas(w,ws)       -> Quad.combineList (List.map (freeVarsWal env) (w::ws))
@@ -1149,18 +1117,25 @@ module MasterSubst = struct
 
   let print (vsub,tsub,lsub,hsub) =
     Log.log0 "vsub\n";
-    List.iter (fun (x,w) -> Log.log2 "  %s |-> %s\n" x (prettyStrWal w)) vsub;
+    List.iter (fun (x,w) -> Log.log2 "  %s |-> %s\n" x (strWal w)) vsub;
     Log.log0 "tsub\n";
-    List.iter (fun (x,t) -> Log.log2 "  %s |-> %s\n" x (prettyStrTyp t)) tsub;
+    List.iter (fun (x,t) -> Log.log2 "  %s |-> %s\n" x (strTyp t)) tsub;
     Log.log0 "lsub\n";
     List.iter (fun (x,l) -> Log.log2 "  %s |-> %s\n" x (strLoc l)) lsub;
     Log.log0 "hsub\n";
-    List.iter (fun (x,h) -> Log.log2 "  %s |-> %s\n" x (prettyStrHeap h)) hsub;
+    List.iter (fun (x,h) -> Log.log2 "  %s |-> %s\n" x (strHeap h)) hsub;
     ()
 
 end
 
 type subst = MasterSubst.t
+
+(* checks whether any of the binders are referred to within the tuple *)
+let isDepTuple l =
+  let env = Quad.empty in (* since looking for all variable occurrences *)
+  let varsMentioned =
+    Quad.combineList (List.map (freeVarsTyp env) (List.map snd l)) in
+  List.exists (fun x -> Quad.memV x varsMentioned) (bindersOfDepTuple l)
 
 
 (******
@@ -1177,51 +1152,24 @@ type subst = MasterSubst.t
      2. arrows      [A_i;L_i;H_i] x:T1/E1 -> T2/E2
 *)
 
-(*
-(* note: this one returns a walue, not a value *)
-let rec masterSubstVal subst = function
-  | VVar(x) -> (* value variable substitution *)
-      let (sub,_,_,_) = subst in
-      if List.mem_assoc x sub then List.assoc x sub else WVal (VVar x)
-  | VBase(x) -> WVal (VBase x)
-  | VEmpty   -> WVal VEmpty
-  | VExtend(v1,v2,v3) -> begin
-      match List.map (masterSubstWal subst) [WVal v1; WVal v2; WVal v3] with
-        | [WVal(v1');WVal(v2');WVal(v3')] -> WVal (VExtend (v1', v2', v3'))
-        | _ -> failwith "masterSubstVal VExtend"
-    end
-  (* TODO might need to recurse into lambdas, if they appear in formulas *)
-  | VFun _ as v -> WVal v
-*)
-
 let rec substWal (subst:subst) = function
-
-(*
-  | WVal(VVar(x)) -> (* value variable substitution *)
-      let (sub,_,_,_) = subst in
-      if List.mem_assoc x sub then List.assoc x sub else WVal (VVar x)
-  | WVal(VBase(x))       -> WVal (VBase x)
-  | WVal(VEmpty)         -> WVal VEmpty
-  | WVal(VNewObjRef(i))  -> WVal (VNewObjRef i)
-  | WVal(VExtend _ as v) -> WVal v
-  | WVal(VFun _ as v)    -> WVal v
-  (* TODO might need to recurse into lambdas, if they appear in formulas *)
-*)
   | WVal(v) -> begin match v.value with
       | VVar(x) -> (* value variable substitution *)
           let (sub,_,_,_) = subst in
           if List.mem_assoc x sub then List.assoc x sub else WVal v
       | VBase _       -> WVal v
       | VEmpty        -> WVal v
+      | VNull         -> WVal v
       | VNewObjRef _  -> WVal v
+      | VArray _      -> WVal v (* TODO *)
+      | VTuple _      -> WVal v (* TODO *)
       | VExtend _     -> WVal v (* TODO *)
       | VFun _        -> WVal v (* lambdas shouldn't appear in formulas *)
     end
-  | WBot            -> WBot
-  | WApp(s,ws)      -> WApp (s, List.map (substWal subst) ws)
-  | WHeapSel(h,l,w) -> WHeapSel (substHeap subst h,
-                               substLoc subst l,
-                               substWal subst w)
+  | WBot -> WBot
+  | WApp(s,ws) -> WApp (s, List.map (substWal subst) ws)
+  | WHeapSel(h,l,w) ->
+      WHeapSel (substHeap subst h, substLoc subst l, substWal subst w)
   | WObjSel(ds,k,h,l) ->
       WObjSel (List.map (substWal subst) ds, substWal subst k,
                substHeap subst h, substLoc subst l)
@@ -1229,8 +1177,6 @@ let rec substWal (subst:subst) = function
 and substForm subst = function
   | PEq(w1,w2)  -> PEq (substWal subst w1, substWal subst w2)
   | PApp(s,ws)  -> PApp (s, List.map (substWal subst) ws)
-  | PTru        -> PTru
-  | PFls        -> PFls
   | PConn(s,ps) -> PConn (s, List.map (substForm subst) ps)
   | PHasTyp(w,UVar(x)) -> (* type variable instantiation *)
       let w = substWal subst w in
@@ -1240,60 +1186,56 @@ and substForm subst = function
   | PHasTyp(w,u) ->
       PHasTyp (substWal subst w, substTT subst u)
   | PHeapHas(h,l,w) ->
-      PHeapHas (substHeap subst h,
-                substLoc subst l,
-                substWal subst w)
+      PHeapHas (substHeap subst h, substLoc subst l, substWal subst w)
   | PHas(w,ws) ->
       PHas (substWal subst w, List.map (substWal subst) ws)
   | PDomEq(w,ws) ->
       PDomEq (substWal subst w, List.map (substWal subst) ws)
   | PEqMod(x,y,z) ->
-      PEqMod (substWal subst x,
-              substWal subst y,
-              List.map (substWal subst) z)
+      PEqMod (substWal subst x, substWal subst y, List.map (substWal subst) z)
   | PObjHas(ds,k,h,l) ->
       PObjHas (List.map (substWal subst) ds, substWal subst k,
                substHeap subst h, substLoc subst l)
   | PAll _ -> failwith "substForm: PAll shouldn't appear"
 
 and substTyp (subst:subst) = function
-  | TTop            -> TTop
-  | TBot            -> TBot
-  | TInt            -> TInt
   | TBaseUnion(l)   -> TBaseUnion l
   | TNonNull(t)     -> TNonNull (substTyp subst t)
   | TMaybeNull(t)   -> TMaybeNull (substTyp subst t)
   (* TODO assuming that only one v::A predicate *)
-  | THasTyp([UVar(x)],PTru) -> (* type variable instantiation *)
+  | TQuick(y,QBoxes([UVar(x)]),p) when p = pTru -> (* type variable inst *)
       let (_,sub,_,_) = subst in
-      if List.mem_assoc x sub
-      then List.assoc x sub
-      else THasTyp ([UVar x], PTru)
-  | THasTyp(us,p) ->
-      let us = List.map (substTT subst) us in
-      let p = substForm subst p in
-      THasTyp (us, p)
-  | TSelfify(t,p) ->
-      let t = substTyp subst t in
-      let p = substForm subst p in
-      TSelfify (t, p)
+      if List.mem_assoc x sub then List.assoc x sub
+      else TQuick (y, QBoxes [UVar x], pTru)
   (* binding forms *)
   | TRefinement(x,p) ->
       let subst = MasterSubst.removeVVars [x] subst in
       let (x,p) = freshenRawTyp (MasterSubst.freeVars subst) x p in
       TRefinement (x, substForm subst p)
-  | TBaseRefine(x,t,p) ->
+  | TQuick(x,qt,p) ->
       let subst = MasterSubst.removeVVars [x] subst in
       let (x,p) = freshenRawTyp (MasterSubst.freeVars subst) x p in
-      TBaseRefine (x, t, substForm subst p)
+      TQuick (x, substQuickTyp subst qt, substForm subst p)
+(*
   | TTuple(l) ->
       let subst = MasterSubst.removeVVars (List.map fst l) subst in
       let l = freshenDepTuple (MasterSubst.freeVars subst) l in
       TTuple (List.map (fun (x,t) -> (x, substTyp subst t)) l)
+*)
   | TExists(x,t1,t2) ->
       let (l,_,_,_) = subst in
       if List.mem_assoc x l then failwith "subst TExists" (* TODO 8/20 *)
       else TExists (x, substTyp subst t1, substTyp subst t2)
+
+and substQuickTyp subst = function
+  | QBase(bt)  -> QBase bt
+  | QBoxes(l)  -> QBoxes (List.map (substTT subst) l)
+  | QRecd(l,b) -> QRecd (List.map (fun (f,t) -> (f, substTyp subst t)) l, b)
+  | QTuple(l,b) ->
+      let binders = bindersOfDepTuple l in
+      let subst = MasterSubst.removeVVars binders subst in
+      let l = freshenDepTuple (MasterSubst.freeVars subst) l in
+      QTuple (List.map (fun (xo,t) -> (xo, substTyp subst t)) l, b)
 
 and substTT subst = function
   | UNull   -> UNull
@@ -1365,23 +1307,15 @@ and substLoc subst = function
 (* [[T]](w) *)
 and applyTyp t w =
   match t with
-    | TRefinement(y,f) -> substForm ([(y,w)],[],[],[]) f
-    | TTop             -> PTru
-    | TBot             -> PFls
-    | TInt             -> pAnd [eq (tag w) (wStr tagNum); integer w]
-    | THasTyp(us,p)    -> let ps = List.map (fun u -> PHasTyp (w, u)) us in
-                          let p = substForm (["v",w],[],[],[]) p in
-                          pAnd (p::ps)
     | TNonNull(t)      -> pAnd [applyTyp t w; pNot (PEq (w, wNull))]
     | TMaybeNull(t)    -> pOr [applyTyp t w; PEq (w, wNull)]
-    | TSelfify(t,p)    -> let q = applyTyp t w in
-                          let p = substForm (["v",w],[],[],[]) p in
-                          pAnd [q;p]
-    | TBaseUnion([t])  -> PEq (tag w, wStr t)
-    | TBaseUnion(l)    -> pOr (List.map (fun t -> PEq (tag w, wStr t)) l)
-    | TBaseRefine(y,t,p) ->
-        let p = pAnd [PEq (tag (wVar y), wStr t); p] in
-        substForm ([(y,w)],[],[],[]) p
+    | TBaseUnion(l)    -> pOr (List.map baseTypToForm l)
+    | TRefinement(y,f) -> substForm ([(y,w)],[],[],[]) f
+    | TQuick(y,qt,f)   -> let f0 = applyQuickTyp (wVar y) qt in
+                          substForm ([(y,w)],[],[],[]) (pAnd [f;f0])
+    | TExists(x,t,s)   -> failwith (spr "applyTyp TExists\n%s :: %s\n%s\n%s"
+                            x (strTyp t) (strTyp s) (strWal w))
+(*
     | TTuple(l) ->
         let (vars,typs) = List.split l in
         let subst = Utils.map_i (fun x i -> (x, sel w (wProj i))) vars in
@@ -1394,9 +1328,30 @@ and applyTyp t w =
             typs
         in
         pAnd (PEq (tag w, wStr "Dict") :: has :: sels)
-    | TExists(x,t,s) ->
-        failwith (spr "applyTyp TExists\n%s :: %s\n%s\n%s"
-          x (prettyStrTyp t) (prettyStrTyp s) (prettyStrWal w))
+*)
+
+and applyQuickTyp w = function
+  | QBase(bt) -> baseTypToForm bt
+  | QBoxes(us) -> pAnd (List.map (hastyp w) us)
+  | QRecd(l,exactDom) ->
+      let ps = List.map (fun (f,t) -> applyTyp t (sel w (wStr f))) l in
+      let keys = List.map wStr (List.map fst l) in
+      let dom = if exactDom then PDomEq (w, keys) else PHas (w, keys) in
+      pAnd (dom::ps)
+  | QTuple(l,exactDom) ->
+      let subst =
+        Utils.fold_left_i (fun acc (xo,_) i ->
+          match xo with
+            | None    -> acc
+            | Some(x) -> (x, sel w (wProj i)) :: acc) [] l in
+      let subst = (subst,[],[],[]) in
+      let ps =
+        Utils.map_i (fun (_,t) i -> 
+          substForm subst (applyTyp t (sel w (wProj i)))) l in
+      let keys = Utils.map_i (fun _ i -> wProj i) l in
+      let dom = if exactDom then PDomEq (w, keys) else PHas (w, keys) in
+      pAnd (dom::ps)
+
 
 (***** the helpers that rename binders to avoid capture *****)
 
@@ -1408,6 +1363,7 @@ and freshenRawTyp free x p =
   else
     (x, p)
 
+(*
 and freshenDepTuple free l =
   let binderSubst =
     List.fold_left
@@ -1420,6 +1376,23 @@ and freshenDepTuple free l =
     then (List.assoc x binderSubst, t)
     else (x, t)
   ) l
+*)
+
+and freshenDepTuple free l =
+  let binderSubst =
+    List.fold_left
+      (fun acc -> function
+         | Some(x) -> if Quad.memV x free then (x, freshVar x) :: acc else acc
+         | None    -> acc
+      ) [] (List.map fst l) in
+  let subst = (List.map (fun (x,x') -> (x, wVar x')) binderSubst, [], [], []) in
+  List.map (fun (xo,t) ->
+    let t = substTyp subst t in
+    match xo with
+      | None    -> (None, t)
+      | Some(x) -> if List.mem_assoc x binderSubst
+                   then (Some (List.assoc x binderSubst), t)
+                   else (Some x, t)) l
 
 and freshenHeap free (hs,cs) =
   let binderSubst =
@@ -1458,9 +1431,9 @@ and freshenHeap free (hs,cs) =
   (binderSubstW, (hs, cs))
 
 and freshenDomain free x t =
-  match freshenDepTuple free [(x,t)] with
-    | [(x',t')] -> (x', t')
-    | _         -> failwith "freshenDomain: impossible"
+  match freshenDepTuple free [(Some(x),t)] with
+    | [(Some(x'),t')] -> (x', t')
+    | _               -> failwith "freshenDomain: impossible"
 
 let substTyp subst t =
   BNstats.time "substTyp" (substTyp subst) t
@@ -1481,11 +1454,11 @@ let oc_unroll = open_out (Settings.out_dir ^ "unroll.txt")
 
 let printUnroll cap p q =
   fpr oc_unroll "%s\n%s %s\n\n%s\n\n" (String.make 80 '-') cap
-    (prettyStrForm p) (prettyStrForm q)
+    (strForm p) (strForm q)
 
 let printUnrollWal cap w1 w2 =
   fpr oc_unroll "%s\n%s %s\n\n%s\n\n" (String.make 80 '-') cap
-    (prettyStrWal w1) (prettyStrWal w2)
+    (strWal w1) (strWal w2)
 
 let sHole i = spr "__hole__%d" i
 let wHole i = wVar (sHole i)
@@ -1640,7 +1613,7 @@ let embedEqMod d1 d2 ks =
 let rec embedObjHas ds k (hs,cs) l =
   if cs <> [] then
     kill (spr "embedObjHas: constraints should've been expanded:\n\n%s"
-      (prettyStrForm (PObjHas(ds,k,(hs,cs),l))));
+      (strForm (PObjHas(ds,k,(hs,cs),l))));
   let ps = List.map (fun d -> embedHas d [k]) ds in
   if l = lRoot then
     pOr ps
@@ -1674,7 +1647,7 @@ let createContextOS p =
 let applyContextOS ctx (i,(ds,k,(hs,cs),l)) =
   if cs <> [] then
     failwith (spr "embedObjSel: constraints should've been expanded:\n\n%s"
-      (prettyStrWal (WObjSel(ds,k,(hs,cs),l))));
+      (strWal (WObjSel(ds,k,(hs,cs),l))));
   let rec foo = function
     | [] ->
         let subst = ([sHole i, WHeapSel ((hs,[]), l, k)], [], [], []) in
@@ -1731,23 +1704,18 @@ let embedForm1 p =
   in
   mapForm ~fForm ~onlyTopForm:true p
 
-let embedForm p = p |> embedForm1 |> embedObjSelsInsideOut
+let embedForm p = p |> embedForm1 |> embedObjSelsInsideOut |> formToSMT
 
 
 (***** More stuff *************************************************************)
 
 let tyArrayTuple tInv ts extensible = 
   let p = if extensible then ge else eq in
+  failwith "tyArrayTuple: use QArray and move up in file"
+(*
   let ps =
     packed theV :: p (arrlen theV) (wInt (List.length ts))
     :: Utils.map_i (fun ti i -> applyTyp ti (sel theV (wInt i))) ts in
   THasTyp ([UArray tInv], pAnd ps)
-
-
-let removeExtraTrues = function
-  | PConn("and",ps) ->
-      let ps' =
-        List.filter (function PTru | PConn("and",[]) -> false | _ -> true) ps in
-      (match ps with [] -> PTru | [p] -> p | _ -> pAnd ps')
-  | p -> p
+*)
 

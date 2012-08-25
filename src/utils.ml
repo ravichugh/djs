@@ -95,6 +95,16 @@ let list0N n =
 let list1N n = List.map succ (list0N (pred n))
 
 
+let take k l =
+  let rec foo k acc l =
+    if k = 0 then List.rev acc
+    else match l with
+      | h::t -> foo (pred k) (h::acc) t
+      | []   -> failwith "take"
+  in
+  foo k [] l
+
+
 let splitInMiddle l =
   if (List.length l) mod 2 = 1 then failwith "splitInMiddle: odd length";
   let rec foo acc i rest =

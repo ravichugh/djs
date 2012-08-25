@@ -1,0 +1,5 @@
+#use "tests/functional/quicktypes/__ops.ml"
+let b = neg true in
+let _ :: Bool = b in
+let _ :: {(= v false)} = b in
+0

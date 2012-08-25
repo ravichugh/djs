@@ -176,13 +176,13 @@ baseval :
  | b=VBOOL         { Bool b }
  | i=INT           { Int i }
  | s=STR           { Str s }
- | NULL            { Null }
  | UNDEF           { Undef }
 
 value_ :
- | x=baseval                                   { VBase x }
- | x=VAR                                       { VVar x }
- | EMPTY                                       { VEmpty }
+ | x=baseval       { VBase x }
+ | NULL            { VNull }
+ | x=VAR           { VVar x }
+ | EMPTY           { VEmpty }
  | LPAREN x=value WITH y=value EQ z=value RPAREN { VExtend(x,y,z) } 
  (* quick hack: using begin/end to avoid conflicts *)
  | BEGIN e=lambda END
@@ -294,8 +294,11 @@ typ :
 
  | SUGAR_TOP                              { tyAny }
  | SUGAR_BOT                              { tyFls }
- | b=basetag                              { TBaseUnion([b]) }
- | SUGAR_INT                              { TInt }
+ | SUGAR_INT                              { tyInt }
+ | SUGAR_NUM                              { tyNum }
+ | SUGAR_STR                              { tyStr }
+ | SUGAR_BOOL                             { tyBool }
+ | SUGAR_DICT                             { tyDict }
  | SUGAR_NUMORBOOL                        { tyNumOrBool }
  | SUGAR_STRORBOOL                        { tyStrOrBool }
 
@@ -308,14 +311,19 @@ typ :
  (* | LPAREN u=typ_term RPAREN QMARK         { TMaybeNull (tyTypTerm u) } *)
 
  (* be careful of conflicts *)
- | l=deptuple                             { TTuple(l) }
+ | l=deptuple                             { TQuick("v",QTuple(l,false),pTru) }
+ (* | l=deptuple                             { TTuple(l) } *)
 
+(*
  | LBRACE b=basetag PIPE p=formula RBRACE             { TBaseRefine("v",b,p) }
  | LBRACE x=VAR COLON b=basetag PIPE p=formula RBRACE { TBaseRefine(x,b,p) }
  | LBRACE SUGAR_INT PIPE p=formula RBRACE
      { TBaseRefine ("v", tagNum, pAnd [integer theV; p]) }
+*)
 
- | LBRACE u=typ_term PIPE p=formula RBRACE            { THasTyp([u],p) }
+ | LBRACE qt=quickbasetyp PIPE p=formula RBRACE { TQuick("v",qt,p) }
+ | LBRACE x=VAR COLON qt=quickbasetyp PIPE p=formula RBRACE { TQuick(x,qt,p) }
+ | LBRACE u=typ_term PIPE p=formula RBRACE { TQuick("v",QBoxes[u],p) }
 
  (***** syntactic macros *****)
 
@@ -327,37 +335,52 @@ typ :
  | LT x=array_tuple_typs GT { let (ts,tInv,b) = x in tyArrayTuple tInv ts b }
 
  
+(*
 basetag :
  (* | SUGAR_INT   { tagInt } *)
  | SUGAR_NUM   { tagNum }
  | SUGAR_BOOL  { tagBool }
  | SUGAR_STR   { tagStr }
- | SUGAR_DICT  { tagDict }
+ (* | SUGAR_DICT  { tagDict } *)
+*)
+
+quickbasetyp :
+ | SUGAR_INT   { QBase BInt }
+ | SUGAR_NUM   { QBase BNum }
+ | SUGAR_BOOL  { QBase BBool }
+ | SUGAR_STR   { QBase BStr }
 
 deptuple :
 (*
  | LPAREN RPAREN (* () *)      { ([], ParseUtils.mkDepTupleTyp []) }
- | LPAREN deptuple_ RPAREN     { let vars = List.map fst $2 in
+ | LPAREN deptuple_allbinders RPAREN     { let vars = List.map fst $2 in
                                  (vars, ParseUtils.mkDepTupleTyp $2) }
 *)
  (* using square brackets so vartyp and deptuple don't conflict in arr_dom *) 
- | LBRACK RBRACK               { [] }
- | LBRACK l=deptuple_ RBRACK   { l }
+ | LBRACK RBRACK                         { [] }
+ | LBRACK l=deptuple_somebinders RBRACK  { l }
+(*
+ | LBRACK l=deptuple_allbinders RBRACK   { l }
+*)
 (*
  | LPAREN RPAREN (* () *)      { [] }
- | LPAREN l=deptuple_ RPAREN   { l }
+ | LPAREN l=deptuple_allbinders RPAREN   { l }
 *)
 
 (*
-deptuple_ :
+deptuple_allbinders :
 (* | LPAREN RPAREN (* (()) *)                   { [] } *)
  | LPAREN x=VAR COLON t=typ RPAREN                   { [(x,t)] }
- | LPAREN x=VAR COLON t=typ RPAREN MUL dt=deptuple_  { (x,t) :: dt }
+ | LPAREN x=VAR COLON t=typ RPAREN MUL dt=deptuple_allbinders  { (x,t) :: dt }
 *)
 
-deptuple_ :
- | xt=vartyp                    { [xt] }
- | xt=vartyp COMMA l=deptuple_  { xt :: l }
+deptuple_somebinders :
+ | xot=varopttyp                              { [xot] }
+ | xot=varopttyp COMMA l=deptuple_somebinders { xot :: l }
+
+deptuple_allbinders :
+ | xt=vartyp                                  { [xt] }
+ | xt=vartyp COMMA l=deptuple_allbinders      { xt :: l }
 
 typ_term :
  | TVAR                                  { UVar($1) }
@@ -489,7 +512,7 @@ formula :
  | LPAREN PACKED w=walue RPAREN                 { packed w }
  | LPAREN INTEGER w=walue RPAREN                { integer w }
  (***** logical connectives *****)
- | b=BOOL                                       { if b then PTru else PFls }
+ | b=BOOL                                       { if b then pTru else pFls }
  | LPAREN OR ps=formulas RPAREN                 { pOr ps }
  | LPAREN AND ps=formulas RPAREN                { pAnd ps }
  | LPAREN IMP p=formula q=formula RPAREN        { pImp p q }
@@ -503,6 +526,7 @@ formula :
  | LPAREN DOM x=walue ys=walueset RPAREN        { PDomEq(x,ys) }
  | LPAREN EQMOD x=walue y=walue zs=walueset RPAREN { PEqMod(x,y,zs) }
  (***** syntactic macros *****)
+ (* TODO rethink these wrt quick types *)
  | LPAREN w=walue TCOLON t=typ RPAREN           { applyTyp t w }
  | LPAREN w=walue COLON t=typ RPAREN            { applyTyp t w }
 (*
@@ -641,14 +665,18 @@ thawstate :
  | FRZN       { Frzn }
  | THWD l=loc { Thwd(l) }
 
-varopt:
+varopt :
  | x=VAR                { x }
  | UNDERSCORE           { dummyBinder() }
+
+varopttyp :
+ | x=VAR COLON t=typ      { (Some x, t) }
+ | UNDERSCORE COLON t=typ { (None, t) }
  
 vartyp :
- | x=varopt COLON t=typ { (x,t) }
- | LTUP RTUP              { (dummyBinder (), TTuple []) }
- | LTUP dt=deptuple_ RTUP { (dummyBinder (), TTuple dt) }
+ | x=varopt COLON t=typ             { (x,t) }
+ | LTUP RTUP                        { (dummyBinder (), tyDepTuple []) }
+ | LTUP dt=deptuple_allbinders RTUP { (dummyBinder (), tyDepTuple dt) }
 (*
  | dt=deptuple          { (dummyBinder (), TTuple dt) }
 *)

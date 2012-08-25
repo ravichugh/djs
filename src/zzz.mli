@@ -19,7 +19,5 @@ val assertFormula : formula -> unit
 
 val addBinding : string -> typ -> unit
 
-val falseIsProvable : string -> bool
-
 val checkValid : string -> formula -> bool
 

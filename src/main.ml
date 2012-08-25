@@ -44,6 +44,8 @@ let argSpecs = [
                 "    try all boxes, in case typeTerms misses some");
   ("-doFalseChecks", Arg.Set S.doFalseChecks,
                   "  do false checks, which is a _de-optimization_");
+  ("-noQuickTypes", Arg.Clear S.quickTypes,
+               "     do all subtyping with logical queries");
   ("-djsLite", Arg.Set S.djsMode,
             "        Dependent JavaScript (simple dictionaries)");
   ("-djs", Arg.Unit (fun () -> S.djsMode := true; S.fullObjects := true),
@@ -182,13 +184,16 @@ let doParseDJS fo =
   try
     let prog = match fo with Some(f) -> parseJStoEJS f | None -> dummyEJS in
     if !S.marshalInEnv then
-      DjsDesugar.desugar prog
+      failwith "Main: impossible" (* DjsDesugar.desugar prog *)
     else
       let f_pre =
         S.prim_dir ^
         if !Settings.fullObjects then "prelude.js" else "other/preludeLite.js" in
       let ejs_pre = parseJStoEJS f_pre in
+      failwith "bring DjsDesugar back to life"
+(*
       DjsDesugar.desugar (DjsDesugar.makeFlatSeq ejs_pre prog)
+*)
   with Failure(s) ->
     if Utils.strPrefix s "parse error" || Utils.strPrefix s "lexical error"
     then Log.printParseErr s

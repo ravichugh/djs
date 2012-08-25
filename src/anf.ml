@@ -66,6 +66,12 @@ let rec anf = function
         List.map
           (function EVal(v) -> v | _ -> failwith "anf: expr in arr?") vl in
       finish (List.concat ll, EVal ({pos=pos0; value=VArray (t, vl)}))
+  | ETuple(el) ->
+      let (ll,vl) = el |> List.map anfAndTmp |> List.split in
+      let vl =
+        List.map
+          (function EVal(v) -> v | _ -> failwith "anf: expr in tuple?") vl in
+      finish (List.concat ll, EVal ({pos=pos0; value=VTuple vl}))
   | EIf(e1,e2,e3) ->
       let (l1,e1') = anf e1 in
       let z1 = freshTmp () in
@@ -179,7 +185,7 @@ let rec strVal_ k = function
   | VFun(l,x,Some(t,h),e) ->
       let s = strLamImp k l (spr "(%s) / %s" (strBinding (x,t)) (strHeap h)) e in
       spr "%sbegin %s end" (tab k) (clip s)
-  | VBase(Null) -> spr "%snull" (tab k)
+  | VNull -> spr "%snull" (tab k)
   | VBase(c) -> spr "%s%s" (tab k) (strBaseValue c)
   (* | VEmpty -> spr "%s{}" (tab k) *)
   | VEmpty -> spr "%sempty" (tab k)
@@ -211,6 +217,9 @@ let rec strVal_ k = function
       (* let st = spr " as %s" (strTyp t) in *)
       let svs = List.map (fun s -> clip (strVal k s)) vs in
       spr "%s<%s>%s" (tab k) (String.concat ", " svs) st 
+  | VTuple(vs) ->
+      let svs = List.map (fun s -> clip (strVal k s)) vs in
+      spr "%s(%s)" (tab k) (String.concat ", " svs)
 
 and strVal k v = strVal_ k v.value
 
@@ -360,10 +369,8 @@ and strExp k exp = match exp with
 
 let printAnfExp e =
   let oc = open_out (Settings.out_dir ^ "anfExp.dref") in
-  setPretty true;
   fpr oc "%s\n" (strExp 0 e);
   flush oc;
-  setPretty false;
   ()
 
 

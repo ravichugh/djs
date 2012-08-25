@@ -84,7 +84,7 @@ let envToStrings g =
     List.fold_left (fun (b,acc) -> function
       | Var(x,t) ->
           if x = "end_of_pervasives" then (false, acc)
-          else if b = true then (true, (spr "  %s : %s" x (prettyStrTyp t)) :: acc)
+          else if b = true then (true, (spr "  %s : %s" x (strTyp t)) :: acc)
           else (false, acc)
       | _ -> (b,acc)
     ) (true,[]) g
@@ -95,29 +95,34 @@ let envToStrings g =
 (***** Well-formedness checks *************************************************)
 
 let rec checkType errList g t =
-  let errList = errList @ [spr "Wf.checkType: %s" (prettyStrTyp t)] in
+  let errList = errList @ [spr "Wf.checkType: %s" (strTyp t)] in
   match t with
-    | TTop | TBot | TInt | TBaseUnion _ -> ()
-(*
-    | THasTyp(u) -> checkTypeTerm errList g h u
-*)
-    | THasTyp(us,p) ->
-        let _ = List.iter (checkTypeTerm errList g) us in
-        checkFormula errList g p
     | TNonNull(t) | TMaybeNull(t) -> checkType errList g t
-    | TSelfify(t,p) -> (checkType errList g t; checkFormula errList g p)
-    | TRefinement(x,p) | TBaseRefine(x,_,p) ->
+    | TRefinement(x,p) ->
         checkFormula errList (Var(x,tyAny)::g) p
+    | TQuick(x,qt,p) ->
+        let _ = checkQuickTyp errList (Var(x,tyAny)::g) qt in
+        checkFormula errList (Var(x,tyAny)::g) p
+(*
     | TTuple(l) ->
         let (vars,typs) = List.split l in
         let g = List.fold_left (fun acc x -> Var(x,tyAny)::acc) g vars in
         List.iter (checkType errList g) typs
+*)
     | TExists(x,t,s) ->
         checkType errList (Var(x,t)::g) s
 
+and checkQuickTyp errList g = function
+  | QBase _ -> ()
+  | QBoxes(l) -> List.iter (checkTypeTerm errList g) l
+  | QRecd(l,_) -> List.iter (checkType errList g) (List.map snd l)
+  | QTuple(l,_) ->
+      let binders = bindersOfDepTuple l in
+      let g = List.fold_left (fun acc x -> Var(x,tyAny)::acc) g binders in
+      List.iter (checkType errList g) (List.map snd l)
+
 and checkFormula errList g p =
   match p with
-    | PTru | PFls         -> ()
     | PEq(w1,w2)          -> List.iter (checkWalue errList g) [w1;w2]
     | PApp(_,ws)          -> List.iter (checkWalue errList g) ws
     | PConn(_,ps)         -> List.iter (checkFormula errList g) ps
@@ -152,13 +157,13 @@ and checkValue errList g v =
         if varBound x g then ()
         (* else err (errList @ [spr "unbound variable: [%s]" x] @ envToStrings g) *)
         else err (errList @ [spr "unbound variable: [%s]" x])
-    | VBase _ | VEmpty -> ()
+    | VBase _ | VNull | VEmpty -> ()
     | VNewObjRef _ -> ()
     | VExtend(v1,v2,v3) -> List.iter (checkValue errList g) [v1;v2;v3]
     | VFun _ -> () (* not recursing, since lambdas don't appear in formulas *)
 
 and checkTypeTerm errList g u =
-  let errList = errList @ [spr "Wf.checkTypeTerm: %s" (prettyStrTT u)] in
+  let errList = errList @ [spr "Wf.checkTypeTerm: %s" (strTT u)] in
   match u with
     | UNull   -> ()
     | URef(l) -> checkLoc errList g l
@@ -184,7 +189,7 @@ and checkTypeTerm errList g u =
       end
 
 and checkHeap errList g h =
-  let errList = errList @ [spr "Wf.checkHeap:\n%s" (prettyStrHeap h)] in
+  let errList = errList @ [spr "Wf.checkHeap:\n%s" (strHeap h)] in
   List.iter
     (function x ->
        if List.exists (function HVar(y) -> x = y | _ -> false) g then ()
