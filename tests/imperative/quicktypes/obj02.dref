@@ -1,0 +1,8 @@
+let x = new ({"f" = 100}, lx, objROOT, lROOT) in
+let _ :: Int = getPropObj (x, "f") in
+let _ :: Undef = getPropObj (x, "g") in
+let _ = setPropObj (x, "f", true) in
+let _ = setPropObj (x, "g", false) in
+let _ :: Bool = getPropObj (x, "f") in
+let _ :: Bool = getPropObj (x, "g") in
+0

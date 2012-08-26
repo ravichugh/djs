@@ -15,6 +15,14 @@ let baseTypOfBaseVal = function
   | Bool _  -> BBool
   | Undef _ -> BUndef
 
+let rec addPredicate p = function
+  | TQuick(x,qt,q)   -> TQuick (x, qt, pAnd [p;q])
+  | TRefinement(x,q) -> TRefinement (x, pAnd [p;q])
+  | TNonNull(t)      -> TNonNull (addPredicate p t)
+  | TMaybeNull(t)    -> TMaybeNull (addPredicate p t)
+  | TExists(x,t1,t2) -> TExists (x, t1, addPredicate p t2)
+  | TBaseUnion(l)    -> ty (pAnd [p; applyTyp (TBaseUnion l) theV])
+
 
 (**** Selfify *****************************************************************)
 
@@ -51,15 +59,38 @@ let printBinding (x,s) =
     flush stdout;
   end
 
-let printHeapEnv (hs,cs) =
-  if (!Settings.printAllTypes || !depth = 0) then begin
+let strHC = function
+  | HEWeakTok(x) -> strThawState x
+  | HEConc(v) -> strVal v
+  | HEConcObj(v,l') -> spr "%s |> %s" (strVal v) (strLoc l')
+
+let maybePrintHeapEnv hNew hOld =
+  if hNew <> hOld && (!Settings.printAllTypes || !depth = 0) then begin
+    let ((hs,csNew),(_,csOld)) = (hNew, hOld) in
+    (* print heap variables *)
     Log.log1 "\n/ %s ++\n" (String.concat "++" hs);
+    (* print bindings and their relationship to old ones *)
+    List.iter (fun (l,hc) ->
+      let status =
+        if not (List.mem_assoc l csOld) then "+"     (* added *)
+        else if hc <> List.assoc l csOld then "*"    (* modified *)
+        else " " in                                  (* unchanged *)
+      Log.log3 "  %s %s |-> %s\n" status (strLoc l) (strHC hc)
+    ) csNew;
+    (* print bindings that have been dropped *)
+    List.iter (fun (l,hc) ->
+      if not (List.mem_assoc l csNew) then
+        let status = "-" in                          (* dropped *)
+        Log.log2 "  %s %s\n" status (strLoc l)
+    ) csOld;
+  end
+(*
     List.iter (function
       | (m,HEWeakTok(x)) -> Log.log2 "  %s |-> %s\n" (strLoc m) (strThawState x)
       | (l,HEConc(v)) -> Log.log2 "  %s |-> %s\n" (strLoc l) (strVal v)
       | (l,HEConcObj(v,l')) -> Log.log3 "  %s |-> %s |> %s\n"
                                  (strLoc l) (strVal v) (strLoc l')) cs;
-  end
+*)
 
 (* TODO *)
 let bindingsAreRecursive l =
@@ -198,8 +229,8 @@ let rec mkExists s = function
 (* Add existentials and check well-formedness. Algorithmic typing should
    always synthesize well-formed types, but doing this as a sanity check. *)
 let finishLet cap g y l ((s,h): (typ*heapenv)) : typ * heapenv =
-  if y = "end_of_pervasives" then checkWfHeap := false;
-  if y = "end_of_djs_prelude" then checkWfHeap := false;
+  if Str.string_match (Str.regexp "^end_of_dref") y 0 then
+    checkWfHeap := false;
   let w = (mkExists s l, h) in
   (* TODO 8/14 should also check that the heapenv is well formed *)
   if !checkWfHeap then Wf.typ (spr "finishLet: %s" cap) g (fst w);
@@ -455,6 +486,28 @@ let heapDepTupleSubst (_,cs) =
   subst
 
 *)
+
+let twoVals cap = function
+  | [v1;v2] -> (v1, v2)
+  | _       -> err [cap; "wrong number of arguments"]
+
+let threeVals cap = function
+  | [v1;v2;v3] -> (v1, v2, v3)
+  | _          -> err [cap; "wrong number of arguments"]
+
+let matchQRecd = function
+  | TQuick(_,QRecd(recd,b),_) -> Some (recd, b)
+  | _                         -> None
+
+let matchQStrLit = function
+  | TQuick(k,QBase(BStr),
+           PEq(WVal{value=VVar(k')},
+               WVal{value=VBase(Str(f))})) when k = k' -> Some f
+  | _ -> None
+
+let updQRecd v (recd,b) f t3 =
+  let recd' = (f,t3) :: (List.remove_assoc f recd) in
+  TQuick ("v", QRecd (recd', b), eq theV (WVal v))
 
 
 (***** Heap parameter inference ***********************************************)
@@ -836,16 +889,9 @@ and tsVal_ g h = function
       let (t1,t2,t3) = (tsVal g h v1, tsVal g h v2, tsVal g h v3) in
       Sub.types cap g t1 tyDict;
       Sub.types cap g t2 tyStr;
-      match t1, t2 with
-        (* TODO something for false *)
-        | TQuick(d,QRecd(recd,true),_),
-          TQuick(k,QBase(BStr),PEq(WVal{value=VVar(k')},
-                                   WVal{value=VBase(Str(f))}))
-          when k = k' ->
-            let recd' = (f,t3) :: (List.remove_assoc f recd) in
-            TQuick ("v", QRecd (recd', true), eq theV (WVal v))
-        | _ ->
-            ty (eq theV (WVal v))
+      match matchQRecd t1, matchQStrLit t2 with
+        | Some(recd,b), Some(f) -> updQRecd v (recd,b) f t3
+        | _                     -> ty (eq theV (WVal v))
     end
 
 (*
@@ -931,32 +977,13 @@ and tsExp_ g h = function
         | Some _, _ -> err [cap; spr "loc [%s] already bound" (strLoc l1)]
       end
 
-  | EApp(([],[],[]) as l,
-         EVal({value=VVar("get")} as v1),
-         EVal({value=VTuple(vs)} as v2)) -> begin
-      let cap = spr "TS-Get: get (%s)" (strVal v2) in
-      if List.length vs <> 2 then err [cap; "wrong number of arguments"];
-      match tsVal g h (List.nth vs 0), tsVal g h (List.nth vs 1) with
-        | TQuick(_,QRecd(recd,exactDom),_),
-          TQuick(k,QBase(BStr),PEq(WVal{value=VVar(k')},
-                                   WVal{value=VBase(Str(f))})) ->
-            if List.mem_assoc f recd then (List.assoc f recd, h)
-            else if exactDom then err [cap; spr "missing field \"%s\"" f]
-            else tsApp g h l v1 v2
-        | _ ->
-            tsApp g h l v1 v2
-    end
-
-  | EApp(([],[],[]) as l,
-         EVal({value=VVar("set")} as v1),
-         EVal({value=VTuple(vs)} as v2)) ->
-      let cap = spr "TS-Set: set (%s)" (strVal v2) in
-      begin match vs with
-        | [v21;v22;v23] -> (tsVal g h (wrapVal pos0 (VExtend(v21,v22,v23))), h)
-        | _ -> err [cap; "wrong number of arguments"]
-      end
-
-  | EApp(l,EVal(v1),EVal(v2)) -> tsApp g h l v1 v2
+  | EApp(l,EVal(v1),EVal(v2)) ->
+      if !Settings.quickTypes then begin
+        match tsAppQuick g h (l,v1,v2) with
+          | Some(s,h) -> (s, h)
+          | None      -> tsAppSlow g h (l,v1,v2)
+      end else
+        tsAppSlow g h (l,v1,v2)
 
 (*
   | ELet(x,Some(frame),e1,e2) -> begin
@@ -993,7 +1020,7 @@ and tsExp_ g h = function
          annotation is simply a check rather than an abstraction. *)
       let g = tcAddBinding g x s1 in
       Log.log2 "%s :: %s\n" (String.make (String.length x) ' ') (strTyp tGoal);
-      if h1 <> h then printHeapEnv h1;
+      maybePrintHeapEnv h1 h;
       let (s2,h2) = tsExp g h1 e2 in
       (* tcRemoveBindingN n; *)
       finishLet cap gInit x [(x,s1)] (s2,h2)
@@ -1009,7 +1036,7 @@ and tsExp_ g h = function
       let (bindings,h1) = heapEnvOfHeap h1 in
       let g = tcAddBindings g bindings in
       let g = tcAddBinding g x s1 in
-      if h1 <> h then printHeapEnv h1;
+      maybePrintHeapEnv h1 h;
       let (s2,h2) = tsExp g h1 e2 in
       (* tcRemoveBindingN (n + m); *)
       finishLet cap gInit x [(x,s1)] (s2,h2)
@@ -1025,7 +1052,7 @@ and tsExp_ g h = function
       let (l1,s1) = stripExists s1 in
       let g = tcAddBindings g l1 in
       let g = tcAddBinding g x s1 in
-      if h1 <> h then printHeapEnv h1;
+      maybePrintHeapEnv h1 h;
       let (s2,h2) = tsExp g h1 e2 in
       (* tcRemoveBindingN (m + n); *)
       finishLet cap gInit x (l1 @ [(x,s1)]) (s2,h2)
@@ -1192,7 +1219,7 @@ and tsExp_ g h = function
   | EFreeze _  -> Anf.badAnf "ts EFreeze"
   | EThaw _    -> Anf.badAnf "ts EThaw"
 
-and tsApp g curHeap (tActs,lActs,hActs) v1 v2 =
+and tsAppSlow g curHeap ((tActs,lActs,hActs), v1, v2) =
 
   Zzz.queryRoot := "TS-App";
   let cap = spr "TS-App: [...] (%s) (%s)" (strVal v1) (strVal v2) in
@@ -1495,6 +1522,99 @@ and tcExp_ g h goal = function
   | ESetref _  -> Anf.badAnf "tc ESetref"
 
 
+(***** TS-App optimized rules *************************************************)
+
+(* these should derive types consistent with the primitive signatures *)
+
+and tsAppQuick g h ((poly,vFun,vArg) as triple) = match (poly,vFun,vArg) with
+
+  | ([],[],[]), {value=VVar("get")}, {value=VTuple(vs)} ->
+      let cap = spr "TS-App-Get: get (%s)" (strVal vArg) in
+      let (v1,v2) = twoVals cap vs in
+      let (t1,t2) = (tsVal g h v1, tsVal g h v2) in
+      begin match matchQRecd t1, matchQStrLit t2 with
+        | Some(recd,exactDom), Some(f) ->
+            if List.mem_assoc f recd then Some (List.assoc f recd, h)
+            else if exactDom then err [cap; spr "missing field \"%s\"" f]
+            else None
+        | _ ->
+            None
+      end
+
+  | ([],[],[]), {value=VVar("set")}, {value=VTuple(vs)} ->
+      let cap = spr "TS-App-Set: set (%s)" (strVal vArg) in
+      let (v1,v2,v3) = threeVals cap vs in
+      Some (tsVal g h (wrapVal pos0 (VExtend(v1,v2,v3))), h)
+
+  | ([],[],[]), {value=VVar("getPropObj")}, {value=VTuple(vs)} -> begin
+      let cap = spr "TS-App-GetPropObj: getPropObj (%s)" (strVal vArg) in
+      let (v1,v2) = twoVals cap vs in
+      let (t1,t2) = (tsVal g h v1, tsVal g h v2) in
+      let l1 = singleRefTermOf cap g t1 in
+      match findCell l1 h with
+        | Some(HEConcObj(d1,l2)) ->
+            (match matchQRecd (tsVal g h d1), matchQStrLit t2 with
+               | Some(recd,exactDom), Some(f) ->
+                   (match getPropObj g h l1 l2 recd exactDom f with
+                      | Some(s) -> Some (s, h)
+                      | None    -> None)
+               | _ -> None)
+        | _ -> err [cap; spr "%s not an object in heap" (strLoc l1)]
+    end
+
+  | ([],[],[]), {value=VVar("setPropObj")}, {value=VTuple(vs)} -> begin
+      let cap = spr "TS-App-SetPropObj: setPropObj (%s)" (strVal vArg) in
+      if List.length vs <> 3 then err [cap; "wrong number of arguments"];
+      let (v1,v2,v3) = threeVals cap vs in
+      let (t1,t2) = (tsVal g h v1, tsVal g h v2) in
+      let l1 = singleRefTermOf cap g t1 in
+      match findAndRemoveCell l1 h with
+        | Some(HEConcObj(d1,l2),h0) ->
+            (match matchQRecd (tsVal g h d1), matchQStrLit t2 with
+               | Some(recd,exactDom), Some(f) ->
+                   let t3 = tsVal g h v3 in
+                   let d = freshVar "setobj" in
+                   let vUpd = wrapVal pos0 (VExtend(d1,v2,v3)) in
+                   let s = updQRecd vUpd (recd,exactDom) f t3 in
+                   let s = addPredicate (pNot (eq (WVal v1) wNull)) s in
+                   let h' = (fst h0, snd h0 @ [(l1, HEConcObj (vVar d, l2))]) in
+                   Some (TExists (d, s, t3), h')
+               | _ -> None)
+        | _ -> err [cap; spr "%s not an object in heap" (strLoc l1)]
+    end
+
+  | ([],[],[]), {value=VVar("getElem")}, {value=VTuple(vs)} ->
+      tsAppQuickTry g h
+        ["getPropObj"; "getIdx"; "getPropArr"; "getPropArrLen"] vArg
+
+  | ([],[],[]), {value=VVar("setElem")}, {value=VTuple(vs)} ->
+      tsAppQuickTry g h
+        ["setPropObj"; "setIdx"; "setPropArr"] vArg
+
+  | _ -> None
+
+and getPropObj g h l1 l2 recd exactDom f =
+  if List.mem_assoc f recd then Some (List.assoc f recd)
+  else if not exactDom then None
+  else if l2 = lRoot then Some tyUndef
+  else begin
+    match findCell l2 h with
+      | Some(HEConcObj(d2,l3)) ->
+          (match matchQRecd (tsVal g h d2) with
+             | Some(recd2,exactDom2) -> getPropObj g h l2 l3 recd2 exactDom2 f
+             | None -> None)
+      | Some _ -> failwith "getPropObj: bad constraint"
+      | None -> failwith "getPropObj: could return HeapSel here"
+  end
+
+and tsAppQuickTry g h fs vArg =
+  match fs with
+    | []   -> None
+    | f::l -> (match tsAppQuick g h (([],[],[]), vVar f, vArg) with
+                 | Some(s,h) -> Some (s, h)
+                 | None      -> tsAppQuickTry g h l vArg)
+
+
 (***** Entry point ************************************************************)
 
 let assertIntegerness e =
@@ -1522,13 +1642,15 @@ let initialEnvs () =
     let g = addSkolems g in
     (g, h)
   else
-    let h_init = "H_emp" in
+    let h_init = "H_ROOT" (* "H_emp" *) in
     let g = [HVar h_init] in
     let g = tcAddBinding g "v" tyAny in
     let g = addSkolems g in
     let g = tcAddBinding g "dObjectProto" tyEmpty in
-    let h = ([h_init], [(lObjectPro, HEConcObj (vVar "dObjectProto", lRoot))]) in
-    let _ = printHeapEnv h in
+    let h = ([h_init],
+             (lRoot, HEConcObj (vNull, lRoot)) ::
+             (lObjectPro, HEConcObj (vVar "dObjectProto", lRoot)) :: []) in
+    let _ = maybePrintHeapEnv h ([],[]) in
     (g, h)
 
 let typecheck e =
@@ -1537,7 +1659,7 @@ let typecheck e =
   let (g,h) = initialEnvs () in
   try begin
     ignore (tsExp g h e);
-    Sub.writeCacheStats ();
+    Sub.writeStats ();
     Zzz.writeQueryStats ();
     let s = spr "OK! %d queries." !Zzz.queryCount in
     fpr oc_num_q "%d" !Zzz.queryCount;

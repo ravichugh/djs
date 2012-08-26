@@ -31,6 +31,7 @@ rule token = parse
   | "BOT"  | "Bot"  { SUGAR_BOT }
   | "Num"           { SUGAR_NUM }
   | "Empty"         { SUGAR_EMPTY }
+  | "Undef"         { SUGAR_UNDEF }
 
   | "NumOrBool" { SUGAR_NUMORBOOL }
   | "IntOrBool" { SUGAR_INTORBOOL }

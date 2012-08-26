@@ -160,6 +160,7 @@ and checkValue errList g v =
     | VBase _ | VNull | VEmpty -> ()
     | VNewObjRef _ -> ()
     | VExtend(v1,v2,v3) -> List.iter (checkValue errList g) [v1;v2;v3]
+    | VTuple(vs) -> List.iter (checkValue errList g) vs
     | VFun _ -> () (* not recursing, since lambdas don't appear in formulas *)
 
 and checkTypeTerm errList g u =

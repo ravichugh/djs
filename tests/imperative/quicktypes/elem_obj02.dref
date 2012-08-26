@@ -1,0 +1,8 @@
+let x = new ({"f" = 100}, lx, objROOT, lROOT) in
+let _ :: Int = getElem (x, "f") in
+let _ :: Undef = getElem (x, "g") in
+let _ = setElem (x, "f", true) in
+let _ = setElem (x, "g", false) in
+let _ :: Bool = getElem (x, "f") in
+let _ :: Bool = getElem (x, "g") in
+0

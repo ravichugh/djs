@@ -148,10 +148,17 @@ let foldTyp (fForm: 'a -> formula -> 'a)
 
   let rec fooTyp acc = function
     | TRefinement(_,p)   -> fooForm acc p
+    | TQuick(_,qt,p)     -> fooForm (fooQuickTyp acc qt) p
     | TBaseUnion _       -> acc
     | TNonNull(t)        -> fooTyp acc t
     | TMaybeNull(t)      -> fooTyp acc t
     | TExists _          -> failwith "foldTyp TExists"
+
+  and fooQuickTyp acc = function
+    | QBase _            -> acc
+    | QBoxes(us)         -> List.fold_left fooTT acc us
+    | QRecd(l,_)         -> List.fold_left fooTyp acc (List.map snd l)
+    | QTuple(l,_)        -> List.fold_left fooTyp acc (List.map snd l)
 
   and fooForm acc = function
     | PEq(w1,w2)         -> let acc = List.fold_left fooWal acc [w1;w2] in
@@ -248,6 +255,7 @@ let mapExp fE e =
     | ELoadedSrc(s,e) -> fE (ELoadedSrc (s, fooExp e))
   and fooVal v = { v with value = match v.value with
     | VBase(bv) -> VBase bv
+    | VNull -> VNull
     | VVar(x) -> VVar x
     | VEmpty -> VEmpty
     | VNewObjRef(i) -> VNewObjRef i
@@ -293,6 +301,7 @@ let foldExp fE fV init e =
     | ELoadedSrc(s,e) -> fE (fooExp acc e) exp
   and fooVal acc v = match v.value with
     | VBase(bv) -> fV acc v.value
+    | VNull -> fV acc v.value
     | VVar(x) -> fV acc v.value
     | VEmpty -> fV acc v.value
     | VNewObjRef(i) -> fV acc v.value
@@ -413,6 +422,9 @@ let tyIntOrStr    = TBaseUnion [BInt; BStr] (* ty (pOr [pInt; pStr]) *)
 let tyNull        = TQuick ("v", QBoxes [UNull], eq theV wNull)
 let tyRef l       = TQuick ("v", QBoxes [URef l], pTru)
 
+let tyUndef       = TQuick ("v", QBase BUndef, pTru) (* ty (eq theV wUndef) *)
+let tyNotUndef    = ty (pNot (eq theV wUndef))
+
 let tyTypTerm = function
   | URef(l) -> tyRef l (* so that default for references can be tweaked *)
   | u       -> TQuick ("v", QBoxes [u], pTru)
@@ -420,15 +432,14 @@ let tyTypTerm = function
 let tyDepTuple l =
   TQuick ("v", QTuple (List.map (fun (x,t) -> (Some x, t)) l, false), pTru)
 
-let bindersOfDepTuple l =
-  List.fold_left (fun acc -> function Some(x) -> x::acc | None -> acc)
-    [] (List.map fst l)
-
 (* setting the default for array tuple invariants to be v != undefined,
    not Top, so that packed array accesses can at least prove that the
    value retrieved is not undefined *)
-let tyNotUndef = ty (pNot (eq theV (WVal vUndef)))
 let tyArrDefault = tyNotUndef
+
+let bindersOfDepTuple l =
+  List.fold_left (fun acc -> function Some(x) -> x::acc | None -> acc)
+    [] (List.map fst l)
 
 let baseTypToForm = function
   | BNum   -> pNum
@@ -673,16 +684,20 @@ and strWalList l =
   spr "[%s]" (String.concat "," (List.map strWal l))
 
 and strTyp = function
+  | t when t = tyAny     -> "Top"
+  | t when t = tyFls     -> "Bot"
   | t when t = tyDict    -> "Dict"
   | t when t = tyNum     -> "Num"
   | t when t = tyInt     -> "Int"
   | t when t = tyBool    -> "Bool"
   | t when t = tyStr     -> "Str"
+  | t when t = tyUndef   -> "Undef"
   | TBaseUnion(l)        -> String.concat "Or" (List.map strBaseTyp l)
   | TRefinement("v",p)   -> spr "{%s}" (strForm p)
   | TRefinement(x,p)     -> spr "{%s|%s}" x (strForm p)
   | TQuick(_,QRecd(l,true),_)  -> strQuickTyp (QRecd (l, true))
   | TQuick(_,QTuple(l,true),_) -> strQuickTyp (QTuple (l, true))
+  | TQuick(_,QBoxes([]),_) -> failwith "strTyp: weird type with QBoxes []"
   | TQuick(_,QBoxes([u]),p) when p = pTru -> strTT u
   | TQuick("v",(QBase(_) as qt),p) 
   | TQuick("v",(QRecd(_) as qt),p) 
@@ -695,7 +710,7 @@ and strTyp = function
 
 and strQuickTyp = function
   | QBase(bt) -> strBaseTyp bt
-  | QBoxes(us) -> strForm (pAnd (List.map (hastyp theV) us))
+  | QBoxes(us) -> String.concat " /\ " (List.map strTT us)
   | QRecd(l,b) ->
       spr "[%s%s]"
         (String.concat "; "
@@ -985,10 +1000,8 @@ let heapBinders (_,cs) =
 (* all the freeVarsX functions are of the form env:Quad.t -> x:X -> Quad.t *)
 
 let rec freeVarsVal env v = match v.value with
-  | VBase _ -> Quad.empty
   | VVar(x) -> if Quad.memV x env then Quad.empty else Quad.addV x Quad.empty
-  | VEmpty  -> Quad.empty
-  | VNewObjRef _ -> Quad.empty
+  | VBase _ | VNull | VEmpty | VNewObjRef _ -> Quad.empty
   | VExtend(v1,v2,v3) ->
       Quad.combineList (List.map (freeVarsVal env) [v1;v2;v3])
   | VArray(_,vs) | VTuple(vs) ->
@@ -1467,15 +1480,14 @@ let wHole i = wVar (sHole i)
 
 let rec expandHH (hs,cs) l k =
   let p =
-    if not (List.mem_assoc l cs) then PHeapHas ((hs,[]), l, k)
+    if l = lRoot then pFls
+    else if not (List.mem_assoc l cs) then PHeapHas ((hs,[]), l, k)
     else begin
       match List.assoc l cs with
         | HConcObj(None,_,l') -> failwith "expandHH None"
         | HConcObj(Some(d),_,l') -> 
-            if l' = lRoot then
-              has (wVar d) k
-            else
-              pOr [has (wVar d) k; expandHH (hs,cs) l' k]
+            (* if l' = lRoot then has (wVar d) k else *)
+            pOr [has (wVar d) k; expandHH (hs,cs) l' k]
         | _ -> failwith (spr "expandHH: %s" (strLoc l))
     end
   in
@@ -1486,7 +1498,8 @@ let rec expandHH (hs,cs) l k =
 
 let expandOH ds k (hs,cs) l =
   let rec foo ds l =
-    if not (List.mem_assoc l cs) then PObjHas (ds, k, (hs,[]), l)
+    if l = lRoot then PObjHas (ds, k, ([],[]), l)
+    else if not (List.mem_assoc l cs) then PObjHas (ds, k, (hs,[]), l)
     else begin
       match List.assoc l cs with
         | HConcObj(None,t,l') -> foo (ds @ [WVal (valOfSingleton t)]) l'
@@ -1504,7 +1517,8 @@ let expandOH ds k (hs,cs) l =
    and applying them: convert to an ObjSel macro! *)
 let expandHS (hs,cs) l k =
   let rec foo ds l =
-    if not (List.mem_assoc l cs) then WObjSel (ds, k, (hs,[]), l)
+    if l = lRoot then wUndef
+    else if not (List.mem_assoc l cs) then WObjSel (ds, k, (hs,[]), l)
     else begin
       match List.assoc l cs with
         | HConcObj(None,_,l') -> failwith "expandHS None"
@@ -1520,7 +1534,8 @@ let expandHS (hs,cs) l k =
 
 let expandOS ds k (hs,cs) l =
   let rec foo ds l =
-    if not (List.mem_assoc l cs) then WObjSel (ds, k, (hs,[]), l)
+    if l = lRoot then WObjSel (ds, k, ([],[]), l)
+    else if not (List.mem_assoc l cs) then WObjSel (ds, k, (hs,[]), l)
     else begin
       match List.assoc l cs with
         | HConcObj(None,t,l') -> foo (ds @ [WVal (valOfSingleton t)]) l'

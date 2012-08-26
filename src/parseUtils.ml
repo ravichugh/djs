@@ -278,6 +278,7 @@ let undoIntersectionHack g t =
               | _ -> None
           ) (Some []) ps in
         begin match boxes_opt with
+          | Some([]) -> tyAny
           | Some(us) -> TQuick ("v", QBoxes us, pTru)
           | None -> t
         end

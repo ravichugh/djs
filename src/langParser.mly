@@ -126,7 +126,7 @@ let sameCell exact l =
   SUGAR_INT SUGAR_BOOL SUGAR_TOP SUGAR_DICT SUGAR_BOT
   SUGAR_INTORBOOL SUGAR_STR SUGAR_INTORSTR SUGAR_STRORBOOL SUGAR_NUM
   SUGAR_NUMORBOOL SUGAR_EMPTY
-  SUGAR_EXTEND SUGAR_FLD
+  SUGAR_EXTEND SUGAR_FLD SUGAR_UNDEF
   PLUS MINUS MUL DIV LT LE GE (* NE EQEQ AMPAMP PIPEPIPE *) PLUSPLUS
   ASSGN (* LOCALL *) NEWREF REFTYPE (* AT *) MAPSTO SAME HEAP
   SAME_TYPE SAME_EXACT
@@ -301,6 +301,7 @@ typ :
  | SUGAR_DICT                             { tyDict }
  | SUGAR_NUMORBOOL                        { tyNumOrBool }
  | SUGAR_STRORBOOL                        { tyStrOrBool }
+ | SUGAR_UNDEF                            { tyUndef }
 
  (* parens to avoid conflicts *)
  | LPAREN t=typ RPAREN BANG               { TNonNull(t) }
@@ -324,6 +325,7 @@ typ :
  | LBRACE qt=quickbasetyp PIPE p=formula RBRACE { TQuick("v",qt,p) }
  | LBRACE x=VAR COLON qt=quickbasetyp PIPE p=formula RBRACE { TQuick(x,qt,p) }
  | LBRACE u=typ_term PIPE p=formula RBRACE { TQuick("v",QBoxes[u],p) }
+ | LBRACE SUGAR_DICT PIPE p=formula RBRACE { TRefinement("v",pAnd[pDict;p]) }
 
  (***** syntactic macros *****)
 

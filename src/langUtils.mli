@@ -126,6 +126,7 @@ val tyIntOrBool : typ
 val tyIntOrStr : typ
 val tyNull : typ
 val tyRef : loc -> typ
+val tyUndef : typ
 val tyNotUndef : typ
 val tyArrDefault : typ
 val pIsBang : walue -> typterm -> formula

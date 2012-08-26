@@ -114,7 +114,13 @@ val delIdx :: [A; Loc1,Loc2]
 val delElem :: {(and (type delPropObj) (type delIdx))}
 
 
+(***** Root Object ************************************************************)
+
+(* not used by DJS desugaring, only when writing !D by hand *)
+val objROOT :: Ref(lROOT)
+
+
 (******************************************************************************)
 
-let end_of_djs_prelude :: INT = 0
+val end_of_dref_objects :: Top
 

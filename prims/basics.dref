@@ -82,5 +82,5 @@ val randStr :: _:Top -> Str
 
 (******************************************************************************)
 
-let end_of_prims :: Int = 0
+val end_of_dref_basics :: Top
 

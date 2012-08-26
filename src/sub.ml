@@ -275,6 +275,15 @@ let filterObligations obligations = function
 
 (***** Subtyping **************************************************************)
 
+let oc_quick = open_out (Settings.out_dir ^ "quick-types.txt")
+let (count_quick,count_slow) = (ref 0, ref 0)
+
+let tallyQuick s1 s2 =
+  fpr oc_quick "Discharged quick:\n  %s\n  %s\n\n" s1 s2; incr count_quick
+
+let tallySlow s1 s2 =
+  fpr oc_quick "Discharged slow:\n  %s\n  %s\n\n" s1 s2; incr count_slow
+
 let rec bindExistentials errList = function
   | TExists(x,s1,s2) ->
       (match s1 with
@@ -286,8 +295,8 @@ let rec bindExistentials errList = function
   | s -> s
 
 let rec checkTypes errList usedBoxes g t1 t2 =
+  let (s1,s2) = (strTyp t1, strTyp t2) in
   let errList =
-    let (s1,s2) = (strTyp t1, strTyp t2) in
     errList @ [spr "Sub.checkTypes:\n   t1 = %s\n   t2 = %s" s1 s2] in
   begin match t2 with
     | TExists _ -> die errList "existential type on the right"
@@ -296,15 +305,17 @@ let rec checkTypes errList usedBoxes g t1 t2 =
   Zzz.inNewScope (fun () ->
     let t1 = bindExistentials errList t1 in
     if !Settings.quickTypes && quickCheckTypes errList usedBoxes g (t1,t2)
-    then ()
+    then tallyQuick s1 s2
     else let v = freshVar "v" in
          let _ = Zzz.addBinding v t1 in
-         checkFormula errList usedBoxes g (applyTyp t2 (wVar v)))
+         let _ = checkFormula errList usedBoxes g (applyTyp t2 (wVar v)) in
+         tallySlow s1 s2)
 
   (* binding existentials even for quickCheckTypes, since it may recursively
      call checkTypes for sub-obligations. *)
 
 and quickCheckTypes errList usedBoxes g = function
+  | TQuick(_,QBase(BInt),_), TQuick(_,QBase(BNum),p) -> p = pTru
   | TQuick(_,QBase(bt),_), TQuick(_,QBase(bt'),p) -> bt = bt' && p = pTru
   | TQuick(_,QBase(bt),_), TBaseUnion(l) -> List.mem bt l
   | TQuick(_,QRecd(l1,_),_), TQuick(_,QRecd(l2,_),p) when p = pTru -> begin
@@ -326,6 +337,8 @@ and quickCheckTypes errList usedBoxes g = function
              (List.map snd l2));
         true
       end
+  | TQuick(_,QBoxes(l1),_), TQuick(_,QBoxes(l2),p) when p = pTru ->
+      List.for_all (fun u -> List.mem u l1) l2
   | _ ->
       false
 
@@ -609,12 +622,17 @@ let mustFlow ?filter:(filter=(fun _ -> true)) g t =
   end
 *)
 
-let writeCacheStats () =
+let writeStats () =
   let oc = open_out (Settings.out_dir ^ "extract-cache.txt") in
   Hashtbl.iter (fun t _ ->
     let c = Hashtbl.find mustFlowCounters t in
     fpr oc "%s %d\n" (strTyp t) c
-  ) mustFlowCache
+  ) mustFlowCache;
+  fpr oc_quick "Total Quick:      %4d\n" !count_quick;
+  fpr oc_quick "Total Slow:       %4d\n" !count_slow;
+  fpr oc_quick "-----------------------\n";
+  fpr oc_quick "Total Subtypings: %4d" (!count_quick + !count_slow);
+  ()
 
 let canFlow    = canFlow_ TypeTerms.empty
 
