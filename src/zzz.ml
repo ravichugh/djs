@@ -21,9 +21,7 @@ let emitPreamble () =
   let rec f ic =
     try z3write (input_line ic ^ "\n"); f ic
     with End_of_file -> () in
-  if !Settings.marshalInEnv
-  then f (open_in (Settings.out_dir ^ "env.lisp"))
-  else f (open_in (Settings.prim_dir ^ "theory.smt2"))
+  f (open_in (Settings.prim_dir ^ "theory.smt2"))
 
 let dump ?nl:(nl=true) ?tab:(tab=true) s =
   let pre = if tab then indent () else "" in

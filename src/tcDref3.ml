@@ -894,19 +894,7 @@ and tsVal_ g h = function
         | _                     -> ty (eq theV (WVal v))
     end
 
-(*
-  | {value=VBase(Str("no source file"))} when !Settings.marshalOutEnv -> begin
-      let oc_env = open_out_bin (Settings.out_dir ^ "env.env") in
-      Marshal.to_channel oc_env (g,h) [];
-      Utils.copyFile
-        (Settings.out_dir ^ "queries.lisp") (Settings.out_dir ^ "env.lisp");
-      (* TODO need to marshal other state too... *)
-      ty (PEq (theV, wStr "no source file"))
-    end
-*)
-
   | {value=VArray(tInv,vs)} -> begin
-      (* TODO use QArray or QTuple instead? *)
       List.iter (tcVal g h tInv) vs;
       let n = List.length vs in
       let ps = 
@@ -1333,6 +1321,7 @@ and tcVal_ g h goal = function
   | ({value=VVar _} as v)
   | ({value=VEmpty} as v)
   | ({value=VExtend _} as v)
+  | ({value=VArray _} as v)
   | ({value=VTuple _} as v) ->
       let s = tsVal g h v in
       let _ = Zzz.queryRoot := "TC-EVal" in
@@ -1636,22 +1625,16 @@ let addSkolems g =
   foo g 1
 
 let initialEnvs () =
-  if !Settings.marshalInEnv then
-    let ic_env = open_in_bin (Settings.out_dir ^ "env.env") in
-    let (g,h) = (Marshal.from_channel ic_env : (env * heapenv)) in
-    let g = addSkolems g in
-    (g, h)
-  else
-    let h_init = "H_ROOT" (* "H_emp" *) in
-    let g = [HVar h_init] in
-    let g = tcAddBinding g "v" tyAny in
-    let g = addSkolems g in
-    let g = tcAddBinding g "dObjectProto" tyEmpty in
-    let h = ([h_init],
-             (lRoot, HEConcObj (vNull, lRoot)) ::
-             (lObjectPro, HEConcObj (vVar "dObjectProto", lRoot)) :: []) in
-    let _ = maybePrintHeapEnv h ([],[]) in
-    (g, h)
+  let h_init = "H_ROOT" (* "H_emp" *) in
+  let g = [HVar h_init] in
+  let g = tcAddBinding g "v" tyAny in
+  let g = addSkolems g in
+  let g = tcAddBinding g "dObjectProto" tyEmpty in
+  let h = ([h_init],
+           (lRoot, HEConcObj (vNull, lRoot)) ::
+           (lObjectPro, HEConcObj (vVar "dObjectProto", lRoot)) :: []) in
+  let _ = maybePrintHeapEnv h ([],[]) in
+  (g, h)
 
 let typecheck e =
   let oc_num_q = open_out (Settings.out_dir ^ "num-queries.txt") in

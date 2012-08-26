@@ -70,10 +70,6 @@ let argSpecs = [
                 "    desugaring inserts thaw/freeze greedily around weak locs");
   ("-assistCtor", Arg.Set S.assistCtor,
                "     desugaring wraps annotation around calls to ctor funcs");
-  ("-marshalOutEnv", Arg.Set S.marshalOutEnv,
-                  "  marshal output environments in out/world.world");
-  ("-marshalInEnv", Arg.Set S.marshalInEnv,
-                 "   use out/env.env as initial environments for typing");
 ]
 
 let anonArgFun s =
@@ -134,10 +130,6 @@ let parsePrelude f =
 let anfAndAddPrelude e =
   if !doRaw then
     Anf.coerce e
-  else if !S.marshalInEnv then
-    let e = Anf.anfExp e in
-    let _ = Anf.printAnfExp e in
-    e
   else
     let basics = parsePrelude !primsPath in
     (* let pervs = parsePrelude !pervsPath in *)
@@ -183,16 +175,13 @@ let dummyEJS =
 let doParseDJS fo =
   try
     let prog = match fo with Some(f) -> parseJStoEJS f | None -> dummyEJS in
-    if !S.marshalInEnv then
-      failwith "Main: impossible" (* DjsDesugar.desugar prog *)
-    else
-      let f_pre =
-        S.prim_dir ^
-        if !Settings.fullObjects then "prelude.js" else "other/preludeLite.js" in
-      let ejs_pre = parseJStoEJS f_pre in
-      failwith "bring DjsDesugar back to life"
+    let f_pre =
+      S.prim_dir ^
+      if !Settings.fullObjects then "prelude.js" else "other/preludeLite.js" in
+    let ejs_pre = parseJStoEJS f_pre in
+    failwith "bring DjsDesugar back to life"
 (*
-      DjsDesugar.desugar (DjsDesugar.makeFlatSeq ejs_pre prog)
+    DjsDesugar.desugar (DjsDesugar.makeFlatSeq ejs_pre prog)
 *)
   with Failure(s) ->
     if Utils.strPrefix s "parse error" || Utils.strPrefix s "lexical error"
@@ -214,16 +203,6 @@ let parseDJS () =
 let _ = 
 
   Arg.parse argSpecs anonArgFun usage;
-
-  if !S.marshalOutEnv || !S.marshalInEnv then
-    failwith "need to marshal other state too...";
-
-  if !S.marshalOutEnv then begin
-    if !doRaw then
-      failwith "don't use both -marshalOutEnv and -doRaw"
-    else if !srcFiles <> [] then
-      failwith "don't provide source files with -marshalOutEnv"
-  end;
 
   let e =
     if !S.djsMode then parseDJS ()
