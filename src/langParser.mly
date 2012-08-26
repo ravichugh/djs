@@ -58,6 +58,15 @@ let addHeapPrefixVar ts ls x t cs1 t2 cs2 =
 
 let emp = ([],[])
 
+let mkSugarTyp x s p =
+  match s with (* NOTE: keep these in sync with LangUtils.simpleSugarToTyp *)
+    | "Int"  -> TQuick(x,QBase(BInt),p)
+    | "Num"  -> TQuick(x,QBase(BNum),p)
+    | "Bool" -> TQuick(x,QBase(BBool),p)
+    | "Str"  -> TQuick(x,QBase(BStr),p)
+    | "Dict" -> TRefinement(x,pAnd[pDict;p])
+    | _      -> printParseErr (spr "bad sugar {%s:%s|%s}" x s (strForm p))
+
 
 (***** Stuff for System !D ****************************************************)
 
@@ -116,17 +125,19 @@ let sameCell exact l =
 %token <Lang.vvar> VAR
 %token <string> TVAR (* using this for tvar, lvar, and hvar *)
 %token <Lang.lbl> LBL
+%token <string> SUGAR
 %token
   EOF TAG (* TRUE FALSE *) LET REC EQ IN FUN ARROW IF THEN ELSE
   LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK (* ALL *) DOT COMMA
   SEMI DCOLON COLON AS GT (* GTGT *) EXTERN FAIL (* VTRUE VFALSE *) PIPE
   OR IMP IFF NOT AND ITE HAS SEL UPD EQMOD DOM WBOT EMPTY
   TYPE NULL NULLBOX NEW (* LIST *) BANG QMARK
-  (* TODO get rid of the sugar tokens *)
+(*
   SUGAR_INT SUGAR_BOOL SUGAR_TOP SUGAR_DICT SUGAR_BOT
   SUGAR_INTORBOOL SUGAR_STR SUGAR_INTORSTR SUGAR_STRORBOOL SUGAR_NUM
   SUGAR_NUMORBOOL SUGAR_EMPTY
-  SUGAR_EXTEND SUGAR_FLD SUGAR_UNDEF
+  SUGAR_EXTEND SUGAR_FLD SUGAR_UNDEF SUGAR_NOTUNDEF
+*)
   PLUS MINUS MUL DIV LT LE GE (* NE EQEQ AMPAMP PIPEPIPE *) PLUSPLUS
   ASSGN (* LOCALL *) NEWREF REFTYPE (* AT *) MAPSTO SAME HEAP
   SAME_TYPE SAME_EXACT
@@ -284,73 +295,27 @@ lambda : (* requiring parens around body to avoid conflicts *)
 
 
 typ :
-
- (**** raw refinement types *****)
-
  | LBRACE x=VAR PIPE p=formula RBRACE     { TRefinement(x,p) }
  | LBRACE p=formula RBRACE                { TRefinement("v",p) }
+ | u=typ_term                             { tyTypTerm u }
 
- (***** delayed macros *****)
+ | s=SUGAR  { if List.mem_assoc s LangUtils.simpleSugarToTyp
+              then List.assoc s LangUtils.simpleSugarToTyp
+              else printParseErr (spr "unexpected Sugar: [%s]" s) }
 
- | SUGAR_TOP                              { tyAny }
- | SUGAR_BOT                              { tyFls }
- | SUGAR_INT                              { tyInt }
- | SUGAR_NUM                              { tyNum }
- | SUGAR_STR                              { tyStr }
- | SUGAR_BOOL                             { tyBool }
- | SUGAR_DICT                             { tyDict }
- | SUGAR_NUMORBOOL                        { tyNumOrBool }
- | SUGAR_STRORBOOL                        { tyStrOrBool }
- | SUGAR_UNDEF                            { tyUndef }
+ | LBRACE s=SUGAR             PIPE p=formula RBRACE { mkSugarTyp "v" s p }
+ | LBRACE x=VAR COLON s=SUGAR PIPE p=formula RBRACE { mkSugarTyp x s p }
+ | LBRACE u=typ_term          PIPE p=formula RBRACE { TQuick("v",QBoxes[u],p) }
 
  (* parens to avoid conflicts *)
  | LPAREN t=typ RPAREN BANG               { TNonNull(t) }
  | LPAREN t=typ RPAREN QMARK              { TMaybeNull(t) }
 
- | u=typ_term                             { tyTypTerm u }
- (* | LPAREN u=typ_term RPAREN               { tyTypTerm u } *)
- (* | LPAREN u=typ_term RPAREN QMARK         { TMaybeNull (tyTypTerm u) } *)
-
  (* be careful of conflicts *)
  | l=deptuple                             { TQuick("v",QTuple(l,false),pTru) }
- (* | l=deptuple                             { TTuple(l) } *)
 
-(*
- | LBRACE b=basetag PIPE p=formula RBRACE             { TBaseRefine("v",b,p) }
- | LBRACE x=VAR COLON b=basetag PIPE p=formula RBRACE { TBaseRefine(x,b,p) }
- | LBRACE SUGAR_INT PIPE p=formula RBRACE
-     { TBaseRefine ("v", tagNum, pAnd [integer theV; p]) }
-*)
-
- | LBRACE qt=quickbasetyp PIPE p=formula RBRACE { TQuick("v",qt,p) }
- | LBRACE x=VAR COLON qt=quickbasetyp PIPE p=formula RBRACE { TQuick(x,qt,p) }
- | LBRACE u=typ_term PIPE p=formula RBRACE { TQuick("v",QBoxes[u],p) }
- | LBRACE SUGAR_DICT PIPE p=formula RBRACE { TRefinement("v",pAnd[pDict;p]) }
-
- (***** syntactic macros *****)
-
- | SUGAR_INTORBOOL                        { tyIntOrBool }
- | SUGAR_INTORSTR                         { tyIntOrStr }
- | SUGAR_EMPTY                            { tyEmpty }
-
- (* TODO might want to add array tuple to abstract syntax *)
  | LT x=array_tuple_typs GT { let (ts,tInv,b) = x in tyArrayTuple tInv ts b }
 
- 
-(*
-basetag :
- (* | SUGAR_INT   { tagInt } *)
- | SUGAR_NUM   { tagNum }
- | SUGAR_BOOL  { tagBool }
- | SUGAR_STR   { tagStr }
- (* | SUGAR_DICT  { tagDict } *)
-*)
-
-quickbasetyp :
- | SUGAR_INT   { QBase BInt }
- | SUGAR_NUM   { QBase BNum }
- | SUGAR_BOOL  { QBase BBool }
- | SUGAR_STR   { QBase BStr }
 
 deptuple :
 (*

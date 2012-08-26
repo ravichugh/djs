@@ -91,11 +91,11 @@ and value_ =
   | VNull (* separate from basevalues to emphasize that it has-type Null *)
   | VVar of vvar
   | VEmpty
-  | VExtend of value * value * value (* TODO maybe switch this to VDict *)
-  | VArray of typ * value list (* TODO okay to drop typ? *) (* TODO merge w/ tuple? *)
+  | VExtend of value * value * value
   | VFun of (tvars * lvars * hvars) * vvar * (typ * heap) option * exp
   | VNewObjRef of int
   (***** abstract syntactic sugar *****)
+  | VArray of typ * value list
   | VTuple of value list
 
 and value = { pos: pos; value: value_ }
@@ -148,7 +148,6 @@ and quicktyp =
   | QBoxes of typterm list
   | QRecd  of (string * typ) list * bool (* true if exact domain *)
   | QTuple of deptuple * bool            (* true if exact domain *)
-  (* TODO array *)
 
 and basetyp = BNum | BInt | BStr | BBool | BUndef
 

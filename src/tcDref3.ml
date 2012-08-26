@@ -53,9 +53,9 @@ let selfifyVal g = function
 let removeLabels g =
   List.filter (function Lbl _ -> false | _ -> true) g
 
-let printBinding (x,s) =
+let printBinding ?(extraBreak=true) (x,s) =
   if !Settings.printAllTypes || !depth = 0 then begin
-    Log.log2 "\n%s :: %s\n" x (strTyp s);
+    Log.log3 "%s%s :: %s\n" (if extraBreak then "\n" else "") x (strTyp s);
     flush stdout;
   end
 
@@ -854,6 +854,13 @@ and tcExp g h (w: world) e =
   if !Settings.doFalseChecks && checkInconsistent "tcExp" then ()
   else tcExp_ g h w e
 
+(*
+and tryTcVal g h s e =
+  Zzz.inNewScope (fun () ->
+    try (tcVal g h s e; true)
+    with Tc_error _ -> false)
+*)
+
 
 (***** Value type synthesis ***************************************************)
 
@@ -897,7 +904,7 @@ and tsVal_ g h = function
   | {value=VArray(tInv,vs)} -> begin
       List.iter (tcVal g h tInv) vs;
       let n = List.length vs in
-      let ps = 
+      let ps = (* could add pDict if needed *)
         packed theV :: PEq (arrlen theV, wInt n)
         :: Utils.map_i (fun vi i -> PEq (sel theV (wInt i), WVal vi)) vs in
       TQuick ("v", QBoxes [UArray tInv], pAnd ps)
@@ -956,10 +963,33 @@ and tsExp_ g h = function
         (strVal v1) (strLoc l1) (strVal v2) (strLoc l2) in
       begin match findCell l1 h, findCell l2 h with
         | None, Some(HEConcObj _) ->
+            let _ = tcVal g h (tyRef l2) v2 in
+            let t1 = tsVal g h v1 in
+            let d = freshVar "obj" in
+            let h' = (fst h, snd h @ [l1, HEConcObj (vVar d, l2)]) in
+            (TExists (d, t1, tyRef l1), h')
+              (* using an existential in case v1 is an array value (really
+                 just sugar), which doesn't come equipped with a has-type
+                 predicate, but its type t1 does *)
+(*
+            if tryTcVal g h tyDict v1 then
+              let h' = (fst h, snd h @ [l1, HEConcObj (v1, l2)]) in
+              (tyRef l1, h')
+            else (* assuming v1 is an array, no big deal *)
+              let t1 = tsVal g h v1 in
+              let a = freshVar "arr" in
+              let h' = (fst h, snd h @ [l1, HEConcObj (vVar a, l2)]) in
+              (TExists (a, t1, tyRef l1), h')
+              (* using an existential since an array value (really just sugar)
+                 don't come equipped with a has-type predicate, but its
+                 type t1 does *)
+*)
+(*
             let _ = tcVal g h tyDict v1 in
             let _ = tcVal g h (tyRef l2) v2 in
             let h' = (fst h, snd h @ [l1, HEConcObj (v1, l2)]) in
             (tyRef l1, h')
+*)
         | None, Some _ -> err [cap; spr "loc [%s] isn't a conc obj" (strLoc l2)]
         | None, None -> err [cap; spr "loc [%s] isn't bound" (strLoc l2)]
         | Some _, _ -> err [cap; spr "loc [%s] already bound" (strLoc l1)]
@@ -1007,7 +1037,7 @@ and tsExp_ g h = function
          binders in scope, since they may refered to in h1. so the tGoal
          annotation is simply a check rather than an abstraction. *)
       let g = tcAddBinding g x s1 in
-      Log.log2 "%s :: %s\n" (String.make (String.length x) ' ') (strTyp tGoal);
+      printBinding (String.make (String.length x) ' ', tGoal) ~extraBreak:false;
       maybePrintHeapEnv h1 h;
       let (s2,h2) = tsExp g h1 e2 in
       (* tcRemoveBindingN n; *)
@@ -1294,6 +1324,7 @@ and tsAppSlow g curHeap ((tActs,lActs,hActs), v1, v2) =
       match acc, u with
         | AppOk _, _ -> acc
         | AppFail(l), UArrow(uarr) -> begin
+            (* TODO no need for inNewScope, right? *)
             try tryOne uarr
             with Tc_error(errList) ->
               AppFail (l @ [spr "\n*** box %d: %s" i (strTT u)] @ errList)

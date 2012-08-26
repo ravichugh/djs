@@ -1,0 +1,7 @@
+let a = new (<0, 1>, lA, objROOT, lROOT) in
+
+let _ :: {(= v 2)} = ([NotUndef;lA,lROOT] getElem) (a, "length") in
+let _ :: {(= v 0)} = ([NotUndef;lA,lROOT] getElem) (a, 0) in
+let _ :: {(= v 1)} = ([NotUndef;lA,lROOT] getElem) (a, 1) in
+let _ :: Undef     = ([NotUndef;lA,lROOT] getElem) (a, 2) in
+0

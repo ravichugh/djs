@@ -28,7 +28,8 @@ def strip_test_dir(f):
 
 def iterate(positive):
     for top, _, files in os.walk(test_dir + path):
-        for nm in files:       
+        for nm in files:
+            if re.match("^__", nm): continue
             b = re.match("^xx_", nm)
             if positive:
                 b = not b

@@ -1,4 +1,12 @@
+let a = new (<0, 1>, lA, objROOT, lROOT) in
 
+let _ :: {(= v 2)} = ([NotUndef;lA,lROOT] getPropArrLen) (a, "length") in
+let _ :: {(= v 0)} = ([NotUndef;lA,lROOT] getIdx) (a, 0) in
+let _ :: {(= v 1)} = ([NotUndef;lA,lROOT] getIdx) (a, 1) in
+let _ :: Undef     = ([NotUndef;lA,lROOT] getIdx) (a, 2) in
+0
+
+(*
 #use "tests/imperative/arrays/__arrays.dref"
 
 let d = ref lD {"f" = 1} in
@@ -11,3 +19,4 @@ let _ :: {(= v 1)} = ([{(not (= v undefined))};lA] impGetArr) (a, 1) in
 let _ :: {(= v undefined)} = ([{(not (= v undefined))};lA] impGetArr) (a, 2) in
 
 0
+*)

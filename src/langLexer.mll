@@ -23,20 +23,21 @@ let str =
 rule token = parse
   | eof { EOF }
 
-  | "INT"  | "Int"  { SUGAR_INT }
-  | "BOOL" | "Bool" { SUGAR_BOOL }
-  | "STR"  | "Str"  { SUGAR_STR }
-  | "DICT" | "Dict" { SUGAR_DICT }
-  | "TOP"  | "Top"  { SUGAR_TOP }
-  | "BOT"  | "Bot"  { SUGAR_BOT }
-  | "Num"           { SUGAR_NUM }
-  | "Empty"         { SUGAR_EMPTY }
-  | "Undef"         { SUGAR_UNDEF }
-
-  | "NumOrBool" { SUGAR_NUMORBOOL }
-  | "IntOrBool" { SUGAR_INTORBOOL }
-  | "IntOrStr"  { SUGAR_INTORSTR }
-  | "StrOrBool" { SUGAR_STRORBOOL }
+  (* NOTE: keep these in sync with LangUtils.simpleSugarToTyp *)
+  | "Int"        { SUGAR "Int" }
+  | "Bool"       { SUGAR "Bool" }
+  | "Str"        { SUGAR "Str" }
+  | "Dict"       { SUGAR "Dict" }
+  | "Top"        { SUGAR "Top" }
+  | "Bot"        { SUGAR "Bot" }
+  | "Num"        { SUGAR "Num" }
+  | "Empty"      { SUGAR "Empty" }
+  | "Undef"      { SUGAR "Undef" }
+  | "NotUndef"   { SUGAR "NotUndef" }
+  | "NumOrBool"  { SUGAR "NumOrBool" }
+  | "IntOrBool"  { SUGAR "IntOrBool" }
+  | "IntOrStr"   { SUGAR "IntOrStr" }
+  | "StrOrBool"  { SUGAR "StrOrBool" }
 (*
   | "EXTEND"       { SUGAR_EXTEND }
   | "FLD"          { SUGAR_FLD }

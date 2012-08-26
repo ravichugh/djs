@@ -53,7 +53,14 @@ let popScope () =
   ()
 
 let inNewScope f =
-  pushScope (); let x = f () in popScope (); x
+  pushScope ();
+  try
+    let x = f () in
+    let _ = popScope () in
+    x
+  with e ->
+    let _ = popScope () in (* in case exception is caught later *)
+    raise e
 
 
 (***** Stats ******************************************************************)

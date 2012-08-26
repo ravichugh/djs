@@ -400,6 +400,7 @@ and coerce = function
   | EDict _ -> failwith "Anf.coerce EDict: should have become calls to set"
   | EFun(l,x,t,e) -> EVal (wrapVal pos0 (VFun (l, x, t, coerce e)))
   | EArray(t,es) -> EVal (wrapVal pos0 (VArray (t, List.map coerceVal es)))
+  | ETuple(es) -> EVal (wrapVal pos0 (VTuple (List.map coerceVal es)))
   | EIf(e1,e2,e3) -> EIf (coerceEVal "if" e1, coerce e2, coerce e3)
   | EApp(l,e1,e2) -> EApp (l, coerceEVal "app1" e1, coerceEVal "app2" e2)
   | ELet(x,ao,e1,e2) -> ELet (x, ao, coerce e1, coerce e2)

@@ -140,6 +140,8 @@ val idTypTerms : int ref * (int, typterm) Hashtbl.t * (typterm, int) Hashtbl.t
 
 (***** Printers ***************************************************************)
 
+val simpleSugarToTyp : (string * typ) list
+val simpleSugarOfTyp : (typ * string) list
 val sugarArrow : bool ref
 val strLoc : loc -> string
 val strLocs : locs -> string

@@ -474,31 +474,9 @@ let oc_boxes = open_out (Settings.out_dir ^ "boxes.txt")
 
 (***** Strings *****)
 
-(*
-let isTag s =
-  List.exists ((=) s) [tagInt; tagStr; tagBool; tagDict; tagFun]
-*)
-
-(*
-(* TODO quick, but somewhat dangerous, way to set up tags for JavaScript
-   without changing any tags of System D primitives. *)
-let switchJsString = function
-  | "number"  -> "Int"
-  | "boolean" -> "Bool"
-  | "string"  -> "Str"
-  | "object"  -> "Dict"
-  | s         -> s
-*)
-
 let idStrings = Id.create ()
 
 let getStringId s = (* assigning ids on demand *)
-(*
-  let s =
-    if !Settings.djsMode
-      then switchJsString s
-      else s in
-*)
   let b = not (Id.mem idStrings s) in
   let i = Id.process idStrings s in
   if b then fpr oc_boxes "\nstring %d\n  \"%s\"\n" i s;
@@ -557,6 +535,25 @@ let pretty = ref true
 
 let sugarArrow = ref true (* TODO is this necessary? *)
 
+let simpleSugarToTyp = [
+  ("Top"         , tyAny          );
+  ("Bot"         , tyFls          );
+  ("Dict"        , tyDict         );
+  ("Num"         , tyNum          );
+  ("Int"         , tyInt          );
+  ("Bool"        , tyBool         );
+  ("Str"         , tyStr          );
+  ("Empty"       , tyEmpty        );
+  ("Undef"       , tyUndef        );
+  ("NotUndef"    , tyNotUndef     );
+  ("IntOrBool"   , tyIntOrBool    );
+  ("IntOrStr"    , tyIntOrStr     );
+  ("NumOrBool"   , tyNumOrBool    );
+]
+
+let simpleSugarOfTyp =
+  List.fold_left (fun acc (s,t) -> (t,s)::acc) [] simpleSugarToTyp
+
 let rec strPat = function
   | PLeaf(x) -> x
   | PNode(l) -> spr "(%s)" (String.concat "," (List.map strPat l))
@@ -590,17 +587,13 @@ let strBaseTyp = function
 
 let strBaseValue v =
   match v, !pretty with
-    | Bool(b), true -> spr "%b" b
+    | Bool(b), true  -> spr "%b" b
     | Bool(b), false -> if b then "VTrue" else "VFalse"
-    | Undef, _      -> "undefined"
-    | Int(i), true  -> spr "%d" i
-    | Int(i), false -> spr "(VInt %d)" i
-(*
-    | Str(s), true  -> spr "\"%s\""
-                         (if !Settings.djsMode then switchJsString s else s)
-*)
-    | Str(s), true  -> spr "\"%s\"" s
-    | Str(s), false -> spr "(VStr %d)" (getStringId s)
+    | Undef, _       -> "undefined"
+    | Int(i), true   -> spr "%d" i
+    | Int(i), false  -> spr "(VInt %d)" i
+    | Str(s), true   -> spr "\"%s\"" s
+    | Str(s), false  -> spr "(VStr %d)" (getStringId s)
 
 let rec strVal v = match v.value with
   | VBase(c)    -> strBaseValue c
@@ -610,23 +603,17 @@ let rec strVal v = match v.value with
   | VNewObjRef(i) -> spr "(VObjRef %d)" i
   | VFun _ as v -> spr "(VFun %d)" (Id.process idLamTerms v)
   | VExtend(v1,v2,v3) ->
-      (* spr "(VExtend %s %s %s)" (strVal v1) (strVal v2) (strVal v3) *)
-      (* spr "(upd %s %s %s)" (strVal v1) (strVal v2) (strVal v3) *)
-      if !pretty then
-        spr "(%s with %s = %s)" (strVal v1) (strVal v2) (strVal v3)
-      else
-        spr "(upd %s %s %s)" (strVal v1) (strVal v2) (strVal v3)
-  (* TODO *)
+      if !pretty
+      then spr "(%s with %s = %s)" (strVal v1) (strVal v2) (strVal v3)
+      else spr "(upd %s %s %s)" (strVal v1) (strVal v2) (strVal v3)
   | VArray(_,vs) ->
-      if !pretty then
-        spr "<%s> as Arr(_)" (String.concat " " (List.map strVal vs))
-      else failwith "strVal VArray"
+      if !pretty
+      then spr "<%s> as Arr(_)" (String.concat " " (List.map strVal vs))
+      else failwith "strVal VArray: should have been expanded by embedForm"
   | VTuple(vs) ->
-      if !pretty then spr "(%s)" (String.concat ", " (List.map strVal vs))
-      else (* TODO morally, this should go in embedForm *)
-        strVal (Utils.fold_left_i
-                  (fun d v i -> wrapVal pos0 (VExtend (d, vProj i, v)))
-                  vEmpty vs)
+      if !pretty
+      then spr "(%s)" (String.concat ", " (List.map strVal vs))
+      else failwith "strVal VTuple: should have been expanded by embedForm"
 
 let strFunSym s =
   if !pretty = false then s
@@ -684,14 +671,7 @@ and strWalList l =
   spr "[%s]" (String.concat "," (List.map strWal l))
 
 and strTyp = function
-  | t when t = tyAny     -> "Top"
-  | t when t = tyFls     -> "Bot"
-  | t when t = tyDict    -> "Dict"
-  | t when t = tyNum     -> "Num"
-  | t when t = tyInt     -> "Int"
-  | t when t = tyBool    -> "Bool"
-  | t when t = tyStr     -> "Str"
-  | t when t = tyUndef   -> "Undef"
+  | t when List.mem_assoc t simpleSugarOfTyp -> List.assoc t simpleSugarOfTyp
   | TBaseUnion(l)        -> String.concat "Or" (List.map strBaseTyp l)
   | TRefinement("v",p)   -> spr "{%s}" (strForm p)
   | TRefinement(x,p)     -> spr "{%s|%s}" x (strForm p)
@@ -1350,7 +1330,7 @@ and applyQuickTyp w = function
       let ps = List.map (fun (f,t) -> applyTyp t (sel w (wStr f))) l in
       let keys = List.map wStr (List.map fst l) in
       let dom = if exactDom then PDomEq (w, keys) else PHas (w, keys) in
-      pAnd (dom::ps)
+      pAnd (pDict::dom::ps)
   | QTuple(l,exactDom) ->
       let subst =
         Utils.fold_left_i (fun acc (xo,_) i ->
@@ -1363,7 +1343,7 @@ and applyQuickTyp w = function
           substForm subst (applyTyp t (sel w (wProj i)))) l in
       let keys = Utils.map_i (fun _ i -> wProj i) l in
       let dom = if exactDom then PDomEq (w, keys) else PHas (w, keys) in
-      pAnd (dom::ps)
+      pAnd (pDict::dom::ps)
 
 
 (***** the helpers that rename binders to avoid capture *****)
@@ -1709,7 +1689,17 @@ let rec embedForm1 p =
     | PObjHas(ds,k,h,l) -> embedObjHas ds k h l
     | PAll _ -> failwith "embedForm1: PAll shouldn't appear before expansion"
 *)
+
+let valOfTuple vs =
+  Utils.fold_left_i
+    (fun d v i -> wrapVal pos0 (VExtend (d, vProj i, v))) vEmpty vs
+
 let embedForm1 p =
+  let fVal = function
+    | VArray(_,vs)
+    | VTuple(vs)   -> (valOfTuple vs).value
+    | v            -> v
+  in
   let fForm = function
     | PHas(d,ks)        -> embedHas d ks
     | PDomEq(d,ks)      -> embedDomEq d ks
@@ -1717,7 +1707,7 @@ let embedForm1 p =
     | PObjHas(ds,k,h,l) -> embedObjHas ds k h l
     | p                 -> p
   in
-  mapForm ~fForm ~onlyTopForm:true p
+  mapForm ~fVal ~fForm ~onlyTopForm:true p
 
 let embedForm p = p |> embedForm1 |> embedObjSelsInsideOut |> formToSMT
 
