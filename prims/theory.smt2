@@ -25,7 +25,7 @@
          (upd (ExtBase DVal) (ExtKey DVal) (ExtVal DVal)) ; (VExtend ...)
          (bot)
          (null)
-         (undefined) ; added for DJS
+         (undefined)
          (VRef (VRefSel Int))
          (VObjRef (VObjRefSel Int)) ; 4/1
   )
@@ -60,7 +60,6 @@
 (declare-fun TagObj     () DVal) (assert (= TagObj     (VStr 7)))
 (declare-fun TagUndef   () DVal) (assert (= TagUndef   (VStr 8)))
 (declare-fun TagRef     () DVal) (assert (= TagRef     (VStr 9)))
-; (declare-fun TagArray () DVal) (assert (= TagArray (VStr 10)))
 
 (assert                     (= (tag VTrue)        TagBool))
 (assert                     (= (tag VFalse)       TagBool))
@@ -72,8 +71,8 @@
 (assert (forall ((i FunId)) (= (tag (VFun i))     TagFun)))
 (assert (forall ((i Int))   (= (tag (VRef i))     TagRef))) ; 3/12
 (assert (forall ((i Int))   (= (tag (VObjRef i))  TagObj))) ; 4/1
-(assert                     (= (tag empty)        TagDict))
 
+(assert (= (tag empty) TagDict))
 (assert (forall ((w1 DVal) (w2 DVal) (w3 DVal))
         (= (tag (upd w1 w2 w3)) TagDict)))
 

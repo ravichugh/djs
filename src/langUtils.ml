@@ -59,6 +59,8 @@ let mapTyp ?fForm:(fForm=(fun x -> x))
     | TBaseUnion(l)      -> TBaseUnion l
     | TNonNull(t)        -> TNonNull (fooTyp t)
     | TMaybeNull(t)      -> TMaybeNull (fooTyp t)
+
+  and fooPrenexTyp = function
     | TExists _          -> failwith "mapTyp TExists"
 
   and fooQuickTyp = function
@@ -152,6 +154,8 @@ let foldTyp (fForm: 'a -> formula -> 'a)
     | TBaseUnion _       -> acc
     | TNonNull(t)        -> fooTyp acc t
     | TMaybeNull(t)      -> fooTyp acc t
+
+  and fooPrenexTyp acc = function
     | TExists _          -> failwith "foldTyp TExists"
 
   and fooQuickTyp acc = function
@@ -231,14 +235,14 @@ let mapExp fE e =
     | EDict(es) ->
         fE (EDict (List.map (fun (e1,e2) -> (fooExp e1, fooExp e2)) es))
     | EArray(t,es) -> fE (EArray (t, List.map fooExp es))
-    | EFun(poly,x,inWorld,e) -> EFun (poly, x, inWorld, fooExp e)
+    | ETuple(es) -> ETuple (List.map fooExp es)
+    | EFun(x,e) -> EFun (x, fooExp e)
     | EIf(e1,e2,e3) -> fE (EIf (fooExp e1, fooExp e2, fooExp e3))
     | EApp(poly,e1,e2) -> fE (EApp (poly, fooExp e1, fooExp e2))
     | ELet(x,fo,e1,e2) -> fE (ELet (x, fo, fooExp e1, fooExp e2))
     | EExtern(x,t,e) -> fE (EExtern (x, t, fooExp e))
     | ETcFail(s,e) -> fE (ETcFail (s, fooExp e))
-    | EAs(s,e,f) -> fE (EAs (s, fooExp e, f))
-    | EAsW(s,e,w) -> fE (EAsW (s, fooExp e, w))
+    | EAsW(e,w) -> fE (EAsW (fooExp e, w))
     | ENewref(l,e) -> fE (ENewref (l, fooExp e))
     | EDeref(e) -> fE (EDeref (fooExp e))
     | ESetref(e1,e2) -> fE (ESetref (fooExp e1, fooExp e2))
@@ -258,11 +262,11 @@ let mapExp fE e =
     | VNull -> VNull
     | VVar(x) -> VVar x
     | VEmpty -> VEmpty
-    | VNewObjRef(i) -> VNewObjRef i
+    (* | VNewObjRef(i) -> VNewObjRef i *)
     | VExtend(v1,v2,v3) -> VExtend (fooVal v1, fooVal v2, fooVal v3)
     | VArray(t,vs) -> VArray (t, List.map fooVal vs)
     | VTuple(vs) -> VTuple (List.map fooVal vs)
-    | VFun(poly,x,inWorld,e) -> VFun (poly, x, inWorld, fooExp e)
+    | VFun(x,e) -> VFun (x, fooExp e)
   }
   in fooExp e
 
@@ -277,14 +281,13 @@ let foldExp fE fV init e =
                     (fun acc (e1,e2) -> fooExp (fooExp acc e1) e2) acc es in
         fE acc exp
     | EArray(t,es) -> fE (List.fold_left fooExp acc es) exp
-    | EFun(poly,x,inWorld,e) -> fE (fooExp acc e) exp
+    | EFun(x,e) -> fE (fooExp acc e) exp
     | EIf(e1,e2,e3) -> fE (List.fold_left fooExp acc [e1;e2;e3]) exp
     | EApp(poly,e1,e2) -> fE (List.fold_left fooExp acc [e1;e2]) exp
     | ELet(x,fo,e1,e2) -> fE (List.fold_left fooExp acc [e1;e2]) exp
     | EExtern(x,t,e) -> fE (fooExp acc e) exp
     | ETcFail(s,e) -> fE (fooExp acc e) exp
-    | EAs(s,e,f) -> fE (fooExp acc e) exp
-    | EAsW(s,e,w) -> fE (fooExp acc e) exp
+    | EAsW(e,w) -> fE (fooExp acc e) exp
     | ENewref(l,e) -> fE (fooExp acc e) exp
     | EDeref(e) -> fE (fooExp acc e) exp
     | ESetref(e1,e2) -> fE (List.fold_left fooExp acc [e1;e2]) exp
@@ -304,11 +307,11 @@ let foldExp fE fV init e =
     | VNull -> fV acc v.value
     | VVar(x) -> fV acc v.value
     | VEmpty -> fV acc v.value
-    | VNewObjRef(i) -> fV acc v.value
+    (* | VNewObjRef(i) -> fV acc v.value *)
     | VExtend(v1,v2,v3) -> fV (List.fold_left fooVal acc [v1;v2;v3]) v.value
     | VArray(t,vs) -> fV (List.fold_left fooVal acc vs) v.value
     | VTuple(vs) -> fV (List.fold_left fooVal acc vs) v.value
-    | VFun(poly,x,inWorld,e) -> fV (fooExp acc e) v.value
+    | VFun(x,e) -> fV (fooExp acc e) v.value
   in fooExp init e
 
 
@@ -345,7 +348,7 @@ let vUndef        = {pos = pos0; value = VBase Undef}
 let vVar x        = {pos = pos0; value = VVar x}
 let vEmpty        = {pos = pos0; value = VEmpty}
 let vBase x       = {pos = pos0; value = VBase x}
-let vNewObjRef i  = {pos = pos0; value = VNewObjRef i}
+(* let vNewObjRef i  = {pos = pos0; value = VNewObjRef i} *)
 
 let vProj i       = vStr (string_of_int i)
 
@@ -429,8 +432,15 @@ let tyTypTerm = function
   | URef(l) -> tyRef l (* so that default for references can be tweaked *)
   | u       -> TQuick ("v", QBoxes [u], pTru)
 
-let tyDepTuple l =
+let tyTupleNone l = (* no component has a binder *)
+  TQuick ("v", QTuple (List.map (fun t -> (None, t)) l, false), pTru)
+
+let tyTupleSome l = (* some components have binders *)
+  TQuick ("v", QTuple (List.map (fun (xo,t) -> (xo, t)) l, false), pTru)
+
+let tyTupleAll l = (* all components have binders *)
   TQuick ("v", QTuple (List.map (fun (x,t) -> (Some x, t)) l, false), pTru)
+
 
 (* setting the default for array tuple invariants to be v != undefined,
    not Top, so that packed array accesses can at least prove that the
@@ -440,13 +450,6 @@ let tyArrDefault = tyNotUndef
 let bindersOfDepTuple l =
   List.fold_left (fun acc -> function Some(x) -> x::acc | None -> acc)
     [] (List.map fst l)
-
-let baseTypToForm = function
-  | BNum   -> pNum
-  | BInt   -> pInt
-  | BStr   -> pStr
-  | BBool  -> pBool
-  | BUndef -> eq (tag theV) (wStr tagUndef)
 
 (* maybeValOfSingleton used by TcDref3 and Sub to manipulate heap bindings with
    singleton types. can make maybeValOfWal better by "evaluating" record walues
@@ -600,7 +603,7 @@ let rec strVal v = match v.value with
   | VNull       -> "null"
   | VVar(x)     -> x
   | VEmpty      -> "empty"
-  | VNewObjRef(i) -> spr "(VObjRef %d)" i
+  (* | VNewObjRef(i) -> spr "(VObjRef %d)" i *)
   | VFun _ as v -> spr "(VFun %d)" (Id.process idLamTerms v)
   | VExtend(v1,v2,v3) ->
       if !pretty
@@ -672,21 +675,31 @@ and strWalList l =
 
 and strTyp = function
   | t when List.mem_assoc t simpleSugarOfTyp -> List.assoc t simpleSugarOfTyp
-  | TBaseUnion(l)        -> String.concat "Or" (List.map strBaseTyp l)
   | TRefinement("v",p)   -> spr "{%s}" (strForm p)
   | TRefinement(x,p)     -> spr "{%s|%s}" x (strForm p)
-  | TQuick(_,QRecd(l,true),_)  -> strQuickTyp (QRecd (l, true))
-  | TQuick(_,QTuple(l,true),_) -> strQuickTyp (QTuple (l, true))
-  | TQuick(_,QBoxes([]),_) -> failwith "strTyp: weird type with QBoxes []"
-  | TQuick(_,QBoxes([u]),p) when p = pTru -> strTT u
-  | TQuick("v",(QBase(_) as qt),p) 
-  | TQuick("v",(QRecd(_) as qt),p) 
-  | TQuick("v",(QTuple(_) as qt),p) when p = pTru -> strQuickTyp qt
-  | TQuick("v",qt,p)     -> spr "{%s|%s}" (strQuickTyp qt) (strForm p)
-  | TQuick(x,qt,p)       -> spr "{%s:%s|%s}" x (strQuickTyp qt) (strForm p)
+  | TQuick(x,qt,p)       -> strTQuick x qt p
   | TNonNull(t)          -> spr "(%s)!" (strTyp t)
   | TMaybeNull(t)        -> spr "(%s)?" (strTyp t)
-  | TExists(x,t,s)       -> spr "exists (%s:%s). %s" x (strTyp t) (strTyp s)
+  | TBaseUnion(l)        -> String.concat "Or" (List.map strBaseTyp l)
+
+and strPrenexTyp = function
+  | TExists(x,t,s) -> spr "exists (%s:%s). %s" x (strTyp t) (strPrenexTyp s)
+  | Typ(t)         -> strTyp t
+
+and strTQuick x qt p =
+  match (!Settings.printShortQuick, x, qt, p) with
+    | _,    _, QBoxes([]), _     -> failwith "strTyp: weird type with QBoxes []"
+    (* these three cases omit the refinement formula *)
+    | true, _, QRecd(l,true), _  -> strQuickTyp (QRecd (l, true))
+    | true, _, QTuple(l,true), _ -> strQuickTyp (QTuple (l, true))
+    | true, _, QBoxes([u]), _    -> strTT u
+    (* otherwise, omit the formula only if it's pTru *)
+    | _,    _, QBoxes([u]), p when p = pTru -> strTT u
+    | _,    _, QBase(_), p 
+    | _,    _, QRecd(_), p 
+    | _,    _, QTuple(_), p when p = pTru -> strQuickTyp qt
+    | _,  "v", _, _ -> spr "{%s|%s}" (strQuickTyp qt) (strForm p)
+    | _             -> spr "{%s:%s|%s}" x (strQuickTyp qt) (strForm p)
 
 and strQuickTyp = function
   | QBase(bt) -> strBaseTyp bt
@@ -981,7 +994,7 @@ let heapBinders (_,cs) =
 
 let rec freeVarsVal env v = match v.value with
   | VVar(x) -> if Quad.memV x env then Quad.empty else Quad.addV x Quad.empty
-  | VBase _ | VNull | VEmpty | VNewObjRef _ -> Quad.empty
+  | VBase _ | VNull | VEmpty (* | VNewObjRef _ *) -> Quad.empty
   | VExtend(v1,v2,v3) ->
       Quad.combineList (List.map (freeVarsVal env) [v1;v2;v3])
   | VArray(_,vs) | VTuple(vs) ->
@@ -1009,6 +1022,8 @@ and (* let rec *) freeVarsTyp env = function
                         Quad.combineList [v1;v2]
   | TNonNull(t)      -> freeVarsTyp env t
   | TMaybeNull(t)    -> freeVarsTyp env t
+
+and freeVarsPrenexTyp env = function
   | TExists _        -> failwith "freeVars TExists"
 
 and freeVarsQuickTyp env = function
@@ -1153,7 +1168,7 @@ let rec substWal (subst:subst) = function
       | VBase _       -> WVal v
       | VEmpty        -> WVal v
       | VNull         -> WVal v
-      | VNewObjRef _  -> WVal v
+      (* | VNewObjRef _  -> WVal v *)
       | VArray _      -> WVal v (* TODO *)
       | VTuple _      -> WVal v (* TODO *)
       | VExtend _     -> WVal v (* TODO *)
@@ -1215,10 +1230,13 @@ and substTyp (subst:subst) = function
       let l = freshenDepTuple (MasterSubst.freeVars subst) l in
       TTuple (List.map (fun (x,t) -> (x, substTyp subst t)) l)
 *)
+
+and substPrenexTyp subst = function
+  | Typ(t) -> Typ (substTyp subst t)
   | TExists(x,t1,t2) ->
       let (l,_,_,_) = subst in
       if List.mem_assoc x l then failwith "subst TExists" (* TODO 8/20 *)
-      else TExists (x, substTyp subst t1, substTyp subst t2)
+      else TExists (x, substTyp subst t1, substPrenexTyp subst t2)
 
 and substQuickTyp subst = function
   | QBase(bt)  -> QBase bt
@@ -1302,12 +1320,10 @@ and applyTyp t w =
   match t with
     | TNonNull(t)      -> pAnd [applyTyp t w; pNot (PEq (w, wNull))]
     | TMaybeNull(t)    -> pOr [applyTyp t w; PEq (w, wNull)]
-    | TBaseUnion(l)    -> pOr (List.map baseTypToForm l)
+    | TBaseUnion(l)    -> pOr (List.map (fun bt -> applyBaseTyp bt w) l)
     | TRefinement(y,f) -> substForm ([(y,w)],[],[],[]) f
     | TQuick(y,qt,f)   -> let f0 = applyQuickTyp (wVar y) qt in
                           substForm ([(y,w)],[],[],[]) (pAnd [f;f0])
-    | TExists(x,t,s)   -> failwith (spr "applyTyp TExists\n%s :: %s\n%s\n%s"
-                            x (strTyp t) (strTyp s) (strWal w))
 (*
     | TTuple(l) ->
         let (vars,typs) = List.split l in
@@ -1322,14 +1338,19 @@ and applyTyp t w =
         in
         pAnd (PEq (tag w, wStr "Dict") :: has :: sels)
 *)
+(*
+    | TExists(x,t,s)   -> err ["applyTyp TExists\n";
+                               spr "%s :: %s\n" x (strTyp t);
+                               strTyp s]
+*)
 
 and applyQuickTyp w = function
-  | QBase(bt) -> baseTypToForm bt
+  | QBase(bt) -> applyBaseTyp bt w
   | QBoxes(us) -> pAnd (List.map (hastyp w) us)
   | QRecd(l,exactDom) ->
-      let ps = List.map (fun (f,t) -> applyTyp t (sel w (wStr f))) l in
       let keys = List.map wStr (List.map fst l) in
       let dom = if exactDom then PDomEq (w, keys) else PHas (w, keys) in
+      let ps = List.map (fun (f,t) -> applyTyp t (sel w (wStr f))) l in
       pAnd (pDict::dom::ps)
   | QTuple(l,exactDom) ->
       let subst =
@@ -1338,12 +1359,21 @@ and applyQuickTyp w = function
             | None    -> acc
             | Some(x) -> (x, sel w (wProj i)) :: acc) [] l in
       let subst = (subst,[],[],[]) in
+      let keys = List.map wProj (Utils.list0N (pred (List.length l))) in
+      let dom = if exactDom then PDomEq (w, keys) else PHas (w, keys) in
       let ps =
         Utils.map_i (fun (_,t) i -> 
           substForm subst (applyTyp t (sel w (wProj i)))) l in
-      let keys = Utils.map_i (fun _ i -> wProj i) l in
-      let dom = if exactDom then PDomEq (w, keys) else PHas (w, keys) in
       pAnd (pDict::dom::ps)
+
+and applyBaseTyp bt w =
+  substForm ([("v",w)],[],[],[])
+    (match bt with
+       | BNum   -> pNum
+       | BInt   -> pInt
+       | BStr   -> pStr
+       | BBool  -> pBool
+       | BUndef -> eq (tag theV) (wStr tagUndef))
 
 
 (***** the helpers that rename binders to avoid capture *****)
@@ -1429,7 +1459,7 @@ and freshenDomain free x t =
     | _               -> failwith "freshenDomain: impossible"
 
 let substTyp subst t =
-  BNstats.time "substTyp" (substTyp subst) t
+  BNstats.time "LangUtils.substTyp" (substTyp subst) t
 
 
 (***** Expression Substitution ************************************************)

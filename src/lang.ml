@@ -24,7 +24,6 @@ type tag = string
 
 let tagDict  = "Dict"      (* for internal functional dictionaries *)
 let tagRef   = "Ref"       (* for internal references *)
-(* let tagArray = "Array"     (* for internal functional arrays *) *)
 let tagNum   = "number"
 let tagBool  = "boolean"
 let tagStr   = "string"
@@ -57,14 +56,13 @@ type exp =
   | EVal of value
   | EDict of (exp * exp) list
   | EArray of typ * exp list
-  | EFun of (tvars * lvars * hvars) * vvar * (typ * heap) option * exp
+  | EFun of pat * exp
   | EIf of exp * exp * exp
   | EApp of (typs * locs * heaps) * exp * exp
   | ELet of vvar * frame option * exp * exp
   | EExtern of vvar * typ * exp
-  | ETcFail of string * exp
-  | EAs of string * exp * frame           (* string carries debug info *)
-  | EAsW of string * exp * world          (* string carries debug info *)
+  (***** abstract syntactic sugar *****)
+  | ETuple of exp list
   (***** reference operations *****)
   | ENewref of loc * exp
   | EDeref of exp
@@ -79,12 +77,11 @@ type exp =
   | EThrow of exp
   | ETryCatch of exp * vvar * exp
   | ETryFinally of exp * exp
-  (***** helpers for parsing *****)
+  (***** helpers *****)
+  | ETcFail of string * exp
+  | EAsW of exp * world              (* used during type checking *)
   | ELoadSrc of string * exp         (* inserted/eliminated by parsing *)
   | ELoadedSrc of string * exp       (* placeholder to indicate source file *)
-  (***** abstract syntactic sugar *****)
-  | ETuple of exp list
-  (* TODO DJS App nodes, ... ***)
 
 and value_ =
   | VBase of basevalue
@@ -92,8 +89,8 @@ and value_ =
   | VVar of vvar
   | VEmpty
   | VExtend of value * value * value
-  | VFun of (tvars * lvars * hvars) * vvar * (typ * heap) option * exp
-  | VNewObjRef of int
+  | VFun of pat * exp
+  (* | VNewObjRef of int *)
   (***** abstract syntactic sugar *****)
   | VArray of typ * value list
   | VTuple of value list
@@ -138,10 +135,13 @@ and hastyp = walue * typterm
 and typ =
   | TRefinement of vvar * formula        (* {x|p} *)
   | TQuick of vvar * quicktyp * formula  (* {x:Q|p} *)
-  | TExists of vvar * typ * typ          (* Exists x:T. S *)
-  | TBaseUnion of basetyp list
   | TNonNull of typ                      (* T! *)
   | TMaybeNull of typ                    (* T? *)
+  | TBaseUnion of basetyp list           (* IntOrBool, NumOrStr, etc. *)
+
+and prenextyp =
+  | TExists of vvar * typ * prenextyp    (* Exists x:T. S *)
+  | Typ of typ
 
 and quicktyp =
   | QBase  of basetyp

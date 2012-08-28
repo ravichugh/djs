@@ -21,10 +21,10 @@ var typeOf =
 
 Array.prototype.__hack__ = "dummy";
 
-/*: {(= v "number")} */ (typeOf(1));
-/*: {(= v "string")} */ (typeOf("hi"));
-/*: {(= v "boolean")} */ (typeOf(true));
-/*: {(= v "undefined")} */ (typeOf(undefined));
-/*: {(= v "null")} */ (typeOf(null));
-/*: {(= v "object")} */ (typeOf({}));
-/*: {(= v "array")} */ (typeOf([]));
+assert ("number" == typeOf(1));
+assert ("string" == typeOf("hi"));
+assert ("boolean" == typeOf(true));
+assert ("undefined" == typeOf(undefined));
+assert ("null" == typeOf(null));
+assert ("object" == typeOf({}));
+assert ("array" == typeOf([]));

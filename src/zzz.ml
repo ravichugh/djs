@@ -103,7 +103,7 @@ let checkSat cap =
   b
 
 let checkSat cap =
-  BNstats.time "checkSat" checkSat cap
+  BNstats.time "Zzz.checkSat" checkSat cap
 
 let checkValid cap p =
   pushScope ();

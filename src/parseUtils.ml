@@ -2,6 +2,8 @@
 open Lang
 open LangUtils
 
+let useTuplesAndPats = true
+
 (*
 
 (***** Tuple type desugaring **************************************************)
@@ -52,21 +54,11 @@ let mkDepTupleArrow (vars,t1) (h1,t2,h2) =
 (***** Tuple expression desugaring ********************************************)
 
 let mkTupleExp exps =
-  (* EDict (Utils.map_i (fun e i -> (EVal (vStr (string_of_int i)), e)) exps) *)
-  ETuple exps
+  if useTuplesAndPats then ETuple exps
+  else EDict (Utils.map_i (fun e i -> (EVal (vStr (string_of_int i)), e)) exps)
 
 
 (***** Pattern desugaring *****************************************************)
-
-(*
-type pattern =
-  | PLeaf of id
-  | PNode of pattern list
-
-let rec strPattern = function
-  | PLeaf(x) -> x
-  | PNode(l) -> spr "(%s)" (String.concat "," (List.map strPattern l))
-*)
 
 let rec addLets e = function
   | [] -> e
@@ -143,11 +135,13 @@ let patternToBindings4 initBinder pat =
   let newVar = freshVar "pattern" in
   (newVar, mkApp (eVar "get_curried") [eVar initBinder]) :: (foo newVar pat)
 
-let mkPatFun polyFormals pat e =
-  let initBinder = freshVar "pattern" in
-  let newBindings = patternToBindings4 initBinder pat in
-  let e' = addLets e newBindings in
-  EFun (([],[],[]), initBinder, None, e')
+let mkPatFun pat e =
+  if useTuplesAndPats then EFun (pat, e)
+  else
+    let initBinder = freshVar "pattern" in
+    let newBindings = patternToBindings4 initBinder pat in
+    let e' = addLets e newBindings in
+    EFun (PLeaf initBinder, e')
 
 
 (***** Misc *******************************************************************)
@@ -242,8 +236,7 @@ let mkLetRec f uarr e1 e2 =
   let t = tyTypTerm (UArrow uarr) in
   ELet (f, Some (typToFrame t),
         EApp (([t],[],[]), eVar "fix",
-          EFun (([],[],[]), f, None,
-            EFun (([],[],[]), x, None, e1))),
+          EFun (PLeaf f, EFun (PLeaf x, e1))),
         e2)
 
 

@@ -21,7 +21,7 @@ loc:
     utils.ml log.ml                                 \
     tcDref3.ml                                      \
     parseUtils.ml                                   \
-    djsDesugar.ml                                   \
+    djsDesugar2.ml                                  \
     settings.ml                                     \
     langLexer.mll langParser.mly                    \
     ../prims/*.*

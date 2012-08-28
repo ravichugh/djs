@@ -37,7 +37,7 @@ let finish (l,e) =
 
 let rec anf = function
   | EVal(w) -> ([], EVal w)
-  | EFun(l,x,t,e) -> ([], EVal (wrapVal pos0 (VFun (l, x, t, anfExp e))))
+  | EFun(x,e) -> ([], EVal (wrapVal pos0 (VFun (x, anfExp e))))
   | EDict(xel) ->
       let (ll,xwl) =
         xel |> List.map (fun (e1,e2) ->
@@ -98,8 +98,8 @@ let rec anf = function
         (l1, ELet (x, ao, e1, anfExp e2))
   | EExtern(x,s,e) -> ([], EExtern (x, s, anfExp e))
   | ETcFail(s,e) -> ([], ETcFail (s, anfExp e))
-  | EAs(x,e,a) -> ([], EAs (x, anfExp e, a))
-  | EAsW(x,e,a) -> ([], EAsW (x, anfExp e, a))
+  (* | EAs(e,a) -> ([], EAs (anfExp e, a)) *)
+  | EAsW(e,a) -> ([], EAsW (anfExp e, a))
   | ENewref(cl,e) ->
       let (l,e) = anfAndTmp e in
       finish (l, ENewref (cl, e))
@@ -140,20 +140,20 @@ and anfAndTmp e =
 and anfExp e = mkExp (anf e)
 
 (* Clean up the results of ANFing a bit.
+
      let _tmp = e1 in
-     let y = _tmp in     
-       e2
+     let y = _tmp in e2    =>  let y = e1 in e2
+
+     let _tmp = e in _tmp  =>  e
 *)
-let removeUselessLet = function
-(*
-  | ELet(x,None,e1,ELet(y,None,EVal(VVar(x')),e2)) when x = x' && x.[0] = '_' ->
-*)
+let removeUselessLets = function
   | ELet(x,None,e1,ELet(y,None,EVal({value=VVar(x')}),e2))
     when x = x' && x.[0] = '_' ->
       ELet (y, None, e1, e2)
+  | ELet(x,None,e,EVal({value=VVar(x')})) when x = x' -> e
   | e -> e
 
-let anfExp e = e |> anfExp |> mapExp removeUselessLet
+let anfExp e = e |> anfExp |> mapExp removeUselessLets
 
 
 (***** A-Normalized program printer *******************************************)
@@ -179,11 +179,8 @@ let rec strVal_ k = function
       strLam k (spr "(%s)" (strBindingTyp (x,t))) e
 *)
   (* 11/28: to avoid parsing conflict, function values wrapped in begin/end *)
-  | VFun(l,x,None,e) ->
-      let s = strLamImp k l x e in
-      spr "%sbegin %s end" (tab k) (clip s)
-  | VFun(l,x,Some(t,h),e) ->
-      let s = strLamImp k l (spr "(%s) / %s" (strBinding (x,t)) (strHeap h)) e in
+  | VFun(x,e) ->
+      let s = strLam k x e in
       spr "%sbegin %s end" (tab k) (clip s)
   | VNull -> spr "%snull" (tab k)
   | VBase(c) -> spr "%s%s" (tab k) (strBaseValue c)
@@ -223,39 +220,11 @@ let rec strVal_ k = function
 
 and strVal k v = strVal_ k v.value
 
-(*
-and strLam k sarg e =
+and strLam k pat e =
   let sexp = strExp (succ k) e in
   if noLineBreaks sexp
-    then spr "%sfun %s -> %s" (tab k) sarg (clip sexp)
-    else spr "%sfun %s -> \n%s" (tab k) sarg sexp
-*)
-
-and strLamImp k (l1,l2,l3) sarg e =
-  let sexp = strExp (succ k) e in
-(*
-  let sl =
-    if List.length l = 0 then ""
-    else spr "<%s> " (strLocs l) in
-*)
-  let sl =
-    if List.length l1 + List.length l2 + List.length l3 = 0 then ""
-    else spr "[%s;%s;%s] " (String.concat "," l1)
-           (String.concat "," l2) (String.concat "," l3) in
-(*
-  if noLineBreaks sexp
-    then spr "%sfun %s%s -> %s" (tab k) sl sarg (clip sexp)
-    else spr "%sfun %s%s -> \n%s" (tab k) sl sarg sexp
-*)
-  if noLineBreaks sexp
-    then spr "%sfun %s%s -> (%s)" (tab k) sl sarg (clip sexp)
-    else spr "%sfun %s%s -> (\n%s\n%s)" (tab k) sl sarg sexp (tab k)
-
-and strBam k x e =
-  let se = strExp (succ k) e in
-  if noLineBreaks se
-    then spr "%sfun %s -> %s" (tab k) x (clip se)
-    else spr "%sfun %s -> \n%s" (tab k) x se
+    then spr "%sfun %s -> (%s)" (tab k) (strPat pat) (clip sexp)
+    else spr "%sfun %s -> (\n%s\n%s)" (tab k) (strPat pat) sexp (tab k)
 
 (* TODO for better formatting, should always check for newlines before clipping *)
 and strExp k exp = match exp with
@@ -284,17 +253,6 @@ and strExp k exp = match exp with
       spr "%s%s %s(%s)" (tab k) (clip s1) sl (clip s2)
 *)
   | ELet(x,ao,e1,e2) ->
-(*
-      (* TODO remove these and use abstract syntax for separators *)
-      let sep =
-        if x = "end_of_prims" ||
-           x = "end_of_pervasives" ||
-           x = "end_of_djs_prelude" then
-          spr "\n\n(%s)\n\n" (String.make 78 '*')
-        else if k = 0 then "\n\n"
-        else "\n"
-      in
-*)
       let sep = if k = 0 then "\n\n" else "\n" in
       let sao =
         match ao with
@@ -310,13 +268,20 @@ and strExp k exp = match exp with
         else spr "%slet %s%s =\n%s in%s%s" (tab k) x sao s1 sep s2
   (* TODO For Extern, Assert, and Assume, print str_ in flat mode *)
   | EExtern(x,s,e) ->
-      spr "%sval %s :: %s\n\n%s" (tab k) x (clip (strTyp s)) (strExp k e)
+      let sep = if x = "end_of_dref_basics" ||
+                   x = "end_of_dref_objects" ||
+                   x = "__end_of_djs_prelude"
+                then spr "(%s)\n\n" (String.make 78 '*')
+                else "" in
+      spr "%sval %s :: %s\n\n%s%s" (tab k) x (clip (strTyp s)) sep (strExp k e)
   | ETcFail(s,e) ->
       spr "%s(fail \"%s\" \n%s)" (tab k) s (strExp (succ k) e)
-  | EAs(_,e,f) ->
+(*
+  | EAs(e,f) ->
       let sf = strFrame f in
       spr "%s(%s\n%s) as %s" (tab k) (clip (strExp k e)) (tab k) sf
-  | EAsW(_,e,w) ->
+*)
+  | EAsW(e,w) ->
       let sw = strWorld w in
       spr "%s(%s\n%s) as %s" (tab k) (clip (strExp k e)) (tab k) sw
   | ENewref(x,e) ->
@@ -398,7 +363,7 @@ and coerce = function
   | EVal(w) -> EVal w
   | EDict([]) -> EVal (wrapVal pos0 VEmpty)
   | EDict _ -> failwith "Anf.coerce EDict: should have become calls to set"
-  | EFun(l,x,t,e) -> EVal (wrapVal pos0 (VFun (l, x, t, coerce e)))
+  | EFun(x,e) -> EVal (wrapVal pos0 (VFun (x, coerce e)))
   | EArray(t,es) -> EVal (wrapVal pos0 (VArray (t, List.map coerceVal es)))
   | ETuple(es) -> EVal (wrapVal pos0 (VTuple (List.map coerceVal es)))
   | EIf(e1,e2,e3) -> EIf (coerceEVal "if" e1, coerce e2, coerce e3)
@@ -406,7 +371,7 @@ and coerce = function
   | ELet(x,ao,e1,e2) -> ELet (x, ao, coerce e1, coerce e2)
   | EExtern(x,s,e) -> EExtern (x, s, coerce e)
   | ETcFail(s,e) -> ETcFail (s, coerce e)
-  | EAs(x,e,a) -> EAs (x, coerce e, a)
+  (* | EAs(e,a) -> EAs (coerce e, a) *)
   | ENewref(cl,e) -> ENewref (cl, coerce e)
   | EDeref(e) -> EDeref (coerceEVal "deref" e)
   | ESetref(e1,e2) -> ESetref (coerceEVal "setref1" e1, coerceEVal "setref2" e2)

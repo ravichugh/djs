@@ -9,8 +9,6 @@ let spr = Printf.sprintf
 (***** Command-line options ***************************************************)
 
 let parseOnly = ref false
-let primsPath = ref (Settings.prim_dir ^ "basics.dref")
-(* let pervsPath = ref (Settings.prim_dir ^ "pervasives.ml") *)
 let doRaw     = ref false
 let srcFiles  = ref []
 
@@ -26,12 +24,15 @@ let argSpecs = [
               Cnf.checkConversion := false;
               Log.printToStdout := false;
               Log.printToLog := false;
+              S.checkWfSynthesis := false;
               ()),
          "           don't check CNF conversion, ");
   ("-checkCNF", Arg.Set Cnf.checkConversion,
              "       check CNF conversion");
   ("-printAllTypes", Arg.Set S.printAllTypes,
                   "  default is just top-level definitions");
+  ("-printFullQuick", Arg.Clear S.printShortQuick,
+                   " don't abbreviate quick types");
   ("-meet", Arg.Set Sub.doMeet,
          "           use meet to combine type terms");
   ("-join", Arg.Int (fun i -> Sub.maxJoinSize := i),
@@ -46,9 +47,7 @@ let argSpecs = [
                   "  do false checks, which is a _de-optimization_");
   ("-noQuickTypes", Arg.Clear S.quickTypes,
                "     do all subtyping with logical queries");
-  ("-djsLite", Arg.Set S.djsMode,
-            "        Dependent JavaScript (simple dictionaries)");
-  ("-djs", Arg.Unit (fun () -> S.djsMode := true; S.fullObjects := true),
+  ("-djs", Arg.Set S.djsMode,
         "            Dependent JavaScript");
   ("-varLifting", Arg.Bool (fun b -> S.doVarLifting := b),
                "     <bool> (default is false)");
@@ -93,7 +92,7 @@ let makeAbsolute f =
   if f.[0] = '/' then f else Unix.getcwd () ^ "/" ^ f
 
 
-(***** Parse System D and !D **************************************************)
+(***** Parse System !D ********************************************************)
 
 let string_of_position (p, e) = 
   Format.sprintf "%s:%d:%d-%d" p.pos_fname p.pos_lnum (p.pos_cnum - p.pos_bol)
@@ -131,14 +130,8 @@ let anfAndAddPrelude e =
   if !doRaw then
     Anf.coerce e
   else
-    let basics = parsePrelude !primsPath in
-    (* let pervs = parsePrelude !pervsPath in *)
-    let objects =
-      parsePrelude
-        (S.prim_dir ^
-        (if !S.fullObjects then "objects.dref" else "other/objectsLite.dref"))
-    in
-    (* let e = prims (pervs (pre e)) in *)
+    let basics = parsePrelude (Settings.prim_dir ^ "basics.dref") in
+    let objects = parsePrelude (Settings.prim_dir ^ "objects.dref") in
     let e = basics (objects e) in
     let e = Anf.anfExp e in
     let _ = Anf.printAnfExp e in
@@ -151,7 +144,7 @@ let rec expandProg originalF = function
   | e ->
       Lang.ELoadedSrc (originalF, e)
 
-let parseSystemD () =
+let parseSystemDref () =
   let e =
     match !srcFiles with
       | []  -> Lang.EVal (LangUtils.vStr "no source file")
@@ -175,14 +168,9 @@ let dummyEJS =
 let doParseDJS fo =
   try
     let prog = match fo with Some(f) -> parseJStoEJS f | None -> dummyEJS in
-    let f_pre =
-      S.prim_dir ^
-      if !Settings.fullObjects then "prelude.js" else "other/preludeLite.js" in
+    let f_pre = S.prim_dir ^ "prelude.js" in
     let ejs_pre = parseJStoEJS f_pre in
-    failwith "bring DjsDesugar back to life"
-(*
-    DjsDesugar.desugar (DjsDesugar.makeFlatSeq ejs_pre prog)
-*)
+    DjsDesugar2.desugar (DjsDesugar2.makeFlatSeq ejs_pre prog)
   with Failure(s) ->
     if Utils.strPrefix s "parse error" || Utils.strPrefix s "lexical error"
     then Log.printParseErr s
@@ -203,11 +191,7 @@ let parseDJS () =
 let _ = 
 
   Arg.parse argSpecs anonArgFun usage;
-
-  let e =
-    if !S.djsMode then parseDJS ()
-    else parseSystemD () in
-
+  let e = if !S.djsMode then parseDJS () else parseSystemDref () in
   if !parseOnly then begin
     pr "\n%s\n" (Utils.greenString "PARSE SUCCEEDED");
     exit 0

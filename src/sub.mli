@@ -11,8 +11,6 @@ val meetAll : TypeTerms.t -> typterm option
 
 val joinAll : TypeTerms.t -> typterm option
 
-(* val simpleHeapJoin : value -> heap -> heap -> heap *)
-
 (***** Extraction *************************************************************)
 
 val mustFlow : ?filter:(typterm -> bool) -> env -> typ -> TypeTerms.t
@@ -23,11 +21,11 @@ val writeStats : unit -> unit
 
 (***** Subtyping **************************************************************)
 
-val types : string -> env -> typ -> typ -> unit
+val types : string -> env -> prenextyp -> typ -> unit
 
 val heapSat : string -> env -> heapenv -> heap -> LangUtils.vsubst
 
-val worldSat : string -> env -> typ * heapenv -> world -> LangUtils.vsubst
+val worldSat : string -> env -> prenextyp * heapenv -> world -> LangUtils.vsubst
 
 (*
 val heaps : string -> ?locsOpt:(loc list option) -> env -> heap -> heap

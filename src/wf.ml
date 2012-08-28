@@ -7,62 +7,9 @@ open LangUtils
 
 let depTupleBindersEnv t =
   List.map (fun x -> Var (x, tyAny)) (depTupleBinders t)
-(*
-  let rec foo acc = function
-    | TTuple(l) -> 
-        let (xs,ts) = List.split l in
-        let acc = List.fold_left (fun acc x -> Var(x,tyAny)::acc) acc xs in
-        List.fold_left foo acc ts
-    | TNonNull(t) | TMaybeNull(t) -> foo acc t
-    | _ -> acc
-  in foo [] t
-*)
 
-(*
-let varBoundInG x g =
-  List.exists (function Var(y,_) when x = y -> true | _ -> false) g
-*)
-
-(* TODO 11/22 *)
-
-let rec isTopLevelExistential x = function
-  | TExists(y,_,t) -> x = y || isTopLevelExistential x t
-  | _              -> false
-
-let varBoundInG x g =
-  List.exists (function
-    | Var(y,t) -> x = y || isTopLevelExistential x t
-    | _        -> false
-  ) g
-
-(*
-let varBoundInH x h =
-  List.exists
-    (function HConc(y,_) | HConcObj(y,_,_) -> x = y) (* | _ -> false) *)
-    (List.map snd (snd h))
-*)
-
-(* TODO 11/27: when checking heap wf, don't want to snapshot it first.
-   the nice thing about how it was set up is that the entire heap is a
-   parameter when checking wf of its constraints (the helper relation).
-   so, when looking up a variable binder in H, also need to walk dep
-   tuple binders *)
-
-(*
-let varBoundInH x h =
-  List.exists
-    (function
-       | HConc(y,t) | HConcObj(y,t,_) ->
-           x = y || varBoundInG x (depTupleBindersEnv t)
-       | HWeakTok _ -> false)
-    (List.map snd (snd h))
-  
-let varBound x g h = varBoundInG x g || varBoundInH x h
-*)
-
-(* TODO 8/13 keeping h heapenv param as dummy. remove it everywhere *)
-
-let varBound = varBoundInG
+let varBound x g =
+  List.exists (function Var(y,t) -> x = y | _ -> false) g
 
 let noDupeFormal errList s l =
   match Utils.someDupe l with
@@ -97,6 +44,7 @@ let envToStrings g =
 let rec checkType errList g t =
   let errList = errList @ [spr "Wf.checkType: %s" (strTyp t)] in
   match t with
+    | TBaseUnion _ -> ()
     | TNonNull(t) | TMaybeNull(t) -> checkType errList g t
     | TRefinement(x,p) ->
         checkFormula errList (Var(x,tyAny)::g) p
@@ -109,8 +57,12 @@ let rec checkType errList g t =
         let g = List.fold_left (fun acc x -> Var(x,tyAny)::acc) g vars in
         List.iter (checkType errList g) typs
 *)
-    | TExists(x,t,s) ->
-        checkType errList (Var(x,t)::g) s
+
+and checkPrenexTyp errList g t =
+  let errList = errList @ [spr "Wf.checkPrenexTyp: %s" (strPrenexTyp t)] in
+  match t with
+    | Typ(s) -> checkType errList g s
+    | TExists(x,t,s) -> checkPrenexTyp errList (Var(x,t)::g) s
 
 and checkQuickTyp errList g = function
   | QBase _ -> ()
@@ -158,9 +110,9 @@ and checkValue errList g v =
         (* else err (errList @ [spr "unbound variable: [%s]" x] @ envToStrings g) *)
         else err (errList @ [spr "unbound variable: [%s]" x])
     | VBase _ | VNull | VEmpty -> ()
-    | VNewObjRef _ -> ()
+    (* | VNewObjRef _ -> () *)
     | VExtend(v1,v2,v3) -> List.iter (checkValue errList g) [v1;v2;v3]
-    | VTuple(vs) -> List.iter (checkValue errList g) vs
+    | VArray(_,vs) | VTuple(vs) -> List.iter (checkValue errList g) vs
     | VFun _ -> () (* not recursing, since lambdas don't appear in formulas *)
 
 and checkTypeTerm errList g u =
@@ -219,14 +171,9 @@ and checkConstraints errList g h = function
       checkConstraints errList g h rest;
     end
 
-(*
 and checkWorld errList g (t,h) =
   checkHeap errList g h;
-  checkType errList g h t
-*)
-and checkWorld errList g = function
-  | (TExists(x,t,s),h) -> checkWorld errList (Var(x,t)::g) (s,h)
-  | (t,h) -> (checkHeap errList g h; checkType errList g t)
+  checkType errList g t
 
 and checkLoc errList g = function
   (* TODO 8/13 want to check weaklocs also, but they go out of scope since
@@ -248,12 +195,24 @@ and checkFrame errList g (hs,e,w) =
   let g = g @ heapBinders e in
   checkWorld errList g w
 
+let checkType = BNstats.time "Wf.checkType" checkType
+let checkFormula = BNstats.time "Wf.checkFormula" checkFormula
+let checkHeap = BNstats.time "Wf.checkHeap" checkHeap
+let checkConstraints = BNstats.time "Wf.checkConstraints" checkConstraints
+let checkWorld = BNstats.time "Wf.checkWorld" checkWorld
+let checkTypeTerm = BNstats.time "Wf.checkTypeTerm" checkTypeTerm
+let checkFrame = BNstats.time "Wf.checkFrame" checkFrame
+
 
 (***** Entry point ************************************************************)
 
 let typ cap      = checkType      [spr "Wf.typ: %s" cap]
+let prenexTyp cap= checkPrenexTyp [spr "Wf.prenexTyp: %s" cap]
 let heap cap     = checkHeap      [spr "Wf.heap: %s" cap]
 let world cap    = checkWorld     [spr "Wf.world: %s" cap]
 let typeTerm cap = checkTypeTerm  [spr "Wf.typeTerm: %s" cap]
 let frame cap    = checkFrame     [spr "Wf.frame: %s" cap]
+
+let typ = BNstats.time "Wf.typ" typ
+let prenexTyp = BNstats.time "Wf.prenexTyp" prenexTyp
 

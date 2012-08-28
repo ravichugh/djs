@@ -1,7 +1,7 @@
-/*: {(= v "number")} */ (typeof 1);
-/*: {(= v "string")} */ (typeof "hi");
-/*: {(= v "boolean")} */ (typeof true);
-/*: {(= v "object")} */ (typeof null);
-/*: {(= v "object")} */ (typeof {});
-/*: {(= v "object")} */ (typeof []);
-/*: {(= v "undefined")} */ (typeof undefined);
+assert (/*: {(= v "number")} */ (typeof 1));
+assert (/*: {(= v "string")} */ (typeof "hi"));
+assert (/*: {(= v "boolean")} */ (typeof true));
+assert (/*: {(= v "object")} */ (typeof null));
+assert (/*: {(= v "object")} */ (typeof {}));
+assert (/*: {(= v "object")} */ (typeof []));
+assert (/*: {(= v "undefined")} */ (typeof undefined));

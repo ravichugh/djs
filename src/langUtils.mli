@@ -78,7 +78,7 @@ val vUndef : value
 val vVar : vvar -> value
 val vEmpty : value
 val vBase : basevalue -> value
-val vNewObjRef : int -> value
+(* val vNewObjRef : int -> value *)
 
 val wBool : bool -> walue
 val wStr : string -> walue
@@ -132,7 +132,9 @@ val tyArrDefault : typ
 val pIsBang : walue -> typterm -> formula
 val tyArrayTuple : typ -> typ list -> bool -> typ
 val tyTypTerm : typterm -> typ
-val tyDepTuple : (vvar * typ) list -> typ
+val tyTupleNone : typ list -> typ
+val tyTupleSome : (vvar option * typ) list -> typ
+val tyTupleAll : (vvar * typ) list -> typ
 
 (***** Boxes ******************************************************************)
 
@@ -145,11 +147,13 @@ val simpleSugarOfTyp : (typ * string) list
 val sugarArrow : bool ref
 val strLoc : loc -> string
 val strLocs : locs -> string
+val strPat : pat -> string
 val strThawState : thawstate -> string
 val strBaseValue : basevalue -> string
 val strVal : value -> string
 val strWal : walue -> string
 val strTyp : typ -> string
+val strPrenexTyp : prenextyp -> string
 val strTT : typterm -> string
 val strForm : formula -> string
 val strFormExpanded : string -> formula list -> string
@@ -178,6 +182,7 @@ val substTyp  : MasterSubst.t -> typ     -> typ
 val substHeap : MasterSubst.t -> heap    -> heap
 val substWal  : MasterSubst.t -> walue   -> walue
 val substLoc  : MasterSubst.t -> loc     -> loc
+val substPrenexTyp  : MasterSubst.t -> prenextyp -> prenextyp
 
 val applyTyp : typ -> walue -> formula
 

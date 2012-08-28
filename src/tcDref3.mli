@@ -3,7 +3,7 @@ open Lang
 
 val tsVal : env -> heapenv -> value -> typ
 
-val tsExp : env -> heapenv -> exp -> (typ * heapenv)
+val tsExp : env -> heapenv -> exp -> (prenextyp * heapenv)
 
 val tcVal : env -> heapenv -> typ -> value -> unit
 

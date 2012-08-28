@@ -37,7 +37,7 @@ let typeTerms g =
     typeTerms g
 
 let typeTerms g =
-  BNstats.time "typeTerms" typeTerms g
+  BNstats.time "Sub.typeTerms" typeTerms g
 
 
 (***** Meet/Join **************************************************************)
@@ -117,7 +117,7 @@ let mustFlow_ usedBoxes ?filter:(f=(fun _ -> true)) g t =
     extracted)
 
 let mustFlow_ usedBoxes ?filter:(f=(fun _ -> true)) g t =
-  BNstats.time "mustFlow_" (mustFlow_ usedBoxes ~filter:f g) t
+  BNstats.time "Sub.mustFlow_" (mustFlow_ usedBoxes ~filter:f g) t
 
 let canFlow_ usedBoxes ?filter:(f=(fun _ -> true)) g t =
   (* Log.smallTitle "CanFlow"; *)
@@ -285,23 +285,16 @@ let tallySlow s1 s2 =
   fpr oc_quick "Discharged slow:\n  %s\n  %s\n\n" s1 s2; incr count_slow
 
 let rec bindExistentials errList = function
+  | Typ(s) -> s
   | TExists(x,s1,s2) ->
-      (match s1 with
-         | TExists _ -> die errList "Sub.bindExistentials: not prenex form"
-         | _ ->
-             (* let _ = Log.log2 "bind %s :: %s\n" x (prettyStrTyp s1) in *)
-             let _ = Zzz.addBinding x s1 in
-             bindExistentials errList s2)
-  | s -> s
+      (* let _ = Log.log2 "bind %s :: %s\n" x (prettyStrTyp s1) in *)
+      let _ = Zzz.addBinding x s1 in
+      bindExistentials errList s2
 
 let rec checkTypes errList usedBoxes g t1 t2 =
-  let (s1,s2) = (strTyp t1, strTyp t2) in
+  let (s1,s2) = (strPrenexTyp t1, strTyp t2) in
   let errList =
     errList @ [spr "Sub.checkTypes:\n   t1 = %s\n   t2 = %s" s1 s2] in
-  begin match t2 with
-    | TExists _ -> die errList "existential type on the right"
-    | _ -> ()
-  end;
   Zzz.inNewScope (fun () ->
     let t1 = bindExistentials errList t1 in
     if !Settings.quickTypes && quickCheckTypes errList usedBoxes g (t1,t2)
@@ -315,13 +308,14 @@ let rec checkTypes errList usedBoxes g t1 t2 =
      call checkTypes for sub-obligations. *)
 
 and quickCheckTypes errList usedBoxes g = function
+  | _, t when t = tyAny -> true
   | TQuick(_,QBase(BInt),_), TQuick(_,QBase(BNum),p) -> p = pTru
   | TQuick(_,QBase(bt),_), TQuick(_,QBase(bt'),p) -> bt = bt' && p = pTru
   | TQuick(_,QBase(bt),_), TBaseUnion(l) -> List.mem bt l
   | TQuick(_,QRecd(l1,_),_), TQuick(_,QRecd(l2,_),p) when p = pTru -> begin
       List.iter (fun (f,t2) ->
         if List.mem_assoc f l1
-        then checkTypes errList usedBoxes g (List.assoc f l1) t2
+        then checkTypes errList usedBoxes g (Typ (List.assoc f l1)) t2
         else die errList (spr "Missing field \"%s\"." f)
       ) l2;
       true
@@ -331,7 +325,7 @@ and quickCheckTypes errList usedBoxes g = function
       else if List.length l1 < List.length l2 then false
       else begin
         List.iter
-          (function (t1,t2) -> checkTypes errList usedBoxes g t1 t2)
+          (function (t1,t2) -> checkTypes errList usedBoxes g (Typ t1) t2)
           (List.combine
              (List.map snd (Utils.take (List.length l2) l1))
              (List.map snd l2));
@@ -396,8 +390,8 @@ and checkTypeTerms errList usedBoxes g u1 u2 =
     | UArray(t1), UArray(t2) ->
        (try (* TODO 3/10 ideally want a version that returns bool instead
                of failing *)
-         let _ = checkTypes errList usedBoxes g t1 t2 in
-         let _ = checkTypes errList usedBoxes g t2 t1 in
+         let _ = checkTypes errList usedBoxes g (Typ t1) t2 in
+         let _ = checkTypes errList usedBoxes g (Typ t2) t1 in
          true
        with Tc_error _ ->
          false)

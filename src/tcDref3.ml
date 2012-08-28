@@ -9,6 +9,10 @@ let checkBinder cap g x =
   if List.exists (function Var(y,_) -> x = y | _ -> false) g then
     err [cap; "variable already in scope, so please use a different name."]
 
+let rec checkBinderPat cap g = function
+  | PLeaf(x) -> checkBinder cap g x
+  | PNode(ps) -> List.iter (checkBinderPat cap g) ps
+
 let baseTypOfBaseVal = function
   | Int _   -> BInt
   | Str _   -> BStr
@@ -16,12 +20,14 @@ let baseTypOfBaseVal = function
   | Undef _ -> BUndef
 
 let rec addPredicate p = function
-  | TQuick(x,qt,q)   -> TQuick (x, qt, pAnd [p;q])
-  | TRefinement(x,q) -> TRefinement (x, pAnd [p;q])
-  | TNonNull(t)      -> TNonNull (addPredicate p t)
-  | TMaybeNull(t)    -> TMaybeNull (addPredicate p t)
-  | TExists(x,t1,t2) -> TExists (x, t1, addPredicate p t2)
-  | TBaseUnion(l)    -> ty (pAnd [p; applyTyp (TBaseUnion l) theV])
+  | TQuick("v",qt,q)   -> TQuick ("v", qt, pAnd [p;q])
+  | TRefinement("v",q) -> TRefinement ("v", pAnd [p;q])
+  | TQuick _           -> failwith "addPredicate TQuick"
+  | TRefinement _      -> failwith "addPredicate TRefinement"
+  | TNonNull(t)        -> TNonNull (addPredicate p t)
+  | TMaybeNull(t)      -> TMaybeNull (addPredicate p t)
+  | TBaseUnion(l)      -> ty (pAnd [p; applyTyp (TBaseUnion l) theV])
+  (* | TExists(x,t1,t2)   -> TExists (x, t1, addPredicate p t2) *)
 
 
 (**** Selfify *****************************************************************)
@@ -45,7 +51,7 @@ let selfifyVar g x =
   
 let selfifyVal g = function
   | {value=VVar(x)} -> selfifyVar g x
-  | v               -> ty (PEq (theV, WVal v))
+  | v               -> valToSingleton v (* ty (PEq (theV, WVal v)) *)
 
 
 (**** Environment operations **************************************************)
@@ -53,9 +59,10 @@ let selfifyVal g = function
 let removeLabels g =
   List.filter (function Lbl _ -> false | _ -> true) g
 
-let printBinding ?(extraBreak=true) (x,s) =
+let printBinding ?(extraBreak=true) x s =
   if !Settings.printAllTypes || !depth = 0 then begin
-    Log.log3 "%s%s :: %s\n" (if extraBreak then "\n" else "") x (strTyp s);
+    Log.log4 "%s%s%s :: %s\n"
+      (if extraBreak then "\n" else "") (bigindent ()) x (strTyp s);
     flush stdout;
   end
 
@@ -68,58 +75,67 @@ let maybePrintHeapEnv hNew hOld =
   if hNew <> hOld && (!Settings.printAllTypes || !depth = 0) then begin
     let ((hs,csNew),(_,csOld)) = (hNew, hOld) in
     (* print heap variables *)
-    Log.log1 "\n/ %s ++\n" (String.concat "++" hs);
+    Log.log2 "\n%s/ %s ++\n" (bigindent ()) (String.concat "++" hs);
     (* print bindings and their relationship to old ones *)
     List.iter (fun (l,hc) ->
       let status =
         if not (List.mem_assoc l csOld) then "+"     (* added *)
         else if hc <> List.assoc l csOld then "*"    (* modified *)
         else " " in                                  (* unchanged *)
-      Log.log3 "  %s %s |-> %s\n" status (strLoc l) (strHC hc)
+      Log.log4 "%s  %s %s |-> %s\n" (bigindent ()) status (strLoc l) (strHC hc)
     ) csNew;
     (* print bindings that have been dropped *)
     List.iter (fun (l,hc) ->
       if not (List.mem_assoc l csNew) then
         let status = "-" in                          (* dropped *)
-        Log.log2 "  %s %s\n" status (strLoc l)
+        Log.log3 "%s  %s %s\n" (bigindent ()) status (strLoc l)
     ) csOld;
   end
-(*
-    List.iter (function
-      | (m,HEWeakTok(x)) -> Log.log2 "  %s |-> %s\n" (strLoc m) (strThawState x)
-      | (l,HEConc(v)) -> Log.log2 "  %s |-> %s\n" (strLoc l) (strVal v)
-      | (l,HEConcObj(v,l')) -> Log.log3 "  %s |-> %s |> %s\n"
-                                 (strLoc l) (strVal v) (strLoc l')) cs;
-*)
 
 (* TODO *)
-let bindingsAreRecursive l =
-  true
+let bindingsAreLeftToRight l =
+  false
 
 let rec tcAddBinding g x = function
-  | TExists(y,t1,t2) -> tcAddBinding (tcAddBinding g y t1) x t2
-  | s ->
+  | TExists(y,t1,t2) ->
+      tcAddBinding (tcAddBinding g y (Typ t1)) x t2
+  | Typ(s) ->
       let g =
         match s with
           | TQuick(_,QTuple(l,_),_) -> (* filtering out those w/o binder *)
               tcAddBindings g
                 (List.fold_left (fun acc -> function
                    | None, _    -> acc
-                   | Some(x), t -> (x,t)::acc) [] l)
+                   | Some(y), t -> (y,t)::acc) [] l)
           | _ -> g in
       let _ = Zzz.addBinding x s in
-      let _ = printBinding (x,s) in
+      let _ = printBinding x s in
       Var(x,s) :: g
 
 and tcAddBindings g l =
-  if bindingsAreRecursive l then
-    let g = List.fold_left tcAddBindingUn g l in
+  if bindingsAreLeftToRight l then
+    List.fold_left (fun g (x,t) -> tcAddBinding g x (Typ t)) g l
+  else
+    (* TODO this should be tyAny, but want t stored in g *)
+    let g = List.fold_left (fun g (x,t) -> tcAddBinding g x (Typ t)) g l in
     let _ = List.iter (fun (x,t) -> Zzz.assertFormula (applyTyp t(wVar x))) l in
     g (* might want to print the asserted formulas *)
-  else
-    List.fold_left tcAddBindingUn g l
 
-and tcAddBindingUn g (x,t) = tcAddBinding g x t
+let rec tcAddBindingPat g p t =
+  let sErr = spr "tcAddBindingPat %s %s" (strPat p) (strTyp t) in
+  match p, t with
+    | PLeaf(x), _ ->
+        tcAddBinding g x (Typ t)
+    | PNode(ps), TQuick("v",QTuple(tup,tru),q)
+      when q = pTru && List.length ps = List.length tup ->
+        List.fold_left (fun g (pi,(yio,si)) ->
+          match pi, yio with
+            | _, None -> tcAddBindingPat g pi si
+            | PLeaf(xi), Some(yi) when xi = yi -> tcAddBinding g xi (Typ si)
+            | _ -> failwith (spr "%s\n%s" sErr (strPat pi))
+        ) g (List.combine ps tup)
+    | _ ->
+        failwith sErr
 
 let findWeakLoc g m =
   try
@@ -222,19 +238,26 @@ let substHeapEnv subst (hs,cs) =
 
 let checkWfHeap = ref true
 
-let rec mkExists s = function
-  | (x,t)::l -> TExists (x, t, mkExists s l)
-  | []       -> s
+let rec mkExists l s =
+  match l with
+    | (x,t)::l -> TExists (x, t, mkExists l s)
+    | []       -> s
 
 (* Add existentials and check well-formedness. Algorithmic typing should
    always synthesize well-formed types, but doing this as a sanity check. *)
-let finishLet cap g y l ((s,h): (typ*heapenv)) : typ * heapenv =
-  if Str.string_match (Str.regexp "^end_of_dref") y 0 then
-    checkWfHeap := false;
-  let w = (mkExists s l, h) in
-  (* TODO 8/14 should also check that the heapenv is well formed *)
-  if !checkWfHeap then Wf.typ (spr "finishLet: %s" cap) g (fst w);
+let finishLet cap g y l ((s,h): (prenextyp*heapenv)) : prenextyp * heapenv =
+  if Str.string_match (Str.regexp "^end_of_dref") y 0 then begin
+    checkWfHeap := false
+  end;
+  let w = (mkExists l s, h) in
+  (* TODO 8/27/12: figure out why this slows things down so much *)
+  if !Settings.checkWfSynthesis && !checkWfHeap then begin
+    Wf.prenexTyp (spr "finishLet: %s" cap) g (fst w)
+    (* TODO 8/14/12: should also check that the heapenv is well formed *)
+  end;
   w
+
+let finishLet = BNstats.time "Tc.finishLet" finishLet
 
 let avoidSingletonExistentials (l,h) =
   List.fold_left (fun (l,h) (x,t) ->
@@ -243,6 +266,7 @@ let avoidSingletonExistentials (l,h) =
       | None    -> ((x,t)::l, h)
   ) ([],h) l
 
+(* TODO 8/27/12 took this out b/c of bug... *)
 let rec elimSingletonExistentials (t,h) =
   match t with
     | TExists(x,t1,t2) ->
@@ -251,7 +275,7 @@ let rec elimSingletonExistentials (t,h) =
                let _ = fpr oc_elim "avoided singleton %s\n%s\n\n" x (strTyp t1) in
                let subst = ([x,WVal(v)],[],[],[]) in
                elimSingletonExistentials
-                 (substTyp subst t2, substHeapEnv subst h)
+                 (substPrenexTyp subst t2, substHeapEnv subst h)
            | None ->
                let _ = fpr oc_elim "did not avoid singleton %s\n" x in
                let (t2,h) = elimSingletonExistentials (t2,h) in
@@ -261,7 +285,7 @@ let rec elimSingletonExistentials (t,h) =
 let stripExists t =
   let rec foo acc = function
     | TExists(x,t,s) -> foo ((x,t)::acc) s
-    | s              -> (acc, s)
+    | Typ(s)         -> (acc, s)
   in
   let (l,s) = foo [] t in
   (List.rev l, s)
@@ -366,10 +390,10 @@ let joinTypes v t1 t2 =
   let p = pIte (pGuard v true) (applyTyp s1 (wVar x)) (applyTyp s2 (wVar x)) in
   (l1 @ l2, TRefinement(x,p))
 
-let joinWorlds v (t1,heap1) (t2,heap2) : typ * heapenv =
+let joinWorlds v (t1,heap1) (t2,heap2) : prenextyp * heapenv =
   let (l1,s) = joinTypes v t1 t2 in
   let (l2,h) = joinHeapEnvs v heap1 heap2 in
-  (mkExists s (l1 @ l2), h)
+  (mkExists (l1 @ l2) (Typ s), h)
 
 (*
 let joinWorlds v w1 w2 =
@@ -382,7 +406,7 @@ let joinWorlds v w1 w2 =
 *)
   
 
-(***** Lambda/application helpers *********************************************)
+(***** TC lambda helpers ******************************************************)
 
 let isArrow = function
   | TRefinement(x,PHasTyp(y,UArrow(arr))) when y = wVar x -> Some arr
@@ -416,8 +440,11 @@ let destructNonArrowTypeFrame (_,_,(t,h)) =
     | None   -> t
     | Some _ -> failwith "destructNonArrowTypeFrame: impossible"
 
+
+(***** TS application helpers *************************************************)
+
 type app_rule_result =
-  | AppOk   of (typ * heapenv)
+  | AppOk   of (prenextyp * heapenv)
   | AppFail of string list
 
 (* TODO 8/15 what is depTupleSubst and heapDepTupleSubst?
@@ -629,6 +656,7 @@ let isValueTuple v =
     | {value=VExtend(v1,{value=VBase(Str(sn))},v3)} ->
         (match isIntOfString sn with
            | Some(n') when n = n' -> foo (v3::acc) (n-1) v1
+           | Some _ -> failwith "isValueTuple"
            | None -> None)
     | _ -> None
   in
@@ -838,12 +866,12 @@ let inferTypLocParams cap g tForms lForms tForm hForm tActs lActs vAct hAct =
 let checkInconsistent cap =
   Zzz.checkValid (spr "%s false check" cap) pFls
 
-let rec tsVal g h e =
+let rec tsVal g h e : typ =
   if !Settings.doFalseChecks && checkInconsistent "tsVal" then tyFls
   else tsVal_ g h e
 
-and tsExp g h e : typ * heapenv =
-  if !Settings.doFalseChecks && checkInconsistent "tsExp" then (tyFls, h)
+and tsExp g h e : prenextyp * heapenv =
+  if !Settings.doFalseChecks && checkInconsistent "tsExp" then (Typ tyFls, h)
   else tsExp_ g h e
 
 and tcVal g h s e =
@@ -894,8 +922,8 @@ and tsVal_ g h = function
       let cap =
         spr "TS-Val: %s ++ %s |-> %s" (strVal v1) (strVal v2) (strVal v3) in
       let (t1,t2,t3) = (tsVal g h v1, tsVal g h v2, tsVal g h v3) in
-      Sub.types cap g t1 tyDict;
-      Sub.types cap g t2 tyStr;
+      Sub.types cap g (Typ t1) tyDict;
+      Sub.types cap g (Typ t2) tyStr;
       match matchQRecd t1, matchQStrLit t2 with
         | Some(recd,b), Some(f) -> updQRecd v (recd,b) f t3
         | _                     -> ty (eq theV (WVal v))
@@ -921,7 +949,7 @@ and tsVal_ g h = function
 
 and tsExp_ g h = function
 
-  | EVal(v) -> (tsVal g h v, h)
+  | EVal(v) -> (Typ (tsVal g h v), h)
 
   | ENewref(l,EVal(v)) ->
       let cap = spr "TS-Newref: %s (%s) in ..." (strLoc l) (strVal v) in
@@ -930,7 +958,8 @@ and tsExp_ g h = function
         | None ->
             let _ = tsVal g h v in
             let h' = (fst h, snd h @ [(l, HEConc v)]) in
-            (tyRef l, h')
+            (* probably no need to use the more precise v=VRef(_) *)
+            (Typ (tyRef l), h')
       end
 
   | EDeref(EVal(v)) ->
@@ -938,7 +967,7 @@ and tsExp_ g h = function
       let t1 = tsVal g h v in
       let l = singleRefTermOf cap g t1 in
       begin match findCell l h with
-        | Some(HEConc(v')) -> (valToSingleton v', h)
+        | Some(HEConc(v')) -> (Typ (selfifyVal g v'), h)
         | Some(HEConcObj _) -> err ([cap; "can't deref object location"])
         | Some(HEWeakTok _) -> err ([cap; "can't deref weak location"])
         | None -> err ([cap; spr "unbound loc [%s]" (strLoc l)])
@@ -955,7 +984,7 @@ and tsExp_ g h = function
         | Some(HEWeakTok _, _) -> err ([cap; "can't setref weak location"])
         | Some(HEConc(v), h0) ->
             let h' = (fst h0, snd h0 @ [(l, HEConc v2)]) in
-            (valToSingleton v2, h')
+            (Typ (selfifyVal g v2), h')
       end
 
   | ENewObj(EVal(v1),l1,EVal(v2),l2) ->
@@ -967,23 +996,12 @@ and tsExp_ g h = function
             let t1 = tsVal g h v1 in
             let d = freshVar "obj" in
             let h' = (fst h, snd h @ [l1, HEConcObj (vVar d, l2)]) in
-            (TExists (d, t1, tyRef l1), h')
+            let s = (* probably no need to use the more precise v=VObjRef(_) *)
+              TQuick ("v", QBoxes [URef l1], eq (tag theV) (wStr tagObj)) in
+            (TExists (d, t1, Typ s), h')
               (* using an existential in case v1 is an array value (really
                  just sugar), which doesn't come equipped with a has-type
                  predicate, but its type t1 does *)
-(*
-            if tryTcVal g h tyDict v1 then
-              let h' = (fst h, snd h @ [l1, HEConcObj (v1, l2)]) in
-              (tyRef l1, h')
-            else (* assuming v1 is an array, no big deal *)
-              let t1 = tsVal g h v1 in
-              let a = freshVar "arr" in
-              let h' = (fst h, snd h @ [l1, HEConcObj (vVar a, l2)]) in
-              (TExists (a, t1, tyRef l1), h')
-              (* using an existential since an array value (really just sugar)
-                 don't come equipped with a has-type predicate, but its
-                 type t1 does *)
-*)
 (*
             let _ = tcVal g h tyDict v1 in
             let _ = tcVal g h (tyRef l2) v2 in
@@ -1021,7 +1039,7 @@ and tsExp_ g h = function
       finishLet (spr "%s: let %s = ..." ruleName x) g x [(x,s1)] (s2,h2)
 *)
 
-  (* 8/20: split TS-Let-Ann into two cases, depending on whether the frame
+  (* 8/20/12: split TS-Let-Ann into two cases, depending on whether the frame
      annotation is for a function type or not. *)
 
   | ELet(x,Some(frame),e1,e2) when frameIsNonArrowType frame -> begin
@@ -1030,18 +1048,21 @@ and tsExp_ g h = function
       let cap = spr "%s: let %s = ..." ruleName x in
       checkBinder cap g x;
       let (s1,h1) = Zzz.inNewScope (fun () -> tsExp g h e1) in
+(*
       let (s1,h1) = elimSingletonExistentials (s1,h1) in
+*)
       let tGoal = destructNonArrowTypeFrame frame in
       Sub.types cap g s1 tGoal;
+      let (l1,s1) = stripExists s1 in
+      let g = tcAddBindings g l1 in
+      let g = tcAddBinding g x (Typ s1) in
       (* synthesizing x:s1, _not_ the goal tGoal, since need to bring all the
          binders in scope, since they may refered to in h1. so the tGoal
          annotation is simply a check rather than an abstraction. *)
-      let g = tcAddBinding g x s1 in
-      printBinding (String.make (String.length x) ' ', tGoal) ~extraBreak:false;
+      printBinding (String.make (String.length x) ' ') tGoal ~extraBreak:false;
       maybePrintHeapEnv h1 h;
       let (s2,h2) = tsExp g h1 e2 in
-      (* tcRemoveBindingN n; *)
-      finishLet cap gInit x [(x,s1)] (s2,h2)
+      finishLet cap gInit x (l1 @ [(x,s1)]) (s2,h2)
     end
 
   | ELet(x,Some(frame),e1,e2) (* when not (frameIsNonArrowType frame) *) -> begin
@@ -1053,10 +1074,9 @@ and tsExp_ g h = function
       Zzz.inNewScope (fun () -> tcExp g h (s1,h1) e1);
       let (bindings,h1) = heapEnvOfHeap h1 in
       let g = tcAddBindings g bindings in
-      let g = tcAddBinding g x s1 in
+      let g = tcAddBinding g x (Typ s1) in
       maybePrintHeapEnv h1 h;
       let (s2,h2) = tsExp g h1 e2 in
-      (* tcRemoveBindingN (n + m); *)
       finishLet cap gInit x [(x,s1)] (s2,h2)
     end
 
@@ -1066,13 +1086,14 @@ and tsExp_ g h = function
       let cap = spr "%s: let %s = ..." ruleName x in
       checkBinder cap g x;
       let (s1,h1) = Zzz.inNewScope (fun () -> tsExp g h e1) in
+(*
       let (s1,h1) = elimSingletonExistentials (s1,h1) in
+*)
       let (l1,s1) = stripExists s1 in
       let g = tcAddBindings g l1 in
-      let g = tcAddBinding g x s1 in
+      let g = tcAddBinding g x (Typ s1) in
       maybePrintHeapEnv h1 h;
       let (s2,h2) = tsExp g h1 e2 in
-      (* tcRemoveBindingN (m + n); *)
       finishLet cap gInit x (l1 @ [(x,s1)]) (s2,h2)
     end
 
@@ -1090,9 +1111,8 @@ and tsExp_ g h = function
       if !depth > 0 then err [spr "extern [%s] not at top-level" x];
       let s = ParseUtils.undoIntersectionHack g s in
       Wf.typ (spr "ts extern %s" x) g s;
-      let g1 = tcAddBinding g x s in
+      let g1 = tcAddBinding g x (Typ s) in
       let (s2,h2) = tsExp g1 h e in
-      (* tcRemoveBindingN n; *)
       finishLet (spr "%s: let %s = ..." "TS-Extern" x) g x [(x,s)] (s2,h2)
     end
 
@@ -1104,34 +1124,14 @@ and tsExp_ g h = function
       tsExp g h e
     end
 
-  | ETcFail(s,e) ->
-      failwith "ts tcfail"
-(*
-      let fail =
-        try let _ = tsExp g h e in false
-        with Tc_error _ -> true in
-      if fail
-        then (STyp tyAny, h)
-        else err (spr "ts ETcFail: [\"%s\"] should have failed" s)
-*)
-
-  | EAs(s,e,f) -> begin
-      failwith "tsexp eas heapenv"
-(*
-      let w = applyFrame h f in
-      tcExp g h w (EAsW(s,e,w));
-      w
-*)
-    end
-
-  | EAsW(s,e,w) -> begin
-      Wf.world (spr "TS-EAsW: %s" s) g w;
+  | EAsW(e,w) -> begin
+      Wf.world "TS-EAsW:" g w;
       let (tGoal,hGoal) = freshenWorld w in
       tcExp g h (tGoal,hGoal) e;
       let (binders,h) = heapEnvOfHeap hGoal in
       (* TODO use a version of mkExists that adds dummy binders first,
          since binders can mutually refer to each other? *)
-      (mkExists tGoal binders, h)
+      (mkExists binders (Typ tGoal), h)
     end
 
   | ELabel(x,e) -> failwith "TS-Label: need a goal"
@@ -1147,7 +1147,7 @@ and tsExp_ g h = function
             tcVal g h tGoal v;
             Zzz.queryRoot := "TS-Break";
             ignore (Sub.heapSat cap g h hGoal);
-            (tyFls, h)
+            (Typ tyFls, h)
           end
         | _ -> err [cap; "no goal for label"]
       end
@@ -1166,7 +1166,7 @@ and tsExp_ g h = function
                   let _ = Zzz.queryRoot := "TS-Freeze" in
                   let _ = tcVal g h tFrzn v' in
                   let h' = (fst h1, (m, HEWeakTok Frzn) :: snd h1) in
-                  (TNonNull (tyRef m), h')
+                  (Typ (TNonNull (tyRef m)), h')
               | Some(HEConcObj _, _) ->
                   err [cap; spr "[%s] wrong proto link" (strLoc l)]
               | Some _ -> err [cap; spr "[%s] isn't a strong obj" (strLoc l)]
@@ -1203,19 +1203,27 @@ and tsExp_ g h = function
                                    (eq theV wNull)
                                    (applyTyp (tyRef l) theV)) in
                   *)
-                  (TExists (x, tFrzn, t), h')
+                  (TExists (x, tFrzn, Typ t), h')
               | Some(HEWeakTok _, _) -> err [cap; "already thawed"]
               | Some _ -> err [cap; "isn't a weaktok constraint"]
               | None -> err [cap; spr "[%s] location not bound" (strLoc m)]
             end
       end
 
-  | EThrow(EVal(v)) ->
-      let _ = tsVal g h v in (tyFls, h)
+  | EThrow(EVal(v)) -> failwith "EThrow"
+      (* let _ = tsVal g h v in (tyFls, h) *)
 
   | ETryCatch _ -> failwith "ETryCatch"
 
   | ETryFinally _ -> failwith "ETryFinally"
+
+  | ETcFail(s,e) ->
+      let fail =
+        try let _ = tsExp g h e in false
+        with Tc_error _ -> true in
+      if fail
+        then (Typ tyAny, h)
+        else err [spr "TS-Fail: [\"%s\"] should have failed" s]
 
   | ELoadedSrc(_,e) -> tsExp g h e
 
@@ -1226,12 +1234,15 @@ and tsExp_ g h = function
      some failure of parsing or ANFing *)
 
   | EDict _    -> Anf.badAnf "ts EDict"
+  | ETuple _   -> Anf.badAnf "ts ETuple"
+  | EArray _   -> Anf.badAnf "ts EArray"
   | EFun _     -> Anf.badAnf "ts EFun"
   | EIf _      -> Anf.badAnf "ts EIf"
   | EApp _     -> Anf.badAnf "ts EApp"
   | ENewref _  -> Anf.badAnf "ts ENewref"
   | EDeref _   -> Anf.badAnf "ts EDeref"
   | ESetref _  -> Anf.badAnf "ts ESetref"
+  | ENewObj _  -> Anf.badAnf "ts ENewObj"
   | EBreak _   -> Anf.badAnf "ts EBreak"
   | EThrow _   -> Anf.badAnf "ts EThrow"
   | EFreeze _  -> Anf.badAnf "ts EFreeze"
@@ -1316,7 +1327,7 @@ and tsAppSlow g curHeap ((tActs,lActs,hActs), v1, v2) =
 
     let (heapBindings,h) = heapEnvOfHeap e12 in
     let (heapBindings,h) = avoidSingletonExistentials (heapBindings,h) in
-    let t = mkExists t12 heapBindings in
+    let t = mkExists heapBindings (Typ t12) in
     AppOk (t, h) in (* end tryOne *)
 
   let result = (* use the first arrow that type checks the call *)
@@ -1347,31 +1358,19 @@ and tsAppSlow g curHeap ((tActs,lActs,hActs), v1, v2) =
 
 and tcVal_ g h goal = function
 
-  | ({value=VBase _} as v)
-  | ({value=VNull} as v)
-  | ({value=VVar _} as v)
-  | ({value=VEmpty} as v)
-  | ({value=VExtend _} as v)
-  | ({value=VArray _} as v)
-  | ({value=VTuple _} as v) ->
-      let s = tsVal g h v in
-      let _ = Zzz.queryRoot := "TC-EVal" in
-      Sub.types (spr "TC-EVal: %s" (strVal v)) g s goal
-
-  | {value=VFun(l,x,None,e)} -> begin
-      let ruleName = "TC-Fun-Bare" in
+  | {value=VFun(x,e)} -> begin
+      let ruleName = "TC-Fun" in
       let g = removeLabels g in
       let checkOne (((ts,ls,hs),y,t1,h1,t2,h2) as arr) =
         checkBinder (spr "%s: formal %s" ruleName y) g y;
         let u = UArrow arr in
         Wf.typeTerm (spr "%s: arrow:\n  %s" ruleName (strTT u)) g u;
-        let (ts,ls,hs) =
-          if l = ([],[],[]) then (ts,ls,hs)
-          else err ["lambda has some params..."]
-            (* requiring all params to be missing, since don't want to deal
-               with heap prefix vars that get inserted. *)
-        in
-        let subst = ([(y, wVar x)], [], [], []) in
+        (* let subst = ([(y, wVar x)], [], [], []) in *)
+        let vsubst =
+          match x with
+            | PNode(ps) -> []
+            | PLeaf(x) -> [(y, wVar x)] in
+        let subst = (vsubst, [], [], []) in
         let t2 = substTyp subst t2 in
         let h2 = substHeap subst h2 in
         let g = List.fold_left (fun acc x -> TVar(x)::acc) g ts in
@@ -1379,11 +1378,10 @@ and tcVal_ g h goal = function
         let g = List.fold_left (fun acc x -> HVar(x)::acc) g hs in
         Zzz.inNewScope (fun () ->
           (* since input heap can refer to arg binders, need to process t1 first *)
-          let g = tcAddBinding g x t1 in
+          let g = tcAddBindingPat g x t1 in
           let (bindings,h) = heapEnvOfHeap h1 in
           let g = tcAddBindings g bindings in
           tcExp g h (t2,h2) e;
-          (* tcRemoveBindingN (n + m) *)
         )
       in
       match isArrows goal with 
@@ -1392,7 +1390,10 @@ and tcVal_ g h goal = function
                             ruleName (strTyp goal)]
     end
 
-  | {value=VFun(_,_,Some(_),_)} -> err ["TC-Fun-Ann: don't annotate lambdas"]
+  | v ->
+      let s = tsVal g h v in
+      let _ = Zzz.queryRoot := "TC-EVal" in
+      Sub.types (spr "TC-EVal: %s" (strVal v)) g (Typ s) goal
 
 
 (***** Expression type conversion *********************************************)
@@ -1437,38 +1438,15 @@ and tcExp_ g h goal = function
       let _ = Zzz.queryRoot := "TC-App" in
       ignore (Sub.worldSat cap g w goal)
 
-  (* 9/21: special case added when trying to handle ANFed ifs *)
-  (* 11/25: added this back in *)
-  | ELet(x,None,e1,EVal({value=VVar(x')})) when x = x' ->
-      let cap = spr "TS-Let-Bare-Special: let %s = ..." x in
-      let _ = checkBinder cap g x in
-      let _ = tcExp g h goal e1 in
-      printBinding (x, fst goal)
-
   (***** all typing rules that use special let-bindings should be above *****)
 
   | ELet(x,None,e1,e2) ->
-      let cap = spr "TC-Let-Bare: let %s = ..." x in
-      let e2 = EAsW (cap, e2, goal) in
-      let w = tsExp g h (ELet(x,None,e1,e2)) in
-      ()
+      (* let cap = spr "TC-Let-Bare: let %s = ..." x in *)
+      ignore (tsExp g h (ELet (x, None, e1, EAsW (e2, goal))))
 
   | ELet(x,Some(a1),e1,e2) ->
-      let cap = spr "TC-Let-Ann: let %s = ..." x in
-      let e2 = EAsW (cap, e2, goal) in
-      let w = tsExp g h (ELet(x,Some(a1),e1,e2)) in
-      ()
-(*
-      let ruleName = "TC-Let-Ann" in
-      Wf.frame (spr "%s: let %s = ..." ruleName x) g a1;
-      Zzz.pushScope ();
-      let (s1,h1) = applyFrame h a1 in
-      tcExp g h (s1,h1) e1;
-      Zzz.popScope ();
-      let (n,g1) = tcAddBinding g h1 x s1 in
-      tcExp g1 h1 goal e2;
-      tcRemoveBindingN n;
-*)
+      (* let cap = spr "TC-Let-Ann: let %s = ..." x in *)
+      ignore (tsExp g h (ELet (x, Some a1, e1, EAsW (e2, goal))))
 
   | EIf(EVal(v),e1,e2) -> begin
       (* TODO check if false is provable? *)
@@ -1487,25 +1465,7 @@ and tcExp_ g h goal = function
 
   | EExtern _ -> failwith "tc EExtern"
 
-  | ETcFail(s,e) ->
-      let fail =
-        try let _ = tcExp g h goal e in false
-        with Tc_error _ -> true in
-      if fail
-        then ()
-        else err [spr "tc ETcFail: [\"%s\"] should have failed" s]
-
-  | EAs(_,e,f) -> begin
-      failwith "tcexp eas heapenv"
-(*
-      let w = applyFrame h f in
-      tcExp g h w e;
-      Zzz.queryRoot := "TC-As";
-      ignore (Sub.worlds "TC-EAs" g w goal)
-*)
-    end
-
-  | EAsW(_,e,w) -> begin
+  | EAsW(e,w) -> begin
       failwith "tcexp eas heapenv"
 (*
       tcExp g h w e;
@@ -1526,27 +1486,43 @@ and tcExp_ g h goal = function
   | EFreeze _ -> failwith "tc EFreeze"
   | EThaw _ -> failwith "tc EThaw"
 
+  | ELoadedSrc _ -> failwith "tc ELoadedSrc"
+  | ELoadSrc(s,_) ->
+      failwith (spr "tc ELoadSrc [%s]: should've been expanded" s)
+
   | EThrow _ -> failwith "tc EThrow"
   | ETryCatch _ -> failwith "tc ETryCatch"
   | ETryFinally _ -> failwith "tc ETryFinally"
+
+  | ETcFail(s,e) ->
+      let fail =
+        try let _ = tcExp g h goal e in false
+        with Tc_error _ -> true in
+      if fail
+        then ()
+        else err [spr "TC-Fail: [\"%s\"] should have failed" s]
 
   (* the remaining cases should not make it to type checking, so they indicate
      some failure of parsing or ANFing *)
 
   | EDict _    -> Anf.badAnf "tc EDict"
+  | ETuple _   -> Anf.badAnf "tc ETuple"
+  | EArray _   -> Anf.badAnf "tc EArray"
   | EFun _     -> Anf.badAnf "tc EFun"
   | EIf _      -> Anf.badAnf "tc EIf"
   | EApp _     -> Anf.badAnf "tc EApp"
   | ENewref _  -> Anf.badAnf "tc ENewref"
   | EDeref _   -> Anf.badAnf "tc EDeref"
   | ESetref _  -> Anf.badAnf "tc ESetref"
+  | ENewObj _  -> Anf.badAnf "tc ENewObj"
+  | EBreak _   -> Anf.badAnf "tc EBreak"
 
 
 (***** TS-App optimized rules *************************************************)
 
 (* these should derive types consistent with the primitive signatures *)
 
-and tsAppQuick g h ((poly,vFun,vArg) as triple) = match (poly,vFun,vArg) with
+and tsAppQuick g h (poly,vFun,vArg) = match (poly,vFun,vArg) with
 
   | ([],[],[]), {value=VVar("get")}, {value=VTuple(vs)} ->
       let cap = spr "TS-App-Get: get (%s)" (strVal vArg) in
@@ -1554,7 +1530,7 @@ and tsAppQuick g h ((poly,vFun,vArg) as triple) = match (poly,vFun,vArg) with
       let (t1,t2) = (tsVal g h v1, tsVal g h v2) in
       begin match matchQRecd t1, matchQStrLit t2 with
         | Some(recd,exactDom), Some(f) ->
-            if List.mem_assoc f recd then Some (List.assoc f recd, h)
+            if List.mem_assoc f recd then Some (Typ (List.assoc f recd), h)
             else if exactDom then err [cap; spr "missing field \"%s\"" f]
             else None
         | _ ->
@@ -1564,7 +1540,7 @@ and tsAppQuick g h ((poly,vFun,vArg) as triple) = match (poly,vFun,vArg) with
   | ([],[],[]), {value=VVar("set")}, {value=VTuple(vs)} ->
       let cap = spr "TS-App-Set: set (%s)" (strVal vArg) in
       let (v1,v2,v3) = threeVals cap vs in
-      Some (tsVal g h (wrapVal pos0 (VExtend(v1,v2,v3))), h)
+      Some (Typ (tsVal g h (wrapVal pos0 (VExtend(v1,v2,v3)))), h)
 
   | ([],[],[]), {value=VVar("getPropObj")}, {value=VTuple(vs)} -> begin
       let cap = spr "TS-App-GetPropObj: getPropObj (%s)" (strVal vArg) in
@@ -1576,7 +1552,7 @@ and tsAppQuick g h ((poly,vFun,vArg) as triple) = match (poly,vFun,vArg) with
             (match matchQRecd (tsVal g h d1), matchQStrLit t2 with
                | Some(recd,exactDom), Some(f) ->
                    (match getPropObj g h l1 l2 recd exactDom f with
-                      | Some(s) -> Some (s, h)
+                      | Some(s) -> Some (Typ s, h)
                       | None    -> None)
                | _ -> None)
         | _ -> err [cap; spr "%s not an object in heap" (strLoc l1)]
@@ -1598,14 +1574,22 @@ and tsAppQuick g h ((poly,vFun,vArg) as triple) = match (poly,vFun,vArg) with
                    let s = updQRecd vUpd (recd,exactDom) f t3 in
                    let s = addPredicate (pNot (eq (WVal v1) wNull)) s in
                    let h' = (fst h0, snd h0 @ [(l1, HEConcObj (vVar d, l2))]) in
-                   Some (TExists (d, s, t3), h')
+                   Some (TExists (d, s, Typ (selfifyVal g v3)), h')
                | _ -> None)
         | _ -> err [cap; spr "%s not an object in heap" (strLoc l1)]
     end
 
+  | ([],[],[]), {value=VVar("getProp")}, {value=VTuple(vs)} ->
+      tsAppQuickTry g h
+        ["getPropObj"; "getPropArr"; "getPropArrLen"] vArg
+
   | ([],[],[]), {value=VVar("getElem")}, {value=VTuple(vs)} ->
       tsAppQuickTry g h
-        ["getPropObj"; "getIdx"; "getPropArr"; "getPropArrLen"] vArg
+        ["getPropObj"; "getIdx"; "getPropArr"; (* "getPropArrLen" *)] vArg
+
+  | ([],[],[]), {value=VVar("setProp")}, {value=VTuple(vs)} ->
+      tsAppQuickTry g h
+        ["setPropObj"; "setPropArr"] vArg
 
   | ([],[],[]), {value=VVar("setElem")}, {value=VTuple(vs)} ->
       tsAppQuickTry g h
@@ -1651,16 +1635,16 @@ let addSkolems g =
   let rec foo acc i =
     if i > n then acc
     else let sk = spr "_skolem_%d" i in
-         foo (tcAddBinding acc sk tyNum) (i+1)
+         foo (tcAddBinding acc sk (Typ tyNum)) (i+1)
   in
   foo g 1
 
 let initialEnvs () =
   let h_init = "H_ROOT" (* "H_emp" *) in
   let g = [HVar h_init] in
-  let g = tcAddBinding g "v" tyAny in
+  let g = tcAddBinding g "v" (Typ tyAny) in
   let g = addSkolems g in
-  let g = tcAddBinding g "dObjectProto" tyEmpty in
+  let g = tcAddBinding g "dObjectProto" (Typ tyEmpty) in
   let h = ([h_init],
            (lRoot, HEConcObj (vNull, lRoot)) ::
            (lObjectPro, HEConcObj (vVar "dObjectProto", lRoot)) :: []) in
@@ -1683,5 +1667,5 @@ let typecheck e =
     Log.printTcErr s
 
 let typecheck e =
-  BNstats.time "typecheck" typecheck e
+  BNstats.time "Tc.typecheck" typecheck e
 

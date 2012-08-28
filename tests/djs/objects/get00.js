@@ -1,8 +1,8 @@
 var x = {f:1};
 
-/*: {(= v 1)} */ (x.f);
-/*: {(= v undefined)} */ (x.g);
+assert (x.f == 1);
+assert (x.g == undefined);
 
 Object.prototype.g = "yipee";
 
-/*: {(= v "yipee")} */ (x.g);
+assert (x.g == "yipee");

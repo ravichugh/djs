@@ -1,6 +1,6 @@
-/*: {(= v true)} */ (1 === 1);
-/*: {(= v true)} */ (1 == 1);
-/*: {(= v true)} */ (!("a" == "b"));
-/*: {(= v true)} */ (1 + 2 == 3);
-/*: {(= v true)} */ (1 + 2 === 3);
-/*: {(= v true)} */ (true || false === true && true);
+assert (1 === 1);
+assert (1 == 1);
+assert (!("a" == "b"));
+assert (1 + 2 == 3);
+assert (1 + 2 === 3);
+assert (true || false === true && true);

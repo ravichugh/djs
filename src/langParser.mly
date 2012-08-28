@@ -29,17 +29,17 @@ let eOp2 (s,x,y)   = mkApp (eVar s) [x;y]
 let eOp3 (s,x,y,z) = mkApp (eVar s) [x;y;z]
 
 (* make curried lambdas, putting polyFormals on the first lambda *)
-let mkCurriedFuns polyFormals xs e =
-  let rec foo l = function
+let mkCurriedFuns xs e =
+  let rec foo = function
     | []    -> printParseErr "mkCurriedFuns: need at least one value var"
-    | x::[] -> EFun (l, x, None, e)
-    | x::xs -> EFun (l, x, None, foo ([],[],[]) xs)
-  in foo polyFormals xs
+    | x::[] -> EFun (PLeaf x, e)
+    | x::xs -> EFun (PLeaf x, foo xs)
+  in foo xs
 
-let mkFun polyFormals p e =
+let mkFun p e =
   match p with
-    | PLeaf(x) -> mkCurriedFuns polyFormals [x] e
-    | _        -> ParseUtils.mkPatFun polyFormals p e
+    | PLeaf(x) -> mkCurriedFuns [x] e
+    | _        -> ParseUtils.mkPatFun p e
 
 (* not using LangUtils.freshVar, since want a version that does not
    insert leading zeroes and does not keep a counter across all freshvars *)
@@ -80,19 +80,13 @@ let registerHeap h =
   heapStack := h :: !heapStack;
   h
 
-(*
-let mkUArrImp a b c d e f =
-  heapStack := List.tl (List.tl !heapStack);
-  UArr(a,b,c,d,e,f)
-*)
-
 let popDHeap () =
   heapStack := List.tl !heapStack
 
 let copyCell exact x s =
   if exact then ty (PEq (theV, wVar x)) else s
 
-(* 8/14 could try to avoid unnecessary binders when using same* tokens *)
+(* 8/14/12: could try to avoid unnecessary binders when using same* tokens *)
 
 let freshenCell exact = function
   | HConc(None,s) -> printParseErr "freshenCell"
@@ -250,15 +244,9 @@ exp2 :
  | LPAREN exp RPAREN                         { $2 }
  | LPAREN exp COMMA exps RPAREN              { ParseUtils.mkTupleExp ($2::$4) }
  | LPAREN FAIL STR exp RPAREN                { ETcFail($3,$4) }
- | LPAREN e=exp RPAREN AS f=frame            { EAs("source program",e,f) }
+ (* | LPAREN e=exp RPAREN AS f=frame            { EAs(e,f) } *)
  | LBRACE RBRACE                             { EDict([]) }
  | LBRACE fieldexps RBRACE                   { EDict($2) }
-(*
- | LT GT                                     { EArray(tyArrDefault,[]) }
- | LT es=exps GT                             { EArray(tyArrDefault,es) }
- | LT GT AS t=typ                            { EArray(t,[]) }
- | LT es=exps GT AS t=typ                    { EArray(t,es) }
-*)
  | LT GT                                     { EArray(tyArrDefault,[]) }
  | LT es=exps GT                             { EArray(tyArrDefault,es) }
  | LT GT AS u=typ_term           { match u with
@@ -269,32 +257,13 @@ exp2 :
                                      | _ -> printParseErr "bad array ann" }
 
 lambda : (* requiring parens around body to avoid conflicts *)
-
- (* the productions that result in mkCurriedFuns match sequences of at
-    least two variables to avoid conflicting with pat, which can match
-    a single variable *)
-
- | FUN p=pat ARROW LPAREN e=exp RPAREN
-     { mkFun ([],[],[]) p e }
- | FUN x=VAR xs=vars ARROW LPAREN e=exp RPAREN
-     { mkCurriedFuns ([],[],[]) (x::xs) e }
-
- | FUN l=poly_formals p=pat ARROW LPAREN e=exp RPAREN
-     { mkFun l p e }
- | FUN l=poly_formals x=VAR xs=vars ARROW LPAREN e=exp RPAREN
-     { mkCurriedFuns l (x::xs) e }
- 
-
-(*
- | FUN LPAREN VAR COLON typ RPAREN
-   DIV heap ARROW exp                    { mkEFunImp [] $3 (Some($5,$8)) $10 }
- | FUN LT vars GT LPAREN VAR COLON typ 
-   RPAREN DIV heap ARROW exp             { mkEFunImp $3 $6 (Some($8,$11)) $13 }
- | FUN LT vars GT VAR ARROW exp          { mkEFunImp $3 $5 None $7 }
-*)
-
+ | FUN p=pat ARROW LPAREN e=exp RPAREN         { mkFun p e }
+ | FUN x=VAR xs=vars ARROW LPAREN e=exp RPAREN { mkCurriedFuns (x::xs) e }
+     (* for mkCurriedFuns, match sequences of at least two variables to avoid
+        conflicting with pat, which can match a single variable *)
 
 typ :
+
  | LBRACE x=VAR PIPE p=formula RBRACE     { TRefinement(x,p) }
  | LBRACE p=formula RBRACE                { TRefinement("v",p) }
  | u=typ_term                             { tyTypTerm u }
@@ -312,34 +281,14 @@ typ :
  | LPAREN t=typ RPAREN QMARK              { TMaybeNull(t) }
 
  (* be careful of conflicts *)
- | l=deptuple                             { TQuick("v",QTuple(l,false),pTru) }
+ | l=deptuple_some                        { TQuick("v",QTuple(l,false),pTru) }
 
  | LT x=array_tuple_typs GT { let (ts,tInv,b) = x in tyArrayTuple tInv ts b }
 
-
-deptuple :
-(*
- | LPAREN RPAREN (* () *)      { ([], ParseUtils.mkDepTupleTyp []) }
- | LPAREN deptuple_allbinders RPAREN     { let vars = List.map fst $2 in
-                                 (vars, ParseUtils.mkDepTupleTyp $2) }
-*)
+deptuple_some :
  (* using square brackets so vartyp and deptuple don't conflict in arr_dom *) 
  | LBRACK RBRACK                         { [] }
  | LBRACK l=deptuple_somebinders RBRACK  { l }
-(*
- | LBRACK l=deptuple_allbinders RBRACK   { l }
-*)
-(*
- | LPAREN RPAREN (* () *)      { [] }
- | LPAREN l=deptuple_allbinders RPAREN   { l }
-*)
-
-(*
-deptuple_allbinders :
-(* | LPAREN RPAREN (* (()) *)                   { [] } *)
- | LPAREN x=VAR COLON t=typ RPAREN                   { [(x,t)] }
- | LPAREN x=VAR COLON t=typ RPAREN MUL dt=deptuple_allbinders  { (x,t) :: dt }
-*)
 
 deptuple_somebinders :
  | xot=varopttyp                              { [xot] }
@@ -355,7 +304,6 @@ typ_term :
  | REFTYPE LPAREN l=loc RPAREN           { URef(l) }
  | u=arrow_typ                           { u }
  | ARRTYPE LPAREN t=typ RPAREN           { UArray(t) }
-
 
 arrow_typ :
 
@@ -377,50 +325,6 @@ arrow_typ :
        UArrow (ParseUtils.maybeAddHeapPrefixVar
                  (l,fst xt,snd xt,h1,t2,h2)) }
 
-
-
-(*
- | xt=vartyp ARROW t2=typ   { UArr(([],[],[]),fst(xt),snd(xt),[],t2,[]) }
- | dt=deptuple ARROW t2=typ { printParseErr "a" }
-*)
-
-(* TODO 10/26 do parsing for arrows
-
-
- | LPAREN VAR COLON typ RPAREN ARROW typ { UArr([],$2,$4,[],$7,[]) }
- | VAR COLON typ ARROW typ               { UArr([],$1,$3,[],$5,[]) }
-
- (* TODO TODO TODO
- | dt=deptuple ARROW t2=typ
-     { let (x,t1,_,t2,_) = ParseUtils.mkDepTupleArrow dt ([],t2,[]) in
-       UArr([],x,t1,[],t2,[]) }
- *)
-
-
-
- | LOCALL l=locs DOT x=var COLON t1=typ DIV h1=dheap ARROW t2=typ DIV h2=rheap
- | LOCALL l=locs DOT LPAREN x=var COLON t1=typ RPAREN DIV h1=dheap ARROW
-   t2=typ DIV h2=rheap                   { mkUArrImp l x t1 h1 t2 h2 }
- | LPAREN VAR COLON typ RPAREN DIV dheap ARROW typ DIV rheap
-                                         { mkUArrImp [] $2 $4 $7 $9 $11 }
- | VAR COLON typ DIV dheap ARROW typ DIV rheap
-                                         { mkUArrImp [] $1 $3 $5 $7 $9 }
-
- (* TODO maybe try having a general production for:
-       VAR COLON | LAREN VAR COLON RPAREN | deptuple
- *)
-
- | LOCALL l=locs DOT dt=deptuple DIV h1=dheap ARROW t2=typ DIV h2=rheap
-     { let (x,t1,h1,t2,h2) = ParseUtils.mkDepTupleArrow dt (h1,t2,h2) in
-       mkUArrImp l x t1 h1 t2 h2 }
-
- | dt=deptuple DIV h1=dheap ARROW t2=typ DIV h2=rheap
-     { let (x,t1,h1,t2,h2) = ParseUtils.mkDepTupleArrow dt (h1,t2,h2) in
-       mkUArrImp [] x t1 h1 t2 h2 }
-
-*)
-
-
 (*
 
 (* NOTE: the limitations here in the parser need to be taken into account
@@ -431,7 +335,7 @@ arrow_dom :
  | LPAREN xt=vartyp RPAREN  { (fst xt, snd xt) }
  | xt=vartyp                { (fst xt, snd xt) }
 (* TODO
- | dt=deptuple              { (dummyBinder (), TTuple dt) }
+ | dt=deptuple              { (dummyBinder (), tyTupleSome dt) }
 *)
 
 (* TODO clearly a better way to organize poly_formals and poly_actuals ... *)
@@ -642,8 +546,8 @@ varopttyp :
  
 vartyp :
  | x=varopt COLON t=typ             { (x,t) }
- | LTUP RTUP                        { (dummyBinder (), tyDepTuple []) }
- | LTUP dt=deptuple_allbinders RTUP { (dummyBinder (), tyDepTuple dt) }
+ | LTUP RTUP                        { (dummyBinder (), tyTupleAll []) }
+ | LTUP dt=deptuple_allbinders RTUP { (dummyBinder (), tyTupleAll dt) }
 (*
  | dt=deptuple          { (dummyBinder (), TTuple dt) }
 *)

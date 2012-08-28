@@ -97,5 +97,7 @@ var Function = /*: lFunction */ { prototype: __FunctionProto };
 __FunctionProto.constructor = Function;
 
 
-"**********************************************************************";
+////////////////////////////////////////////////////////////////////////////////
+
+var end_of_djs_prelude = /*: Top */ "#extern";
 
