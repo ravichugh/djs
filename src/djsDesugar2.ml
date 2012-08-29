@@ -442,32 +442,6 @@ let rec eSeq = function
   | e::es -> ELet (freshVar "seq", None, e, eSeq es)
 
 
-(***** Prop/Bracket ***********************************************************)
-
-(* rkc: hacked LamJS/exprjs_syntax.ml to distinguish between prop/bracket,
-   even though the abstract syntax doesn't. so, need to make sure to undo
-   the hack whenever using BracketExpr or PropLValue *)
-
-(* TODO 3/31 instead, just add safe(v) predicate to primitives where needed,
-   and ditch the syntactic prop detection *)
-
-(* 3/31: removed this
-let undoDotStr s =
-  if Str.string_match (Str.regexp "^__dot__\\(.*\\)$") s 0
-  then (true, Str.matched_group 1 s)
-  else (false, s)
-*)
-let undoDotStr s = (false, s)
-
-let undoDotExp = function
-  | E.ConstExpr (p, J.CString s) ->
-      E.ConstExpr (p, J.CString (snd (undoDotStr s)))
-  | e -> e
-
-let notAnIntStr s =
-  try let _ = int_of_string s in false with Failure _ -> true
-
-
 (***** Desugaring calls *******************************************************)
 
 let mkApp ?(curried=false) f args =
@@ -552,20 +526,13 @@ let rec ds (env:env) = function
           | E.HintExpr (_, h, e1) -> (parseAppArgs h, e1)
           | _                     -> (([],[],[]), e1) in
       if hs <> [] then failwith "x[k] shouldn't have heap args";
-      if !Settings.typedDesugaring then begin
-        failwith "restore from DjsDesugar.ml x[k]"
-      end else begin
-        match e2 with
-          | E.ConstExpr (_, J.CInt i) ->
-              objOp ts ls "getIdx" [ds env e1; EVal (vInt i)]
-          | E.ConstExpr (_, J.CString s) ->
-              let (b,s) = undoDotStr s in
-              let f = if b || notAnIntStr s then "getProp" else "getElem" in
-              objOp ts ls f [ds env e1; EVal (vStr s)]
-          | _ ->
-              let e2 = undoDotExp e2 in
-              objOp ts ls "getElem" [ds env e1; ds env e2]
-      end
+      match e2 with
+        | E.ConstExpr (_, J.CInt i) ->
+            objOp ts ls "getIdx" [ds env e1; EVal (vInt i)]
+        | E.ConstExpr (_, J.CString s) ->
+            objOp ts ls "getProp" [ds env e1; EVal (vStr s)]
+        | _ ->
+            objOp ts ls "getElem" [ds env e1; ds env e2]
     end
 
   | E.PrefixExpr (_, "prefix:delete", E.BracketExpr (_, ed, ek)) -> begin
@@ -574,7 +541,6 @@ let rec ds (env:env) = function
           | E.HintExpr (_, h, ed) -> (parseAppArgs h, ed)
           | _                     -> (([],[],[]), ed) in
       if hs <> [] then failwith "delete x[k] shouldn't have heap args";
-      let ek = undoDotExp ek in
       match ek with
         | E.ConstExpr (_, J.CInt i) ->
             objOp ts ls "delIdx" [ds env ed; EVal (vInt i)]
@@ -608,13 +574,11 @@ let rec ds (env:env) = function
           | E.HintExpr (_, s, ed) -> (parseAppArgs s, ed)
           | _                     -> (([],[],[]), ed) in
       if hs <> [] then failwith "(k in d) shouldn't have heap args";
-      (* TODO could add the typedDesugaring stuff here *)
       match ek with
         | E.ConstExpr (_, J.CInt i) ->
             objOp ts ls "hasIdx" [ds env ed; EVal (vInt i)]
         | E.ConstExpr (_, J.CString s) ->
-            let f = if notAnIntStr s then "hasProp" else "hasElem" in
-            objOp ts ls f [ds env ed; EVal (vStr s)]
+            objOp ts ls "hasProp" [ds env ed; EVal (vStr s)]
         | _ ->
             objOp ts ls "hasElem" [ds env ed; ds env ek]
     end
@@ -650,24 +614,28 @@ let rec ds (env:env) = function
   (* TODO for freeze and thaw, figure out how to handle this (_this) and
      other formals, which aren't ref cells so can't setref *)
 
+(*
   | E.SeqExpr (_, E.HintExpr (_, h, E.ConstExpr (_, J.CString "#freeze")), e2)
         when !Settings.typedDesugaring ->
       let (x,l,thaw) = parseFreeze h in
       let x = dsVar x in
       let env = updateVarType env x l in
       eSeq [ESetref (eVar x, EFreeze (l, thaw, EDeref (eVar x))); ds env e2]
+*)
 
   | E.HintExpr (_, h, E.ConstExpr (_, J.CString "#freeze")) ->
       let (x,l,thaw) = parseFreeze h in
       let x = eVar (dsVar x) in
       ESetref (x, EFreeze (l, thaw, EDeref x))
 
+(*
   | E.SeqExpr (_, E.HintExpr (_, h, E.ConstExpr (_, J.CString "#thaw")), e2)
         when !Settings.typedDesugaring ->
       let (x,l) = parseThaw h in
       let x = dsVar x in
       let env = updateVarType env x l in
       eSeq [ESetref (eVar x, EThaw (l, EDeref (eVar x))); ds env e2]
+*)
 
   | E.HintExpr (_, h, E.ConstExpr (_, J.CString "#thaw")) ->
       let (x,l) = parseThaw h in
@@ -707,20 +675,13 @@ let rec ds (env:env) = function
           | E.HintExpr (_, h, e1) -> (parseAppArgs h, e1)
           | _                     -> (([],[],[]), e1) in
       if hs <> [] then failwith "x[k] = y shouldn't have heap args";
-      if !Settings.typedDesugaring then begin
-        failwith "restore from DjsDesugar.ml x[k] = y"
-      end else begin
-        match e2 with
-          | E.ConstExpr (_, J.CInt i) ->
-              objOp ts ls "setIdx" [ds env e1; EVal (vInt i); ds env e3]
-          | E.ConstExpr (_, J.CString s) ->
-              let (b,s) = undoDotStr s in
-              let f = if b || notAnIntStr s then "setProp" else "setElem" in
-              objOp ts ls f [ds env e1; EVal (vStr s); ds env e3]
-          | _ ->
-              let e2 = undoDotExp e2 in
-              objOp ts ls "setElem" [ds env e1; ds env e2; ds env e3]
-      end
+      match e2 with
+        | E.ConstExpr (_, J.CInt i) ->
+            objOp ts ls "setIdx" [ds env e1; EVal (vInt i); ds env e3]
+        | E.ConstExpr (_, J.CString s) ->
+            objOp ts ls "setProp" [ds env e1; EVal (vStr s); ds env e3]
+        | _ ->
+            objOp ts ls "setElem" [ds env e1; ds env e2; ds env e3]
     end
 
   | E.LetExpr (_, x, e1, e2) ->
@@ -910,8 +871,8 @@ let rec ds (env:env) = function
         | _                      -> Log.printParseErr "bad assert syntax"
     end
 
-  | E.AppExpr (p, E.BracketExpr (_, f, E.ConstExpr (_, J.CString s)), obj::args)
-        when snd (undoDotStr s) = "apply" ->
+  | E.AppExpr (p,
+        E.BracketExpr (_, f, E.ConstExpr (_, J.CString "apply")), obj::args) ->
       mkCall [] [] (ds env f) (Some (ds env obj)) (List.map (ds env) args)
 
   | E.AppExpr (p, E.HintExpr (_, s, E.BracketExpr (p', obj, prop)), args) ->
@@ -1029,15 +990,11 @@ and dsAssert env s = function
 
 and dsMethCall env ts ls obj prop args =
   let obj = ds env obj in
-  (* TODO could add the typedDesugaring stuff here *)
   let func =
     match prop with
       | E.ConstExpr (_, J.CString s) ->
-          let (b,s) = undoDotStr s in
-          let f = if b || notAnIntStr s then "getProp" else "getElem" in
-          objOp ts ls f [obj; EVal (vStr s)]
+          objOp ts ls "getProp" [obj; EVal (vStr s)]
       | _ ->
-          let prop = undoDotExp prop in
           objOp ts ls "getElem" [obj; ds env prop]
   in
  (* TODO for now, just passing the same poly args, but this probably

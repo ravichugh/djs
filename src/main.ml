@@ -55,14 +55,6 @@ let argSpecs = [
                    " <bool> (default is false)");
   ("-argsArray", Arg.Set S.doArgsArray,
               "      desugar lambdas/calls with arguments tuple");
-  ("-untypedDs", Arg.Unit (fun () -> S.typedDesugaring := false),
-              "      untyped desugaring");
-(*
-  ("-inferFrames", Arg.Set S.inferFrames,
-                "    desugaring should infer frames");
-  ("-monotonicHeaps", Arg.Set S.monotonicHeaps,
-                   " desugaring should thread types through heaps");
-*)
   ("-augmentHeaps", Arg.Set S.augmentHeaps,
                  "   desugaring should add locations to heaps for enclosing refs");
   ("-greedyThaws", Arg.Set S.greedyThaws,

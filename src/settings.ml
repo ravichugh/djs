@@ -27,8 +27,6 @@ let doVarLifting = ref false
 let doImplicitGlobal = ref false
 let doArgsArray = ref false
 
-(* TODO rename this since it only applies to desugaring obj prims *)
-let typedDesugaring = ref false (* TODO *)
 let augmentHeaps = ref false
 let greedyThaws = ref false
 let assistCtor = ref false

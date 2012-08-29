@@ -2,18 +2,17 @@
 (***** Objects / Arrays *******************************************************)
 
 (**    [[ x.f    ]] = getProp ([[x]],  "f" )                                 **)
-(**    [[ x["f"] ]] = getProp ([[x]],  "f" )    where "f" is a SafeStr       **)
+(**    [[ x["f"] ]] = getProp ([[x]],  "f" )                                 **)
 (**    [[ x[i]   ]] = getIdx  ([[x]],   i  )    where i is an int literal    **)
 (**    [[ x[k]   ]] = getElem ([[x]], [[k]])    where k is anything else     **)
 
 val getPropObj :: [; Loc1,Loc2; H]
      [[xx:(Ref(Loc1))?, kk:Str]] / [H ++ Loc1 |-> (dd:Dict, Loc2)]
-  -> {(and (not (= xx null)) (not (= v bot))
-      (ite (objhas dd kk H Loc2) (= v (objsel dd kk H Loc2)) (= v undefined)))}
-   / same
+  -> {(and (not (= xx null))
+      (ite (objhas dd kk H Loc2)
+           (= v (objsel dd kk H Loc2))
+           (= v undefined)))} / same
 
-(* tempting to write down getPropArr for "length" and non-"length" separately
-   and then use an intersection, but that's no good for the type checker. *)
 val getPropArr :: [A; Loc1,Loc2; H]
      [[xx:(Ref(Loc1))?, kk:Str]] / [H ++ Loc1 |-> (aa:Arr(A), Loc2)]
   -> {(and (not (= xx null))
@@ -22,10 +21,6 @@ val getPropArr :: [A; Loc1,Loc2; H]
            (ite (heaphas H Loc2 kk)
                 (= v (heapsel H Loc2 kk))
                 (= v undefined))))} / same
-
-val getPropArrLen :: [A; Loc1,Loc2; H]
-     [[xx:(Ref(Loc1))?, kk:{(= v "length")}]] / [H ++ Loc1 |-> (aa:Arr(A), Loc2)]
-  -> {Int|(and (not (= xx null)) (implies (packed aa) (= v (len aa))))} / same
 
 val getIdx :: [A; Loc1,Loc2; H]
      [[xx:(Ref(Loc1))?, ii:Int]] / [H ++ Loc1 |-> (aa:Arr(A), Loc2)]
@@ -36,20 +31,21 @@ val getIdx :: [A; Loc1,Loc2; H]
 
 val getProp :: {(and (type getPropObj) (type getPropArr))}
 
-val getElem :: {(and (type getPropObj) (type getPropArrLen) (type getIdx))}
-  (* note that the non-"length" part of getPropArr is _not_ included
-     in this intersection *)
+val getElem :: {(and (type getPropObj) (type getPropArr) (type getIdx))}
 
 (**    [[ x.f  = y ]] = setProp ([[x]],  "f" , [[y]])                        **)
 (**    [[ x[i] = y ]] = setIdx  ([[x]],   i  , [[y]])                        **)
 (**    [[ x[k] = y ]] = setElem ([[x]], [[k]], [[y]])                        **)
 
 val setPropObj :: [; Loc1,Loc2; H]
-     [[xx:(Ref(Loc1))?, yy:Str, zz:Top]] / [H ++ Loc1 |-> (dd:Dict, Loc2)]
-  -> {(and (not (= xx null)) (= v zz))} / [H ++ Loc1 |-> (dd':{(= v (upd dd yy zz))}, Loc2)]
+     [[xx:(Ref(Loc1))?, yy:Str, zz:Top]]
+   / [H ++ Loc1 |-> (dd:Dict, Loc2)]
+  -> {(and (not (= xx null)) (= v zz))}
+   / [H ++ Loc1 |-> (dd':{(= v (upd dd yy zz))}, Loc2)]
 
-val setPropArrLen :: [A; Loc1,Loc2]
-     [[xx:(Ref(Loc1))?, kk:{(= v "length")}, nn:Int]] / [Loc1 |-> (aa:Arr(A), Loc2)]
+val setPropArr :: [A; Loc1,Loc2]
+     [[xx:(Ref(Loc1))?, kk:{(= v "length")}, nn:Int]]
+   / [Loc1 |-> (aa:Arr(A), Loc2)]
   -> {(and (not (= xx null)) (= v nn))}
    / [Loc1 |-> (aa':{(and (v::Arr(A))
                           (implies (and (packed aa) (<= nn (len aa)))
@@ -65,12 +61,12 @@ val setIdx :: [A; Loc1,Loc2]
                      (implies (and (packed aa) (= ii (len aa)))
                               (and (packed v) (= (len v) (+ 1 (len aa))))))}, Loc2)]
 
-val setProp :: {(and (type setPropObj) (type setPropArrLen))}
+val setProp :: {(and (type setPropObj) (type setPropArr))}
 
-val setElem :: {(and (type setPropObj) (type setPropArrLen) (type setIdx))}
+val setElem :: {(and (type setPropObj) (type setPropArr) (type setIdx))}
 
 (**    [[  i  in x ]] = hasIdx  ([[x]],   i  )                                 **)
-(**    [[ "f" in x ]] = hasProp ([[x]],  "f" )    where "f" is a SafeStr       **)
+(**    [[ "f" in x ]] = hasProp ([[x]],  "f" )                                 **)
 (**    [[  k  in x ]] = hasElem ([[x]], [[k]])                                 **)
 
 val hasPropObj :: [; Loc1,Loc2; H]
@@ -83,19 +79,15 @@ val hasPropArr :: [A; Loc1,Loc2; H]
   -> {Bool|(and (not (= xx null))
            (iff (= v true) (or (= kk "length") (heaphas H Loc2 kk))))} / same
 
-val hasPropArrLen :: [A; Loc1,Loc2; H]
-     [[xx:(Ref(Loc1))?, kk:{(= v "length")}]] / [H ++ Loc1 |-> (aa:Arr(A), Loc2)]
-  -> {(and (not (= xx null)) (= v true))} / same
-
 val hasIdx :: [A; Loc1,Loc2]
      [[xx:(Ref(Loc1))?, ii:Int]] / [Loc1 |-> (aa:Arr(A), Loc2)]
   -> {Bool|(and (not (= xx null))
            (implies (and (packed aa) (>= ii 0))
                     (iff (= v true) (< ii (len aa)))))} / same
 
-val hasProp :: {(and (type hasPropObj) (type hasPropArr) (type hasIdx))}
+val hasProp :: {(and (type hasPropObj) (type hasPropArr))}
 
-val hasElem :: {(and (type hasPropObj) (type hasPropArrLen) (type hasIdx))}
+val hasElem :: {(and (type hasPropObj) (type hasPropArr) (type hasIdx))}
 
 (**    [[ delete x.f  ]] = delPropObj ([[x]],  "f" )                         **)
 (**    [[ delete x[i] ]] = delIdx     ([[x]],   i  )                         **)
