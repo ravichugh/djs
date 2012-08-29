@@ -162,12 +162,12 @@ and typterm =
   | UNull
   | UArray of typ
 
-and heapconstraint =
+and heapcell =
   | HConc    of vvar option * typ        (* [l |-> x:S]       *)
   | HConcObj of vvar option * typ * loc  (* [l |-> (x:S, l')] *)
   | HWeakTok of thawstate                (* [m |-> 0]         *)
 
-and heap  = hvars * (loc * heapconstraint) list
+and heap  = hvars * (loc * heapcell) list
 and world = typ * heap
 and frame = hvars * heap * world
 and typs  = typ list
@@ -191,12 +191,12 @@ type envbinding =
 
 type env = envbinding list
 
-and heapenvconstraint =
+and heapenvcell =
   | HEConc    of value        (* [l |-> v]      *)
   | HEConcObj of value * loc  (* [l |-> (v,l')] *)
   | HEWeakTok of thawstate    (* [m |-> 0]      *)
 
-type heapenv = hvars * (loc * heapenvconstraint) list
+type heapenv = hvars * (loc * heapenvcell) list
 
 type clause = formula * hastyp list
 

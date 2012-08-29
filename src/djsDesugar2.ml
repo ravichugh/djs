@@ -381,60 +381,13 @@ let augmentFrame frame env freeVars =
 
 let oc_desugar_hint = open_out (Settings.out_dir ^ "desugar_hint.txt")
 
-(* all [typArgs; locArgs, l_this, l_args; heapArgs].
-       (Ref(l_this) * Ref(l_args))
-     / [inH ++ inC, l_this |-> c_this: TOP, l_args |-> c_args: tIn] 
-    -> tRet
-     / [outH ++ outC, l_this |-> c_this': TOP]
-*)
 let dsArrowWithArgsArray arr =
-
-  let arr = ParseUtils.maybeAddHeapPrefixVar arr in
-  let ((ts,ls,hs),x,tIn,(inH,inC),tRet,(outH,outC)) = arr in
-
-  let (tyThis,tIn) =
-    match tIn with
-(*
-      | TTuple(("this",THasTyp([URef(lThis)],_))::tup) ->
-*)
-      | TQuick(_,QTuple((Some("this"),TQuick(_,QBoxes([URef(lThis)]),_))
-                        ::tup,true),_) ->
-          failwith "dsArrow tyThis"
-          (* ([("this", tyRef lThis)], TTuple tup) *)
-      | _ ->
-          ([], tIn) in
-
-  let (lArgs,cArgs) = (freshVar "Largs", freshVar "cArgs") in
-
-  let formalSubst = [(x, wVar cArgs)] in
-
-  fpr oc_desugar_hint "formalSubst:\n%s\n"
-    (String.concat "" (List.map (fun (x,w) -> spr "  %s |-> %s\n"
-       x (strWal w)) formalSubst));
-
-  let argsCell  = (LocVar lArgs, HConc (Some cArgs, tIn)) in
-
-  let subst = (formalSubst, [], [], []) in
-  let inC   = snd (substHeap subst ([],inC)) @ [argsCell] in
-  let outC  = snd (substHeap subst ([],outC)) @ [] in
-  let tRet  = substTyp subst tRet in
-
-  (* let tyArgs = [("arguments", tyRef (LocVar lArgs))] in *)
-  let tyArgs = [("arguments", tyRef (LocVar lArgs))] in
-
-  ((ts, ls @ [lArgs], hs),
-   freshVar "_",
-   tyTupleAll (tyThis @ tyArgs), (inH,inC),
-   tRet, (outH,outC))
-
-let dsArrowWithoutArgsArray arr =
-  let arr = ParseUtils.maybeAddHeapPrefixVar arr in
-  arr
+  failwith "no longer implemented. see DjsDesugar.ml for reference"
 
 let dsArrow arr =
   if !Settings.doArgsArray
   then dsArrowWithArgsArray arr
-  else dsArrowWithoutArgsArray arr
+  else ParseUtils.maybeAddHeapPrefixVar arr
 
 (* TODO desugar variables to add __ *)
 let dsTyp t env =
@@ -488,10 +441,6 @@ let rec eSeq = function
   | [e]   -> e
   | e::es -> ELet (freshVar "seq", None, e, eSeq es)
 
-let mkArgsArray es = 
-  let l = LocConst (freshVar "argsArray") in
-  (l, ENewref (l, ParseUtils.mkTupleExp es))
-
 
 (***** Prop/Bracket ***********************************************************)
 
@@ -531,9 +480,7 @@ let mkApp ?(curried=false) f args =
 let mkCall ts ls func recvOpt args =
   let recv = match recvOpt with Some(e) -> [e] | None -> [] in
   if !Settings.doArgsArray then
-    let (locArgs,argsArray) = mkArgsArray args in
-    EApp ((ts, ls @ [locArgs], []), 
-          func, ParseUtils.mkTupleExp (recv @ [argsArray]))
+    failwith "no longer implemented. see DjsDesugar.ml for reference"
   else
     EApp ((ts, ls, []), func, ParseUtils.mkTupleExp (recv @ args))
 
@@ -1073,7 +1020,8 @@ and dsAnnotatedFuncExpr env s = function
       let e = dsFunc (hasThisParam t) env p args body in
       annotateExp e (ParseUtils.typToFrame t)
   | _ ->
-      Log.printParseErr "use assert(...) rather than general annotation"
+      Log.printParseErr
+        (spr "use assert(...) rather than general annotation\n\n[%s]" s)
 
 and dsAssert env s = function
   | E.FuncExpr _ -> Log.printParseErr "don't put lambda inside assert(...)"
@@ -1116,53 +1064,7 @@ and dsFuncWithoutArgsArray thisParam env p args body =
 
 (* rkc: based on LamJS E.FuncExpr case *)
 and dsFuncWithArgsArray thisParam env p args body =
-  failwith "dsFuncWithArgsArray: update this to __this";
-  let args = List.map dsVar args in
-  let init_var x exp =
-(*
-    failwith "init_var: what is this?";
-*)
-    ELet (x, None, ENewref (LocConst (freshVar "freshLoc"), EVal vUndef), exp)
-  and get_arg x n exp =
-    (*
-    ELet (x, None,
-          (* ENewref (freshVar "freshLoc", *)
-          ENewref (LocConst (spr "&%s" x),
-                   mkApp (eVar "get")
-                      [EDeref (eVar "arguments");
-                       EVal (vStr (string_of_int n))]),
-          exp) 
-    *)
-    (* 11/28: manually doing ANF here so can play the trick with the
-       original source binder x, using it as the initial value for the
-       pointer variable __x. *)
-    let xOrig = undoDsVar x in
-    ELet (xOrig, None, mkApp "getarg" [eStr (string_of_int n)],
-    ELet (x, None, ENewref (LocConst (spr "&%s" xOrig), eVar xOrig),
-      exp))
-  and vars = Exprjs_syntax.locals body in
-  (* rkc: adding locals at top of function body only if flag set *)
-  (* let env = IdSet.fold (fun x env -> IdMap.add x true env) vars env in *)
-  let env =
-    if !Settings.doVarLifting
-      then IdSet.fold (fun x env -> addFlag x true env) vars env
-      else env in
-  let env = List.fold_left (fun env x -> addFlag x true env) env args in
-  let env = addFlag "arguments" false (addFlag "this" false env) in
-  let body = 
-    List.fold_right2 get_arg args (Prelude.iota (List.length args))
-      (List.fold_right init_var (IdSetExt.to_list vars)
-         (ds env body)) in
-  (* 11/28: adding "getarg" at the top just once so each get_arg can use it *)
-  let body =
-    if List.length args = 0 then body
-    else ELet ("getarg", None,
-               mkApp ~curried:true "get_curried" [EDeref (eVar "arguments")],
-               body)
-  in
-  if thisParam
-    then eLambda ["this"; "arguments"] body
-    else eLambda ["arguments"] body
+  failwith "no longer implemented. see DjsDesugar.ml for reference"
 
 (* rkc: based on LamJS E.WhileExpr case *)
 and dsWhile env breakL continueL test body frame =

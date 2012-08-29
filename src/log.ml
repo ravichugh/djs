@@ -34,6 +34,11 @@ let log4 fmt s1 s2 s3 s4 =
   if !printToStdout then fpr stdout fmt s1 s2 s3 s4;
   ()
 
+let log5 fmt s1 s2 s3 s4 s5 =
+  if !printToLog then fpr oc_log fmt s1 s2 s3 s4 s5;
+  if !printToStdout then fpr stdout fmt s1 s2 s3 s4 s5;
+  ()
+
 let bigTitle s =
   log1 "%s\n" (String.make 80 ';');
   log1 ";;; %s\n\n" s

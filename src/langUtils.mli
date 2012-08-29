@@ -13,6 +13,7 @@ val (|>) : 'a -> ('a -> 'b) -> 'b
 val pos0 : Lexing.position * Lexing.position
 
 val freshVar : vvar -> vvar
+val freshVarX : vvar -> vvar
 val freshHVar : unit -> hvar
 
 (******************************************************************************)
@@ -159,8 +160,9 @@ val strForm : formula -> string
 val strFormExpanded : string -> formula list -> string
 val strTTFlat : typterm -> string
 val strHeap : heap -> string
-val strHeapCell : heapconstraint -> string
-val strHeapEnvCell : heapenvconstraint -> string
+val strHeapCell : heapcell -> string
+val strHeapEnvCell : heapenvcell -> string
+val strHeapEnv : heapenv -> string
 val strWeakLoc : weakloc -> string
 val strWorld : world -> string
 val strFrame : frame -> string
@@ -175,6 +177,7 @@ type hsubst = (hvar * heap) list
 
 module MasterSubst : sig
   type t = vsubst * tsubst * lsubst * hsubst
+  val print : t -> unit
 end
 
 val substForm : MasterSubst.t -> formula -> formula

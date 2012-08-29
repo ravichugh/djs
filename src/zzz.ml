@@ -126,6 +126,7 @@ let assertFormula f =
 
 let addBinding x t =
   dump (spr "(declare-fun %s () DVal) ; depth %d" x !depth);
+  dump (spr "(assert (not (= %s bot)))" x);
   if varInScope x then Log.warn (spr "already in scope in logic: %s\n" x);
   Stack.push (x :: Stack.pop curVars) curVars;
   assertFormula (applyTyp t (wVar x));

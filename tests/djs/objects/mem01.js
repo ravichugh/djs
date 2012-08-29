@@ -1,7 +1,7 @@
 var x = {};
-/*: {(= v false )} */ ("f" in x);
-/*: {(= v undefined)} */ (x.f);
+assert (/*: {(= v false )} */ ("f" in x));
+assert (/*: {(= v undefined)} */ (x.f));
 
 x.f = undefined;
-/*: {(= v true )} */ ("f" in x);
-/*: {(= v undefined)} */ (x.f);
+assert (/*: {(= v true )} */ ("f" in x));
+assert (/*: {(= v undefined)} */ (x.f));

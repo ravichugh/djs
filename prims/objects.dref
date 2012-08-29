@@ -6,8 +6,6 @@
 (**    [[ x[i]   ]] = getIdx  ([[x]],   i  )    where i is an int literal    **)
 (**    [[ x[k]   ]] = getElem ([[x]], [[k]])    where k is anything else     **)
 
-(* TODO add v != bot to all primitives *)
-
 val getPropObj :: [; Loc1,Loc2; H]
      [[xx:(Ref(Loc1))?, kk:Str]] / [H ++ Loc1 |-> (dd:Dict, Loc2)]
   -> {(and (not (= xx null)) (not (= v bot))

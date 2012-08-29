@@ -7,3 +7,4 @@ var read = function(x,f)
 };
 
 assert (read({a:1},"a") == 1);
+assert (read({b:true},"b") == true);

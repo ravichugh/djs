@@ -10,4 +10,4 @@ for (i = 0; i < bs.length; i++) {
   b = b && bs[i];
 };
 
-/*: Bool */ b;
+assert (typeof b == "boolean");

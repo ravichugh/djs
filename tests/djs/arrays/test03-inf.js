@@ -5,8 +5,8 @@ a[3] = 3;
 a[4] = 4;
 a[5] = 5;
 
-/*: {(= v 6)} */ (a.length);
+assert (a.length == 6);
 
 a.length = 2;
 
-/*: {(= v 2)} */ (a.length);
+assert (a.length == 2);

@@ -1,19 +1,15 @@
 
 var a = /*: lA Arr(Int) */ [0,1,2];
 
-/*: {(= v 3)} */
-(/*: [Int;lA,lArrayProto;] */ a.length);
+assert (/*: [Int;lA,lArrayProto;] */ a.length == 3);
 
 (/*: [Int;lA,lArrayProto;] */ (a.push))(3);
 
-/*: {(= v 4)} */
-(/*: [Int;lA,lArrayProto;] */ a.length);
+assert (/*: [Int;lA,lArrayProto;] */ a.length == 4);
 
-/*: Int */
-(/*: [Int;lA,lArrayProto;] */ a[3]);
+assert (/*: Int */ (/*: [Int;lA,lArrayProto;] */ a[3]));
 
 (/*: [Int;lA,lArrayProto;] */ (a.pop))();
 
-/*: {(= v undefined)} */
-(/*: [Int;lA,lArrayProto;] */ a[3]);
+assert (/*: [Int;lA,lArrayProto;] */ a[3] == undefined);
 

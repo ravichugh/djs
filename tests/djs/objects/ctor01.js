@@ -9,15 +9,15 @@ function F()
   return this;
 }
 
-/*: Ref(lFProto) */ (F.prototype);
+assert (/*: Ref(lFProto) */ (F.prototype));
 
 F.prototype.g = "sweet";
 
 var x = new (/*: [;lx;] lFProto */ F)();
 
-/*: {(= v 1)} */ (x.f);
-/*: {(= v "sweet")} */ (x.g);
+assert (x.f == 1);
+assert (x.g == "sweet");
 
 F.prototype.g = "updated";
 
-/*: {(= v "updated")} */ (x.g);
+assert (x.g == "updated");

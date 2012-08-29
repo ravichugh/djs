@@ -43,6 +43,13 @@ let freshHVar =
     (* TODO spr "H_%06d" !c *)
     "H_"
 
+let freshVarX =
+  let counters = Hashtbl.create 17 in
+  fun x ->
+    let c = if Hashtbl.mem counters x then Hashtbl.find counters x else 0 in
+    Hashtbl.replace counters x (succ c);
+    spr "%s__%04d" x (succ c)
+
 
 (***** Map ********************************************************************)
 
@@ -796,8 +803,7 @@ and strForm = function
   | PHasTyp(w,u) ->
       if !pretty
         then spr "(%s :: %s)" (strWal w) (strTT u)
-        (*else spr "(= (hastyp %s (Box %d)) true)" (strWal w) (registerBox u)*)
-        else spr "(= (hastyp %s %d) true)" (strWal w) (registerBox u)
+        else spr "(hastyp %s %d)" (strWal w) (registerBox u)
   | PHeapHas((h,[]),l,k) ->
       if !pretty then
         spr "(heaphas %s %s %s)" (strHeap (h,[])) (strLoc l) (strWal k)
@@ -917,9 +923,10 @@ let strFrame (l,h,w) =
 let strBinding (x,s) = spr "%s:%s" x (strTyp s)
 
 let strHeapEnvCell = function
-  | HEConc(v)      -> spr "%s" (strVal v)
-  | HEConcObj(v,l) -> spr "(%s, %s)" (strVal v) (strLoc l)
   | HEWeakTok(ts)  -> strThawState ts
+  | HEConc(v)      -> strVal v
+  | HEConcObj(v,l) -> spr "%s |> %s" (strVal v) (strLoc l)
+  (* | HEConcObj(v,l) -> spr "(%s, %s)" (strVal v) (strLoc l) *)
 
 let strHeapEnv (hs,cs) =
   let s = 
@@ -1483,6 +1490,23 @@ let printUnrollWal cap w1 w2 =
   fpr oc_unroll "%s\n%s %s\n\n%s\n\n" (String.make 80 '-') cap
     (strWal w1) (strWal w2)
 
+let printUnroll_h (hs,cs) =
+  fpr oc_unroll "  %s ++\n" (String.concat " ++" hs);
+  List.iter (fun (l,hc) ->
+    fpr oc_unroll "    %s |-> %s\n" (strLoc l) (strHeapCell hc)) cs
+
+let printUnroll_h_l_k pre_cap h l k post_cap =
+  fpr oc_unroll "%s\n%s\n" (String.make 80 '-') pre_cap;
+  printUnroll_h h;
+  fpr oc_unroll "  %s\n  %s\n= %s\n" (strLoc l) (strWal k) post_cap
+
+let printUnroll_ds_k_h_l pre_cap ds k h l post_cap =
+  fpr oc_unroll "%s\n%s\n" (String.make 80 '-') pre_cap;
+  fpr oc_unroll "  [%s]\n  %s\n"
+    (String.concat "; " (List.map strWal ds)) (strWal k);
+  printUnroll_h h;
+  fpr oc_unroll "  %s\n\n= %s\n" (strLoc l) post_cap
+
 let sHole i = spr "__hole__%d" i
 let wHole i = wVar (sHole i)
 
@@ -1494,14 +1518,15 @@ let rec expandHH (hs,cs) l k =
     else if not (List.mem_assoc l cs) then PHeapHas ((hs,[]), l, k)
     else begin
       match List.assoc l cs with
-        | HConcObj(None,_,l') -> failwith "expandHH None"
+        | HConcObj(None,t,l') ->
+            pOr [has (WVal (valOfSingleton t)) k; expandHH (hs,cs) l' k]
         | HConcObj(Some(d),_,l') -> 
-            (* if l' = lRoot then has (wVar d) k else *)
             pOr [has (wVar d) k; expandHH (hs,cs) l' k]
         | _ -> failwith (spr "expandHH: %s" (strLoc l))
     end
   in
-  printUnroll "expand" (PHeapHas((hs,cs),l,k)) p;
+  (* printUnroll "expandHH" (PHeapHas((hs,cs),l,k)) p; *)
+  printUnroll_h_l_k "UnrollHeapHas" (hs,cs) l k (strForm p);
   p
 
 (***** expand PObjHas *****)
@@ -1518,7 +1543,8 @@ let expandOH ds k (hs,cs) l =
     end
   in
   let p = foo ds l in
-  printUnroll "expand" (PObjHas(ds,k,(hs,cs),l)) p;
+  (* printUnroll "expandOH" (PObjHas(ds,k,(hs,cs),l)) p; *)
+  printUnroll_ds_k_h_l "UnrollObjHas" ds k (hs,cs) l (strForm p);
   p
 
 (***** expand WHeapSel *****)
@@ -1527,17 +1553,18 @@ let expandOH ds k (hs,cs) l =
    and applying them: convert to an ObjSel macro! *)
 let expandHS (hs,cs) l k =
   let rec foo ds l =
-    if l = lRoot then wUndef
+    if l = lRoot then WObjSel (ds, k, ([],[]), l)
     else if not (List.mem_assoc l cs) then WObjSel (ds, k, (hs,[]), l)
     else begin
       match List.assoc l cs with
-        | HConcObj(None,_,l') -> failwith "expandHS None"
+        | HConcObj(None,t,l') -> foo (ds @ [WVal (valOfSingleton t)]) l'
         | HConcObj(Some(d),_,l') -> foo (ds @ [wVar d]) l'
         | _ -> failwith "expandHS: not conc constraint"
     end
   in
   let w = foo [] l in
-  printUnrollWal "expand" (WHeapSel((hs,cs),l,k)) w;
+  (* printUnrollWal "expandHS" (WHeapSel((hs,cs),l,k)) w; *)
+  printUnroll_h_l_k "UnrollHeapSel" (hs,cs) l k (strWal w);
   w
 
 (***** expand WObjSel *****)
@@ -1554,7 +1581,8 @@ let expandOS ds k (hs,cs) l =
     end
   in
   let w = foo ds l in
-  printUnrollWal "expand" (WObjSel(ds,k,(hs,cs),l)) w;
+  (* printUnrollWal "expandOS" (WObjSel(ds,k,(hs,cs),l)) w; *)
+  printUnroll_ds_k_h_l "UnrollObjSel" ds k (hs,cs) l (strWal w);
   w
 
 (***** *****)
@@ -1682,6 +1710,9 @@ let applyContextOS ctx (i,(ds,k,(hs,cs),l)) =
         pAnd [pImp (embedHas d [k]) (substForm subst ctx);
               pImp (pNot (embedHas d [k])) (foo ds)]
   in
+  (* TODO 8/29/12: should i add the following case to match the way
+     UnrollHeapSel and UnrollObjSel handle lRoot ?
+  if hs = [] then substForm ([sHole i, wUndef],[],[],[]) ctx else *)
   foo ds
 
 let osCache = Hashtbl.create 17
@@ -1746,11 +1777,8 @@ let embedForm p = p |> embedForm1 |> embedObjSelsInsideOut |> formToSMT
 
 let tyArrayTuple tInv ts extensible = 
   let p = if extensible then ge else eq in
-  failwith "tyArrayTuple: use QArray and move up in file"
-(*
-  let ps =
+  let ps = (* could add pDict if needed ? *)
     packed theV :: p (arrlen theV) (wInt (List.length ts))
     :: Utils.map_i (fun ti i -> applyTyp ti (sel theV (wInt i))) ts in
-  THasTyp ([UArray tInv], pAnd ps)
-*)
+  TQuick ("v", QBoxes [UArray tInv], pAnd ps)
 

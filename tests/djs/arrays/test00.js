@@ -1,22 +1,22 @@
 
 var a = /*: lA Arr(Top) */ [0,"hi",true];
 
-/*: {(= v 0)} */ (/*: [Top;lA,lArrayProto;] */ a[0]);
+assert (/*: [Top;lA,lArrayProto;] */ a[0] == 0);
 
-/*: {(= v "hi")} */ (/*: [Top;lA,lArrayProto;] */ a[1]);
+assert (/*: [Top;lA,lArrayProto;] */ a[1] == "hi");
 
-/*: {(= v true)} */ (/*: [Top;lA,lArrayProto;] */ a[2]);
+assert (/*: [Top;lA,lArrayProto;] */ a[2] == true);
 
-/*: {(= v undefined)} */ (/*: [Top;lA,lArrayProto] */ a[3]);
+assert (/*: [Top;lA,lArrayProto] */ a[3] == undefined);
 
-/*: {(= v 3)} */ (/*: [Top;lA,lArrayProto;] */ a.length);
+assert (/*: [Top;lA,lArrayProto;] */ a.length == 3);
 
-/*: {(= v 3)} */ (/*: [Top;lA,lArrayProto;] */ a["length"]);
+assert (/*: [Top;lA,lArrayProto;] */ a["length"] == 3);
 
 var s = "length";
 
-/*: {(= v 3)} */ (/*: [Top;lA,lArrayProto] */ a[s]);
+assert (/*: [Top;lA,lArrayProto] */ a[s] == 3);
 
 var i = 1;
 
-/*: {(= v "hi")} */ (/*: [Top;lA,lArrayProto;] */ a[i]);
+assert (/*: [Top;lA,lArrayProto;] */ a[i] == "hi");

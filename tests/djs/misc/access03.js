@@ -20,7 +20,8 @@ function TreeNode(left,right,item) /*: new ctorTreeNode */ {
 };
 
 
-var tree1 = /*: Ref(~lTreeNode) */ (new (/*: [;lTree1;] lTreeNodeProto */ TreeNode)(null, null, 10));
+var tree1 = new (/*: [;lTree1;] lTreeNodeProto */ TreeNode)(null, null, 10);
+assert (/*: Ref(~lTreeNode) */ tree1);
 var tree2 = new (/*: [;lTree2;] lTreeNodeProto */ TreeNode)(null, null, 20);
 var tree3 = new (/*: [;lTree2;] lTreeNodeProto */ TreeNode)(tree1, tree2, 30);
 
@@ -62,7 +63,8 @@ var bottomUpTree = function foo(item,depth) /*: tyBottomUpTree */ {
 };
 
 
-var tree4 = /*: Ref(~lTreeNode) */ (bottomUpTree(0,42));
+var tree4 = bottomUpTree(0,42);
+assert (/*: Ref(~lTreeNode) */ tree4);
 var k = (tree4.itemCheck).apply(tree4);
 assert (typeof k === "number");
 

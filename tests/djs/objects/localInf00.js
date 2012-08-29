@@ -1,17 +1,15 @@
 
 var x = {f:0, g:"hi"};
 
-/*: {(= v "hi")} */
-(x.g); // Look, ma, no location params!  
+assert (x.g == "hi"); // Look, ma, no location params!  
 
 x.g = "hello";
 
-/*: {(= v "hello")} */
-(x.g);
+assert (x.g == "hello");
 
 var b = x.hasOwnProperty("f")
         && x.hasOwnProperty("g")
         && !(x.hasOwnProperty("h"));
 
-/*: {(= v true)} */ b;
+assert (b == true);
 

@@ -1,22 +1,22 @@
 
 var a = [0,"hi",true];
 
-/*: {(= v 0)} */ (a[0]);
+assert (a[0] == 0);
 
-/*: {(= v "hi")} */ (a[1]);
+assert (a[1] == "hi");
 
-/*: {(= v true)} */ (a[2]);
+assert (a[2] == true);
 
-/*: {(= v undefined)} */ (a[3]);
+assert (a[3] == undefined);
 
-/*: {(= v 3)} */ (a.length);
+assert (a.length == 3);
 
-/*: {(= v 3)} */ (a["length"]);
+assert (a["length"] == 3);
 
 var s = "length";
 
-/*: {(= v 3)} */ (a[s]);
+assert (a[s] == 3);
 
 var i = 1;
 
-/*: {(= v "hi")} */ (a[i]);
+assert (a[i] == "hi");

@@ -33,5 +33,5 @@ function Foo(name)
 
 var bob = new /*: [;lBob;] lFooProto */ Foo("bob");
 
-/*: {(= v "bob")} */ (bob.name);
-/*: {(= v "bob")} */ (bob.getName());
+assert (bob.name == "bob");
+assert (bob.getName() == "bob");

@@ -3,15 +3,15 @@
 
 var a = /*: lA Arr(Int) */ [0,1,2];
 
-/*: {(= v 3)} */ (a.length);
+assert (a.length == 3);
 
 a["push"](3);
 
-/*: {(= v 4)} */ (a.length);
+assert (a.length == 4);
 
-/*: Int */ (a[3]);
+assert (/*: Int */ (a[3]));
 
 a["pop"]();
 
-/*: {(= v undefined)} */ (a[3]);
+assert (a[3] == undefined);
 

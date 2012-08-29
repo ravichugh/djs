@@ -70,7 +70,7 @@ let boxNumbers s =
   il
 
 let setUpExtract t usedBoxes =
-  let x = freshVar "extract" in
+  let x = freshVarX "extract" in
   Zzz.addBinding x t;
   Zzz.dump (spr "; off limits: %s" (Utils.strIntList (boxNumbers usedBoxes)));
   Zzz.doingExtract := true;
@@ -333,6 +333,10 @@ and quickCheckTypes errList usedBoxes g = function
       end
   | TQuick(_,QBoxes(l1),_), TQuick(_,QBoxes(l2),p) when p = pTru ->
       List.for_all (fun u -> List.mem u l1) l2
+  | t1, TMaybeNull(t2) ->
+      quickCheckTypes errList usedBoxes g (t1, t2)
+  | TQuick(_,QBase(bt),_), t when t = tyNotUndef && bt <> BUndef ->
+      true
   | _ ->
       false
 
