@@ -162,6 +162,8 @@ val strTTFlat : typterm -> string
 val strHeap : heap -> string
 val strHeapCell : heapcell -> string
 val strHeapEnvCell : heapenvcell -> string
+val strHeapEnvBinding : heapenvbinding -> string
+val strHeapBinding : heapbinding -> string
 val strHeapEnv : heapenv -> string
 val strWeakLoc : weakloc -> string
 val strWorld : world -> string

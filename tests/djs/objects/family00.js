@@ -1,10 +1,8 @@
 /*: #define nativeIn
-    lObjectProto |-> (_:Top, lROOT), lFunctionProto |-> (_:Top, lObjectProto),
-    &__FunctionProto |-> _:Ref(lFunctionProto) */ "#define";
+    lObjPro |-> (_:Top, lROOT), lFunPro |-> (_:Top, lObjPro) */ "#define";
 
 /*: #define nativeOut
-    lObjectProto |-> same, lFunctionProto |-> same, &__FunctionProto |-> same
-*/ "#define";
+    lObjPro |-> same, lFunPro |-> same */ "#define";
 
 /*: #define ty_beget [;LL1,LL2,LL3;]
         [[o:Ref(LL2)]] / [LL2 |-> (dParent:Top, LL3), nativeIn]
@@ -22,7 +20,7 @@ var beget = function (o) /*: ty_beget */ {
 };
 
 var parent = /*: lParent */ {"last": " Doe"};
-var child = /*: [;lChild,lParent,lObjectProto;] */ beget(parent);
+var child = /*: [;lChild,lParent,lObjPro;] */ beget(parent);
 
 assert ("last" in child == true);
 assert (child.hasOwnProperty("last") == false);

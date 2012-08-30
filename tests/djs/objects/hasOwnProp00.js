@@ -2,11 +2,11 @@
 var x = /*: lx */ {f:0, g:"hi"};
 
 assert (/*: {(= v true)} */
-(/*: [;lx,lObjectProto;] */ (x.hasOwnProperty)("f")));
+(/*: [;lx,lObjPro;] */ (x.hasOwnProperty)("f")));
 
 assert (/*: {(= v true)} */
-(/*: [;lx,lObjectProto;] */ (x.hasOwnProperty)("g")));
+(/*: [;lx,lObjPro;] */ (x.hasOwnProperty)("g")));
 
 assert (/*: {(= v false)} */
-(/*: [;lx,lObjectProto;] */ (x.hasOwnProperty)("h")));
+(/*: [;lx,lObjPro;] */ (x.hasOwnProperty)("h")));
 

@@ -97,6 +97,7 @@ let rec anf = function
         let (l1,e1) = anf e1 in
         (l1, ELet (x, ao, e1, anfExp e2))
   | EExtern(x,s,e) -> ([], EExtern (x, s, anfExp e))
+  | EHeapEnv(l,e) -> ([], EHeapEnv (l, anfExp e))
   | ETcFail(s,e) -> ([], ETcFail (s, anfExp e))
   (* | EAs(e,a) -> ([], EAs (anfExp e, a)) *)
   | EAsW(e,a) -> ([], EAsW (anfExp e, a))
@@ -270,10 +271,18 @@ and strExp k exp = match exp with
   | EExtern(x,s,e) ->
       let sep = if x = "end_of_dref_basics" ||
                    x = "end_of_dref_objects" ||
+                   x = "end_of_js_natives" ||
                    x = "__end_of_djs_prelude"
                 then spr "(%s)\n\n" (String.make 78 '*')
                 else "" in
       spr "%sval %s :: %s\n\n%s%s" (tab k) x (clip (strTyp s)) sep (strExp k e)
+  | EHeapEnv(l,e) ->
+      let sep = if k = 0 then "\n\n" else "\n" in
+      spr "%sheap (\n%s%s\n%s)%s%s"
+        (tab k) (tab (succ k))
+        (clip (String.concat (spr ",\n%s" (tab (succ k)))
+                             (List.map strHeapEnvBinding l)))
+        (tab k) sep (strExp k e)
   | ETcFail(s,e) ->
       spr "%s(fail \"%s\" \n%s)" (tab k) s (strExp (succ k) e)
 (*

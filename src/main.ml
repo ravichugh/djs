@@ -122,16 +122,22 @@ let anfAndAddPrelude e =
   if !doRaw then
     Anf.coerce e
   else
-    let basics = parsePrelude (Settings.prim_dir ^ "basics.dref") in
-    let objects = parsePrelude (Settings.prim_dir ^ "objects.dref") in
-    let e = basics (objects e) in
+    let basics = parsePrelude (S.prim_dir ^ "basics.dref") in
+    let objects = parsePrelude (S.prim_dir ^ "objects.dref") in
+    let e =
+      if !S.djsMode then
+        let natives = parsePrelude (S.prim_dir ^ "js_natives.dref") in
+        basics (objects (natives e))
+      else
+        basics (objects e)
+    in
     let e = Anf.anfExp e in
     let _ = Anf.printAnfExp e in
     e
 
 let rec expandProg originalF = function
   | Lang.ELoadSrc(f',e) ->
-      let prelude = parsePrelude (Settings.djs_dir ^ f') in
+      let prelude = parsePrelude (S.djs_dir ^ f') in
       prelude (expandProg originalF e)
   | e ->
       Lang.ELoadedSrc (originalF, e)
@@ -160,9 +166,12 @@ let dummyEJS =
 let doParseDJS fo =
   try
     let prog = match fo with Some(f) -> parseJStoEJS f | None -> dummyEJS in
+(*
     let f_pre = S.prim_dir ^ "prelude.js" in
     let ejs_pre = parseJStoEJS f_pre in
     DjsDesugar2.desugar (DjsDesugar2.makeFlatSeq ejs_pre prog)
+*)
+    DjsDesugar2.desugar prog
   with Failure(s) ->
     if Utils.strPrefix s "parse error" || Utils.strPrefix s "lexical error"
     then Log.printParseErr s
@@ -194,6 +203,6 @@ let _ =
 
   Zzz.emitPreamble ();
   TcDref3.typecheck e;
-  BNstats.print (open_out (Settings.out_dir ^ "stats.txt")) "";
+  BNstats.print (open_out (S.out_dir ^ "stats.txt")) "";
   ()
   

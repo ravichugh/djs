@@ -311,6 +311,7 @@ and quickCheckTypes errList usedBoxes g = function
   | _, t when t = tyAny -> true
   | TQuick(_,QBase(BInt),_), TQuick(_,QBase(BNum),p) -> p = pTru
   | TQuick(_,QBase(bt),_), TQuick(_,QBase(bt'),p) -> bt = bt' && p = pTru
+  | TQuick(_,QBase(BInt),_), TBaseUnion(l) when List.mem BNum l -> true
   | TQuick(_,QBase(bt),_), TBaseUnion(l) -> List.mem bt l
   | TQuick(_,QRecd(l1,_),_), TQuick(_,QRecd(l2,_),p) when p = pTru -> begin
       List.iter (fun (f,t2) ->

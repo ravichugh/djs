@@ -60,7 +60,6 @@ type exp =
   | EIf of exp * exp * exp
   | EApp of (typs * locs * heaps) * exp * exp
   | ELet of vvar * frame option * exp * exp
-  | EExtern of vvar * typ * exp
   (***** abstract syntactic sugar *****)
   | ETuple of exp list
   (***** reference operations *****)
@@ -77,6 +76,9 @@ type exp =
   | EThrow of exp
   | ETryCatch of exp * vvar * exp
   | ETryFinally of exp * exp
+  (***** external definitions *****)
+  | EExtern of vvar * typ * exp
+  | EHeapEnv of heapenvbinding list * exp
   (***** helpers *****)
   | ETcFail of string * exp
   | EAsW of exp * world              (* used during type checking *)
@@ -167,13 +169,24 @@ and heapcell =
   | HConcObj of vvar option * typ * loc  (* [l |-> (x:S, l')] *)
   | HWeakTok of thawstate                (* [m |-> 0]         *)
 
-and heap  = hvars * (loc * heapcell) list
+and heapbinding = loc * heapcell
+
+and heap  = hvars * heapbinding list
 and world = typ * heap
 and frame = hvars * heap * world
 and typs  = typ list
 and heaps = heap list
 
 and weakloc = loc * typ * loc (* m |-> (T, l) *)
+
+and heapenvcell =
+  | HEConc    of value        (* [l |-> v]      *)
+  | HEConcObj of value * loc  (* [l |-> (v,l')] *)
+  | HEWeakTok of thawstate    (* [m |-> 0]      *)
+
+and heapenvbinding = loc * heapenvcell
+
+and heapenv = hvars * heapenvbinding list
 
 (* differences compared to formal presentation:
    - patterns for (abstract) syntactic sugar
@@ -191,13 +204,6 @@ type envbinding =
 
 type env = envbinding list
 
-and heapenvcell =
-  | HEConc    of value        (* [l |-> v]      *)
-  | HEConcObj of value * loc  (* [l |-> (v,l')] *)
-  | HEWeakTok of thawstate    (* [m |-> 0]      *)
-
-type heapenv = hvars * (loc * heapenvcell) list
-
 type clause = formula * hastyp list
 
 module TypeTerms =
@@ -209,7 +215,6 @@ let mkTypeTerms l =
 let wrapVal pos value = { pos = pos; value = value }
 
 let lRoot = LocConst "lROOT"
-let lObjectPro = LocConst "lObjectProto"
 
 let isWeakLoc = function LocConst(x) | LocVar(x) -> x.[0] = '~'
 let isStrongLoc l = not (isWeakLoc l)

@@ -121,11 +121,11 @@ let sameCell exact l =
 %token <Lang.lbl> LBL
 %token <string> SUGAR
 %token
-  EOF TAG (* TRUE FALSE *) LET REC EQ IN FUN ARROW IF THEN ELSE
+  EOF TAG LET REC EQ IN FUN ARROW IF THEN ELSE
   LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK (* ALL *) DOT COMMA
-  SEMI DCOLON COLON AS GT (* GTGT *) EXTERN FAIL (* VTRUE VFALSE *) PIPE
+  SEMI DCOLON COLON AS GT (* GTGT *) EXTERN FAIL PIPE PIPEGT
   OR IMP IFF NOT AND ITE HAS SEL UPD EQMOD DOM WBOT EMPTY
-  TYPE NULL NULLBOX NEW (* LIST *) BANG QMARK
+  TYPE NULL NULLBOX NEW BANG QMARK
 (*
   SUGAR_INT SUGAR_BOOL SUGAR_TOP SUGAR_DICT SUGAR_BOT
   SUGAR_INTORBOOL SUGAR_STR SUGAR_INTORSTR SUGAR_STRORBOOL SUGAR_NUM
@@ -133,9 +133,9 @@ let sameCell exact l =
   SUGAR_EXTEND SUGAR_FLD SUGAR_UNDEF SUGAR_NOTUNDEF
 *)
   PLUS MINUS MUL DIV LT LE GE (* NE EQEQ AMPAMP PIPEPIPE *) PLUSPLUS
-  ASSGN (* LOCALL *) NEWREF REFTYPE (* AT *) MAPSTO SAME HEAP
+  ASSGN NEWREF REFTYPE (* AT *) MAPSTO SAME HEAP
   SAME_TYPE SAME_EXACT
-  FRZN THWD FREEZE THAW (* REFREEZE *)
+  WEAK FRZN THWD FREEZE THAW
   ARRTYPE PACKED LEN TRUTHY FALSY INTEGER
   BREAK THROW TRY CATCH FINALLY
   UNDEF
@@ -176,6 +176,7 @@ prelude :
  | EXTERN x=VAR DCOLON t=typ p=prelude { fun e -> EExtern(x,t,p(e)) }
  | LET x=VAR a=ann EQ e0=exp p=prelude { fun e -> ELet(x,Some(a),e0,p(e)) }
  | LET x=VAR EQ e0=exp p=prelude       { fun e -> ELet(x,None,e0,p(e)) }
+ | HEAP LPAREN l=heapenvbindings RPAREN p=prelude { fun e -> EHeapEnv(l,p(e)) }
 
 baseval :
  | b=VBOOL         { Bool b }
@@ -205,7 +206,7 @@ exp :
  | LET x=varopt a=ann EQ e1=exp IN e2=exp { ELet(x,Some(a),e1,e2) }
  (* | LET REC VAR DCOLON scm EQ exp IN exp  { ParseUtils.mkLetRec $3 $5 $7 $9 } *)
  | EXTERN VAR DCOLON typ exp             { EExtern($2,$4,$5) }
- | HEAP w=weakloc e=exp                  { EWeak(w,e) }
+ | WEAK w=weakloc e=exp                  { EWeak(w,e) }
  | x=LBL LBRACE e=exp RBRACE             { ELabel(x,e) }
  | BREAK LBL exp                         { EBreak($2,$3) }
  | THROW exp                             { EThrow($2) }
@@ -466,24 +467,24 @@ dheap :
  | heap      { registerHeap $1 }
 
 heap :
- | LBRACK RBRACK                                 { ([],[]) }
- | LBRACK l2=heapcells RBRACK                    { ([],l2) }
- | LBRACK l1=tvars RBRACK                        { (l1,[]) }
- | LBRACK l1=tvars PLUSPLUS l2=heapcells RBRACK  { (l1,l2) }
- | h=TVAR                                        { ([h],[]) }
+ | LBRACK RBRACK                                    { ([],[]) }
+ | LBRACK l2=heapbindings RBRACK                    { ([],l2) }
+ | LBRACK l1=tvars RBRACK                           { (l1,[]) }
+ | LBRACK l1=tvars PLUSPLUS l2=heapbindings RBRACK  { (l1,l2) }
+ | h=TVAR                                           { ([h],[]) }
  (* TODO generalize to multiple weaklocs *)
- | LBRACK wl=weakloc_ PLUSPLUS hcl=heapcells RBRACK
+ | LBRACK wl=weakloc_ PLUSPLUS hcl=heapbindings RBRACK
      { Log.printParseErr "need arrows to abstract over weak heaps" }
 
 rheap :
- | LBRACK RBRACK                                 { ([],[]) }
- | LBRACK l2=rheapcells RBRACK                   { ([],l2) }
- | LBRACK l1=tvars RBRACK                        { (l1,[]) }
- | LBRACK l1=tvars PLUSPLUS l2=rheapcells RBRACK { (l1,l2) }
- | h=TVAR                                        { ([h],[]) }
- | SAME                                          { sameHeap true }
- | SAME_EXACT                                    { sameHeap true }
- | SAME_TYPE                                     { sameHeap false }
+ | LBRACK RBRACK                                    { ([],[]) }
+ | LBRACK l2=rheapbindings RBRACK                   { ([],l2) }
+ | LBRACK l1=tvars RBRACK                           { (l1,[]) }
+ | LBRACK l1=tvars PLUSPLUS l2=rheapbindings RBRACK { (l1,l2) }
+ | h=TVAR                                           { ([h],[]) }
+ | SAME                                             { sameHeap true }
+ | SAME_EXACT                                       { sameHeap true }
+ | SAME_TYPE                                        { sameHeap false }
 
 frame :
  | LBRACK l=tvars RBRACK h1=dheap ARROW t2=typ DIV h2=rheap { (l,h1,(t2,h2)) }
@@ -509,22 +510,24 @@ pats_ :
  | pat                       { [$1] }
  | pat COMMA pats_           { $1 :: $3 }
 
-heapcell :
- | l=loc MAPSTO x=varopt COLON t=typ { (l, HConc (Some x,t)) }
- | l=loc MAPSTO LPAREN x=varopt COLON t=typ COMMA l2=loc RPAREN
-     { (l, HConcObj (Some x,t,l2)) }
-(*
- | l=loc MAPSTO LPAREN x=thawstate COMMA t=typ COMMA l2=loc RPAREN
-     { (l,HWeakObj(x,t,l2)) }
-*)
+heapbinding :
  | l=loc MAPSTO x=thawstate { (l,HWeakTok(x)) }
+ | l=loc MAPSTO x=varopt COLON t=typ { (l,HConc(Some(x),t)) }
+ | l=loc MAPSTO LPAREN x=varopt COLON t=typ COMMA l2=loc RPAREN
+     { (l,HConcObj(Some(x),t,l2)) }
 
-rheapcell :
- | heapcell                 { $1 }
+rheapbinding :
+ | heapbinding              { $1 }
  | l=loc MAPSTO SAME        { (l, sameCell true l) }
  | l=loc MAPSTO SAME_EXACT  { (l, sameCell true l) }
  | l=loc MAPSTO SAME_TYPE   { (l, sameCell false l) }
  (* TODO add weak obj *)
+
+heapenvbinding :
+ | l=loc MAPSTO x=thawstate           { (l,HEWeakTok(x)) }
+ | l=loc MAPSTO v=value               { (l,HEConc(v)) }
+ | l=loc MAPSTO v=value PIPEGT l2=loc { (l,HEConcObj(v,l2)) }
+ (* | l=loc MAPSTO LPAREN v=value COMMA l2=loc RPAREN { (l,HEConcObj(v,l2)) } *)
 
 weakloc :
  | LBRACK wl=weakloc_ RBRACK { wl }
@@ -640,13 +643,17 @@ typs_mul :
  | typ MUL typs_mul          { $1 :: $3 }
 *)
 
-heapcells :
- | heapcell                  { [$1] }
- | heapcell COMMA heapcells  { $1 :: $3 }
+heapbindings :
+ | heapbinding                     { [$1] }
+ | heapbinding COMMA heapbindings  { $1 :: $3 }
 
-rheapcells :
- | rheapcell                   { [$1] }
- | rheapcell COMMA rheapcells  { $1 :: $3 }
+rheapbindings :
+ | rheapbinding                      { [$1] }
+ | rheapbinding COMMA rheapbindings  { $1 :: $3 }
+
+heapenvbindings :
+ | heapenvbinding                        { [$1] }
+ | heapenvbinding COMMA heapenvbindings  { $1 :: $3 }
 
 heaps :
  | heap                  { [$1] }

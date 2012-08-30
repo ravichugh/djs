@@ -241,7 +241,7 @@ let rec mkExists l s =
 (* Add existentials and check well-formedness. Algorithmic typing should
    always synthesize well-formed types, but doing this as a sanity check. *)
 let finishLet cap g y l ((s,h): (prenextyp*heapenv)) : prenextyp * heapenv =
-  if Str.string_match (Str.regexp "^end_of_dref") y 0 then begin
+  if Str.string_match (Str.regexp "^end_of" (*"_dref"*)) y 0 then begin
     checkWfHeap := false
   end;
   let w = (mkExists l s, h) in
@@ -1099,6 +1099,14 @@ and tsExp_ g h = function
             end
       end
 
+  | EHeapEnv(l,e) -> begin
+      (* TODO could check that all bindings are new and well-formed *)
+      if !depth > 0 then err ["TS-HeapEnv: not at top-level"];
+      let h1 = (fst h, (snd h) @ l) in
+      maybePrintHeapEnv h1 h;
+      tsExp g h1 e
+    end
+
   | EThrow(EVal(v)) -> failwith "EThrow"
       (* let _ = tsVal g h v in (tyFls, h) *)
 
@@ -1381,6 +1389,8 @@ and tcExp_ g h goal = function
   | EFreeze _ -> failwith "tc EFreeze"
   | EThaw _ -> failwith "tc EThaw"
 
+  | EHeapEnv(l,e) -> failwith "tc EHeapEnv"
+
   | ELoadedSrc _ -> failwith "tc ELoadedSrc"
   | ELoadSrc(s,_) ->
       failwith (spr "tc ELoadSrc [%s]: should've been expanded" s)
@@ -1560,10 +1570,7 @@ let initialEnvs () =
   let g = [HVar h_init] in
   let g = tcAddBinding g "v" tyAny in
   let g = addSkolems g in
-  let g = tcAddBinding g "dObjectProto" tyEmpty in
-  let h = ([h_init],
-           (lRoot, HEConcObj (vNull, lRoot)) ::
-           (lObjectPro, HEConcObj (vVar "dObjectProto", lRoot)) :: []) in
+  let h = ([h_init], [lRoot, HEConcObj (vNull, lRoot)]) in
   let _ = maybePrintHeapEnv h ([],[]) in
   (g, h)
 

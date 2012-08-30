@@ -1,0 +1,75 @@
+
+(* the JS parser treats the tokens {undefined,NaN,Infinity} as variables *)
+val __undefined :: {(= v undefined)}
+val __NaN :: Num
+val __Infinity :: Num
+
+(* disallowing new Object(...), new Array(...), new Function(...) *)
+val __Object :: Top
+val __Array :: Top
+val __Function :: Top
+
+(* these are internal to desugaring *)
+val ____ObjPro :: Ref(lObjPro)
+val ____ArrPro :: Ref(lArrPro)
+val ____FunPro :: Ref(lFunPro)
+
+(* the Object.prototype dictionary *)
+val theObjPro :: { Dict | (and (dom v {"hasOwnProperty"})
+  ((sel v "hasOwnProperty") ::
+        [; L1,L2] _:[this:Ref(L1), kk:Str] / [L1 |-> (dd:Dict, L2)]
+     -> {Bool|(iff (= v true) (has dd {kk}))} / same)
+  ((sel v "hasOwnProperty") ::
+        [A; L1,L2] _:[this:Ref(L1), kk:Str] / [L1 |-> (aa:Arr(A), L2)]
+     -> {Bool|(iff (= v true) (= v "length"))} / same)
+  ((sel v "hasOwnProperty") ::
+        [A; L1,L2] _:[this:Ref(L1), i:Int] / [L1 |-> (aa:Arr(A), L2)]
+     -> {Bool|(implies (and (packed aa) (>= i 0))
+                       (iff (= v true) (< i (len aa))))} / same)
+)}
+
+(* the Array.prototype dictionary *)
+val theArrPro :: { Dict | (and (dom v {"push","pop"})
+  ((sel v "push") ::
+     [A; L1,L2]
+        _:[this:Ref(L1), xx:A] / [L1 |-> (aa:Arr(A), L2)]
+       -> {Int|(implies (packed aa) (= v (+ 1 (len aa))))}
+        / [L1 |-> (_:{(and (v::Arr(A)) 
+                      (implies (packed aa)
+                               (and (packed v)
+                                    (= (len v) (+ 1 (len aa)))
+                                    (= (sel aa (len aa)) xx))))}, L2)])
+  ((sel v "pop") ::
+     [A; L1,L2]
+        _:[this:Ref(L1)] / [L1 |-> (aa:Arr(A), L2)]
+       -> {(ite (packed aa)
+                (and (v::A) (= v (sel aa (- (len aa) 1))))
+                (or (v::A) (= v undefined)))}
+        / [L1 |-> (_:{(and (v::Arr(A))
+                            (implies (packed aa)
+                                     (and (packed v)
+                                          (= (len v) (- (len aa) 1))
+                                          (> (len aa) 0))))}, L2)])
+)}
+
+(* Array.isArray *)
+val __isArray ::
+  {(and (v :: [A;L1,L2] [[_:Ref(L1)]] / [L1 |-> (_:Arr(A), L2)]
+           -> {(= v true)} / same)
+        (v :: [;L1,L2] [[_:Ref(L1)]] / [L1 |-> (_:Dict, L2)]
+           -> {(= v false)} / same)
+        (v :: [[_:{(or (= (tag v) "number") (= (tag v) "boolean")
+                       (= (tag v) "string") (= (tag v) "undefined")
+                       (= v null))}]]
+           -> {(= v false)}))}
+
+(* the Function.prototype dictionary *)
+val theFunPro :: Empty
+
+heap (
+  lObjPro |-> theObjPro |> lROOT
+, lArrPro |-> theArrPro |> lObjPro
+, lFunPro |-> theFunPro |> lObjPro
+)
+
+val end_of_js_natives :: Top

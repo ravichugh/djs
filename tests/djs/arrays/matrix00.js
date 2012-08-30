@@ -3,9 +3,9 @@ var row2 = ["10","11"];
 
 var mat = [row1, row2];
 
-/*: {(= v "00")} */ (mat[0][0]);
-/*: {(= v "01")} */ (mat[0][1]);
-/*: {(= v "10")} */ (mat[1][0]);
-/*: {(= v "11")} */ (mat[1][1]);
+assert (mat[0][0] == "00");
+assert (mat[0][1] == "01");
+assert (mat[1][0] == "10");
+assert (mat[1][1] == "11");
 
-/*: {(= v undefined)} */ (mat[1][2]);
+assert (mat[1][2] == undefined);

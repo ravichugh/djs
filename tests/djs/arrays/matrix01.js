@@ -6,12 +6,12 @@ var i;
 
 /*: heapAnn -> heapAnn */
 for (i=0; i < mat.length; i++) {
-  /*: Str */ (mat[i][0]);
+  assert (/*: Str */ (mat[i][0]));
 }
 
 /*: #define heapAnn
     [&i    |-> _:{Int|(>= v 0)},
      &mat  |-> _:Ref(lMat),
      &row1 |-> _:Ref(lRow),
-     lRow  |-> (_:<Str,Str>, lArrayProto),
-     lMat  |-> (_:<Ref(lRow), Ref(lRow)>, lArrayProto)] */ '#define';
+     lRow  |-> (_:<Str,Str>, lArrPro),
+     lMat  |-> (_:<Ref(lRow), Ref(lRow)>, lArrPro)] */ '#define';

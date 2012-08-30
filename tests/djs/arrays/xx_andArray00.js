@@ -3,11 +3,11 @@ var b = true;
 var i;
 
 /*: [&bs |-> _:Ref(l), &b |-> _:Bool, &i |-> _:{Int|(>= v 0)},
-     l |-> (_:Arr(Bool), lArrayProto)]
+     l |-> (_:Arr(Bool), lArrPro)]
  -> [&bs |-> _:Ref(l), &b |-> _:Bool, &i |-> _:{Int|(>= v 0)},
-     l |-> (_:Arr(Bool), lArrayProto)] */
+     l |-> (_:Arr(Bool), lArrPro)] */
 for (i = 0; i < bs.length; i++) {
   b = b && bs[i];
 };
 
-/*: Bool */ b;
+assert (/*: Bool */ b);

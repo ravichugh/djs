@@ -38,12 +38,10 @@ rule token = parse
   | "IntOrBool"  { SUGAR "IntOrBool" }
   | "IntOrStr"   { SUGAR "IntOrStr" }
   | "StrOrBool"  { SUGAR "StrOrBool" }
-(*
-  | "EXTEND"       { SUGAR_EXTEND }
-  | "FLD"          { SUGAR_FLD }
-*)
+
   | "type"         { TYPE }
-  | "weak"         { HEAP }
+  | "heap"         { HEAP }
+  | "weak"         { WEAK }
   | "ref"          { NEWREF }
   | "Ref"          { REFTYPE }
   | "Arr"          { ARRTYPE }
@@ -56,7 +54,6 @@ rule token = parse
   | "thwd"         { THWD }
   | "freeze"       { FREEZE }
   | "thaw"         { THAW }
-  (* | "refreeze"     { REFREEZE } *)
   | "break"        { BREAK }
   | "throw"        { THROW }
   | "try"          { TRY }
@@ -64,11 +61,6 @@ rule token = parse
   | "finally"      { FINALLY }
   | "val"          { EXTERN }
   | "fail"         { FAIL }
-  (* | "List"         { LIST } *)
-  (* | "True"         { VBOOL true } *)
-  (* | "False"        { VBOOL false } *)
-  (* | "true"         { BOOL true } *)
-  (* | "false"        { BOOL false } *)
   | "true"         { VBOOL true }
   | "false"        { VBOOL false }
   | "TRU"          { BOOL true }
@@ -87,6 +79,7 @@ rule token = parse
   | "fun"          { FUN }
   | "|->"          { MAPSTO }
   | "->"           { ARROW }
+  | "|>"           { PIPEGT }
   | "if"           { IF }
   | "then"         { THEN }
   | "else"         { ELSE }

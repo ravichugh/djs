@@ -248,6 +248,7 @@ let mapExp fE e =
     | EApp(poly,e1,e2) -> fE (EApp (poly, fooExp e1, fooExp e2))
     | ELet(x,fo,e1,e2) -> fE (ELet (x, fo, fooExp e1, fooExp e2))
     | EExtern(x,t,e) -> fE (EExtern (x, t, fooExp e))
+    | EHeapEnv(l,e) -> fE (EHeapEnv (l, fooExp e)) (* if needed, add fold l *)
     | ETcFail(s,e) -> fE (ETcFail (s, fooExp e))
     | EAsW(e,w) -> fE (EAsW (fooExp e, w))
     | ENewref(l,e) -> fE (ENewref (l, fooExp e))
@@ -293,6 +294,7 @@ let foldExp fE fV init e =
     | EApp(poly,e1,e2) -> fE (List.fold_left fooExp acc [e1;e2]) exp
     | ELet(x,fo,e1,e2) -> fE (List.fold_left fooExp acc [e1;e2]) exp
     | EExtern(x,t,e) -> fE (fooExp acc e) exp
+    | EHeapEnv(l,e) -> fE (fooExp acc e) exp (* if needed, add fold l *)
     | ETcFail(s,e) -> fE (fooExp acc e) exp
     | EAsW(e,w) -> fE (fooExp acc e) exp
     | ENewref(l,e) -> fE (fooExp acc e) exp
@@ -901,10 +903,10 @@ and strHeapCell = function
   | HConcObj(Some(x),s,l) -> spr "(%s:%s, %s)" x (strTyp s) (strLoc l)
   | HWeakTok(ts)          -> strThawState ts
 
+and strHeapBinding (l,hc) = spr "%s |-> %s" (strLoc l) (strHeapCell hc)
+
 and strHeap (hs,cs) =
-  let s = 
-    String.concat ", " (List.map
-      (fun (l,hc) -> spr "%s |-> %s" (strLoc l) (strHeapCell hc)) cs) in
+  let s = String.concat ", " (List.map strHeapBinding cs) in
   match hs, cs with
     | [], _ -> spr "[%s]" s
     (* 11/28: extra space to avoid ]] conflict *)
@@ -928,10 +930,10 @@ let strHeapEnvCell = function
   | HEConcObj(v,l) -> spr "%s |> %s" (strVal v) (strLoc l)
   (* | HEConcObj(v,l) -> spr "(%s, %s)" (strVal v) (strLoc l) *)
 
+let strHeapEnvBinding (l,hc) = spr "%s |-> %s" (strLoc l) (strHeapEnvCell hc)
+
 let strHeapEnv (hs,cs) =
-  let s = 
-    String.concat ", " (List.map
-      (fun (l,hc) -> spr "%s |-> %s" (strLoc l) (strHeapEnvCell hc)) cs) in
+  let s = String.concat ", " (List.map strHeapEnvBinding cs) in
   match hs, cs with
     | [], _ -> spr "[%s]" s
     (* 11/28: extra space to avoid ]] conflict *)

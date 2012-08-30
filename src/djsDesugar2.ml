@@ -13,6 +13,10 @@ module IdSetExt = Prelude.IdSetExt
 module StrSet = Utils.StrSet
 
 
+(* these should match the ones in js_natives.dref *)
+let predefinedVars = ["undefined"; "Infinity"; "NaN"; "isArray"]
+
+
 (***** Check variable scopes **************************************************)
 
 exception NeedVarLifting of Prelude.id * Prelude.id
@@ -105,7 +109,9 @@ and fooIter curFunc lexScope varScope es =
   List.iter (fun e -> ignore (foo curFunc lexScope varScope e)) es
 
 let checkVars e =
-  let init = IdSet.add "assert" IdSet.empty in
+  let init = List.fold_left
+               (fun env x -> IdSet.add x env) IdSet.empty
+               ("assert" :: predefinedVars) in
   try ignore (foo "TOP_LEVEL" init IdSet.empty e)
   with NeedVarLifting(foo,x) ->
          Log.printParseErr (spr
@@ -202,6 +208,17 @@ and fooLv = function
 let freshenLabels e = foo e
 
 
+(***** Desugaring variables ***************************************************)
+
+(* normal desugaring creates a local variable "x" for JS formal "x",
+   set to the initial value passed in. so that i can still use the JS
+   formals inside types, using a different name for the corresponding
+   local variable. *)
+let dsVar x = spr "__%s" x
+
+let undoDsVar x = String.sub x 2 (String.length x - 2)
+
+
 (***** DJS macros *************************************************************)
 
 let oc_macros = open_out (Settings.out_dir ^ "macros.txt")
@@ -254,6 +271,33 @@ let rec collectMacros = function
   | _                             -> ()
 
 
+(***** Object.prototype and Array.prototype ***********************************)
+
+let objOp ts ls fn args =
+  EApp ((ts,ls,[]), eVar fn, ParseUtils.mkTupleExp args)
+
+(* {Object|Array|Function}.prototype cannot be replaced in DJS, so can
+   desugar directly to the following locations and primitives *)
+
+let lObjectPro   = LocConst "lObjPro"
+let lArrayPro    = LocConst "lArrPro"
+let lFunctionPro = LocConst "lFunPro"
+
+let eObjectPro ()   = eVar (dsVar "__ObjPro")
+let eArrayPro ()    = eVar (dsVar "__ArrPro")
+let eFunctionPro () = eVar (dsVar "__FunPro")
+
+(*
+let eNativePro f l1 l2 =
+  objOp [] [LocConst l1; l2] "getPropObj"
+    [EDeref (eVar (dsVar f)); EVal (vStr "prototype")]
+
+let eObjectPro ()   = eNativePro "Object" "lObject" lObjectPro
+let eArrayPro ()    = eNativePro "Array" "lArray" lObjectPro
+let eFunctionPro () = eNativePro "Function" "lFunction" lObjectPro
+*)
+
+
 (***** Parsing DJS annotations ************************************************)
 
 let parseWith production cap s =
@@ -290,54 +334,18 @@ let maybeParseWith production s =
 let maybeParseTcFail s  = maybeParseWith LangParser.jsFail s
 
 
-(***** Desugaring variables ***************************************************)
-
-(* normal desugaring creates a local variable "x" for JS formal "x",
-   set to the initial value passed in. so that i can still use the JS
-   formals inside types, using a different name for the corresponding
-   local variable. *)
-let dsVar x = spr "__%s" x
-
-let undoDsVar x = String.sub x 2 (String.length x - 2)
-
-
-(***** Object.prototype and Array.prototype ***********************************)
-
-let objOp ts ls fn args =
-  EApp ((ts,ls,[]), eVar fn, ParseUtils.mkTupleExp args)
-
-(* by using these locations when desugaring object literals, array literals,
-   and constructor functions, i'm optimistically assuming that
-   {Object|Array|Function}.prototype have not been replaced.
-   that is, Object.prototype is still Ref(lObjectProto). *)
-let lObjectPro   = lObjectPro (* defined in lang.ml *)
-let lArrayPro    = LocConst "lArrayProto"
-let lFunctionPro = LocConst "lFunctionProto"
-
-(*
-let eNativePro f l1 l2 =
-  objOp [] [LocConst l1; l2] "getPropObj"
-    [EDeref (eVar (dsVar f)); EVal (vStr "prototype")]
-
-let eObjectPro ()   = eNativePro "Object" "lObject" lObjectPro
-let eArrayPro ()    = eNativePro "Array" "lArray" lObjectPro
-let eFunctionPro () = eNativePro "Function" "lFunction" lObjectPro
-*)
-
-(* assuming {Object|Array|Function}.prototype haven't been overwritten
-   to make things a bit faster. *)
-let eObjectPro ()   = eVar (dsVar "__ObjectProto")
-let eArrayPro ()    = EDeref (eVar (dsVar "__ArrayProto"))
-let eFunctionPro () = EDeref (eVar (dsVar "__FunctionProto"))
-
-
 (***** Desugaring environments ************************************************)
 
 (* TODO restore from DjsDesugar.ml *)
 
 type env = { flags: bool IdMap.t; (* types: jstyp IdMap.t *) }
 
-let emptyEnv = { flags = IdMap.empty; (* types = IdMap.empty *) }
+let emptyEnv = {
+  flags = List.fold_left
+            (fun acc x -> IdMap.add (dsVar x) false acc)
+            IdMap.empty predefinedVars;
+  (* types = IdMap.empty *)
+}
 
 let addFlag x b env = { env with flags = IdMap.add x b env.flags }
 
