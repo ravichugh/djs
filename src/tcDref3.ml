@@ -447,33 +447,27 @@ type app_rule_result =
   | AppOk   of (prenextyp * heapenv)
   | AppFail of string list
 
-(* TODO 8/15 what is depTupleSubst and heapDepTupleSubst?
-   can/should these be factored somewhere else?
-   now with heap envs, can't heapDepTupleSubst select path from
-   corresponding values, like depTupleSubst? *)
+(* for each tuple component of the form xi:ti, add the mapping
+     xi |-> wi           if w is a tuple
+     xi |-> sel(w,"i")   ow
 
-(* for each dep tuple binder x in t, adding a mapping from x to w.path,
-   where path is the path to the x binder *)
-let depTupleSubst t w =
-  let rec foo path acc = function
-(*
-    | TTuple(l) ->
-        Utils.fold_left_i (fun acc (x,t) i ->
-          let path = sel path (wProj i) in
-          let acc = foo path acc t in
-          (x, path) :: acc
-        ) acc l
+   INTERESTING 8/29/12: segfault if switch (foo wi acc ti) to (foo wi acc t)
 *)
+let depTupleSubst t w =
+  let rec foo w acc = function
     | TQuick(_,QTuple(l,_),_) ->
-        Utils.fold_left_i (fun acc (xo,t) i ->
-          let path = sel path (wProj i) in
-          match xo with
-            | None    -> acc
-            | Some(x) -> let acc = foo path acc t in
-                         (x, path) :: acc) acc l
-    | TNonNull(t) -> failwith "depTupleSubst: nonnull"
-    (* TODO ok to just recurse inside? *)
-    | TMaybeNull(t) -> foo path acc t
+        Utils.fold_left_i (fun acc (xio,ti) i ->
+          let wi =
+            match w with
+              | WVal({value=VTuple(vs)})
+                when i < List.length vs -> WVal (List.nth vs i)
+              | _                       -> sel w (wProj i) in
+          match xio with
+            | None     -> acc
+            | Some(xi) -> let acc = foo wi acc ti in
+                          (xi, wi) :: acc) acc l
+    | TNonNull(t)
+    | TMaybeNull(t) -> foo w acc t
     | _ -> acc
   in
   let subst = foo w [] t in
@@ -484,6 +478,9 @@ let depTupleSubst t w =
   subst
 
 
+(* TODO 8/15 
+   now with heap envs, can't heapDepTupleSubst select path from
+   corresponding values, like depTupleSubst? *)
 
 (*
 let heapDepTupleSubst (_,cs) =
@@ -1215,7 +1212,6 @@ and tsAppSlow g curHeap ((tActs,lActs,hActs), v1, v2) =
     let polySubst = ([],tSubst,lSubst,hSubst) in
     let (t12,e12) = (substTyp polySubst t12, substHeap polySubst e12) in
 
-    let argSubst = (y, WVal v2) :: (depTupleSubst t11 (WVal v2)) in
     let valueSubst = (argSubst @ heapSubst,[],[],[]) in
     let (t12,e12) = (substTyp valueSubst t12, substHeap valueSubst e12) in
     let (t12,e12) = (expandPreTyp t12, expandPreHeap e12) in
