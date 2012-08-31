@@ -86,13 +86,15 @@ let popDHeap () =
 let copyCell exact x s =
   if exact then ty (PEq (theV, wVar x)) else s
 
-(* 8/14/12: could try to avoid unnecessary binders when using same* tokens *)
-
 let freshenCell exact = function
   | HConc(None,s) -> printParseErr "freshenCell"
   | HConcObj(None,s,l') -> printParseErr "freshenCell"
-  | HConc(Some(x),s) -> HConc (Some (freshVar x), copyCell exact x s)
-  | HConcObj(Some(x),s,l') -> HConcObj (Some (freshVar x), copyCell exact x s, l')
+  | HConc(Some(x),s) ->
+      let xo = if exact then None else Some (freshVar x) in 
+      HConc (xo, copyCell exact x s)
+  | HConcObj(Some(x),s,l') ->
+      let xo = if exact then None else Some (freshVar x) in 
+      HConcObj (xo, copyCell exact x s, l')
   | HWeakTok(tok) -> HWeakTok tok
 
 let sameHeap exact =
@@ -205,16 +207,21 @@ exp :
  | LET x=varopt EQ e1=exp IN e2=exp       { ELet(x,None,e1,e2) }
  | LET x=varopt a=ann EQ e1=exp IN e2=exp { ELet(x,Some(a),e1,e2) }
  (* | LET REC VAR DCOLON scm EQ exp IN exp  { ParseUtils.mkLetRec $3 $5 $7 $9 } *)
- | EXTERN VAR DCOLON typ exp             { EExtern($2,$4,$5) }
- | WEAK w=weakloc e=exp                  { EWeak(w,e) }
+
+ | EXTERN VAR DCOLON typ exp                  { EExtern($2,$4,$5) }
+ | HEAP LPAREN l=heapenvbindings RPAREN e=exp { EHeapEnv(l,e) }
+ | WEAK w=weakloc e=exp                       { EWeak(w,e) }
+
  | x=LBL LBRACE e=exp RBRACE             { ELabel(x,e) }
  | BREAK LBL exp                         { EBreak($2,$3) }
+
  | THROW exp                             { EThrow($2) }
  | TRY LBRACE exp RBRACE
    CATCH LPAREN VAR RPAREN
    LBRACE exp RBRACE                     { ETryCatch($3,$7,$10) }
  | TRY LBRACE exp RBRACE
    FINALLY LBRACE exp RBRACE             { ETryFinally($3,$7) }
+
  (* TODO these should only be allowed at the top-level and at the
     beginning, but not checking that right now.
     Main.parseProgAndExpand makes these assumptions. so, better

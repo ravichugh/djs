@@ -338,9 +338,10 @@ let maybeParseTcFail s  = maybeParseWith LangParser.jsFail s
 
 (* TODO restore from DjsDesugar.ml *)
 
-type env = { flags: bool IdMap.t; (* types: jstyp IdMap.t *) }
+type env = { flags: bool IdMap.t; (* types: jstyp IdMap.t *) funcNum: int }
 
 let emptyEnv = {
+  funcNum = 0;
   flags = List.fold_left
             (fun acc x -> IdMap.add (dsVar x) false acc)
             IdMap.empty predefinedVars;
@@ -469,6 +470,10 @@ let mkCall ts ls func recvOpt args =
 
 (***** Desugaring expressions *************************************************)
 
+let funcCount = ref 0
+
+let mkThis i = spr "this%02d" i
+
 let annotateExp e f =
   (* EAs (e, f) *)
   let x = freshVar "dsAnnotate" in ELet (x, Some f, e, eVar x)
@@ -504,8 +509,9 @@ let rec ds (env:env) = function
                eArrayPro (), lArrayPro)
 
   | E.ThisExpr p ->
-      (* eVar "this" *)
-      EDeref (eVar (dsVar "this")) (* 4/9 switched to a __this ref cell *)
+      (* eVar "this" *)                                     (* original LamJS *)
+      (* EDeref (eVar (dsVar "this")) *)   (* __this ref cell for thaw/freeze *)
+      EDeref (eVar (dsVar (mkThis env.funcNum)))    (* unique "this" per func *)
 
   (* TODO 3/15
   | E.IdExpr (p, x) -> let _ = failwith "rkc: ds idexpr" in EVar x
@@ -1014,10 +1020,13 @@ and dsFunc thisParam env p args body =
   then dsFuncWithArgsArray thisParam env p args body
   else dsFuncWithoutArgsArray thisParam env p args body
 
-(* 3/30 *)
 and dsFuncWithoutArgsArray thisParam env p args body =
-  (* 4/9: starting to use a __this reference cell to facilitate thaw/freeze *)
-  let args = if thisParam then ("this"::args) else args in
+  let (args,env) =
+    if not thisParam then (args, env)
+    else (* generate a fresh "this" and store it in env *)
+      let thisi = incr funcCount; mkThis !funcCount in
+      let env = { env with funcNum = !funcCount } in
+      (thisi::args, env) in
   let env =
     List.fold_left (fun env x -> addFlag (dsVar x) true env) env args in
   let body =

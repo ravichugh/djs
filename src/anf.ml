@@ -379,6 +379,7 @@ and coerce = function
   | EApp(l,e1,e2) -> EApp (l, coerceEVal "app1" e1, coerceEVal "app2" e2)
   | ELet(x,ao,e1,e2) -> ELet (x, ao, coerce e1, coerce e2)
   | EExtern(x,s,e) -> EExtern (x, s, coerce e)
+  | EHeapEnv(l,e) -> EHeapEnv (l, coerce e)
   | ETcFail(s,e) -> ETcFail (s, coerce e)
   (* | EAs(e,a) -> EAs (coerce e, a) *)
   | ENewref(cl,e) -> ENewref (cl, coerce e)

@@ -440,6 +440,25 @@ let destructNonArrowTypeFrame (_,_,(t,h)) =
     | None   -> t
     | Some _ -> failwith "destructNonArrowTypeFrame: impossible"
 
+(* desugaring generates fresh "thisi" arguments for lambdas but doesn't
+   replace "this" in type annotations. so do the substitution here. *)
+let fixupThisArg p t1 h1 t2 h2 =
+  match p, t1 with
+    | PNode(PLeaf(thisi)::ps), TQuick(y,QTuple((Some("this"),tyThis)::l,b),q)
+      when Utils.strPrefix thisi "this" ->
+        let subst = ([("this", wVar thisi)], [], [], []) in
+        let tyThis = substTyp subst tyThis in
+        let l = List.map (fun (xo,t) -> (xo, substTyp subst t)) l in
+        let q = substForm subst q in
+        let t1 = TQuick (y, QTuple ((Some thisi, tyThis) :: l, b), q) in
+        let t2 = substTyp subst t2 in
+        let (h1,h2) = substHeap subst h1, substHeap subst h2 in
+        (* let _ = Log.log4 "fixup\nt1 = %s\nh1 = %s\nt2 = %s\nh2 = %s\n" *)
+        (*           (strTyp t1) (strTyp t2) (strHeap h1) (strHeap h2) in *)
+        (t1, h1, t2, h2)
+    | _ ->
+        (t1, h1, t2, h2)
+
 
 (***** TS application helpers *************************************************)
 
@@ -1265,9 +1284,10 @@ and tcVal_ g h goal = function
   | {value=VFun(x,e)} -> begin
       let ruleName = "TC-Fun" in
       let g = removeLabels g in
-      let checkOne (((ts,ls,hs),y,t1,h1,t2,h2) as arr) =
+      let checkOne ((ts,ls,hs),y,t1,h1,t2,h2) =
         checkBinder (spr "%s: formal %s" ruleName y) g y;
-        let u = UArrow arr in
+        let (t1,h1,t2,h2) = fixupThisArg x t1 h1 t2 h2 in
+        let u = UArrow ((ts,ls,hs),y,t1,h1,t2,h2) in
         Wf.typeTerm (spr "%s: arrow:\n  %s" ruleName (strTT u)) g u;
         (* let subst = ([(y, wVar x)], [], [], []) in *)
         let vsubst =
