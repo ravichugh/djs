@@ -801,7 +801,17 @@ and strForm = function
                          (String.concat " " (List.map strWal ws))
   | PConn(s,l)      -> strFormExpanded s l
   | PAll(x,p)       -> spr "(forall ((%s DVal)) %s)" x (strForm p)
-  (* TODO make the call to registerBox somewhere more appropriate *)
+  (* TODO 8/30/12 once registerBox keeps boxes in sync with logical context,
+     can assert these axioms once per box rather than here *)
+  | PHasTyp(w,(URef(l) as u)) when isStrongLoc l ->
+      let sNull = strVal vNull in
+      if !pretty then
+        let sU = strTT u in
+        spr "(and (%s :: %s) (not (%s :: %s)))" (strWal w) sU sNull sU
+      else
+        let i = registerBox u in
+        spr "(and (hastyp %s %d) (not (hastyp %s %d)))" (strWal w) i sNull i
+  (* TODO make the call to registerBox somewhere more appropriate. *)
   | PHasTyp(w,u) ->
       if !pretty
         then spr "(%s :: %s)" (strWal w) (strTT u)

@@ -8,6 +8,9 @@ let maxJoinSize   = ref 1 (* anything <= 1 means not doing joins *)
 
 (***** Collecting type terms, or "boxes" **************************************)
 
+(* TODO rig registerBox to add/remove boxes along with logical scope, then
+   all the boxes will be readily available, no need to compute *)
+
 let typeTermsTyp acc t = (* naive way to compute this *)
   foldForm (fun acc -> function
     | PHasTyp(_,u) -> TypeTerms.add u acc

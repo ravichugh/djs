@@ -429,6 +429,9 @@ formula :
  | LPAREN OBJSEL ds=waluelist k=walue h=heap l=loc COLON t=typ RPAREN
      { pAnd [PObjHas(ds,k,h,l); applyTyp t (WObjSel(ds,k,h,l))] }
 
+ (* (= x {y1,...,yn}) *)
+ | LPAREN EQ x=walue ys=walueset RPAREN { pOr (List.map (eq x) ys) }
+
 formulas :
  | formula                               { [$1] }
  | formulas formula                      { $1 @ [$2] }

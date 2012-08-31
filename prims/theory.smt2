@@ -147,17 +147,17 @@
 ;;;;; bot, null, undefined
 ;;;;;
 
-; no source-level function value can be bot
+; this axiom is not necessary, but allows e.g. (has v "f") to be omitted
+; in the presence of a (sel v "f" :: U) predicate.
 (assert (forall ((u BoxId)) (not (hastyp bot u))))
 
-; 3/15
-; could either store let __null = null in initial typing environment, or
-; assert null :: Null here. make sure the id 1 is assigned to box UNull in
-; langUtils.ml.
+; null :: Null. make sure the id 1 is assigned to box UNull in langUtils.ml.
 (assert (hastyp null 1))
 
-; 3/5
-(assert (forall ((u BoxId)) (not (hastyp undefined u))))
+; also want the axiom not (null :: Ref l) for all strong locations l
+; but instead manually instantiating it during type checking
+
+;; (assert (forall ((u BoxId)) (not (hastyp undefined u))))
 
 
 ;;;;; End Background Theory

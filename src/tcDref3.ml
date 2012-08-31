@@ -631,8 +631,9 @@ let isValueTuple v = match v.value with
 let findActualFromRefValue g lVar tTup vTup =
   let rec foo i = function
     (* 3/14 added the MaybeNull case since the objects.dref primitives
-       now take nullable strong references *)
+       now take nullable strong references. 8/30/12: added NonNull case too *)
     | (TQuick(_,QBoxes[URef(LocVar(lVar'))],_) :: ts)
+    | (TNonNull(TQuick(_,QBoxes[URef(LocVar(lVar'))],_)) :: ts)
     | (TMaybeNull(TQuick(_,QBoxes[URef(LocVar(lVar'))],_)) :: ts) when lVar = lVar' ->
         if i >= List.length vTup then None
         else

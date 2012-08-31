@@ -22,8 +22,7 @@ val del :: [[dd:Dict, kk:Str]] -> {(= v (upd dd kk bot))}
 
 val js_typeof :: [[xx:Top]] -> {(= v (tag xx))}
 
-val js_plus :: [[xx:{(or (= (tag v) "number") (= (tag v) "string"))},
-                 yy:{(= (tag v) (tag xx))}]]
+val js_plus :: [[xx:{(= (tag v) {"number","string"})}, yy:{(= (tag v) (tag xx))}]]
             -> {(and (= (tag v) (tag xx))
                      (implies (and (= (tag xx) "number") (integer xx) (integer yy))
                               (and (= v (+ xx yy)) (integer v))))}
