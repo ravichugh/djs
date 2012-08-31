@@ -20,7 +20,7 @@ val del :: [[dd:Dict, kk:Str]] -> {(= v (upd dd kk bot))}
 
 (***** JS primitives **********************************************************)
 
-val js_typeof :: [[xx:Top]] -> {(= v (tag xx))}
+val js_typeof :: xx:Top -> {(= v (tag xx))}
 
 val js_plus :: [[xx:{(= (tag v) {"number","string"})}, yy:{(= (tag v) (tag xx))}]]
             -> {(and (= (tag v) (tag xx))

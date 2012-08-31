@@ -267,6 +267,7 @@ exp2 :
  | v=value                                   { EVal v }
  | e=lambda                                  { e }
  | LPAREN exp RPAREN                         { $2 }
+ | LPAREN exp COMMA RPAREN                   { ParseUtils.mkTupleExp ($2::[]) }
  | LPAREN exp COMMA exps RPAREN              { ParseUtils.mkTupleExp ($2::$4) }
  | LPAREN FAIL STR exp RPAREN                { ETcFail($3,$4) }
  (* | LPAREN e=exp RPAREN AS f=frame            { EAs(e,f) } *)
@@ -538,9 +539,10 @@ pats_ :
  | pat COMMA pats_           { $1 :: $3 }
 
 heapbinding :
- | l=loc MAPSTO x=thawstate { (l,HWeakTok(x)) }
-(* | l=loc MAPSTO xo=realvaropt COLON t=typ { (l,HConc(xo,t)) } *)
- | l=loc MAPSTO x=varopt COLON t=typ { (l,HConc(Some(x),t)) }
+ | l=loc MAPSTO x=thawstate                      { (l,HWeakTok(x)) }
+ | l=loc MAPSTO t=typ                            { (l,HConc(None,t)) }
+ | l=loc MAPSTO x=varopt COLON t=typ             { (l,HConc(Some(x),t)) }
+ | l=loc MAPSTO LPAREN t=typ COMMA l2=loc RPAREN { (l,HConcObj(None,t,l2)) }
  | l=loc MAPSTO LPAREN x=varopt COLON t=typ COMMA l2=loc RPAREN
      { (l,HConcObj(Some(x),t,l2)) }
 

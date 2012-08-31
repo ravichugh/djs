@@ -215,6 +215,7 @@ let rec strVal_ k = function
       (* let st = spr " as %s" (strTyp t) in *)
       let svs = List.map (fun s -> clip (strVal k s)) vs in
       spr "%s<%s>%s" (tab k) (String.concat ", " svs) st 
+  | VTuple([v]) -> spr "%s(%s,)" (tab k) (clip (strVal k v)) (* 8/31/12 *)
   | VTuple(vs) ->
       let svs = List.map (fun s -> clip (strVal k s)) vs in
       spr "%s(%s)" (tab k) (String.concat ", " svs)

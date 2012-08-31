@@ -567,15 +567,17 @@ let rec ds (env:env) = function
   | E.PrefixExpr (_, "prefix:delete", _) ->
       Log.printParseErr "delete not applied to property"
 
+(*
   (* TODO move this back below, and remove 1-elt tuple from basics.dref  *)
   | E.PrefixExpr (_, "prefix:typeof", e) ->
       (* going through mkTupleExp since typ/loc inference looks for tuples *)
       EApp (([],[],[]), eVar "js_typeof", ParseUtils.mkTupleExp [ds env e])
+*)
 
   | E.PrefixExpr (_, op, e) ->
       let e0 =
         match op with
-          (* | "prefix:typeof" -> "js_typeof" *)
+          | "prefix:typeof" -> "js_typeof"
           | "prefix:!"      -> "js_not"
           | "prefix:-"      -> "js_uminus"
           | x               -> failwith (spr "Op1Prefix [%s]" x)
