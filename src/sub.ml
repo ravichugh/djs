@@ -275,6 +275,12 @@ let filterObligations obligations = function
 
 *)
 
+let equalArrows (((ts1,ls1,hs1),x1,t11,e11,t12,e12) as arr1)
+                (((ts2,ls2,hs2),x2,t21,e21,t22,e22) as arr2) =
+  Utils.strPrefix x1 "_underscore" (* to match LangParser *)
+   && Utils.strPrefix x2 "_underscore"
+   && (ts1,ls1,hs1,t11,e11,t12,e12) = (ts2,ls2,hs2,t21,e21,t22,e22)
+
 
 (***** Subtyping **************************************************************)
 
@@ -385,30 +391,35 @@ and checkHasTyp errList usedBoxes g (w,u) =
   end
 
 and checkTypeTerms errList usedBoxes g u1 u2 =
-  sugarArrow := false;
+  if u1 = u2 then true else
   let errList =
     errList @ [spr "checkTypeTerms:\n   %s\n<: %s" (strTT u1) (strTT u2)] in
-  sugarArrow := true;
   match u1, u2 with
     | UVar(x), UVar(y) -> x = y
     | URef(x), URef(y) -> x = y
-    (* 3/15 *)
     | UNull, URef(y)   -> isWeakLoc y
     | UArrow(arr1), UArrow(arr2) -> checkArrow errList usedBoxes g arr1 arr2
-    | UArray(t1), UArray(t2) ->
-       (try (* TODO 3/10 ideally want a version that returns bool instead
-               of failing *)
+    | UArray(t1), UArray(t2) -> t1 = t2 (* add bivariance back in if needed *)
+(*
+       (try (* ideally want a version that returns bool instead of failing *)
          let _ = checkTypes errList usedBoxes g (Typ t1) t2 in
          let _ = checkTypes errList usedBoxes g (Typ t2) t1 in
          true
        with Tc_error _ ->
          false)
+*)
     | _ -> die errList "Syntactic types don't match up."
 
-and checkArrow errList usedBoxes g
-      ((ts1,ls1,hs1),x1,t11,e11,t12,e12) ((ts2,ls2,hs2),x2,t21,e21,t22,e22) =
 
-  failwith "Sub.checkArrow"
+and checkArrow errList usedBoxes g
+      (((ts1,ls1,hs1),x1,t11,e11,t12,e12) as arr1)
+      (((ts2,ls2,hs2),x2,t21,e21,t22,e22) as arr2) =
+
+  (* TODO keep stats about checkArrow *)
+
+  if equalArrows arr1 arr2 then true else
+
+  die errList "need to restore Sub.checkArrow"
 
 (*
 (* TODO 3/10

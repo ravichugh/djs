@@ -37,5 +37,5 @@ var henrietta = new /*: [;lHenrietta,lCatPro;] lCatPro */
 
 var s = henrietta.get_name();
 
-/*: Str */ s;
+assert (/*: Str */ s);
 

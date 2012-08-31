@@ -9,17 +9,17 @@ var mammal = function(priv) /*: ty_init_mammal */ {
 
 /*: #define ty_priv
     {(and (= (tag v) "Dict")
-          (objhas [v] "name" [Heap] lObjectProto)
-         ((objsel [v] "name" [Heap] lObjectProto) : Str))} */ '#define';
+          (objhas [v] "name" [Heap] lObjPro)
+         ((objsel [v] "name" [Heap] lObjPro) : Str))} */ '#define';
 
 /*: #define ty_init_mammal
     [;Lnew,Lpriv;Heap]
         [[priv:Ref(Lpriv)]]
-      / [Heap ++ lObjectProto |-> (do:Dict,lROOT), Lpriv |-> (dPriv:ty_priv,lObjectProto)]
+      / [Heap ++ lObjPro |-> (do:Dict,lROOT), Lpriv |-> (dPriv:ty_priv,lObjPro)]
      -> Ref(Lnew)
-      / [Heap ++ lObjectProto |-> same, Lpriv |-> same,
+      / [Heap ++ lObjPro |-> same, Lpriv |-> same,
          &priv |-> blah1:Ref(Lpriv),
-         Lnew |-> (dNew:ty_mam, lObjectProto)] */ '#define';
+         Lnew |-> (dNew:ty_mam, lObjPro)] */ '#define';
 
 /*: #define ty_mam
     {(and (= (tag v) "Dict")
@@ -29,8 +29,8 @@ var mammal = function(priv) /*: ty_init_mammal */ {
 /*: #define ty_get_name
     [;Dummy1;Heap]
         [[this:Ref(Dummy1)]]
-      / [Heap ++ Lpriv |-> (ePriv:ty_priv,lObjectProto), &priv |-> blah:Ref(Lpriv)]
-     -> {(= v (objsel [ePriv] "name" [Heap] lObjectProto))}
+      / [Heap ++ Lpriv |-> (ePriv:ty_priv,lObjPro), &priv |-> blah:Ref(Lpriv)]
+     -> {(= v (objsel [ePriv] "name" [Heap] lObjPro))}
       / same */ '#define';
 
 //////////////////////////////////////////////////////////////////////////////
@@ -39,7 +39,7 @@ var herbPriv = /*: lHerbPriv */ {name: "Herb"};
 var herb     = /*: [;lHerb,lHerbPriv;] */ mammal(herbPriv);
 var oldName  = herb.get_name();
 
-/*: {(= v "Herb")} */ oldName;
+assert (oldName == "Herb");
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -47,7 +47,7 @@ var oldName  = herb.get_name();
 herbPriv.name = "Herbert";
 var newName   = herb.get_name();
 
-/*: {(= v "Herbert")} */ newName;
+assert (newName == "Herbert");
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -61,15 +61,15 @@ var cat = function(priv2) /*: ty_init_cat */ {
 /*: #define ty_init_cat
     [;Lnew,Lpriv;Heap]
         [[priv2:Ref(Lpriv)]]
-      / [Heap ++ lObjectProto |-> (do:Dict,lROOT),
+      / [Heap ++ lObjPro |-> (do:Dict,lROOT),
                  &mammal |-> blahMammal:ty_init_mammal,
-                 Lpriv   |-> (dPriv:ty_priv,lObjectProto)]
+                 Lpriv   |-> (dPriv:ty_priv,lObjPro)]
      -> Ref(Lnew)
-      / [Heap ++ lObjectProto |-> same,
+      / [Heap ++ lObjPro |-> same,
                  Lpriv   |-> same,
                  &mammal |-> same,
                  &priv   |-> blah1:Ref(Lpriv),
-                 Lnew    |-> (dNew:ty_cat, lObjectProto)] */ '#define';
+                 Lnew    |-> (dNew:ty_cat, lObjPro)] */ '#define';
 
 /*: #define ty_cat
     {(and (= (tag v) "Dict")

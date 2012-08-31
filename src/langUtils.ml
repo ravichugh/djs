@@ -460,25 +460,6 @@ let bindersOfDepTuple l =
   List.fold_left (fun acc -> function Some(x) -> x::acc | None -> acc)
     [] (List.map fst l)
 
-(* maybeValOfSingleton used by TcDref3 and Sub to manipulate heap bindings with
-   singleton types. can make maybeValOfWal better by "evaluating" record walues
-   to values *)
-
-let rec maybeValOfWal = function
-  | WVal(v) -> Some v
-  | _ -> None
-
-let valToSingleton v = ty (PEq (theV, WVal v))
-
-let maybeValOfSingleton = function
-  | TRefinement("v",PEq(WVal({value=VVar"v"}),w)) -> maybeValOfWal w
-  | _ -> None
-
-let valOfSingleton t =
-  match maybeValOfSingleton t with
-    | Some(v) -> v
-    | None -> failwith (spr "valOfSingleton: %s" "")
-
 
 (***** Id Tables **************************************************************)
 
@@ -544,8 +525,6 @@ let newObjId =
 (***** Printing to SMT-LIB-2 format and stdout ********************************)
 
 let pretty = ref true
-
-let sugarArrow = ref true (* TODO is this necessary? *)
 
 let simpleSugarToTyp = [
   ("Top"         , tyAny          );
@@ -1488,6 +1467,30 @@ let substTyp subst t =
 let substVarInExp z x e =
   if x = z then e
   else failwith "substVarInExp: letrec using a freshvar for mono def?"
+
+
+(***** Misc *******************************************************************)
+
+(* maybeValOfSingleton used by TcDref3 and Sub to manipulate heap bindings with
+   singleton types. can make maybeValOfWal better by "evaluating" record walues
+   to values *)
+
+(* TODO might phase this out for HSing *)
+
+let rec maybeValOfWal = function
+  | WVal(v) -> Some v
+  | _ -> None
+
+let valToSingleton v = ty (PEq (theV, WVal v))
+
+let maybeValOfSingleton = function
+  | TRefinement("v",PEq(WVal({value=VVar"v"}),w)) -> maybeValOfWal w
+  | _ -> None
+
+let valOfSingleton t =
+  match maybeValOfSingleton t with
+    | Some(v) -> v
+    | None -> failwith (spr "valOfSingleton: %s" (strTyp t))
 
 
 (***** Expanding pre-formulas *************************************************)

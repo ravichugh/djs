@@ -19,10 +19,9 @@ let noDupeFormal errList s l =
 let heapBinders (_,cs) =
   List.fold_left (fun acc -> function
     | (_,HConc(None,t))
-    | (_,HConcObj(None,t,_)) -> failwith "wf heapbinders none"
+    | (_,HConcObj(None,t,_)) -> depTupleBindersEnv t @ acc
     | (_,HConc(Some(x),t))
-    | (_,HConcObj(Some(x),t,_)) ->
-        Var(x,tyAny) :: depTupleBindersEnv t @ acc
+    | (_,HConcObj(Some(x),t,_)) -> Var(x,tyAny) :: depTupleBindersEnv t @ acc
     | (_,HWeakTok _) -> acc
   ) [] cs
 

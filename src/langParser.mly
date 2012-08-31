@@ -83,10 +83,27 @@ let registerHeap h =
 let popDHeap () =
   heapStack := List.tl !heapStack
 
+(*
+let copySingletonCell l s exact =
+  if not exact then s
+  else begin
+    match maybeValOfSingleton s with
+      | Some(v) -> valToSingleton v
+      | None ->
+          printParseErr (spr
+           "i can't sameExact the location [%s] because it stores a \
+            non-singleton type [%s] without a binder.\n\n\
+            do me a solid: either use an explicit binder or use sameType."
+              (strLoc l) (strTyp s))
+  end
+*)
+
 let copyCell exact x s =
-  if exact then ty (PEq (theV, wVar x)) else s
+  if exact then valToSingleton (vVar x) else s
 
 let freshenCell exact = function
+  (* | HConc(None,s) -> HConc (None, copySingletonCell l s exact) *)
+  (* | HConcObj(None,s,l') -> HConcObj (None, copySingletonCell l s exact, l') *)
   | HConc(None,s) -> printParseErr "freshenCell"
   | HConcObj(None,s,l') -> printParseErr "freshenCell"
   | HConc(Some(x),s) ->
@@ -522,6 +539,7 @@ pats_ :
 
 heapbinding :
  | l=loc MAPSTO x=thawstate { (l,HWeakTok(x)) }
+(* | l=loc MAPSTO xo=realvaropt COLON t=typ { (l,HConc(xo,t)) } *)
  | l=loc MAPSTO x=varopt COLON t=typ { (l,HConc(Some(x),t)) }
  | l=loc MAPSTO LPAREN x=varopt COLON t=typ COMMA l2=loc RPAREN
      { (l,HConcObj(Some(x),t,l2)) }
@@ -548,6 +566,12 @@ weakloc_ :
 thawstate :
  | FRZN       { Frzn }
  | THWD l=loc { Thwd(l) }
+
+(*
+realvaropt :
+ | x=VAR                { Some x }
+ | UNDERSCORE           { None }
+*)
 
 varopt :
  | x=VAR                { x }

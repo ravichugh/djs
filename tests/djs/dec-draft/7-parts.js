@@ -11,7 +11,7 @@ var hybrid = /*: l */ {};
 make_dog(hybrid);
 make_cat(hybrid);
 var noise = hybrid.bark() + hybrid.purr();
-/*: Str */ noise;
+assert (/*: Str */ noise);
 
 
 /*: #define ty_make_dog
