@@ -25,7 +25,7 @@ var getCount = function(t,c) /*: ty_getCount */ {
                 &toNum |-> blah1:ty_toNum,
                 &getCount |-> blah2:ty_getCount]
             -> Top
-             / [Lt |-> (_:{(and (eqmod v dt {c}) ((sel v c) : Num))}, Ltp),
+             / [Lt |-> (_:{(and (eqmod v dt {c}) (Num (sel v c)))}, Ltp),
                 &toNum |-> same,
                 &getCount |-> same] */ "#define";
 

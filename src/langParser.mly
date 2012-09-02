@@ -101,9 +101,11 @@ let copySingletonCell l s exact =
 let copyCell exact x s =
   if exact then valToSingleton (vVar x) else s
 
-let freshenCell exact = function
-  (* | HConc(None,s) -> HConc (None, copySingletonCell l s exact) *)
-  (* | HConcObj(None,s,l') -> HConcObj (None, copySingletonCell l s exact, l') *)
+let freshenCell exact l = function
+(*
+  | HConc(None,s) -> HConc (None, copySingletonCell l s exact)
+  | HConcObj(None,s,l') -> HConcObj (None, copySingletonCell l s exact, l')
+*)
   | HConc(None,s) -> printParseErr "freshenCell"
   | HConcObj(None,s,l') -> printParseErr "freshenCell"
   | HConc(Some(x),s) ->
@@ -116,11 +118,11 @@ let freshenCell exact = function
 
 let sameHeap exact =
   let (hs,cs) = List.hd !heapStack in
-  let cs = List.map (fun (l,hc) -> (l, freshenCell exact hc)) cs in
+  let cs = List.map (fun (l,hc) -> (l, freshenCell exact l hc)) cs in
   (hs, cs)
 
 let sameCell exact l =
-  try freshenCell exact (List.assoc l (snd (List.hd !heapStack)))
+  try freshenCell exact l (List.assoc l (snd (List.hd !heapStack)))
   with
     Not_found ->
     printParseErr (spr "sameCell: [%s] not found in previous heap" (strLoc l))
@@ -178,12 +180,13 @@ let sameCell exact l =
 %type <(Lang.typs * Lang.locs * Lang.heaps) * Lang.loc> jsNew
 %type <Lang.loc * Lang.typ> jsArrLit
 %type <Lang.heap> jsHeap
+%type <Lang.vvar * Lang.macro> jsMacroDef
 %type <string> jsFail
 
 
 %start prog prelude
 %start jsTyp jsPolyArgs jsLoc jsObjLocs jsWhile jsFail jsCtor jsNew jsArrLit
-       jsHeap jsFreeze jsThaw jsWeakLoc
+       jsHeap jsFreeze jsThaw jsWeakLoc jsMacroDef
 
 
 %%
@@ -228,6 +231,8 @@ exp :
  | EXTERN VAR DCOLON typ exp                  { EExtern($2,$4,$5) }
  | HEAP LPAREN l=heapenvbindings RPAREN e=exp { EHeapEnv(l,e) }
  | WEAK w=weakloc e=exp                       { EWeak(w,e) }
+ | TYPE x=VAR DCOLON tt=typ_term e=exp        { EMacro(x,MacroTT(tt),e) }
+ | TYPE x=VAR EQ t=typ e=exp                  { EMacro(x,MacroT(t),e) }
 
  | x=LBL LBRACE e=exp RBRACE             { ELabel(x,e) }
  | BREAK LBL exp                         { EBreak($2,$3) }
@@ -299,8 +304,12 @@ typ :
               else printParseErr (spr "unexpected Sugar: [%s]" s) }
 
  | LBRACE s=SUGAR             PIPE p=formula RBRACE { mkSugarTyp "v" s p }
+ (* 8/31/12: removed this because of shift/reduce conflict with previous
+   production. add this back in if needed
  | LBRACE x=VAR COLON s=SUGAR PIPE p=formula RBRACE { mkSugarTyp x s p }
- | LBRACE u=typ_term          PIPE p=formula RBRACE { TQuick("v",QBoxes[u],p) }
+ *)
+ | LBRACE u=real_typ_term     PIPE p=formula RBRACE { TQuick("v",QBoxes[u],p) }
+ (* | LBRACE u=typ_term          PIPE p=formula RBRACE { TQuick("v",QBoxes[u],p) } *)
 
  (* parens to avoid conflicts *)
  | LPAREN t=typ RPAREN BANG               { TNonNull(t) }
@@ -325,6 +334,10 @@ deptuple_allbinders :
  | xt=vartyp COMMA l=deptuple_allbinders      { xt :: l }
 
 typ_term :
+ | u=real_typ_term                       { u }
+ | x=VAR                                 { UMacro(x) }
+
+real_typ_term :
  | TVAR                                  { UVar($1) }
  | NULLBOX                               { UNull }
  | REFTYPE LPAREN l=loc RPAREN           { URef(l) }
@@ -402,9 +415,6 @@ formula :
  (***** uninterpreted predicates *****)
  | LPAREN w=walue DCOLON u=typ_term RPAREN      { PHasTyp(w,u) }
  | LPAREN w=walue DCOLON u=typ_term BANG RPAREN { pIsBang w u }
-(*
- | HEAPHAS LPAREN h=heap COMMA l=loc COMMA k=walue RPAREN { PHeapHas(h,l,k) }
-*)
  | LPAREN HEAPHAS h=heap l=loc k=walue RPAREN   { PHeapHas(h,l,k) }
  | LPAREN PACKED w=walue RPAREN                 { packed w }
  | LPAREN INTEGER w=walue RPAREN                { integer w }
@@ -423,39 +433,29 @@ formula :
  | LPAREN DOM x=walue ys=walueset RPAREN        { PDomEq(x,ys) }
  | LPAREN EQMOD x=walue y=walue zs=walueset RPAREN { PEqMod(x,y,zs) }
  (***** syntactic macros *****)
- (* TODO rethink these wrt quick types *)
- | LPAREN w=walue TCOLON t=typ RPAREN           { applyTyp t w }
- | LPAREN w=walue COLON t=typ RPAREN            { applyTyp t w }
-(*
- | OBJHAS LPAREN d=walue COMMA k=walue COMMA h=heap COMMA l=loc RPAREN
-     { PObjHas([d],k,h,l) }
- | OBJHAS LPAREN ds=waluelist COMMA k=walue COMMA h=heap COMMA l=loc RPAREN
-     { PObjHas(ds,k,h,l) }
-*)
  | LPAREN OBJHAS d=walue k=walue h=heap l=loc RPAREN      { PObjHas([d],k,h,l) }
  | LPAREN OBJHAS ds=waluelist k=walue h=heap l=loc RPAREN { PObjHas(ds,k,h,l) }
  | LPAREN TYPE x=VAR RPAREN  { ParseUtils.doIntersectionHack x }
+ | LPAREN t=typ w=walue RPAREN
+     { match w with
+         | WApp("sel",[k])   -> pAnd [has w k; applyTyp t w]
+         | WHeapSel(h,l,k)   -> pAnd [PHeapHas(h,l,k); applyTyp t w]
+         | WObjSel(ds,k,h,l) -> pAnd [PObjHas(ds,k,h,l); applyTyp t w]
+         | _                 -> applyTyp t w }
 
-(*
- | LPAREN SUGAR_EXTEND a1=atom a2=atom a3=atom a4=atom RPAREN
-     { pExtend a1 a2 a3 a4 }
-
- | LPAREN SUGAR_FLD a1=atom a2=atom t=typ RPAREN
-     { let TRefinement(x,p) = t in
-       PAnd [PEq (tag a2, aStr "Str"); (* TODO better not to hardcode Str *)
-             PEq (has a1 a2, ATru);
-             substForm (sel a1 a2) (aVar x) p] }
-*)
-
- (* TODO probably want to add PTruthy and PFalsy as delayed macros *)
+ (* might want to add PTruthy and PFalsy as delayed macros *)
  | LPAREN TRUTHY x=walue RPAREN                 { pTruthy x }
  | LPAREN FALSY x=walue RPAREN                  { pFalsy x }
 
- | LPAREN OBJSEL ds=waluelist k=walue h=heap l=loc COLON t=typ RPAREN
-     { pAnd [PObjHas(ds,k,h,l); applyTyp t (WObjSel(ds,k,h,l))] }
-
  (* (= x {y1,...,yn}) *)
  | LPAREN EQ x=walue ys=walueset RPAREN { pOr (List.map (eq x) ys) }
+
+ (* removed these three in favor of (T w) syntax
+ | LPAREN w=walue TCOLON t=typ RPAREN           { applyTyp t w }
+ | LPAREN w=walue COLON t=typ RPAREN            { applyTyp t w }
+ | LPAREN OBJSEL ds=waluelist k=walue h=heap l=loc COLON t=typ RPAREN
+     { pAnd [PObjHas(ds,k,h,l); applyTyp t (WObjSel(ds,k,h,l))] } *)
+
 
 formulas :
  | formula                               { [$1] }
@@ -471,14 +471,7 @@ walue :
  | LPAREN MINUS x=walue y=walue RPAREN       { minus x y }
  | LPAREN UPD x=walue y=walue z=walue RPAREN { upd x y z }
  | LPAREN LEN x=walue RPAREN                 { arrlen x }
-(*
- | HEAPSEL LPAREN h=heap COMMA l=loc COMMA k=walue RPAREN
-     { WHeapSel(h,l,k) }
- | OBJSEL LPAREN d=walue COMMA k=walue COMMA h=heap COMMA l=loc RPAREN
-     { WObjSel([d],k,h,l) }
- | OBJSEL LPAREN ds=waluelist COMMA k=walue COMMA h=heap COMMA l=loc RPAREN
-     { WObjSel(ds,k,h,l) }
-*)
+
  | LPAREN HEAPSEL h=heap l=loc k=walue RPAREN             { WHeapSel(h,l,k) }
  | LPAREN OBJSEL d=walue k=walue h=heap l=loc RPAREN      { WObjSel([d],k,h,l) }
  | LPAREN OBJSEL ds=waluelist k=walue h=heap l=loc RPAREN { WObjSel(ds,k,h,l) }
@@ -751,5 +744,9 @@ jsArrLit :
 *)
 
 jsHeap : h=heap EOF { h }
+
+jsMacroDef :
+ | TYPE x=VAR EQ t=typ EOF            { x,MacroT(t) }
+ | TYPE x=VAR DCOLON tt=typ_term EOF  { x,MacroTT(tt) }
 
 %%

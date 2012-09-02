@@ -1,25 +1,25 @@
 
 #use "tests/functional/arrays/__arrays.ml"
 
-val tup4 :: {(and (v::Arr({(or (v:Int) (v:Bool) (v:Str))}))
+val tup4 :: {(and (v::Arr({(or (Int v) (Bool v) (Str v))}))
                   (packed v) (= (len v) 4)
-                  ((sel v 0) : Int)
-                  ((sel v 1) : Bool))}
+                  (Int (sel v 0))
+                  (Bool (sel v 1)))}
 
 let _ :: Int =
-  ([{(or (v:Int) (v:Bool) (v:Str))}] geti) tup4 0 in
+  ([{(or (Int v) (Bool v) (Str v))}] geti) tup4 0 in
 
 let _ :: Bool =
-  ([{(or (v:Int) (v:Bool) (v:Str))}] geti) tup4 1 in
+  ([{(or (Int v) (Bool v) (Str v))}] geti) tup4 1 in
 
-let _ :: {(or (v:Int) (v:Bool) (v:Str))} =
-  ([{(or (v:Int) (v:Bool) (v:Str))}] geti) tup4 2 in
+let _ :: {(or (Int v) (Bool v) (Str v))} =
+  ([{(or (Int v) (Bool v) (Str v))}] geti) tup4 2 in
 
-let _ :: {(or (v:Int) (v:Bool) (v:Str))} =
-  ([{(or (v:Int) (v:Bool) (v:Str))}] geti) tup4 3 in
+let _ :: {(or (Int v) (Bool v) (Str v))} =
+  ([{(or (Int v) (Bool v) (Str v))}] geti) tup4 3 in
 
 let _ :: {(= v undefined)} =
-  ([{(or (v:Int) (v:Bool) (v:Str))}] geti) tup4 4 in
+  ([{(or (Int v) (Bool v) (Str v))}] geti) tup4 4 in
 
 0
 

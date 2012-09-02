@@ -1,0 +1,3 @@
+type int_to_int = x:Int -> Int
+let _ :: int_to_int = fun x -> (x) in
+0

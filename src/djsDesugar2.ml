@@ -321,6 +321,7 @@ let parseThaw s    = parseWith LangParser.jsThaw "thaw annot" s
 let parseCtorTyp s = parseWith LangParser.jsCtor "ctor annot" s
 let parseNew s     = parseWith LangParser.jsNew "new annot" s
 let parseArrLit s  = parseWith LangParser.jsArrLit "array literal annot" s
+let parseMacro s   = parseWith LangParser.jsMacroDef "macro def" s
 let parseObjLocs s =
   match parseWith LangParser.jsObjLocs "obj loc annot" s with
     | l1, Some(l2) -> (l1, l2)
@@ -393,17 +394,25 @@ let oc_desugar_hint = open_out (Settings.out_dir ^ "desugar_hint.txt")
 let dsArrowWithArgsArray arr =
   failwith "no longer implemented. see DjsDesugar.ml for reference"
 
+let maybeAddDummyThis = function
+  | ((ts,ls,hs),x,TQuick("v",QTuple(tup,b),p),h1,t2,h2)
+    when List.length tup = 0 || fst (List.nth tup 0) <> Some("this") ->
+      let t1 = TQuick ("v", QTuple ((Some "this", tyAny) :: tup, b), p) in
+      ((ts,ls,hs),x,t1,h1,t2,h2)
+  | arr ->
+      arr
+
 let dsArrow arr =
-  if !Settings.doArgsArray
-  then dsArrowWithArgsArray arr
-  else ParseUtils.maybeAddHeapPrefixVar arr
+  if !Settings.doArgsArray then dsArrowWithArgsArray arr else
+  arr |> maybeAddDummyThis |> ParseUtils.maybeAddHeapPrefixVar
+
+let dsTT = function
+  | UArrow(arr) -> UArrow (dsArrow arr)
+  | u           -> u
 
 (* TODO desugar variables to add __ *)
 let dsTyp t env =
-  let fTT = function
-    | UArrow(arr) -> UArrow (dsArrow arr)
-    | u           -> u in
-  mapTyp ~fTT t
+  mapTyp ~fTT:dsTT t
 
 let desugarTypHint hint env =
   (* let err x = printParseErr (spr "desugarScm\n\n%s\n\n%s" cap x) in *)
@@ -423,11 +432,20 @@ let desugarCtorHint hint env =
   dsTyp (tyTypTerm (UArrow arr)) env
   (* TODO track constructors differently in env *)
 
+(*
 (* TODO for now, not allowing intersections of arrows *)
 let hasThisParam = function
   | TQuick(_,QBoxes[UArrow(_,_,
       TQuick(_,QTuple((Some("this"),_)::_,_),_),_,_,_)],_) -> true
   | _ -> false
+*)
+
+let dsMacro = function
+  | MacroT(t) -> MacroT (mapTyp ~fTT:dsTT t)
+  | MacroTT(tt) ->
+      (match mapTyp ~fTT:dsTT (TQuick("v",QBoxes[tt],pTru)) with
+         | TQuick("v",QBoxes[tt'],_) -> MacroTT tt'
+         | _                         -> failwith "dsMacro: impossible")
 
 
 (***** Misc *******************************************************************)
@@ -461,7 +479,8 @@ let mkApp ?(curried=false) f args =
   end
 
 let mkCall ts ls func recvOpt args =
-  let recv = match recvOpt with Some(e) -> [e] | None -> [] in
+  (* let recv = match recvOpt with Some(e) -> [e] | None -> [] in *)
+  let recv = match recvOpt with Some(e) -> [e] | None -> [EVal vNull] in
   if !Settings.doArgsArray then
     failwith "no longer implemented. see DjsDesugar.ml for reference"
   else
@@ -708,6 +727,24 @@ let rec ds (env:env) = function
        normal let-binding instead of doing var lifting or implicit
        updates to global *)
 
+  (* var f = function (...) { ... }; ...
+     insert the hint "f" so that the type macro f is used *)
+  | E.SeqExpr (p0,
+        E.VarDeclExpr (p1, x, (E.FuncExpr _ as e1)),
+        e2) ->
+      let e1 = E.HintExpr (p1, x, e1) in
+      ds env (E.SeqExpr (p0, E.VarDeclExpr (p1, x, e1), e2))
+
+  (* x.f = function (...) { ... }; ...
+     insert the hint "f" so that the type macro f is used *)
+  | E.SeqExpr (p0,
+        E.AssignExpr (p1,
+          (E.PropLValue (_, _, E.ConstExpr (_, J.CString f)) as eLHS),
+          (E.FuncExpr _ as eRHS)),
+        e2) ->
+      let eRHS = E.HintExpr (p1, f, eRHS) in
+      ds env (E.SeqExpr (p0, E.AssignExpr (p1, eLHS, eRHS), e2))
+
 (*
   (* rkc TODO figure out what annotation for x should be *)
   | E.SeqExpr (_, E.HintExpr (_, s, E.VarDeclExpr (p1, x, xInit)), e) ->
@@ -726,12 +763,6 @@ let rec ds (env:env) = function
       (* TODO could addVarType here for Ref(lObjectProto) *)
       let x = dsVar x in
       EExtern (x, desugarTypHint s env, ds (addFlag x false env) e2)
-
-  | E.SeqExpr (_, E.HintExpr (_, s, E.ConstExpr (_, J.CString "#weak")), e2) ->
-      let (m,t,l) = parseWeakLoc s in
-      (* TODO store weak locs differently in env *)
-      let _ = weakLocs := (m,l) :: !weakLocs in
-      EWeak ((m, dsTyp t env, l), ds env e2)
 
   (* rkc: 3/15 match this case if i wanted to look for recursive functions as
          var fact = function f(n) /*: ... */ {};
@@ -761,6 +792,19 @@ let rec ds (env:env) = function
 
   | E.VarDeclExpr _ -> Log.printParseErr "ds VarDeclExpr: shouldn't get here"
 
+  (* TODO 9/2/12 moved next two cases down after vardecls, should be fine *)
+
+  | E.SeqExpr (_, E.HintExpr (_, s, E.ConstExpr (_, J.CString "#weak")), e2) ->
+      let (m,t,l) = parseWeakLoc s in
+      (* TODO store weak locs differently in env *)
+      let _ = weakLocs := (m,l) :: !weakLocs in
+      EWeak ((m, dsTyp t env, l), ds env e2)
+
+  | E.SeqExpr (_, E.HintExpr (_, s, E.ConstExpr (_, J.CString "#type")), e2) ->
+      let (x,m) = parseMacro (spr "type %s" s) in
+      let m = dsMacro m in
+      EMacro (x, m, ds env e2)
+
   | E.SeqExpr (_, E.HintExpr (_, s, E.FuncStmtExpr (p, f, args, body)), e2) ->
       let fOrig = f in
       let f = dsVar f in
@@ -773,7 +817,7 @@ let rec ds (env:env) = function
       let t = augmentType t env (fvExps "dsFuncStmtExpr recursive" env [body]) in
 
       let ctorFun =
-        annotateExp (dsFunc true env p args body) (ParseUtils.typToFrame t) in
+        annotateExp (dsFunc(*true*)env p args body) (ParseUtils.typToFrame t) in
       let protoObj =
         ENewObj (EDict [],
                  LocConst (spr "l%sProto" fOrig),
@@ -956,12 +1000,11 @@ let rec ds (env:env) = function
          it too
       *)
       let env = List.fold_left (fun env arg -> addFlag arg true env) env args in
-      let env = if hasThisParam t then addFlag "this" true env else env in
+      (* let env = if hasThisParam t then addFlag "this" true env else env in *)
+      let env = addFlag "this" true env in
       let t = augmentType t env (fvExps "dsFuncStmtExpr recursive" env [body]) in
-(*
-      let func = dsFunc false env p args body in
-*)
-      let func = dsFunc (hasThisParam t) env p args body in
+      (* let func = dsFunc (hasThisParam t) env p args body in *)
+      let func = dsFunc env p args body in
       EApp (([t],[],[]), eVar "fix", EFun (PLeaf f, func))
 
   | E.FuncStmtExpr (_, f, _, _) ->
@@ -994,7 +1037,8 @@ and dsAnnotatedFuncExpr env s = function
       let env = addFormals t env in
       let env = List.fold_left (fun env arg -> addFlag arg true env) env args in
       let t = augmentType t env (fvExps "dsAnnotatedFuncExpr" env [body]) in
-      let e = dsFunc (hasThisParam t) env p args body in
+      (* let e = dsFunc (hasThisParam t) env p args body in *)
+      let e = dsFunc env p args body in
       annotateExp e (ParseUtils.typToFrame t)
   | _ ->
       Log.printParseErr
@@ -1017,18 +1061,24 @@ and dsMethCall env ts ls obj prop args =
     will not work in general *)
   mkCall ts ls func (Some obj) (List.map (ds env) args)
 
-and dsFunc thisParam env p args body =
+and dsFunc (* thisParam *) env p args body =
   if !Settings.doArgsArray
-  then dsFuncWithArgsArray thisParam env p args body
-  else dsFuncWithoutArgsArray thisParam env p args body
+  then dsFuncWithArgsArray (* thisParam *) env p args body
+  else dsFuncWithoutArgsArray (* thisParam *) env p args body
 
-and dsFuncWithoutArgsArray thisParam env p args body =
+and dsFuncWithoutArgsArray (* thisParam *) env p args body =
+(*
   let (args,env) =
     if not thisParam then (args, env)
     else (* generate a fresh "this" and store it in env *)
       let thisi = incr funcCount; mkThis !funcCount in
       let env = { env with funcNum = !funcCount } in
       (thisi::args, env) in
+*)
+  (* generate a fresh "this" and store it in env *)
+  let thisi = incr funcCount; mkThis !funcCount in
+  let args = thisi :: args in
+  let env = { env with funcNum = !funcCount } in
   let env =
     List.fold_left (fun env x -> addFlag (dsVar x) true env) env args in
   let body =
@@ -1039,7 +1089,7 @@ and dsFuncWithoutArgsArray thisParam env p args body =
   eLambda args body
 
 (* rkc: based on LamJS E.FuncExpr case *)
-and dsFuncWithArgsArray thisParam env p args body =
+and dsFuncWithArgsArray (* thisParam *) env p args body =
   failwith "no longer implemented. see DjsDesugar.ml for reference"
 
 (* rkc: based on LamJS E.WhileExpr case *)

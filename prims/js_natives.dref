@@ -54,13 +54,13 @@ val theArrPro :: { Dict | (and (dom v {"push","pop"})
 
 (* Array.isArray *)
 val __isArray ::
-  {(and (v :: [A;L1,L2] [[_:Ref(L1)]] / [L1 |-> (_:Arr(A), L2)]
+  {(and (v :: [A;L1,L2] [[this:Top, _:Ref(L1)]] / [L1 |-> (_:Arr(A), L2)]
            -> {(= v true)} / same)
-        (v :: [;L1,L2] [[_:Ref(L1)]] / [L1 |-> (_:Dict, L2)]
+        (v :: [;L1,L2] [[this:Top, _:Ref(L1)]] / [L1 |-> (_:Dict, L2)]
            -> {(= v false)} / same)
-        (v :: [[_:{(or (= (tag v) "number") (= (tag v) "boolean")
-                       (= (tag v) "string") (= (tag v) "undefined")
-                       (= v null))}]]
+        (v :: [[this:Top, _:{(or (= (tag v) "number") (= (tag v) "boolean")
+                                 (= (tag v) "string") (= (tag v) "undefined")
+                                 (= v null))}]]
            -> {(= v false)}))}
 
 (* the Function.prototype dictionary *)

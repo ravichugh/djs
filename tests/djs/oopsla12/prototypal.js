@@ -20,7 +20,7 @@ var beget = function (o) /*: ty_beget */ {
 
 /*: #define ty_get_name [; Lthis,Lpro; H]
         [[this:Ref(Lthis)]]
-      / [H ++ Lthis |-> (dThis:{Dict|(objsel [v] "name" [H] Lpro : Str)}, Lpro)]
+      / [H ++ Lthis |-> (dThis:{Dict|(Str (objsel [v] "name" [H] Lpro))}, Lpro)]
      -> Str / same */ '#define';
 
 var herb = /*: lHerb */ {

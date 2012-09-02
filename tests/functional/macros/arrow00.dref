@@ -1,0 +1,4 @@
+type int_to_int :: x:Int -> Int
+let _ :: {(v :: int_to_int)} = fun x -> (js_plus (x, 17)) in
+let _ :: int_to_int = fun x -> (x) in
+0

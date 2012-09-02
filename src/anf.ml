@@ -98,6 +98,7 @@ let rec anf = function
         (l1, ELet (x, ao, e1, anfExp e2))
   | EExtern(x,s,e) -> ([], EExtern (x, s, anfExp e))
   | EHeapEnv(l,e) -> ([], EHeapEnv (l, anfExp e))
+  | EMacro(x,m,e) -> ([], EMacro (x, m, anfExp e))
   | ETcFail(s,e) -> ([], ETcFail (s, anfExp e))
   (* | EAs(e,a) -> ([], EAs (anfExp e, a)) *)
   | EAsW(e,a) -> ([], EAsW (anfExp e, a))
@@ -284,6 +285,13 @@ and strExp k exp = match exp with
         (clip (String.concat (spr ",\n%s" (tab (succ k)))
                              (List.map strHeapEnvBinding l)))
         (tab k) sep (strExp k e)
+  | EMacro(x,m,e) ->
+      let s =
+        match m with
+          | MacroT(t) -> spr "= %s" (strTyp t)
+          | MacroTT(tt) -> spr ":: %s" (strTT tt) in
+      let sep = if k = 0 then "\n\n" else "\n" in
+      spr "%stype %s %s%s%s%s" (tab k) x s sep (tab k) (strExp k e)
   | ETcFail(s,e) ->
       spr "%s(fail \"%s\" \n%s)" (tab k) s (strExp (succ k) e)
 (*

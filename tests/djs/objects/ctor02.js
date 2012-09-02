@@ -8,7 +8,7 @@
        [[this:Ref(Lthis)]]
      / [HH ++ Lthis |-> (innerDThis:{Dict|
           (and (objhas [v] "name" [HH] Lpro)
-              ((objsel [v] "name" [HH] Lpro) : Str))}, Lpro)]
+               (Str (objsel [v] "name" [HH] Lpro)))}, Lpro)]
     -> {(= v (objsel [innerDThis] "name" [HH] Lpro))}
      / same
 */ "#define";

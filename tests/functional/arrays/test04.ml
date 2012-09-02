@@ -3,9 +3,9 @@
 
 val tup3 :: {(and (v::Arr({(not (= v undefined))}))
                   (packed v) (= (len v) 3)
-                  ((sel v 0) : Int)
-                  ((sel v 1) : Bool)
-                  ((sel v 2) : Str))}
+                  (Int (sel v 0))
+                  (Bool (sel v 1))
+                  (Str (sel v 2)))}
 
 let tup2 = ([{(not (= v undefined))}] pop) tup3 in
 

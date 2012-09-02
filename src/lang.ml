@@ -80,6 +80,7 @@ type exp =
   | EExtern of vvar * typ * exp
   | EHeapEnv of heapenvbinding list * exp
   (***** helpers *****)
+  | EMacro of string * macro * exp
   | ETcFail of string * exp
   | EAsW of exp * world              (* used during type checking *)
   | ELoadSrc of string * exp         (* inserted/eliminated by parsing *)
@@ -163,6 +164,7 @@ and typterm =
   | URef   of loc
   | UNull
   | UArray of typ
+  | UMacro of vvar
 
 and heapcell =
   | HConc    of vvar option * typ        (* [l |-> x:S]       *)
@@ -187,6 +189,10 @@ and heapenvcell =
 and heapenvbinding = loc * heapenvcell
 
 and heapenv = hvars * heapenvbinding list
+
+and macro =
+  | MacroT  of typ
+  | MacroTT of typterm
 
 (* differences compared to formal presentation:
    - patterns for (abstract) syntactic sugar

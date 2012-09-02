@@ -53,7 +53,8 @@ let freshVarX =
 
 (***** Map ********************************************************************)
 
-let mapTyp ?fForm:(fForm=(fun x -> x))
+let mapTyp ?fTyp:(fTyp=(fun x -> x))
+           ?fForm:(fForm=(fun x -> x))
            ?fTT:(fTT=(fun x -> x))
            ?fWal:(fWal=(fun x -> x))
            ?fVal:(fVal=(fun x -> x)) 
@@ -61,11 +62,11 @@ let mapTyp ?fForm:(fForm=(fun x -> x))
            t =
 
   let rec fooTyp = function
-    | TRefinement(x,p)   -> TRefinement (x, fooForm p)
-    | TQuick(x,qt,p)     -> TQuick (x, fooQuickTyp qt, fooForm p)
-    | TBaseUnion(l)      -> TBaseUnion l
-    | TNonNull(t)        -> TNonNull (fooTyp t)
-    | TMaybeNull(t)      -> TMaybeNull (fooTyp t)
+    | TRefinement(x,p)   -> fTyp (TRefinement (x, fooForm p))
+    | TQuick(x,qt,p)     -> fTyp (TQuick (x, fooQuickTyp qt, fooForm p))
+    | TBaseUnion(l)      -> fTyp (TBaseUnion l)
+    | TNonNull(t)        -> fTyp (TNonNull (fooTyp t))
+    | TMaybeNull(t)      -> fTyp (TMaybeNull (fooTyp t))
 
   and fooPrenexTyp = function
     | TExists _          -> failwith "mapTyp TExists"
@@ -100,6 +101,7 @@ let mapTyp ?fForm:(fForm=(fun x -> x))
     | UNull         -> fTT UNull
     | URef(al)      -> fTT (URef al)
     | UArray(t)     -> fTT (UArray (fooTyp t))
+    | UMacro(x)     -> fTT (UMacro x)
     | UArrow(l,x,t1,h1,t2,h2) ->
         let (t1,h1) = fooTyp t1, fooHeap h1 in
         let (t2,h2) = fooTyp t2, fooHeap h2 in
@@ -198,6 +200,7 @@ let foldTyp (fForm: 'a -> formula -> 'a)
     | UVar(x)       -> fTT acc (UVar x)
     | URef(al)      -> fTT acc (URef al)
     | UNull         -> fTT acc UNull
+    | UMacro(x)     -> fTT acc (UMacro x)
     | UArray(t) ->
         let acc = fooTyp acc t in
         fTT acc (UArray t)
@@ -249,6 +252,7 @@ let mapExp fE e =
     | ELet(x,fo,e1,e2) -> fE (ELet (x, fo, fooExp e1, fooExp e2))
     | EExtern(x,t,e) -> fE (EExtern (x, t, fooExp e))
     | EHeapEnv(l,e) -> fE (EHeapEnv (l, fooExp e)) (* if needed, add fold l *)
+    | EMacro(x,m,e) -> fE (EMacro (x, m, fooExp e))
     | ETcFail(s,e) -> fE (ETcFail (s, fooExp e))
     | EAsW(e,w) -> fE (EAsW (fooExp e, w))
     | ENewref(l,e) -> fE (ENewref (l, fooExp e))
@@ -295,6 +299,7 @@ let foldExp fE fV init e =
     | ELet(x,fo,e1,e2) -> fE (List.fold_left fooExp acc [e1;e2]) exp
     | EExtern(x,t,e) -> fE (fooExp acc e) exp
     | EHeapEnv(l,e) -> fE (fooExp acc e) exp (* if needed, add fold l *)
+    | EMacro(x,m,e) -> fE (fooExp acc e) exp
     | ETcFail(s,e) -> fE (fooExp acc e) exp
     | EAsW(e,w) -> fE (fooExp acc e) exp
     | ENewref(l,e) -> fE (fooExp acc e) exp
@@ -707,39 +712,20 @@ and strQuickTyp = function
         (if b then "; exact" else "")
 
 and strTT = function
+  | UMacro(x) -> x
   | UVar(x) -> x
   | URef(l) -> spr "Ref(%s)" (strLoc l)
   | UArray(t) -> spr "Arr(%s)" (strTyp t)
   | UNull   -> "Null"
-
   | UArrow(([],[],[]),x,t1,h1,t2,h2) ->
       failwith "strTT: how can arrow have no heap vars?"
-
-(* can't just use this to pretty print arrows without prefix var, since
-   would have to check whether the var appears in the types!
-
-  TODO do the pretty printing if h does not appear free in t1 or t2
-
+(* TODO to use this, would have to check that h doesn't appear free
   (* special case when single heap variable *)
   | UArr((ts,ls,[h]),x,t1,([h1],cs1),t2,([h2],cs2))
     when h = h1 && h = h2 && !sugarArrow ->
       strArrow ((ts,ls,[]),x,t1,([],cs1),t2,([],cs2))
 *)
-
   | UArrow(arr) -> strArrow arr
-
-(*
-  | UArr((ts,ls,hs),x,t1,h1,t2,h2) ->
-      let s0 =
-        if (ts,ls,hs) = ([],[],[]) then ""
-        else spr "[%s;%s;%s] " (String.concat "," ts)
-                               (String.concat "," ls)
-                               (String.concat "," hs)
-      in
-      let sh1 = if h1 = ([],[]) then "" else spr " / %s" (strHeap h1) in
-      let sh2 = if h2 = ([],[]) then "" else spr " / %s" (strHeap h2) in
-      spr "%s(%s:%s)%s -> %s%s" s0 x (strTyp t1) sh1 (strTyp t2) sh2
-*)
 
 and strArrow (polyArgs,x,t1,e1,t2,e2) =
   let s0 =
@@ -1251,6 +1237,7 @@ and substTT subst = function
   | UVar(x) -> UVar x (* note: type instantiation happens at w::A, not here *)
   | URef(l) -> URef (substLoc subst l)
   | UArray(t) -> UArray (substTyp subst t)
+  | UMacro(x) -> UMacro x
   (* binding form *)
   | UArrow((ts,ls,hs),x,t1,h1,t2,h2) ->
       let xs = heapBinders h1 in

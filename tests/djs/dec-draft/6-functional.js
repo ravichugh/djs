@@ -10,7 +10,7 @@ var mammal = function(priv) /*: ty_init_mammal */ {
 /*: #define ty_priv
     {(and (= (tag v) "Dict")
           (objhas [v] "name" [Heap] lObjPro)
-         ((objsel [v] "name" [Heap] lObjPro) : Str))} */ '#define';
+          (Str (objsel [v] "name" [Heap] lObjPro)))} */ '#define';
 
 /*: #define ty_init_mammal
     [;Lnew,Lpriv;Heap]
@@ -24,7 +24,7 @@ var mammal = function(priv) /*: ty_init_mammal */ {
 /*: #define ty_mam
     {(and (= (tag v) "Dict")
           (dom v {"get_name"})
-          ((sel v "get_name") : ty_get_name))} */ '#define';
+          (ty_get_name (sel v "get_name")))} */ '#define';
 
 /*: #define ty_get_name
     [;Dummy1;Heap]
@@ -74,8 +74,8 @@ var cat = function(priv2) /*: ty_init_cat */ {
 /*: #define ty_cat
     {(and (= (tag v) "Dict")
           (dom v {"get_name","purr"})
-          ((sel v "get_name") : ty_get_name)
-          ((sel v "purr") : ty_sound))} */ '#define';
+          (ty_get_name (sel v "get_name"))
+          (ty_sound (sel v "purr")))} */ '#define';
 
 /*: #define ty_sound [;L1;] [[this:Ref(L1)]] -> Str */ '#define';
 

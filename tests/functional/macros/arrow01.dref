@@ -1,0 +1,6 @@
+type int_to_int :: x:Int -> Int
+type bool_to_bool :: b:Bool -> Bool
+let _ :: {(and (v :: int_to_int) (v :: bool_to_bool))} =
+  fun y -> (y)
+in
+0

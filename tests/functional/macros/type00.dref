@@ -1,0 +1,3 @@
+type pos_int = {Int|(> v 0)}
+let _ :: pos_int = 5 in
+0

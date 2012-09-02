@@ -19,6 +19,7 @@ val freshHVar : unit -> hvar
 (******************************************************************************)
 
 val mapTyp :
+  ?fTyp:(typ -> typ) ->
   ?fForm:(formula -> formula) ->
   ?fTT:(typterm -> typterm) ->
   ?fWal:(walue -> walue) ->

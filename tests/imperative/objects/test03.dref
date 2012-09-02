@@ -1,5 +1,5 @@
-val ____ObjectProto :: Ref(lObjectProto)
-let x = new ({"f" = 100}, lx, ____ObjectProto, lObjectProto) in
-let xf :: {(= v 200)} = ([;lx,lObjectProto;] setPropObj) (x, "f", 200) in
+(* val ____ObjectProto :: Ref(lROOT) *)
+let x = new ({"f" = 100}, lx, objROOT, lROOT) in
+let xf :: {(= v 200)} = ([;lx,lROOT;] setPropObj) (x, "f", 200) in
 let _ :: {(= v 200)} = xf in
 0

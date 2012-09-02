@@ -141,6 +141,51 @@ let findWeakLoc g m =
   with Not_found ->
     err [spr "findWeakLoc: not found: [%s]" (strLoc m)]
 
+(* keeping global macro tables rather than putting them in type env *)
+let htMacros = Hashtbl.create 17
+
+let getMacro x =
+  if not (Hashtbl.mem htMacros x) then None
+  else Some (Hashtbl.find htMacros x)
+
+let expandMacros cap (hvars,h1,(t2,h2)) =
+  let fTT = function
+    | UMacro(x) ->
+        (match getMacro x with
+           | Some(MacroTT(tt)) -> tt
+           | Some(MacroT _)    -> UMacro x (* allow fTyp to do substitution *)
+           | None              -> err [cap; spr "type [%s] not defined" x])
+    | tt -> tt in
+  let fTyp = function
+    | TQuick("v",QBoxes[UMacro(x)],p) when p = pTru ->
+        (match getMacro x with
+           | Some(MacroT(t))   -> t
+           | _                 -> err [cap; "expandMacros: impossible 1"])
+    | t -> t in
+  let fForm = function
+    | PHasTyp(w,UMacro(x)) ->
+        (match getMacro x with
+           | None              -> err [cap; "expandMacros: impossible 2"]
+           | Some(MacroTT _)   -> err [cap; "expandMacros: impossible 3"]
+           | Some(MacroT _) ->
+               err [cap; spr "the abbreviation [%s] is defined as a type, \
+                 so you may not use it as a type term inside a formula" x])
+    | p -> p in
+  match hvars with
+    | [x] when h1 = ([x],[]) && h1 = h2 ->
+        let t2 = mapTyp ~fTyp ~fTT ~fForm t2 in
+        (hvars, h1, (t2, h2))
+    | _ ->
+        err [cap; "expandMacros: need to implement case for general frames"]
+
+let expandMacros cap frame =
+  let frame' = expandMacros cap frame in
+(*
+  if frame <> frame' then
+    Log.log2 "expandMacros\n  %s\n  %s\n" (strFrame frame) (strFrame frame');
+*)
+  frame'
+
 
 (***** Heap operations ********************************************************)
 
@@ -955,40 +1000,43 @@ and tsExp_ g h = function
   (* 8/20/12: split TS-Let-Ann into two cases, depending on whether the frame
      annotation is for a function type or not. *)
 
-  | ELet(x,Some(frame),e1,e2) when frameIsNonArrowType frame -> begin
-      let gInit = g in
-      let ruleName = "TS-Let-Ann-Not-Arrow" in
-      let cap = spr "%s: let %s = ..." ruleName x in
-      checkBinder cap g x;
-      let (s1,h1) = Zzz.inNewScope (fun () -> tsExp g h e1) in
-      (* let (s1,h1) = elimSingletonExistentials (s1,h1) in *)
-      let tGoal = destructNonArrowTypeFrame frame in
-      Sub.types cap g s1 tGoal;
-      let (l1,s1) = stripExists s1 in
-      let g = tcAddBindings g l1 in
-      let g = tcAddBinding g x s1 in
-      (* synthesizing x:s1, _not_ the goal tGoal, since need to bring all the
-         binders in scope, since they may refered to in h1. so the tGoal
-         annotation is simply a check rather than an abstraction. *)
-      printBinding (String.make (String.length x) ' ') tGoal ~extraBreak:false;
-      maybePrintHeapEnv h1 h;
-      let (s2,h2) = tsExp g h1 e2 in
-      finishLet cap gInit x (l1 @ [(x,s1)]) (s2,h2)
-    end
-
-  | ELet(x,Some(frame),e1,e2) (* when not (frameIsNonArrowType frame) *) -> begin
-      let gInit = g in
-      let ruleName = "TS-Let-Ann-Arrow" in
-      let cap = spr "%s: let %s = ..." ruleName x in
-      checkBinder cap g x;
-      let (s1,h1) = applyFrame h frame in
-      Zzz.inNewScope (fun () -> tcExp g h (s1,h1) e1);
-      let (bindings,h1) = heapEnvOfHeap h1 in
-      let g = tcAddBindings g bindings in
-      let g = tcAddBinding g x s1 in
-      maybePrintHeapEnv h1 h;
-      let (s2,h2) = tsExp g h1 e2 in
-      finishLet cap gInit x [(x,s1)] (s2,h2)
+  | ELet(x,Some(frame),e1,e2) -> begin
+      let frame = expandMacros (spr "TC-Let-Ann: let %s = ..." x) frame in
+      if frameIsNonArrowType frame then
+      begin
+        let gInit = g in
+        let ruleName = "TS-Let-Ann-Not-Arrow" in
+        let cap = spr "%s: let %s = ..." ruleName x in
+        checkBinder cap g x;
+        let (s1,h1) = Zzz.inNewScope (fun () -> tsExp g h e1) in
+        (* let (s1,h1) = elimSingletonExistentials (s1,h1) in *)
+        let tGoal = destructNonArrowTypeFrame frame in
+        Sub.types cap g s1 tGoal;
+        let (l1,s1) = stripExists s1 in
+        let g = tcAddBindings g l1 in
+        let g = tcAddBinding g x s1 in
+        (* synthesizing x:s1, _not_ the goal tGoal, since need to bring all the
+           binders in scope, since they may refered to in h1. so the tGoal
+           annotation is simply a check rather than an abstraction. *)
+        printBinding (String.make (String.length x) ' ') tGoal ~extraBreak:false;
+        maybePrintHeapEnv h1 h;
+        let (s2,h2) = tsExp g h1 e2 in
+        finishLet cap gInit x (l1 @ [(x,s1)]) (s2,h2)
+      end else
+      begin
+        let gInit = g in
+        let ruleName = "TS-Let-Ann-Arrow" in
+        let cap = spr "%s: let %s = ..." ruleName x in
+        checkBinder cap g x;
+        let (s1,h1) = applyFrame h frame in
+        Zzz.inNewScope (fun () -> tcExp g h (s1,h1) e1);
+        let (bindings,h1) = heapEnvOfHeap h1 in
+        let g = tcAddBindings g bindings in
+        let g = tcAddBinding g x s1 in
+        maybePrintHeapEnv h1 h;
+        let (s2,h2) = tsExp g h1 e2 in
+        finishLet cap gInit x [(x,s1)] (s2,h2)
+      end
     end
 
   | ELet(x,None,e1,e2) -> begin
@@ -1125,6 +1173,17 @@ and tsExp_ g h = function
       let h1 = (fst h, (snd h) @ l) in
       maybePrintHeapEnv h1 h;
       tsExp g h1 e
+    end
+
+  | EMacro(x,m,e) -> begin
+      let cap = spr "TS-Macro: %s" x in
+      if !depth > 0 then err [cap; "not at top-level"];
+      let _ =
+        match m with
+          | MacroT(t)   -> Wf.typ cap g t
+          | MacroTT(tt) -> Wf.typeTerm cap g tt in
+      Hashtbl.add htMacros x m;
+      tsExp g h e
     end
 
   | EThrow(EVal(v)) -> failwith "EThrow"
@@ -1410,7 +1469,8 @@ and tcExp_ g h goal = function
   | EFreeze _ -> failwith "tc EFreeze"
   | EThaw _ -> failwith "tc EThaw"
 
-  | EHeapEnv(l,e) -> failwith "tc EHeapEnv"
+  | EHeapEnv _ -> failwith "tc EHeapEnv"
+  | EMacro _ -> failwith "tc EMacro"
 
   | ELoadedSrc _ -> failwith "tc ELoadedSrc"
   | ELoadSrc(s,_) ->

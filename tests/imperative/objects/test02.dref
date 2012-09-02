@@ -1,5 +1,5 @@
-val ____ObjectProto :: Ref(lObjectProto)
-let x = new ({"f" = 100}, lx, ____ObjectProto, lObjectProto) in
-let _ = ([;lx,lObjectProto;] delPropObj) (x, "f") in
-let _ :: {(= v undefined)} = ([;lx,lObjectProto;] getPropObj) (x, "f") in
+(* val ____ObjectProto :: Ref(lObjPro) *)
+let x = new ({"f" = 100}, lx, objROOT, lROOT) in
+let _ = ([;lx,lROOT;] delPropObj) (x, "f") in
+let _ :: {(= v undefined)} = ([;lx,lROOT;] getPropObj) (x, "f") in
 0

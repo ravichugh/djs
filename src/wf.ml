@@ -117,7 +117,7 @@ and checkValue errList g v =
 and checkTypeTerm errList g u =
   let errList = errList @ [spr "Wf.checkTypeTerm: %s" (strTT u)] in
   match u with
-    | UNull   -> ()
+    | UNull -> ()
     | URef(l) -> checkLoc errList g l
     | UArray(t) -> checkType errList g t
     | UVar(x) ->
@@ -139,6 +139,7 @@ and checkTypeTerm errList g u =
         let g = g @ heapBinders e1 in
         checkWorld errList g (t2,e2)
       end
+    | UMacro _ -> () (* could check macro table in TcDref3 *)
 
 and checkHeap errList g h =
   let errList = errList @ [spr "Wf.checkHeap:\n%s" (strHeap h)] in

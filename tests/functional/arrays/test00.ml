@@ -19,6 +19,6 @@ let tops = ([Top] _newarr) 0 in
 let _ = ([Top] _geti) tops 1 in
 
 let ints = ([Int] _newarr) 10 in
-let _ :: {(or (= v null) (v : Int))} = ([Int] _geti) ints 1 in
+let _ :: {(or (= v null) (Int v))} = ([Int] _geti) ints 1 in
 0
 

@@ -12,7 +12,7 @@
         [[this:Ref(Lthis)]]
       / [H ++ Lthis |-> (dThis:{Dict|
            (and (objhas [v] "name" [H] Lpro)
-               ((objsel [v] "name" [H] Lpro) : Str))}, Lpro)]
+                (Str (objsel [v] "name" [H] Lpro)))}, Lpro)]
      -> Str / same */ '#define';
 
 function Mammal(name) /*: ty_mammal */ {

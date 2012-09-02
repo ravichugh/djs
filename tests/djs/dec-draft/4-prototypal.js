@@ -25,7 +25,7 @@ var beget = function (o) /*: ty_beget */ {
         [[this:Ref(Lthis)]]
       / [H ++ Lthis |-> (dThis:{Dict|
            (and (objhas [v] "name" [H] Lpro)
-               ((objsel [v] "name" [H] Lpro) : Str))}, Lpro)]
+                (Str (objsel [v] "name" [H] Lpro)))}, Lpro)]
      -> Str / same */ '#define';
 
 var herb = /*: lHerb */ {
