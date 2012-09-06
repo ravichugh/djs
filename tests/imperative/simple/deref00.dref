@@ -1,5 +1,5 @@
 
-let foo :: [;L] x:Ref(L) / [L|->y:Top] -> {(= v y)} / [L|->z:Top] =
+let foo :: [;L] x:Ref(L) / (L|->y:Top) -> {(= v y)} / (L|->z:Top) =
   fun x ->
     (!x)
 in

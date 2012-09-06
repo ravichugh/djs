@@ -641,6 +641,10 @@ let strPredSym s =
 
 let strStrs l = String.concat "," l
 
+let strLocBinds l =
+  (* spr "%s |->" (strLoc l) *)
+  spr "%s:" (strLoc l)
+
 let rec strWal = function
   | WVal(v) -> strVal v
   | WApp(s,ws) ->
@@ -683,9 +687,15 @@ and strTyp = function
   | TRefinement("v",p)   -> spr "{%s}" (strForm p)
   | TRefinement(x,p)     -> spr "{%s|%s}" x (strForm p)
   | TQuick(x,qt,p)       -> strTQuick x qt p
-  | TNonNull(t)          -> spr "(%s)!" (strTyp t)
-  | TMaybeNull(t)        -> spr "(%s)?" (strTyp t)
   | TBaseUnion(l)        -> String.concat "Or" (List.map strBaseTyp l)
+  | TNonNull(TQuick("v",QBoxes[URef(l)],p)) when p = pTru ->
+      spr "Ref(%s!)" (strLoc l)
+  | TMaybeNull(TQuick("v",QBoxes[URef(l)],p)) when p = pTru ->
+      spr "Ref(%s?)" (strLoc l)
+  | TNonNull(t)   -> failwith (spr "strTyp TNonNull %s" (strTyp t))
+  | TMaybeNull(t) -> failwith (spr "strTyp TMaybeNull %s" (strTyp t))
+  (* | TNonNull(t)          -> spr "(%s)!" (strTyp t) *)
+  (* | TMaybeNull(t)        -> spr "(%s)?" (strTyp t) *)
 
 and strPrenexTyp = function
   | TExists(x,t,s) -> spr "exists (%s:%s). %s" x (strTyp t) (strPrenexTyp s)
@@ -715,60 +725,43 @@ and strQuickTyp = function
           (List.map (fun (f,t) -> spr "\"%s\":%s" f (strTyp t)) l))
         (if b then "; exact" else "")
   | QTuple(l,b) ->
-      spr "[%s%s]"
-        (String.concat ", "
-          (List.map (function (Some(x),t) -> spr "%s:%s" x (strTyp t)
-          (* TODO remove underscore when parser allows it *)
-                            | (None   ,t) -> spr "_:%s" (strTyp t)) l))
-          (*                | (None   ,t) -> strTyp t) l)) *)
-        (if b then "; exact" else "")
+      spr "[%s%s]" (strDepTuple l) (if b then "; exact" else "")
+
+and strDepTuple l =
+  String.concat ", "
+    (List.map (function (Some(x),t) -> spr "%s:%s" x (strTyp t)
+                      | (None   ,t) -> strTyp t) l)
 
 and strTT = function
   | UMacro(x) -> x
-  | UVar(x) -> x
-  | URef(l) -> spr "Ref(%s)" (strLoc l)
+  | UVar(x)   -> x
+  | UNull     -> "Null"
+  | URef(l)   -> spr "Ref(%s)" (strLoc l)
   | UArray(t) -> spr "Arr(%s)" (strTyp t)
-  | UNull   -> "Null"
-  | UArrow(([],[],[]),x,t1,h1,t2,h2) ->
-      failwith "strTT: how can arrow have no heap vars?"
-(* TODO to use this, would have to check that h doesn't appear free
-  (* special case when single heap variable *)
-  | UArr((ts,ls,[h]),x,t1,([h1],cs1),t2,([h2],cs2))
-    when h = h1 && h = h2 && !sugarArrow ->
-      strArrow ((ts,ls,[]),x,t1,([],cs1),t2,([],cs2))
-*)
-  | UArrow(arr) -> strArrow arr
-
-and strArrow (polyArgs,x,t1,e1,t2,e2) =
-  let s0 =
-    match polyArgs with
-      | [],[],[] -> ""
-      (* | ts,ls,[] -> spr "[%s;%s] " (strStrs ts) (strStrs ls) *)
-      | ts,ls,hs -> spr "[%s;%s;%s] " (strStrs ts) (strStrs ls) (strStrs hs)
-  in
-  let se1 = if e1 = ([],[]) then "" else spr " / %s" (strHeap e1) in
-  let se2 = if e2 = ([],[]) then "" else spr " / %s" (strHeap e2) in
-(*
-  spr "%s(%s:%s)%s -> %s%s" s0 x (strTyp t1) se1 (strTyp t2) se2
-*)
-  (* TODO 11/27: optimistically assuming that if t1 is dep tuple, then
-     it's binder is trivial. i.e. assuming that the [[ ]] syntax works *)
-  let strDom =
-    match t1 with
-      (* | TTuple _ -> spr "[%s]" (strTyp t1) *)
-      | TQuick(_,QTuple(_),_) -> spr "[%s]" (strTyp t1)
-      | _        -> spr "(%s:%s)" x (strTyp t1)
-  in
-  spr "%s%s%s -> %s%s" s0 strDom se1 (strTyp t2) se2
-(*
-  (* hacking to satisfy parser quirks *)
-  match t1 with
-    | TTuple _ -> (* TODO remove this special case when deptuples are allowed
-                     to appear anywhere by parser *)
-        spr "%s%s%s -> %s%s" s0 (strTyp t1) se1 (strTyp t2) se2
-    | _ ->
-        spr "%s(%s:%s)%s -> %s%s" s0 x (strTyp t1) se1 (strTyp t2) se2
-*)
+  | UArrow(polyArgs,x,t1,e1,t2,e2) -> begin
+      (* following the parser, assuming that if t1 = (x1:T1, ...),
+         then the binder is trivial. *)
+      let strDom =
+        match t1 with
+          | TQuick(_,QTuple(l,false),_) -> spr "(%s)" (strDepTuple l)
+          | _                           -> spr "%s:%s" x (strTyp t1) in
+      match polyArgs, e1, e2 with
+        (* can only omit h if it doesn't appear in any types
+        | (ts,ls,[h]), ([h1],cs1), ([h2],cs2) when h = h1 && h = h2 ->
+            let s0 =
+              match ts,ls with
+                | [],[] -> ""
+                | ts,ls -> spr "[%s;%s] " (strStrs ts) (strStrs ls) in
+            let se1 = if cs1 = [] then "" else spr " / (%s)" (strHeapBindings cs1) in
+            let se2 = if cs2 = [] then "" else spr " / (%s)" (strHeapBindings cs2) in
+            spr "%s%s%s -> %s%s" s0 strDom se1 (strTyp t2) se2
+        *)
+        | (ts,ls,hs), _, _ ->
+            let s0 = spr "[%s;%s;%s] " (strStrs ts) (strStrs ls) (strStrs hs) in
+            let se1 = spr " / %s" (strHeap e1) in
+            let se2 = spr " / %s" (strHeap ~arrowOutHeap:true e2) in
+            spr "%s%s%s -> %s%s" s0 strDom se1 (strTyp t2) se2
+    end
 
 and strForm = function
   | p when p = pTru -> if !pretty then "TRU" else "true"
@@ -886,22 +879,27 @@ and strTTFlat u = Str.global_replace (Str.regexp "\n") " " (strTT u)
 and strHeapCell = function
   | HStrong(None,s,None)       -> spr "%s" (strTyp s)
   | HStrong(Some(x),s,None)    -> spr "%s:%s" x (strTyp s)
-  | HStrong(None,s,Some(l))    -> spr "(%s, %s)" (strTyp s) (strLoc l)
-  | HStrong(Some(x),s,Some(l)) -> spr "(%s:%s, %s)" x (strTyp s) (strLoc l)
+  | HStrong(None,s,Some(l))    -> spr "%s > %s" (strTyp s) (strLoc l)
+  | HStrong(Some(x),s,Some(l)) -> spr "%s:%s > %s" x (strTyp s) (strLoc l)
+  (* | HStrong(None,s,Some(l))    -> spr "(%s, %s)" (strTyp s) (strLoc l) *)
+  (* | HStrong(Some(x),s,Some(l)) -> spr "(%s:%s, %s)" x (strTyp s) (strLoc l) *)
   | HWeak(ts)                  -> strThawState ts
 
-and strHeapBinding (l,hc) = spr "%s |-> %s" (strLoc l) (strHeapCell hc)
+and strHeapBinding (l,hc) = spr "%s %s" (strLocBinds l) (strHeapCell hc)
 
-and strHeap (hs,cs) =
-  let s = String.concat ", " (List.map strHeapBinding cs) in
+and strHeapBindings cs = String.concat ", " (List.map strHeapBinding cs)
+
+and strHeap ?(arrowOutHeap=false) (hs,cs) =
   match hs, cs with
-    | [], _ -> spr "[%s]" s
-    (* 11/28: extra space to avoid ]] conflict *)
-    | _, [] -> spr "[%s ]" (String.concat "," hs)
-    | _     -> spr "[%s ++ %s ]" (String.concat "," hs) s
+    | [h], [] when arrowOutHeap -> spr "(%s)" h (* parens to avoid conflict *)
+    | [h], [] -> h
+    | [h], _  -> spr "%s + (%s)" h (strHeapBindings cs)
+    | [] , [] -> "" (* TODO would be nice to get rid of this case *)
+    | [] , _  -> failwith "strHeap: zero heap vars? and bindings"
+    | _  , _  -> failwith (spr "strHeap: multiple vars [%s]" (strStrs hs))
 
 and strWeakLoc (m,t,l) =
-  spr "[%s |-> (%s, %s)]" (strLoc m) (strTyp t) (strLoc l)
+  spr "[%s (%s, %s)]" (strLocBinds m) (strTyp t) (strLoc l)
 
 and strWorld (s,h) =
   spr "%s / %s" (strTyp s) (strHeap h)
@@ -914,9 +912,9 @@ let strBinding (x,s) = spr "%s:%s" x (strTyp s)
 let strHeapEnvCell = function
   | HEWeak(ts)            -> strThawState ts
   | HEStrong(v,None,_)    -> strVal v
-  | HEStrong(v,Some(l),_) -> spr "%s |> %s" (strVal v) (strLoc l)
+  | HEStrong(v,Some(l),_) -> spr "%s > %s" (strVal v) (strLoc l)
 
-let strHeapEnvBinding (l,hc) = spr "%s |-> %s" (strLoc l) (strHeapEnvCell hc)
+let strHeapEnvBinding (l,hc) = spr "%s %s" (strLocBinds l) (strHeapEnvCell hc)
 
 let strHeapEnv (hs,cs) =
   let s = String.concat ", " (List.map strHeapEnvBinding cs) in
@@ -1484,7 +1482,7 @@ let printUnrollWal cap w1 w2 =
 let printUnroll_h (hs,cs) =
   fpr oc_unroll "  %s ++\n" (String.concat " ++" hs);
   List.iter (fun (l,hc) ->
-    fpr oc_unroll "    %s |-> %s\n" (strLoc l) (strHeapCell hc)) cs
+    fpr oc_unroll "    %s %s\n" (strLocBinds l) (strHeapCell hc)) cs
 
 let printUnroll_h_l_k pre_cap h l k post_cap =
   fpr oc_unroll "%s\n%s\n" (String.make 80 '-') pre_cap;

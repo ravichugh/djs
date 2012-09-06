@@ -1,10 +1,10 @@
 
 var typeOf = function(value) /*: {(and
-  (v :: [;LL1,LL2;H] [[value:Ref(LL1)]] / [H ++ LL1 |-> (_:Dict, LL2)]
+  (v :: [;LL1,LL2] (value:Ref(LL1)) / (LL1: Dict > LL2)
      -> {(= v "object")} / same)
-  (v :: [A;LL1,LL2;H] [[value:Ref(LL1)]] / [H ++ LL1 |-> (_:Arr(A), LL2)]
+  (v :: [A;LL1,LL2] (value:Ref(LL1)) / (LL1: Arr(A) > LL2)
      -> {(= v "array")} / same)
-  (v :: [[value:({(= (tag v) {"number","boolean","string","undefined"})})?]]
+  (v :: (value:{(or (= v null) (= (tag v) {"number","boolean","string","undefined"}))})
      -> {(ite (= value null) (= v "null") (= v (tag value)))}))} */
 {
   var s = typeof value;

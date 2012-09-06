@@ -17,13 +17,13 @@ val ____FunPro :: Ref(lFunPro)
 (* the Object.prototype dictionary *)
 val theObjPro :: { Dict | (and (dom v {"hasOwnProperty"})
   ((sel v "hasOwnProperty") ::
-        [; L1,L2] _:[this:Ref(L1), kk:Str] / [L1 |-> (dd:Dict, L2)]
+        [; L1,L2] (this:Ref(L1), kk:Str) / (L1: dd:Dict > L2)
      -> {Bool|(iff (= v true) (has dd {kk}))} / same)
   ((sel v "hasOwnProperty") ::
-        [A; L1,L2] _:[this:Ref(L1), kk:Str] / [L1 |-> (aa:Arr(A), L2)]
-     -> {Bool|(iff (= v true) (= v "length"))} / same)
+        [A; L1,L2] (this:Ref(L1), kk:Str) / (L1: Arr(A) > L2)
+     -> {Bool|(iff (= v true) (= kk "length"))} / same)
   ((sel v "hasOwnProperty") ::
-        [A; L1,L2] _:[this:Ref(L1), i:Int] / [L1 |-> (aa:Arr(A), L2)]
+        [A; L1,L2] (this:Ref(L1), i:Int) / (L1: aa:Arr(A) > L2)
      -> {Bool|(implies (and (packed aa) (>= i 0))
                        (iff (= v true) (< i (len aa))))} / same)
 )}
@@ -32,44 +32,44 @@ val theObjPro :: { Dict | (and (dom v {"hasOwnProperty"})
 val theArrPro :: { Dict | (and (dom v {"push","pop"})
   ((sel v "push") ::
      [A; L1,L2]
-        _:[this:Ref(L1), xx:A] / [L1 |-> (aa:Arr(A), L2)]
+          (this:Ref(L1), xx:A) / (L1: aa:Arr(A) > L2)
        -> {Int|(implies (packed aa) (= v (+ 1 (len aa))))}
-        / [L1 |-> (_:{(and (v::Arr(A)) 
-                      (implies (packed aa)
-                               (and (packed v)
-                                    (= (len v) (+ 1 (len aa)))
-                                    (= (sel aa (len aa)) xx))))}, L2)])
+        / (L1: {(and (v::Arr(A)) 
+                (implies (packed aa)
+                         (and (packed v)
+                              (= (len v) (+ 1 (len aa)))
+                              (= (sel aa (len aa)) xx))))} > L2))
   ((sel v "pop") ::
      [A; L1,L2]
-        _:[this:Ref(L1)] / [L1 |-> (aa:Arr(A), L2)]
+          (this:Ref(L1)) / (L1: aa:Arr(A) > L2)
        -> {(ite (packed aa)
                 (and (v::A) (= v (sel aa (- (len aa) 1))))
                 (or (v::A) (= v undefined)))}
-        / [L1 |-> (_:{(and (v::Arr(A))
-                            (implies (packed aa)
-                                     (and (packed v)
-                                          (= (len v) (- (len aa) 1))
-                                          (> (len aa) 0))))}, L2)])
+        / (L1: {(and (v::Arr(A))
+                (implies (packed aa)
+                         (and (packed v)
+                              (= (len v) (- (len aa) 1))
+                              (> (len aa) 0))))} > L2))
 )}
 
 (* Array.isArray *)
 val __isArray ::
-  {(and (v :: [A;L1,L2] [[this:Top, _:Ref(L1)]] / [L1 |-> (_:Arr(A), L2)]
+  {(and (v :: [A;L1,L2] (this:Top, Ref(L1)) / (L1: Arr(A) > L2)
            -> {(= v true)} / same)
-        (v :: [;L1,L2] [[this:Top, _:Ref(L1)]] / [L1 |-> (_:Dict, L2)]
+        (v :: [;L1,L2] (this:Top, Ref(L1)) / (L1: Dict > L2)
            -> {(= v false)} / same)
-        (v :: [[this:Top, _:{(or (= (tag v) "number") (= (tag v) "boolean")
-                                 (= (tag v) "string") (= (tag v) "undefined")
-                                 (= v null))}]]
+        (v :: (this:Top, {(or (= (tag v) "number") (= (tag v) "boolean")
+                              (= (tag v) "string") (= (tag v) "undefined")
+                              (= v null))})
            -> {(= v false)}))}
 
 (* the Function.prototype dictionary *)
 val theFunPro :: Empty
 
 heap (
-  lObjPro |-> theObjPro |> lROOT
-, lArrPro |-> theArrPro |> lObjPro
-, lFunPro |-> theFunPro |> lObjPro
+  lObjPro : theObjPro > lROOT
+, lArrPro : theArrPro > lObjPro
+, lFunPro : theFunPro > lObjPro
 )
 
 val end_of_js_natives :: Top

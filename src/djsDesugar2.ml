@@ -306,33 +306,33 @@ let parseWith production cap s =
   with Lang.Parse_error(x) ->
          Log.printParseErr
            (spr "couldn't parse annotation as [%s]:\n\n[%s]\n\n%s" cap s x)
-     | LangParser.Error -> (* menhir *)
+     | LangParser2.Error -> (* menhir *)
          Log.printParseErr
            (spr "couldn't parse annotation as [%s]:\n\n[%s]" cap s)
 
-let parseTyp s     = parseWith LangParser.jsTyp "typ annot" s
-let parseAppArgs s = parseWith LangParser.jsPolyArgs "typ/loc/heap args" s
-let parseWhile s   = parseWith LangParser.jsWhile "while annot" s
-let parseHeap s    = parseWith LangParser.jsHeap "heap annot" s
-let parseLoc s     = parseWith LangParser.jsLoc "loc annot" s
-let parseWeakLoc s = parseWith LangParser.jsWeakLoc "weak loc annot" s
-let parseFreeze s  = parseWith LangParser.jsFreeze "freeze annot" s
-let parseThaw s    = parseWith LangParser.jsThaw "thaw annot" s
-let parseCtorTyp s = parseWith LangParser.jsCtor "ctor annot" s
-let parseNew s     = parseWith LangParser.jsNew "new annot" s
-let parseArrLit s  = parseWith LangParser.jsArrLit "array literal annot" s
-let parseMacro s   = parseWith LangParser.jsMacroDef "macro def" s
+let parseTyp s     = parseWith LangParser2.jsTyp "typ annot" s
+let parseAppArgs s = parseWith LangParser2.jsPolyArgs "typ/loc/heap args" s
+let parseWhile s   = parseWith LangParser2.jsWhile "while annot" s
+let parseHeap s    = parseWith LangParser2.jsHeap "heap annot" s
+let parseLoc s     = parseWith LangParser2.jsLoc "loc annot" s
+let parseWeakLoc s = parseWith LangParser2.jsWeakLoc "weak loc annot" s
+let parseFreeze s  = parseWith LangParser2.jsFreeze "freeze annot" s
+let parseThaw s    = parseWith LangParser2.jsThaw "thaw annot" s
+let parseCtorTyp s = parseWith LangParser2.jsCtor "ctor annot" s
+let parseNew s     = parseWith LangParser2.jsNew "new annot" s
+let parseArrLit s  = parseWith LangParser2.jsArrLit "array literal annot" s
+let parseMacro s   = parseWith LangParser2.jsMacroDef "macro def" s
 let parseObjLocs s =
-  match parseWith LangParser.jsObjLocs "obj loc annot" s with
+  match parseWith LangParser2.jsObjLocs "obj loc annot" s with
     | l1, Some(l2) -> (l1, l2)
     | l1, None     -> (l1, lObjectPro)
 
 let maybeParseWith production s =
   let s = expandMacros s in
   try Some (production LangLexer.token (Lexing.from_string s))
-  with Lang.Parse_error _ | LangParser.Error -> None
+  with Lang.Parse_error _ | LangParser2.Error -> None
 
-let maybeParseTcFail s  = maybeParseWith LangParser.jsFail s
+let maybeParseTcFail s  = maybeParseWith LangParser2.jsFail s
 
 
 (***** Desugaring environments ************************************************)
@@ -399,14 +399,16 @@ let maybeAddDummyThis = function
   | arr ->
       arr
 
+
 let dsArrow arr =
-  arr |> maybeAddDummyThis |> ParseUtils.maybeAddHeapPrefixVar
+  arr |> maybeAddDummyThis
+      (* |> ParseUtils.maybeAddHeapPrefixVar (* this is called by LangParser2 *) *)
 
 let dsTT = function
   | UArrow(arr) -> UArrow (dsArrow arr)
   | u           -> u
 
-(* TODO desugar variables to add __ *)
+(* TODO remove env if not needed *)
 let dsTyp t env =
   mapTyp ~fTT:dsTT t
 
@@ -423,18 +425,9 @@ let desugarTypHint hint env =
         t'
       end
 
+(* for now, not doing anything different than with any function types *)
 let desugarCtorHint hint env =
-  let arr = parseCtorTyp hint in
-  dsTyp (tyTypTerm (UArrow arr)) env
-  (* TODO track constructors differently in env *)
-
-(*
-(* TODO for now, not allowing intersections of arrows *)
-let hasThisParam = function
-  | TQuick(_,QBoxes[UArrow(_,_,
-      TQuick(_,QTuple((Some("this"),_)::_,_),_),_,_,_)],_) -> true
-  | _ -> false
-*)
+  dsTyp (tyTypTerm (parseCtorTyp hint)) env
 
 let dsMacro = function
   | MacroT(t) -> MacroT (mapTyp ~fTT:dsTT t)
@@ -505,7 +498,7 @@ let rec ds (env:env) = function
 
   | E.HintExpr (_, h, E.ObjectExpr (p, fields)) ->
       let (l,ci) =
-        match maybeParseWith LangParser.jsLoc h with
+        match maybeParseWith LangParser2.jsLoc h with
           | Some(l) -> (l, None)
           | None    -> (LocConst (freshVar "objLit"), Some (parseTyp h))
       in
@@ -683,8 +676,14 @@ let rec ds (env:env) = function
       let eRHS = E.HintExpr (p1, f, eRHS) in
       ds env (E.SeqExpr (p0, E.AssignExpr (p1, eLHS, eRHS), e2))
 
+  (* function f(...) { ... }; e2
+     insert the hint "new f" so that the type macro f is used *)
+  | E.SeqExpr (p0, (E.FuncStmtExpr (p1, f, _, _) as e1), e2) ->
+      let e1 = E.HintExpr (p1, spr "new %s" f, e1) in
+      ds env (E.SeqExpr (p0, e1, e2))
+
   (* var x /*: T */ = e1; e2
-     i added this case to the JS parser and JS-to-EJS conversion *)
+     i added this case to the JS LangParser2 and JS-to-EJS conversion *)
   | E.SeqExpr (_, E.HintExpr (_, s, E.VarDeclExpr (_, x, e1)), e2) ->
       let t = desugarTypHint s env in
       dsVarDecl ~locInvariant:(Some(t)) env x e1 e2
@@ -1068,7 +1067,7 @@ let desugar e =
 
 (***** Sequencing EJS expressions *********************************************)
 
-(* The JS parser doesn't have a "prelude" production, so this fakes it by
+(* The JS LangParser2 doesn't have a "prelude" production, so this fakes it by
    stitching together e1 and e2 as if e1 were a prelude. Assumes that e1 is
    a sequence terminated by undefined. This is better than SeqExpr(e1,e2),
    which is no longer a flat top-level sequence. *)

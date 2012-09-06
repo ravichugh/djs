@@ -5,24 +5,24 @@
 
 /*: #define tyGetName
     [;Lthis,Lpro;HH]
-       [[this:Ref(Lthis)]]
-     / [HH ++ Lthis |-> (innerDThis:{Dict|
-          (and (objhas [v] "name" [HH] Lpro)
-               (Str (objsel [v] "name" [HH] Lpro)))}, Lpro)]
-    -> {(= v (objsel [innerDThis] "name" [HH] Lpro))}
+       (this:Ref(Lthis))
+     / HH + (Lthis |-> innerDThis:{Dict|
+          (and (objhas [v] "name" HH Lpro)
+               (Str (objsel [v] "name" HH Lpro)))} > Lpro)
+    -> {(= v (objsel [innerDThis] "name" HH Lpro))}
      / same
 */ "#define";
 
 function Foo(name)
 /*: new [;Lthis;]
-        [[this:Ref(Lthis), name:Str]]
-      / [Lthis |-> (dThis:{(= v empty)}, lFooProto)]
+        (this:Ref(Lthis), name:Str)
+      / (Lthis |-> dThis:{(= v empty)} > lFooProto)
      -> Ref(Lthis)
-      / [Lthis |-> (dThis2:{Dict|
+      / (Lthis |-> dThis2:{Dict|
            (and (dom v {"name","getName"})
                 (= (sel v "name") name)
                 ((sel v "getName") :: tyGetName)
-           )}, lFooProto)] */
+           )} > lFooProto) */
 {
   this.name = name;
 

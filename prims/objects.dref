@@ -7,14 +7,14 @@
 (**    [[ x[k]   ]] = getElem ([[x]], [[k]])    where k is anything else     **)
 
 val getPropObj :: [; Loc1,Loc2; H]
-     [[xx:(Ref(Loc1))?, kk:Str]] / [H ++ Loc1 |-> (dd:Dict, Loc2)]
+     (xx:Ref(Loc1?), kk:Str) / H + (Loc1: dd:Dict > Loc2)
   -> {(and (not (= xx null))
       (ite (objhas dd kk H Loc2)
            (= v (objsel dd kk H Loc2))
            (= v undefined)))} / same
 
 val getPropArr :: [A; Loc1,Loc2; H]
-     [[xx:(Ref(Loc1))?, kk:Str]] / [H ++ Loc1 |-> (aa:Arr(A), Loc2)]
+     (xx:Ref(Loc1?), kk:Str) / H + (Loc1: aa:Arr(A) > Loc2)
   -> {(and (not (= xx null))
       (ite (= kk "length")
            (and (Int v) (implies (packed aa) (= v (len aa))))
@@ -23,7 +23,7 @@ val getPropArr :: [A; Loc1,Loc2; H]
                 (= v undefined))))} / same
 
 val getIdx :: [A; Loc1,Loc2; H]
-     [[xx:(Ref(Loc1))?, ii:Int]] / [H ++ Loc1 |-> (aa:Arr(A), Loc2)]
+     (xx:Ref(Loc1?), ii:Int) / H + (Loc1: aa:Arr(A) > Loc2)
   -> {(and (not (= xx null))
       (ite (and (packed aa) (>= ii 0))
            (ite (< ii (len aa)) (and (v::A) (= v (sel aa ii))) (= v undefined))
@@ -38,28 +38,26 @@ val getElem :: {(and (type getPropObj) (type getPropArr) (type getIdx))}
 (**    [[ x[k] = y ]] = setElem ([[x]], [[k]], [[y]])                        **)
 
 val setPropObj :: [; Loc1,Loc2; H]
-     [[xx:(Ref(Loc1))?, yy:Str, zz:Top]]
-   / [H ++ Loc1 |-> (dd:Dict, Loc2)]
+     (xx:Ref(Loc1?), yy:Str, zz:Top) / H + (Loc1: dd:Dict > Loc2)
   -> {(and (not (= xx null)) (= v zz))}
-   / [H ++ Loc1 |-> (dd':{(= v (upd dd yy zz))}, Loc2)]
+   / H + (Loc1: {(= v (upd dd yy zz))} > Loc2)
 
 val setPropArr :: [A; Loc1,Loc2]
-     [[xx:(Ref(Loc1))?, kk:{(= v "length")}, nn:Int]]
-   / [Loc1 |-> (aa:Arr(A), Loc2)]
+     (xx:Ref(Loc1?), kk:{(= v "length")}, nn:Int) / (Loc1: aa:Arr(A) > Loc2)
   -> {(and (not (= xx null)) (= v nn))}
-   / [Loc1 |-> (aa':{(and (v::Arr(A))
-                          (implies (and (packed aa) (<= nn (len aa)))
-                                   (and (packed v) (= (len v) nn))))}, Loc2)]
+   / (Loc1: {(and (v::Arr(A))
+                  (implies (and (packed aa) (<= nn (len aa)))
+                           (and (packed v) (= (len v) nn))))} > Loc2)
 
 val setIdx :: [A; Loc1,Loc2]
-     [[xx:(Ref(Loc1))?, ii:Int, yy:A]] / [Loc1 |-> (aa:Arr(A), Loc2)]
+     (xx:Ref(Loc1?), ii:Int, yy:A) / (Loc1: aa:Arr(A) > Loc2)
   -> {(and (not (= xx null)) (= v yy))}
-   / [Loc1 |-> (aa':{(and (v::Arr(A))
-                     (= (sel aa ii) yy)
-                     (implies (and (packed aa) (>= ii 0) (< ii (len aa)))
-                              (and (packed v) (= (len v) (len aa))))
-                     (implies (and (packed aa) (= ii (len aa)))
-                              (and (packed v) (= (len v) (+ 1 (len aa))))))}, Loc2)]
+   / (Loc1: {(and (v::Arr(A))
+             (= (sel aa ii) yy)
+             (implies (and (packed aa) (>= ii 0) (< ii (len aa)))
+                      (and (packed v) (= (len v) (len aa))))
+             (implies (and (packed aa) (= ii (len aa)))
+                      (and (packed v) (= (len v) (+ 1 (len aa))))))} > Loc2)
 
 val setProp :: {(and (type setPropObj) (type setPropArr))}
 
@@ -70,17 +68,17 @@ val setElem :: {(and (type setPropObj) (type setPropArr) (type setIdx))}
 (**    [[  k  in x ]] = hasElem ([[x]], [[k]])                                 **)
 
 val hasPropObj :: [; Loc1,Loc2; H]
-     [[xx:(Ref(Loc1))?, kk:Str]] / [H ++ Loc1 |-> (dd:Dict, Loc2)]
+     (xx:Ref(Loc1?), kk:Str) / H + (Loc1: dd:Dict > Loc2)
   -> {Bool|(and (not (= xx null))
            (iff (= v true) (objhas dd kk H Loc2)))} / same
 
 val hasPropArr :: [A; Loc1,Loc2; H]
-     [[xx:(Ref(Loc1))?, kk:Str]] / [H ++ Loc1 |-> (aa:Arr(A), Loc2)]
+     (xx:Ref(Loc1?), kk:Str) / H + (Loc1: Arr(A) > Loc2)
   -> {Bool|(and (not (= xx null))
            (iff (= v true) (or (= kk "length") (heaphas H Loc2 kk))))} / same
 
 val hasIdx :: [A; Loc1,Loc2]
-     [[xx:(Ref(Loc1))?, ii:Int]] / [Loc1 |-> (aa:Arr(A), Loc2)]
+     (xx:Ref(Loc1?), ii:Int) / (Loc1: aa:Arr(A) > Loc2)
   -> {Bool|(and (not (= xx null))
            (implies (and (packed aa) (>= ii 0))
                     (iff (= v true) (< ii (len aa)))))} / same
@@ -94,12 +92,12 @@ val hasElem :: {(and (type hasPropObj) (type hasPropArr) (type hasIdx))}
 (**    [[ delete x[k] ]] = delElem    ([[x]], [[k]])                         **)
 
 val delPropObj :: [; Loc1,Loc2]
-     [[xx:(Ref(Loc1))?, kk:Str]] / [Loc1 |-> (dd:Dict, Loc2)]
-  -> {Bool|(not (= xx null))} / [Loc1 |-> (_:{(= v (upd dd kk bot))}, Loc2)]
+     (xx:Ref(Loc1?), kk:Str) / (Loc1: dd:Dict > Loc2)
+  -> {Bool|(not (= xx null))} / (Loc1: {(= v (upd dd kk bot))} > Loc2)
 
 val delIdx :: [A; Loc1,Loc2]
-     [[xx:(Ref(Loc1))?, _:Int]] / [Loc1 |-> (_:Arr(A), Loc2)]
-  -> {Bool|(and (not (= xx null)))} / [Loc1 |-> (_:Arr(A), Loc2)]
+     (xx:Ref(Loc1?), _:Int) / (Loc1: Arr(A) > Loc2)
+  -> {Bool|(and (not (= xx null)))} / (Loc1: a:Arr(A) > Loc2)
 
 val delElem :: {(and (type delPropObj) (type delIdx))}
 

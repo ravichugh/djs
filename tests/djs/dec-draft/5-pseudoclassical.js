@@ -1,18 +1,18 @@
 
 /*: #define ty_mammal
     new [;Lthis,Lpro;]
-        [[this:Ref(Lthis), name:Str]]
-      / [Lthis |-> (dThis:{(= v empty)}, Lpro)]
+        (this:Ref(Lthis), name:Str)
+      / (Lthis |-> dThis:{(= v empty)} > Lpro)
      -> Ref(Lthis)
-      / [Lthis |-> (dThis2:{(= v (upd dThis "name" name))}, Lpro)]
+      / (Lthis |-> dThis2:{(= v (upd dThis "name" name))} > Lpro)
 */ '#define';
 
 /*: #define ty_get_name
     [; Lthis,Lpro; H]
-        [[this:Ref(Lthis)]]
-      / [H ++ Lthis |-> (dThis:{Dict|
-           (and (objhas [v] "name" [H] Lpro)
-                (Str (objsel [v] "name" [H] Lpro)))}, Lpro)]
+        (this:Ref(Lthis))
+      / H + (Lthis |-> dThis:{Dict|
+           (and (objhas [v] "name" H Lpro)
+                (Str (objsel [v] "name" H Lpro)))} > Lpro)
      -> Str / same */ '#define';
 
 function Mammal(name) /*: ty_mammal */ {

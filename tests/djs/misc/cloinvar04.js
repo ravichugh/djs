@@ -1,6 +1,7 @@
-/*: foo :: [;L] [[a:Ref(L)]] / [L |-> (d:{Dict|(Int (sel v "n"))}, lObjPro)]
-        -> Top / [L |-> sameExact]
-        -> Int / same */ "#type";
+/*: foo :: [;L]
+           [[a:Ref(L)]] / [L |-> (d:{Dict|(Int (sel v "n"))}, lObjPro)]
+        -> [[]] / [L |-> (_:{v=d}, lObjPro)] -> Int / same
+         / same */ "#type";
 var foo = function(a) {
 
 };

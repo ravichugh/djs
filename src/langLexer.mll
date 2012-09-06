@@ -1,6 +1,6 @@
 
 {
-open LangParser
+open LangParser2
 
 }
 
@@ -66,7 +66,7 @@ rule token = parse
   | "TRU"          { BOOL true }
   | "FLS"          { BOOL false }
   | "let"          { LET }
-  | "rec"          { REC }
+  (* | "rec"          { REC } *)
   | "not"          { NOT }
   | "and"          { AND }
   | "or"           { OR }
@@ -79,7 +79,7 @@ rule token = parse
   | "fun"          { FUN }
   | "|->"          { MAPSTO }
   | "->"           { ARROW }
-  | "|>"           { PIPEGT }
+  (* | "|>"           { PIPEGT } *)
   | "if"           { IF }
   | "then"         { THEN }
   | "else"         { ELSE }
@@ -124,10 +124,10 @@ rule token = parse
   | ":::"          { TCOLON }
   | "::"           { DCOLON }
   | ":="           { ASSGN }
-  | "++"           { PLUSPLUS }
+  (* | "++"           { PLUSPLUS } *)
   | "+"            { PLUS }
   | "-"            { MINUS }
-  | "*"            { MUL }
+  (* | "*"            { MUL } *)
   | "/"            { DIV }
   | "<"            { LT }
   | ">"            { GT } (* ordering issue with >>? *)
@@ -139,7 +139,7 @@ rule token = parse
   | "]"            { RBRACK }
   | "{"            { LBRACE }
   | "}"            { RBRACE }
-  | "."            { DOT }
+  (* | "."            { DOT } *)
   | ","            { COMMA }
   | ";"            { SEMI }
   | ":"            { COLON }

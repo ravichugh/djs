@@ -1,26 +1,23 @@
 
-/*: #define nativeIn lObjPro |-> (_:Top, lROOT), lFunPro |-> (_:Top, lObjPro) */ "#define";
+/*: #define nativeIn lObjPro: Top > lROOT, lFunPro: Top > lObjPro */ "#define";
 
-/*: #define nativeOut lObjPro |-> same, lFunPro |-> same */ "#define";
+/*: #define nativeOut lObjPro: same, lFunPro: same */ "#define";
 
-/*: #define ty_beget [;LL1,LL2,LL3;]
-        [[o:Ref(LL2)]] / [LL2 |-> (dParent:Top, LL3), nativeIn]
-     -> Ref(LL1) / [LL1 |-> (dChild:{(= v empty)}, LL2), LL2 |-> same, nativeOut]
-*/ '#define';
+/*: beget :: [;LL1,LL2,LL3;]
+        (Ref(LL2)) / (LL2: Top > LL3, nativeIn)
+     -> Ref(LL1) / (LL1: Empty > LL2, LL2: same, nativeOut) */ '#type';
 
-/*: #define ty_ctor [;Lnew,Lpro;]
-        [[this:Ref(Lnew)]] / [Lnew |-> (dThis:{(= v empty)}, Lpro)]
-     -> Ref(Lnew) / same */ '#define';
+/*: ctor :: [;Lnew,Lpro;]
+        (this:Ref(Lnew)) / (Lnew: Empty > Lpro) -> Ref(Lnew) / same */ '#type';
 
-var beget = function (o) /*: ty_beget */ {
-  function ctor() /*: new ty_ctor */ { return this; };
+var beget = function (o) {
+  function ctor() { return this; };
   ctor.prototype = o;
   return new /*: [;LL1,LL2;] LL2 */ ctor();
 };
 
 /*: #define ty_get_name [; Lthis,Lpro; H]
-        [[this:Ref(Lthis)]]
-      / [H ++ Lthis |-> (dThis:{Dict|(Str (objsel [v] "name" [H] Lpro))}, Lpro)]
+        (this:Ref(Lthis)) / H + (Lthis: {Dict|(Str (objsel [v] "name" H Lpro))} > Lpro)
      -> Str / same */ '#define';
 
 var herb = /*: lHerb */ {
@@ -35,7 +32,7 @@ henrietta.name = "Henrietta";
 var s = henrietta.get_name();
 assert (typeof s === "string");
 
-/*: #define ty_get_name_2 [; Lthis; ] [[this:Ref(Lthis)]] -> Int */ '#define';
+/*: #define ty_get_name_2 [; Lthis; ] (this:Ref(Lthis)) -> Int */ '#define';
 
 herb.get_name = function() /*: ty_get_name_2 */ { return 42; };
 var i = henrietta.get_name();

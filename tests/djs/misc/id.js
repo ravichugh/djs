@@ -1,4 +1,4 @@
-var id = function(x) /*: [[x:Top]] -> {(= v x)} */ {
+var id = function(x) /*: (x:Top) -> {(= v x)} */ {
   return x;
 };
 

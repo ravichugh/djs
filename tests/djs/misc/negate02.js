@@ -1,4 +1,4 @@
-var negate = function(x) /*: [[x:Top]] -> {(ite (Num x) (Num v) (Bool v))} */ {
+var negate = function(x) /*: (x:Top) -> {(ite (Num x) (Num v) (Bool v))} */ {
   if (typeof(x) == "number") { return 0 - x; }
   else                       { return !x;    }
 };

@@ -1,9 +1,9 @@
 function F()
 /*: new [;L;]
-    [[this:Ref(L)]]
-  / [L |-> (dThis:{(= v empty)}, lFProto), lFProto |-> (_:Dict, lObjPro)]
+    (this:Ref(L))
+  / (L |-> dThis:{(= v empty)} > lFProto, lFProto |-> _:Dict > lObjPro)
  -> Ref(L)
-  / [L |-> (_:{(= v (upd dThis "f" 1))}, lFProto), lFProto |-> same] */
+  / (L |-> _:{(= v (upd dThis "f" 1))} > lFProto, lFProto |-> same) */
 {
   this.f = 1;
   return this;

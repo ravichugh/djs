@@ -113,13 +113,13 @@ let doParse start_production name =
       | Lang.Parse_error(s) ->
           Log.printParseErr (spr "at %s\n\n%s" (strPos ()) s)
       | Parsing.Parse_error _  (* thrown when using ocamlyacc *)
-      | LangParser.Error ->    (* thrown when using menhir *)
+      | LangParser2.Error ->   (* thrown when using menhir *)
           Log.printParseErr
             (spr "unexpected token [%s]\n\nat %s" (lexeme lexbuf) (strPos ()))
 
 let parsePrelude f =
   fun e ->
-    let prelude = doParse LangParser.prelude f in
+    let prelude = doParse LangParser2.prelude f in
     Lang.ELoadedSrc (f, prelude e)
 
 let anfAndAddPrelude e =
@@ -151,7 +151,7 @@ let parseSystemDref () =
     match !srcFiles with
       | []  -> Lang.EVal (LangUtils.vStr "no source file")
       | [f] -> let f = makeAbsolute f in
-               (checkSuffix f; expandProg f (doParse LangParser.prog f))
+               (checkSuffix f; expandProg f (doParse LangParser2.prog f))
       | _   -> (pr "%s" usage; Log.terminate ())
   in
   anfAndAddPrelude e

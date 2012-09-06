@@ -85,8 +85,8 @@ let maybePrintHeapEnv (hNew:heapenv) (hOld:heapenv) =
         if not (List.mem_assoc l csOld) then "+"     (* added *)
         else if hc <> List.assoc l csOld then "*"    (* modified *)
         else " " in                                  (* unchanged *)
-      Log.log4 "%s  %s %s |-> %s\n"
-        (bigindent ()) status (strLoc l) (strHeapEnvCell hc)
+      Log.log4 "%s  %s %s %s\n"
+        (bigindent ()) status (strLocBinds l) (strHeapEnvCell hc)
     ) csNew;
     (* print bindings that have been dropped *)
     List.iter (fun (l,hc) ->
@@ -140,7 +140,7 @@ let rec tcAddBindingPat g p t =
           match pi, yio with
             | _, None -> tcAddBindingPat g pi si
             | PLeaf(xi), Some(yi) when xi = yi -> tcAddBinding g xi si
-            | _ -> failwith (spr "%s\n%s" sErr (strPat pi))
+            | _ -> err [sErr; (spr "bad pattern: [%s]" (strPat pi))]
         ) g (List.combine ps tup)
     | _ ->
         failwith sErr

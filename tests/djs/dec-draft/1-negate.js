@@ -1,4 +1,4 @@
-var negate = function(x) /*: [[x:NumOrBool]] -> {(= (tag v) (tag x))} */ {
+var negate = function(x) /*: (x:NumOrBool) -> {(= (tag v) (tag x))} */ {
   if (typeof(x) == "number") {
     return 0 - x;
   } else {

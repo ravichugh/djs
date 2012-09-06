@@ -147,6 +147,7 @@ val idTypTerms : int ref * (int, typterm) Hashtbl.t * (typterm, int) Hashtbl.t
 val simpleSugarToTyp : (string * typ) list
 val simpleSugarOfTyp : (typ * string) list
 val strLoc : loc -> string
+val strLocBinds : loc -> string
 val strLocs : locs -> string
 val strPat : pat -> string
 val strThawState : thawstate -> string
@@ -159,7 +160,7 @@ val strTT : typterm -> string
 val strForm : formula -> string
 val strFormExpanded : string -> formula list -> string
 val strTTFlat : typterm -> string
-val strHeap : heap -> string
+val strHeap : ?arrowOutHeap:bool -> heap -> string
 val strHeapCell : heapcell -> string
 val strHeapEnvCell : heapenvcell -> string
 val strHeapEnvBinding : heapenvbinding -> string

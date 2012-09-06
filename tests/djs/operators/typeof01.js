@@ -12,6 +12,6 @@
          (= v "undefined")
          (= v "object"))} */ "#define";
 
-var typeofScalar = function(x) /*: [[x:tyScalar]] -> tagSet */ {
+var typeofScalar = function(x) /*: (x:tyScalar) -> tagSet */ {
   return typeof x;
 };

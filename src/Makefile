@@ -23,8 +23,8 @@ loc:
     parseUtils.ml                                   \
     djsDesugar2.ml                                  \
     settings.ml                                     \
-    langLexer.mll langParser.mly                    \
-    ../prims/*.*
+    langLexer.mll langParser2.mly                   \
+    ../prims/*.dref
 
 clean:
 	rm -rf _build out system-dref

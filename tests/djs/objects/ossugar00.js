@@ -11,8 +11,8 @@
 
 /*: #define ty2
     [; Lthis,Lpro; H]
-        [[this:Ref(Lthis)]]
-      / [H ++ Lthis |-> (dThis:{Dict|(Str (objsel [v] "name" [H] Lpro))}, Lpro)]
+        (this:Ref(Lthis))
+      / H + (Lthis |-> dThis:{Dict|(Str (objsel [v] "name" H Lpro))} > Lpro)
      -> Str / same */ '#define';
 
 var herb = {

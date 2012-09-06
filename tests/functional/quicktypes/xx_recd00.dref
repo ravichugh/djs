@@ -1,5 +1,5 @@
 val b :: Bool
 let d0 = {"f"=0; "g"="hi"} in
 let d1 = (d0 with "h" = b) in
-let _ :: [_:Dict,_:Bool] = (d1, "f") in
+let _ :: [[_:Dict,_:Bool]] = (d1, "f") in
 0

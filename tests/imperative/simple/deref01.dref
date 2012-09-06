@@ -1,7 +1,7 @@
 
 (* multiple reads with no intervening writes *)
 
-let foo :: [A;L] x:Ref(L) / [L|->yy:A] -> {(= v true)} / [L|->_:{(= v yy)}] =
+let foo :: [A;L] x:Ref(L) / (L|->yy:A) -> {(= v true)} / (L|->_:{(= v yy)}) =
   fun x ->
     (js_eek ((!x),(!x)))
 in
