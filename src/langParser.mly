@@ -106,15 +106,11 @@ let freshenCell exact l = function
   | HConc(None,s) -> HConc (None, copySingletonCell l s exact)
   | HConcObj(None,s,l') -> HConcObj (None, copySingletonCell l s exact, l')
 *)
-  | HConc(None,s) -> printParseErr "freshenCell"
-  | HConcObj(None,s,l') -> printParseErr "freshenCell"
-  | HConc(Some(x),s) ->
+  | HStrong(None,s,_) -> printParseErr "freshenCell"
+  | HStrong(Some(x),s,lo) ->
       let xo = if exact then None else Some (freshVar x) in 
-      HConc (xo, copyCell exact x s)
-  | HConcObj(Some(x),s,l') ->
-      let xo = if exact then None else Some (freshVar x) in 
-      HConcObj (xo, copyCell exact x s, l')
-  | HWeakTok(tok) -> HWeakTok tok
+      HStrong (xo, copyCell exact x s, lo)
+  | HWeak(tok) -> HWeak tok
 
 let sameHeap exact =
   let (hs,cs) = List.hd !heapStack in
@@ -260,10 +256,14 @@ exp1 :
  | e1=exp1 ASSGN e2=exp2         { ESetref(e1,e2) }
  | NEWREF l=loc e=exp2
      { match l with
-         | LocConst(x) when x.[0] = '&' -> ENewref(l,e)
+         | LocConst(x) when x.[0] = '&' -> ENewref(l,e,None)
          | _ -> printParseErr (spr "ref %s isn't an & address" (strLoc l)) }
- | NEW LPAREN e1=exp COMMA l1=loc COMMA e2=exp COMMA l2=loc RPAREN
-     { ENewObj(e1,l1,e2,l2) }
+ | NEWREF LPAREN l=loc COMMA e=exp2 COMMA ci=typ_opt RPAREN
+     { match l with
+         | LocConst(x) when x.[0] = '&' -> ENewref(l,e,ci)
+         | _ -> printParseErr (spr "ref %s isn't an & address" (strLoc l)) }
+ | NEW LPAREN e1=exp COMMA l1=loc COMMA e2=exp COMMA l2=loc COMMA ci=typ_opt RPAREN
+     { ENewObj(e1,l1,e2,l2,ci) }
  | FREEZE LPAREN l=loc COMMA x=thawstate COMMA e=exp RPAREN
      { EFreeze(l,x,e) }
  | THAW LPAREN l=loc COMMA e=exp RPAREN      { EThaw(l,e) }
@@ -532,12 +532,12 @@ pats_ :
  | pat COMMA pats_           { $1 :: $3 }
 
 heapbinding :
- | l=loc MAPSTO x=thawstate                      { (l,HWeakTok(x)) }
- | l=loc MAPSTO t=typ                            { (l,HConc(None,t)) }
- | l=loc MAPSTO x=varopt COLON t=typ             { (l,HConc(Some(x),t)) }
- | l=loc MAPSTO LPAREN t=typ COMMA l2=loc RPAREN { (l,HConcObj(None,t,l2)) }
+ | l=loc MAPSTO x=thawstate                      { (l,HWeak(x)) }
+ | l=loc MAPSTO t=typ                            { (l,HStrong(None,t,None)) }
+ | l=loc MAPSTO x=varopt COLON t=typ             { (l,HStrong(Some(x),t,None)) }
+ | l=loc MAPSTO LPAREN t=typ COMMA l2=loc RPAREN { (l,HStrong(None,t,Some(l2))) }
  | l=loc MAPSTO LPAREN x=varopt COLON t=typ COMMA l2=loc RPAREN
-     { (l,HConcObj(Some(x),t,l2)) }
+     { (l,HStrong(Some(x),t,Some(l2))) }
 
 rheapbinding :
  | heapbinding              { $1 }
@@ -547,10 +547,9 @@ rheapbinding :
  (* TODO add weak obj *)
 
 heapenvbinding :
- | l=loc MAPSTO x=thawstate           { (l,HEWeakTok(x)) }
- | l=loc MAPSTO v=value               { (l,HEConc(v)) }
- | l=loc MAPSTO v=value PIPEGT l2=loc { (l,HEConcObj(v,l2)) }
- (* | l=loc MAPSTO LPAREN v=value COMMA l2=loc RPAREN { (l,HEConcObj(v,l2)) } *)
+ | l=loc MAPSTO x=thawstate           { (l,HEWeak(x)) }
+ | l=loc MAPSTO v=value               { (l,HEStrong(v,None,None)) }
+ | l=loc MAPSTO v=value PIPEGT l2=loc { (l,HEStrong(v,Some(l2),None)) }
 
 weakloc :
  | LBRACK wl=weakloc_ RBRACK { wl }
@@ -591,6 +590,10 @@ vartyp :
 loc :
  | x=TVAR               { LocVar(x) }
  | x=VAR                { LocConst(x) }
+
+typ_opt :
+ | UNDERSCORE { None }
+ | t=typ      { Some t }
 
 
 (***** lists of things ********************************************************)

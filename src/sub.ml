@@ -207,21 +207,25 @@ let checkLength s errList l1 l2 =
   then die errList (spr "different number of %s args" s)
   else ()
 
-(* TODO make this function look nicer *)
+let maybeStrHeapEnvCell cs l =
+  if List.mem_assoc l cs
+  then let hc = List.assoc l cs in strHeapEnvCell hc
+  else "MISSING"
+
 let strHeapSat (hs1,cs1) (hs2,cs2) =
-  let s0 = spr "  %s |= %s" (String.concat "++" hs1) (String.concat "++" hs2) in
-  let l1 = List.map (fun (l,hc) ->
-             spr "  %s |-> %s |= %s" (strLoc l)
-               (if List.mem_assoc l cs1
-                then strHeapEnvCell (List.assoc l cs1)
-                else "MISSING")
-               (strHeapCell hc)) cs2 in
-  let l2 = List.map (fun (l,hc) ->
-            if List.mem_assoc l cs2 then ""
-            else spr "  %s |-> %s |= MISSING"
-                   (strLoc l) (strHeapEnvCell hc)) cs1 in
-  let l2 = List.filter (fun s -> s <> "") l2 in
-  String.concat "\n" [s0; String.concat "\n" l1; String.concat "\n" l2]
+  String.concat "\n"
+    [ spr "  %s |= %s" (String.concat "++" hs1) (String.concat "++" hs2)
+    ; String.concat "\n"
+        (List.map (fun (l,hc) ->
+           spr "  %s |-> %s |= %s"
+             (strLoc l) (maybeStrHeapEnvCell cs1 l) (strHeapCell hc)) cs2)
+    ; String.concat "\n"
+        (List.filter ((<>) "")
+           (List.map (fun (l,hc) ->
+              if List.mem_assoc l cs2 then ""
+              else spr "  %s |-> %s |= MISSING"
+                     (strLoc l) (strHeapEnvCell hc)) cs1))
+    ]
   
 (*
 
@@ -555,31 +559,18 @@ let checkHeapSat errList usedBoxes g heapEnv heapTyp =
         | None -> die errList (spr "location not found: %s" (strLoc l))
         | Some(hc1) ->
             begin match hc1, hc2 with
-              (* simple locations *)
-              | HEConc(v),HConc(Some(x),t) ->
-                  ((x, WVal v) :: acc1, (l, x, t) :: acc2)
-              | HEConc(v),HConc(None,t) ->
-                  begin match maybeValOfSingleton t with
-                    | Some(v') when v = v' -> (acc1, acc2)
-                    | _ -> let x = freshVar "heapSatTemp" in
-                           ((x, WVal v) :: acc1, (l, x, t) :: acc2)
-                  end
-              (* object locations *)
-              | HEConcObj(_,l'),HConcObj(_,_,l'') when l' <> l'' ->
+              | HEStrong(_,lo1,_),HStrong(_,_,lo2) when lo1 <> lo2 ->
                   die errList (spr "proto links differ: %s" (strLoc l))
-              | HEConcObj(v,_),HConcObj(Some(x),t,_) ->
+              | HEStrong(v,_,_),HStrong(Some(x),t,_) ->
                   ((x, WVal v) :: acc1, (l, x, t) :: acc2)
-              | HEConcObj(v,_),HConcObj(None,t,_) ->
-                  begin match maybeValOfSingleton t with
-                    | Some(v') when v = v' -> (acc1, acc2)
-                    | _ -> let x = freshVar "heapSatTemp" in
-                           ((x, WVal v) :: acc1, (l, x, t) :: acc2)
-                  end
-              (* weak locations *)
-              | HEWeakTok(x),HWeakTok(x') ->
+              | HEStrong(v,_,_),HStrong(None,t,_) ->
+                  (match maybeValOfSingleton t with
+                     | Some(v') when v = v' -> (acc1, acc2)
+                     | _ -> let x = freshVar "heapSatTemp" in
+                            ((x, WVal v) :: acc1, (l, x, t) :: acc2))
+              | HEWeak(x),HWeak(x') ->
                   if x = x' then (acc1, acc2) else
-                  die errList (spr
-                    "thaw states differ: %s %s"
+                  die errList (spr "thaw states differ: %s %s"
                     (strThawState x) (strThawState x'))
               | _ ->
                   die errList (spr "wrong shape for: %s" (strLoc l))

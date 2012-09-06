@@ -63,10 +63,10 @@ type exp =
   (***** abstract syntactic sugar *****)
   | ETuple of exp list
   (***** reference operations *****)
-  | ENewref of loc * exp
+  | ENewref of loc * exp * closureinvariant
   | EDeref of exp
   | ESetref of exp * exp
-  | ENewObj of exp * loc * exp * loc
+  | ENewObj of exp * loc * exp * loc * closureinvariant
   | EFreeze of loc * thawstate * exp
   | EThaw of loc * exp
   | EWeak of weakloc * exp
@@ -166,10 +166,9 @@ and typterm =
   | UArray of typ
   | UMacro of vvar
 
-and heapcell =
-  | HConc    of vvar option * typ        (* [l |-> x:S]       *)
-  | HConcObj of vvar option * typ * loc  (* [l |-> (x:S, l')] *)
-  | HWeakTok of thawstate                (* [m |-> 0]         *)
+and heapcell = (* [m |-> 0] [l |-> x:S] [l |-> (x:S, l')] *)
+  | HWeak   of thawstate
+  | HStrong of vvar option * typ * loc option (* TODO add closureinvariant *)
 
 and heapbinding = loc * heapcell
 
@@ -181,14 +180,15 @@ and heaps = heap list
 
 and weakloc = loc * typ * loc (* m |-> (T, l) *)
 
-and heapenvcell =
-  | HEConc    of value        (* [l |-> v]      *)
-  | HEConcObj of value * loc  (* [l |-> (v,l')] *)
-  | HEWeakTok of thawstate    (* [m |-> 0]      *)
+and heapenvcell = (* [m |-> 0] [l |-> v] [l |-> (v,l')] *)
+  | HEWeak   of thawstate
+  | HEStrong of value * loc option * closureinvariant
 
 and heapenvbinding = loc * heapenvcell
 
 and heapenv = hvars * heapenvbinding list
+
+and closureinvariant = typ option
 
 and macro =
   | MacroT  of typ

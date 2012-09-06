@@ -84,27 +84,33 @@ let rec anf = function
       let (l2,e2) = anfAndTmp e2 in
       finish (l1 @ l2, EApp (appargs, e1, e2))
   | ELet(x,ao,e1,e2) ->
-      if true then (* 8/14: set this back to true *)
-        (* original and 11/1 version: maintains same lexical scoping *)
+      (* history of versions used:             I
+                                               II
+                                     09/06/11: III
+                                     11/01/11: I
+                                               III
+                                     08/14/12: I
+                                     09/03/12: II
+                                     09/04/12: I
+      *)
+      if true then                                  (* version I *)
         ([], ELet (x, ao, anfExp e1, anfExp e2))
-      else if true then
-        (* 9/6 version: flattens scoping TODO need to avoid clashes *)
+      else if true then                             (* version II *)
+        let (l1,e1) = anf e1 in
+        (l1, ELet (x, ao, e1, anfExp e2))
+      else                                          (* version III *)
         let (l1,e1) = anf e1 in
         let (l2,e2) = anf e2 in
         (l1 @ [x, ao, e1] @ l2, e2)
-      else
-        (* pre 9/6 version: flattens equation scope TODO need to avoid clashes *)
-        let (l1,e1) = anf e1 in
-        (l1, ELet (x, ao, e1, anfExp e2))
   | EExtern(x,s,e) -> ([], EExtern (x, s, anfExp e))
   | EHeapEnv(l,e) -> ([], EHeapEnv (l, anfExp e))
   | EMacro(x,m,e) -> ([], EMacro (x, m, anfExp e))
   | ETcFail(s,e) -> ([], ETcFail (s, anfExp e))
   (* | EAs(e,a) -> ([], EAs (anfExp e, a)) *)
   | EAsW(e,a) -> ([], EAsW (anfExp e, a))
-  | ENewref(cl,e) ->
+  | ENewref(cl,e,ci) ->
       let (l,e) = anfAndTmp e in
-      finish (l, ENewref (cl, e))
+      finish (l, ENewref (cl, e, ci))
   | EDeref(e) ->
       let (l,e) = anfAndTmp e in
       finish (l, EDeref e)
@@ -122,10 +128,10 @@ let rec anf = function
   | EThrow(e) ->
       let (l,e) = anfAndTmp e in
       finish (l, EThrow e)
-  | ENewObj(e1,loc1,e2,loc2) ->
+  | ENewObj(e1,loc1,e2,loc2,ci) ->
       let (l1,e1) = anfAndTmp e1 in
       let (l2,e2) = anfAndTmp e2 in
-      finish (l1 @ l2, ENewObj (e1, loc1, e2, loc2))
+      finish (l1 @ l2, ENewObj (e1, loc1, e2, loc2, ci))
   | ELoadedSrc(s,e) -> ([], ELoadedSrc (s, anfExp e))
   | EFreeze(loc,x,e) ->
       let (l,e) = anfAndTmp e in
@@ -302,8 +308,9 @@ and strExp k exp = match exp with
   | EAsW(e,w) ->
       let sw = strWorld w in
       spr "%s(%s\n%s) as %s" (tab k) (clip (strExp k e)) (tab k) sw
-  | ENewref(x,e) ->
-      spr "%sref %s %s" (tab k) (strLoc x) (clip (strExp k e))
+  | ENewref(x,e,ci) ->
+      spr "%sref (%s, %s, %s)" (tab k) (strLoc x) (clip (strExp k e))
+        (match ci with Some(t) -> strTyp t | None -> "_")
   | EDeref(e) -> spr "%s(!%s)" (tab k) (clip (strExp k e))
   (* TODO split lines? *)
   | ESetref(e1,e2) ->
@@ -327,11 +334,12 @@ and strExp k exp = match exp with
   | ETryFinally(e1,e2) ->
       let (s1,s2) = strExp (succ k) e1, strExp (succ k) e2 in
       spr "%stry {\n%s\n%s} finally {\n%s\n%s}" (tab k) s1 (tab k) s2 (tab k)
-  | ENewObj(EVal(v1),l1,EVal(v2),l2) ->
+  | ENewObj(EVal(v1),l1,EVal(v2),l2,ci) ->
       let s1 = strVal (succ k) v1 in
       let s2 = strVal (succ k) v2 in
-      spr "%snew (%s, %s, %s, %s)"
+      spr "%snew (%s, %s, %s, %s, %s)"
         (tab k) (clip s1) (strLoc l1) (clip s2) (strLoc l2)
+        (match ci with Some(t) -> strTyp t | None -> "_")
   | EFreeze(l,x,EVal(v)) ->
       let sx = strThawState x in
       spr "%sfreeze (%s, %s, %s)" (tab k) (strLoc l) sx (clip (strVal (succ k) v))
@@ -389,9 +397,10 @@ and coerce = function
   | ELet(x,ao,e1,e2) -> ELet (x, ao, coerce e1, coerce e2)
   | EExtern(x,s,e) -> EExtern (x, s, coerce e)
   | EHeapEnv(l,e) -> EHeapEnv (l, coerce e)
+  | EMacro(x,m,e) -> EMacro (x, m, coerce e)
   | ETcFail(s,e) -> ETcFail (s, coerce e)
   (* | EAs(e,a) -> EAs (coerce e, a) *)
-  | ENewref(cl,e) -> ENewref (cl, coerce e)
+  | ENewref(cl,e,ci) -> ENewref (cl, coerce e, ci)
   | EDeref(e) -> EDeref (coerceEVal "deref" e)
   | ESetref(e1,e2) -> ESetref (coerceEVal "setref1" e1, coerceEVal "setref2" e2)
   | EWeak(h,e) -> EWeak (h, coerce e)
@@ -400,8 +409,8 @@ and coerce = function
   | EThrow(e) -> EThrow (coerceEVal "throw" e)
   | ETryCatch(e1,x,e2) -> ETryCatch (coerce e1, x, coerce e2)
   | ETryFinally(e1,e2) -> ETryFinally (coerce e1, coerce e2)
-  | ENewObj(e1,l1,e2,l2) ->
-      ENewObj (coerceEVal "NewObj" e1, l1, coerceEVal "NewObj" e2, l2)
+  | ENewObj(e1,l1,e2,l2,ci) ->
+      ENewObj (coerceEVal "NewObj" e1, l1, coerceEVal "NewObj" e2, l2, ci)
   | ELoadSrc(s,e) -> ELoadSrc (s, coerce e)
   | ELoadedSrc(s,e) -> ELoadedSrc (s, coerce e)
   | EFreeze(l,x,e) -> EFreeze (l, x, coerceEVal "EFreeze" e)

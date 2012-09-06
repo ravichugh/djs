@@ -4,10 +4,12 @@ open LangUtils
 
 
 let oc_elim = open_out (Settings.out_dir ^ "elim.txt")
+let oc_local_inf = open_out (Settings.out_dir ^ "local-inf.txt")
+
 
 let checkBinder cap g x =
   if List.exists (function Var(y,_) -> x = y | _ -> false) g then
-    err [cap; "variable already in scope, so please use a different name."]
+    err [cap; spr "[%s] already in scope, so please use a different name." x]
 
 let rec checkBinderPat cap g = function
   | PLeaf(x) -> checkBinder cap g x
@@ -36,18 +38,23 @@ let rec addPredicate p = function
    type, and if so, keep that exposed at the top level so that don't need
    as many extractions. *)
 
+let findVarType g x =
+  try begin
+    match List.find (function Var(y,_) -> x = y | _ -> false) g with
+      | Var(_,t) -> Some t
+      | _        -> failwith (spr "findVarType [%s]: unexpected binding" x)
+  end with Not_found ->
+    None
+
 let selfifyVar g x =
-  try
-    let eqX = eq theV (wVar x) in
-    begin match List.find (function Var(y,_) -> x = y | _ -> false) g with
-      | Var(_,TQuick(y,qt,p)) -> TQuick (y, qt, eqX)
-      (* | Var(_,TSelfify(t,p)) -> TSelfify (t, pAnd [eqX; p]) *)
-      (* | Var(_,TMaybeNull(t)) -> TSelfify (TMaybeNull(t), eqX) *)
-      (* | Var(_,THasTyp(us,p)) -> THasTyp (us, pAnd [eqX; p]) *)
-      | _                     -> ty eqX
-    end
-  with Not_found ->
-    err [spr "selfifyVar: var not found: [%s]" x]
+  match findVarType g x with
+    | None -> err [spr "selfifyVar [%s]: not found" x]
+    | Some(t) -> begin
+        let eqX = eq theV (wVar x) in
+        match t with
+          | TQuick(y,qt,p) -> TQuick (y, qt, eqX)
+          | _              -> ty eqX
+      end
   
 let selfifyVal g = function
   | {value=VVar(x)} -> selfifyVar g x
@@ -67,7 +74,7 @@ let printBinding ?(extraBreak=true) ?(isExistential=false) x s =
     flush stdout;
   end
 
-let maybePrintHeapEnv hNew hOld =
+let maybePrintHeapEnv (hNew:heapenv) (hOld:heapenv) =
   if hNew <> hOld && (!Settings.printAllTypes || !depth = 0) then begin
     let ((hs,csNew),(_,csOld)) = (hNew, hOld) in
     (* print heap variables *)
@@ -94,7 +101,7 @@ let maybePrintHeapEnv hNew hOld =
 let bindingsAreLeftToRight l =
   false
 
-let rec tcAddBinding g x s =
+let rec tcAddBinding ?(addToEnv=true) g x s =
   let g =
     match s with
       | TQuick(_,QTuple(l,_),_) -> (* filtering out those w/o binder *)
@@ -104,17 +111,23 @@ let rec tcAddBinding g x s =
                | Some(y), t -> (y,t)::acc) [] l)
       | _ -> g in
   let _ = Zzz.addBinding x s in
-  let _ = printBinding x s in
-  Var(x,s) :: g
+  if addToEnv
+  then tcAddToEnv g (x,s)
+  else g
+
+and tcAddToEnv g (x,s) = printBinding x s; Var(x,s) :: g
+
+and tcAddDummyBinding g (x,_) = tcAddBinding ~addToEnv:false g x tyAny
 
 and tcAddBindings g l =
   if bindingsAreLeftToRight l then
     List.fold_left (fun g (x,t) -> tcAddBinding g x t) g l
-  else
-    (* TODO this should be tyAny, but want t stored in g *)
-    let g = List.fold_left (fun g (x,t) -> tcAddBinding g x t) g l in
-    let _ = List.iter (fun (x,t) -> Zzz.assertFormula (applyTyp t(wVar x))) l in
-    g (* might want to print the asserted formulas *)
+  else begin
+    let g = List.fold_left tcAddDummyBinding g l in
+    let g = List.fold_left tcAddToEnv g l in
+    List.iter (fun (x,t) -> Zzz.assertFormula (applyTyp t (wVar x))) l;
+    g
+  end
 
 let rec tcAddBindingPat g p t =
   let sErr = spr "tcAddBindingPat %s %s" (strPat p) (strTyp t) in
@@ -148,13 +161,19 @@ let getMacro x =
   if not (Hashtbl.mem htMacros x) then None
   else Some (Hashtbl.find htMacros x)
 
+let errDjsMacro () =
+  if !Settings.djsMode
+  then ["perhaps there's an unannotated DJS function of the same name?"]
+  else []
+
 let expandMacros cap (hvars,h1,(t2,h2)) =
   let fTT = function
     | UMacro(x) ->
         (match getMacro x with
            | Some(MacroTT(tt)) -> tt
            | Some(MacroT _)    -> UMacro x (* allow fTyp to do substitution *)
-           | None              -> err [cap; spr "type [%s] not defined" x])
+           | None              -> err (cap :: spr "type [%s] not defined" x
+                                           :: errDjsMacro ()))
     | tt -> tt in
   let fTyp = function
     | TQuick("v",QBoxes[UMacro(x)],p) when p = pTru ->
@@ -199,55 +218,53 @@ let findAndRemoveCell l (hs,cs) =
     | Some(cell) -> Some (cell, (hs, List.remove_assoc l cs))
     | None       -> None
 
-let applyFrame (hAct: heapenv) (hvars,h1,(t2,h2)) : world =
+let isSimpleFrame (hvars,h1,(t2,h2)) =
   match hvars with
-    | [x] when h1 = ([x],[]) && h1 = h2 ->
+    | [x] when h1 = ([x],[]) && h1 = h2 -> Some t2
+    | _                                 -> None
+
+let applyFrame (hAct: heapenv) (f: frame) : world =
+  match isSimpleFrame f with
+    | Some(t2) ->
         let (hs,cs) = hAct in
         let cs =
           List.map (function
-            | (l,HEWeakTok(x)) -> (l, HWeakTok x)
-            | (l,HEConc(v)) -> (l, HConc (None, valToSingleton v))
-            | (l,HEConcObj(v,l')) -> (l, HConcObj (None, valToSingleton v, l'))
+            | (l,HEWeak(x)) -> (l, HWeak x)
+            | (l,HEStrong(v,lo,ci)) ->
+                (* TODO closureinvariant *)
+                (l, HStrong (None, valToSingleton v, lo))
           ) cs in
         (t2, (hs, cs))
-    | _ ->
+    | None ->
         failwith "applyFrame: need to implement general case"
 
 (* TODO 8/14 need to deal with depTupleBinders as in snapshot below? *)
-let heapEnvOfHeap (hs,cs) =
+let heapEnvOfHeap (hs,cs) : ((vvar * typ) list * heapenv) =
   let (bindings,cs) =
     List.fold_left (fun (acc1,acc2) -> function
-      | (m,HWeakTok(x)) -> (acc1, (m, HEWeakTok x) :: acc2)
-      | (l,HConc(None,t)) -> (acc1, (l, HEConc (valOfSingleton t)) :: acc2)
-      | (l,HConcObj(None,t,l')) ->
-          (acc1, (l, HEConcObj (valOfSingleton t, l')) :: acc2)
-      | (l,HConc(Some(x),t)) ->
-          ((x,t) :: acc1, (l, HEConc (vVar x)) :: acc2) 
-      | (l,HConcObj(Some(x),t,l')) ->
-          ((x,t) :: acc1, (l, HEConcObj (vVar x, l')) :: acc2) 
+      | (m,HWeak(x)) -> (acc1, (m, HEWeak x) :: acc2)
+      | (l,HStrong(None,t,lo)) ->
+          (acc1, (l, HEStrong (valOfSingleton t, lo, None)) :: acc2)
+      | (l,HStrong(Some(x),t,lo)) ->
+          ((x,t) :: acc1, (l, HEStrong (vVar x, lo, None)) :: acc2) 
     ) ([],[]) cs
   in (bindings, (hs, cs))
 
 let freshenWorld (t,(hs,cs)) =
   let vSubst =
     List.rev (List.fold_left (fun acc -> function
-      | (_,HConc(Some(x),_))
-      | (_,HConcObj(Some(x),_,_)) -> (x, freshVar x) :: acc
-      | (_,HConc(None,_)) | (_,HConcObj(None,_,_)) -> acc
-      | (_,HWeakTok _) -> acc
+      | (_,HStrong(Some(x),_,_)) -> (x, freshVar x) :: acc
+      | (_,HStrong(None,_,_)) -> acc
+      | (_,HWeak _) -> acc
     ) [] cs) in
   let subst = (List.map (fun (x,y) -> (x, wVar y)) vSubst, [], [], []) in
   let cs =
     List.fold_left (fun acc -> function
-      | (l,HConc(Some(x),s)) ->
+      | (l,HStrong(Some(x),s,lo)) ->
           let x' = List.assoc x vSubst in
-          let s' = substTyp subst s in (l,HConc(Some(x'),s')) :: acc
-      | (l,HConcObj(Some(x),s,l')) ->
-          let x' = List.assoc x vSubst in
-          let s' = substTyp subst s in (l,HConcObj(Some(x'),s',l')) :: acc
-      | (l,HConc(None,s)) -> (l, HConc (None, s)) :: acc
-      | (l,HConcObj(None,s,l')) -> (l, HConcObj (None, s, l')) :: acc
-      | (l,HWeakTok(tok)) -> (l, HWeakTok tok) :: acc
+          let s' = substTyp subst s in (l,HStrong(Some(x'),s',lo)) :: acc
+      | (l,HStrong(None,s,lo)) -> (l, HStrong (None, s, lo)) :: acc
+      | (l,HWeak(tok)) -> (l, HWeak tok) :: acc
     ) [] cs in
   let t = substTyp subst t in
   (t, (hs, cs))
@@ -260,15 +277,13 @@ let substHeapEnvVal subst v =
 let substHeapEnv subst (hs,cs) =
   let cs =
     List.map (function
-      | (l,HEConc(v)) ->
-          (substLoc subst l, HEConc (substHeapEnvVal subst v))
-      | (l,HEConcObj(v,l')) ->
-          (substLoc subst l, HEConcObj (substHeapEnvVal subst v,
-                                        substLoc subst l'))
-      | (l,HEWeakTok(Frzn)) ->
-          (substLoc subst l, HEWeakTok Frzn)
-      | (l,HEWeakTok(Thwd(l'))) ->
-          (substLoc subst l, HEWeakTok (Thwd (substLoc subst l')))
+      | (l,HEStrong(v,lo,ci)) ->
+          (substLoc subst l,
+           HEStrong (substHeapEnvVal subst v, substLocOpt subst lo, ci))
+      | (l,HEWeak(Frzn)) ->
+          (substLoc subst l, HEWeak Frzn)
+      | (l,HEWeak(Thwd(l'))) ->
+          (substLoc subst l, HEWeak (Thwd (substLoc subst l')))
     ) cs
   in
   (hs, cs)
@@ -408,20 +423,19 @@ let joinVal v v1 v2 =
 let joinHeapEnvs v (hs1,cs1) (hs2,cs2) =
   if hs1 <> hs2 then failwith "joinHeapEnvs: different heap variables";
   let (l,cs) =
-    List.fold_left (fun (acc1,acc2) (loc,hc) ->
-      match hc, findCell loc ([],cs2) with
-        | HEWeakTok(ts1), Some(HEWeakTok(ts2)) when ts1 = ts2 ->
-            (acc1, (loc, HEWeakTok ts1) :: acc2)
-        | HEConc(v1), Some(HEConc(v2)) when v1 = v2 ->
-            (acc1, (loc, HEConc v1) :: acc2)
-        | HEConcObj(v1,loc'), Some(HEConcObj(v2,_)) when v1 = v2 ->
-            (acc1, (loc, HEConcObj (v1, loc')) :: acc2)
-        | HEConc(v1), Some(HEConc(v2)) ->
+    List.fold_left (fun (acc1,acc2) (loc,hc1) ->
+      match hc1, findCell loc ([],cs2) with
+        | HEWeak(ts1), Some(HEWeak(ts2)) when ts1 = ts2 ->
+            (acc1, (loc, HEWeak ts1) :: acc2)
+        | HEStrong(_,lo1,_), Some(HEStrong(_,lo2,_)) when lo1 <> lo2 ->
+            failwith "joinHeapEnvs: proto links differ"
+        | HEStrong(_,_,ci1), Some(HEStrong(_,_,ci2)) when ci1 <> ci2 ->
+            failwith "joinHeapEnvs: different clo invariants";
+        | HEStrong(v1,lo1,ci1), Some(HEStrong(v2,_,_)) when v1 = v2 ->
+            (acc1, (loc, HEStrong (v1, lo1, ci1)) :: acc2)
+        | HEStrong(v1,lo1,ci1), Some(HEStrong(v2,_,_)) ->
             let (x,t) = joinVal v v1 v2 in
-            ((x,t) :: acc1, (loc, HEConc (vVar x)) :: acc2)
-        | HEConcObj(v1,loc'), Some(HEConcObj(v2,loc'')) when loc' = loc'' ->
-            let (x,t) = joinVal v v1 v2 in
-            ((x,t) :: acc1, (loc, HEConcObj (vVar x, loc')) :: acc2)
+            ((x,t) :: acc1, (loc, HEStrong (vVar x, lo1, ci1)) :: acc2)
         | _ ->
             (acc1, acc2)
     ) ([],[]) cs1
@@ -487,7 +501,7 @@ let destructNonArrowTypeFrame (_,_,(t,h)) =
 
 (* desugaring generates fresh "thisi" arguments for lambdas but doesn't
    replace "this" in type annotations. so do the substitution here. *)
-let fixupThisArg p t1 h1 t2 h2 =
+let fixupThisArg p (polyArgs,y,t1,h1,t2,h2) =
   match p, t1 with
     | PNode(PLeaf(thisi)::ps), TQuick(y,QTuple((Some("this"),tyThis)::l,b),q)
       when Utils.strPrefix thisi "this" ->
@@ -500,9 +514,63 @@ let fixupThisArg p t1 h1 t2 h2 =
         let (h1,h2) = substHeap subst h1, substHeap subst h2 in
         (* let _ = Log.log4 "fixup\nt1 = %s\nh1 = %s\nt2 = %s\nh2 = %s\n" *)
         (*           (strTyp t1) (strTyp t2) (strHeap h1) (strHeap h2) in *)
-        (t1, h1, t2, h2)
+        (polyArgs, y, t1, h1, t2, h2)
     | _ ->
-        (t1, h1, t2, h2)
+        (polyArgs, y, t1, h1, t2, h2)
+
+
+(***** Collecting heap bindings from DJS desugaring ***************************)
+
+(* TODO probably want to incorporate freeVars *)
+let collectClosureInvariants (_,cs) =
+  List.fold_left (fun (acc1,acc2) -> function
+    | (l,HEStrong(_,lo,Some(t))) ->
+        let hc1 = HStrong (Some (freshVar "locinvar"), t, lo) in
+        let hc2 = HStrong (Some (freshVar "locinvar"), t, lo) in
+        ((l,hc1)::acc1, (l,hc2)::acc2)
+    | (l,HEStrong(v,lo,None)) ->
+        let hc = HStrong (None, valToSingleton v, lo) in
+        ((l,hc)::acc1, (l,hc)::acc2)
+    | (l,HEWeak _) ->
+        (acc1, acc2)
+  ) ([],[]) cs
+
+let addAutoLocBindings (hs,cs0) cs1 =
+  let cs =
+    List.fold_left
+      (fun acc (l,hc) -> if List.mem_assoc l cs0 then acc else (l,hc)::acc)
+      cs0 cs1 in
+  (hs, cs)
+
+let addAutoLocBindings (hs,cs0) cs1 =
+  let (hs2,cs2) = addAutoLocBindings (hs,cs0) cs1 in
+  fpr oc_local_inf "%s\naddAutoLocBindings\n\n" (String.make 80 '-');
+  fpr oc_local_inf "original heap:\n%s\n\n" (strHeap (hs,cs0));
+  fpr oc_local_inf "inferred bindings:\n";
+  List.iter (fun (l,hc) ->
+    if List.mem_assoc l cs0 then ()
+    else fpr oc_local_inf "%s\n" (strHeapBinding (l,hc))
+  ) cs2;
+  fpr oc_local_inf "\n";
+  (hs2, cs2)
+
+let augmentHeaps ((polyArgs,y,t1,h1,t2,h2) as arr) (cs1,cs2) =
+  if !Settings.augmentHeaps then
+    let h1 = addAutoLocBindings h1 cs1 in
+    let h2 = addAutoLocBindings h2 cs2 in
+    (polyArgs, y, t1, h1, t2, h2)
+  else
+    arr
+
+let augmentFrame h f =
+  match isSimpleFrame f with
+    | None -> failwith "augmentFrame: shouldn't get here"
+    | Some(t) ->
+        let cloInvariants = collectClosureInvariants h in
+        let fTT = function
+          | UArrow(arr) -> UArrow (augmentHeaps arr cloInvariants)
+          | u -> u in
+        ParseUtils.typToFrame (mapTyp ~onlyTopForm:true ~fTT t)
 
 
 (***** TS application helpers *************************************************)
@@ -600,8 +668,6 @@ let updQRecd v (recd,b) f t3 =
 
 (***** Heap parameter inference ***********************************************)
 
-let oc_local_inf = open_out (Settings.out_dir ^ "local-inf.txt")
-
 let inferHeapParam cap curHeapEnv = function
   | [x], ([x'],cs1) when x = x' ->
       let (hs,cs) = curHeapEnv in
@@ -609,10 +675,9 @@ let inferHeapParam cap curHeapEnv = function
         List.fold_left (fun acc (l,x) ->
           if List.mem_assoc l cs1 then acc
           else match x with
-            | HEWeakTok(x) -> (l, HWeakTok x) :: acc
-            | HEConc(v) -> (l, HConc (None, valToSingleton v)) :: acc
-            | HEConcObj(v,l') ->
-                (l, HConcObj (None, valToSingleton v, l')) :: acc
+            (* TODO closureinvariant *)
+            | HEStrong(v,lo,_) -> (l, HStrong (None, valToSingleton v, lo)) :: acc
+            | HEWeak(x)        -> (l, HWeak x) :: acc
         ) [] cs
       in Some (hs, cs)
   | _ -> None
@@ -716,14 +781,14 @@ let findActualFromRefValue g lVar tTup vTup =
 
 let findActualFromProtoLink locSubst lVar hForm hAct =
   let rec foo = function
-    | (LocVar lVar', HConcObj (_, _, LocVar x)) :: cs when lVar = x ->
+    | (LocVar lVar', HStrong (_, _, Some (LocVar x))) :: cs when lVar = x ->
         if not (List.mem_assoc lVar' locSubst) then foo cs
         else begin match List.assoc lVar' locSubst with
           | None -> None
           | Some(lAct') ->
               if not (List.mem_assoc lAct' (snd hAct)) then foo cs
               else begin match List.assoc lAct' (snd hAct) with
-                | HEConcObj(_,lAct) ->
+                | HEStrong(_,Some(lAct),_) ->
                     let _ = fpr oc_local_inf "  %s |-> %s\n" lVar (strLoc lAct) in
                     Some lAct
                 | _ -> None
@@ -737,7 +802,7 @@ let findActualFromProtoLink locSubst lVar hForm hAct =
 let findArrayActual g tVar locSubst hForm hAct =
   let rec foo = function
     | (LocVar lVar,
-       HConcObj (_, TQuick (_, QBoxes [UArray (TQuick (_, QBoxes [UVar x], _))], _), _)) :: cs
+       HStrong (_, TQuick (_, QBoxes [UArray (TQuick (_, QBoxes [UVar x], _))], _), _)) :: cs
       when tVar = x ->
         if not (List.mem_assoc lVar locSubst) then foo cs
         else begin match List.assoc lVar locSubst with
@@ -745,14 +810,13 @@ let findArrayActual g tVar locSubst hForm hAct =
           | Some(lAct) ->
               if not (List.mem_assoc lAct (snd hAct)) then foo cs
               else begin match List.assoc lAct (snd hAct) with
-                | HEConcObj(a,_) ->
+                | HEStrong(a,_,_) ->
                     (match arrayTermsOf g (selfifyVal g a) with
                        | [UArray(t)] -> Some t
                        (* 3/31 Arr({v|v != undef}) and Arr({v'|v' != undef}) *)
                        | UArray(t)::_ -> Some t
                        | _           -> foo cs)
-                | HEConc _
-                | HEWeakTok _ -> foo cs
+                | HEWeak _ -> foo cs
               end
         end
     | _ :: cs -> foo cs
@@ -909,13 +973,13 @@ and tsExp_ g h = function
 
   | EVal(v) -> (Typ (tsVal g h v), h)
 
-  | ENewref(l,EVal(v)) ->
+  | ENewref(l,EVal(v),ci) ->
       let cap = spr "TS-Newref: %s (%s) in ..." (strLoc l) (strVal v) in
       begin match findCell l h with
         | Some _ -> err ([cap; spr "location [%s] already bound" (strLoc l)])
         | None ->
             let _ = tsVal g h v in
-            let h' = (fst h, snd h @ [(l, HEConc v)]) in
+            let h' = (fst h, snd h @ [(l, HEStrong (v, None, ci))]) in
             (* probably no need to use the more precise v=VRef(_) *)
             (Typ (tyRef l), h')
       end
@@ -925,9 +989,9 @@ and tsExp_ g h = function
       let t1 = tsVal g h v in
       let l = singleRefTermOf cap g t1 in
       begin match findCell l h with
-        | Some(HEConc(v')) -> (Typ (selfifyVal g v'), h)
-        | Some(HEConcObj _) -> err ([cap; "can't deref object location"])
-        | Some(HEWeakTok _) -> err ([cap; "can't deref weak location"])
+        | Some(HEStrong(v',None,_)) -> (Typ (selfifyVal g v'), h)
+        | Some(HEStrong _) -> err ([cap; "can't deref object location"])
+        | Some(HEWeak _) -> err ([cap; "can't deref weak location"])
         | None -> err ([cap; spr "unbound loc [%s]" (strLoc l)])
       end
 
@@ -937,23 +1001,23 @@ and tsExp_ g h = function
       let _ = tsVal g h v2 in
       let l = singleRefTermOf cap g t in
       begin match findAndRemoveCell l h with
-        | None -> err ([cap; spr "unbound loc [%s]" (strLoc l)])
-        | Some(HEConcObj _, _) -> err ([cap; "can't setref object location"])
-        | Some(HEWeakTok _, _) -> err ([cap; "can't setref weak location"])
-        | Some(HEConc(v), h0) ->
-            let h' = (fst h0, snd h0 @ [(l, HEConc v2)]) in
+        | Some(HEStrong(v,None,ci), h0) ->
+            let h' = (fst h0, snd h0 @ [(l, HEStrong (v2, None, ci))]) in
             (Typ (selfifyVal g v2), h')
+        | Some(HEStrong _, _) -> err ([cap; "can't setref object location"])
+        | Some(HEWeak _, _) -> err ([cap; "can't setref weak location"])
+        | None -> err ([cap; spr "unbound loc [%s]" (strLoc l)])
       end
 
-  | ENewObj(EVal(v1),l1,EVal(v2),l2) ->
+  | ENewObj(EVal(v1),l1,EVal(v2),l2,ci) ->
       let cap = spr "TS-NewObj: new (%s, %s, %s, %s)"
         (strVal v1) (strLoc l1) (strVal v2) (strLoc l2) in
       begin match findCell l1 h, findCell l2 h with
-        | None, Some(HEConcObj _) ->
+        | None, Some(HEStrong (_, Some _, _)) ->
             let _ = tcVal g h (tyRef l2) v2 in
             let t1 = tsVal g h v1 in
             let d = freshVar "obj" in
-            let h' = (fst h, snd h @ [l1, HEConcObj (vVar d, l2)]) in
+            let h' = (fst h, snd h @ [l1, HEStrong (vVar d, Some l2, ci)]) in
             let s = (* probably no need to use the more precise v=VObjRef(_) *)
               TQuick ("v", QBoxes [URef l1], eq (tag theV) (wStr tagObj)) in
             (TExists (d, t1, Typ s), h')
@@ -966,7 +1030,7 @@ and tsExp_ g h = function
             let h' = (fst h, snd h @ [l1, HEConcObj (v1, l2)]) in
             (tyRef l1, h')
 *)
-        | None, Some _ -> err [cap; spr "loc [%s] isn't a conc obj" (strLoc l2)]
+        | None, Some _ -> err [cap; spr "loc [%s] isn't an obj" (strLoc l2)]
         | None, None -> err [cap; spr "loc [%s] isn't bound" (strLoc l2)]
         | Some _, _ -> err [cap; spr "loc [%s] already bound" (strLoc l1)]
       end
@@ -1028,6 +1092,7 @@ and tsExp_ g h = function
         let ruleName = "TS-Let-Ann-Arrow" in
         let cap = spr "%s: let %s = ..." ruleName x in
         checkBinder cap g x;
+        let frame = augmentFrame h frame in
         let (s1,h1) = applyFrame h frame in
         Zzz.inNewScope (fun () -> tcExp g h (s1,h1) e1);
         let (bindings,h1) = heapEnvOfHeap h1 in
@@ -1077,7 +1142,7 @@ and tsExp_ g h = function
       if isStrongLoc m then err ["TS-EWeak: location should be weak"];
       let g = WeakLoc (m, t, l) :: g in
       Wf.typ "EWeak" g t;
-      let h = (fst h, (m, HEWeakTok Frzn) :: snd h) in
+      let h = (fst h, (m, HEWeak Frzn) :: snd h) in
       tsExp g h e
     end
 
@@ -1115,21 +1180,21 @@ and tsExp_ g h = function
       let _ = if not (isWeakLoc m) then err [cap; "location isn't weak"] in
       let (tFrzn,l') = findWeakLoc g m in
       begin match findAndRemoveCell m h with
-        | Some(HEWeakTok(ts'),h0) when ts' = ts ->
+        | Some(HEWeak(ts'),h0) when ts' = ts ->
             let s = tsVal g h v in
             let l = singleStrongRefTermOf "ts EFreeze" g s in
             begin match findAndRemoveCell l h0 with
-              | Some(HEConcObj(v',l''), h1) when l' = l'' ->
+              | Some(HEStrong(v',Some(l''),_), h1) when l' = l'' ->
                   let _ = Zzz.queryRoot := "TS-Freeze" in
                   let _ = tcVal g h tFrzn v' in
-                  let h' = (fst h1, (m, HEWeakTok Frzn) :: snd h1) in
+                  let h' = (fst h1, (m, HEWeak Frzn) :: snd h1) in
                   (Typ (TNonNull (tyRef m)), h')
-              | Some(HEConcObj _, _) ->
+              | Some(HEStrong(_,Some(_),_), _) ->
                   err [cap; spr "[%s] wrong proto link" (strLoc l)]
               | Some _ -> err [cap; spr "[%s] isn't a strong obj" (strLoc l)]
               | None -> err [cap; spr "[%s] not bound" (strLoc l)]
             end
-        | Some(HEWeakTok(ts'),_) ->
+        | Some(HEWeak(ts'),_) ->
             err [cap; spr "different thaw state [%s]" (strThawState ts')]
         | Some _ -> err [cap; "isn't a weaktok constraint"]
         | None -> err [cap; "isn't bound in the heap"]
@@ -1145,10 +1210,10 @@ and tsExp_ g h = function
             let m = singleWeakRefTermOf cap g t1 in
             let (tFrzn,l') = findWeakLoc g m in
             begin match findAndRemoveCell m h with
-              | Some(HEWeakTok(Frzn), h0) ->
+              | Some(HEWeak(Frzn), h0) ->
                   let x = freshVar "thaw" in
-                  let h' = (fst h0, (m, HEWeakTok (Thwd l))
-                                       :: (l, HEConcObj (vVar x, l'))
+                  let h' = (fst h0, (m, HEWeak (Thwd l))
+                                       :: (l, HEStrong (vVar x, Some l', None))
                                        :: snd h0) in
                   let t = TMaybeNull (tyRef l) in
                   (* this version could be used to more precisely track these
@@ -1161,7 +1226,7 @@ and tsExp_ g h = function
                                    (applyTyp (tyRef l) theV)) in
                   *)
                   (TExists (x, tFrzn, Typ t), h')
-              | Some(HEWeakTok _, _) -> err [cap; "already thawed"]
+              | Some(HEWeak _, _) -> err [cap; "already thawed"]
               | Some _ -> err [cap; "isn't a weaktok constraint"]
               | None -> err [cap; spr "[%s] location not bound" (strLoc m)]
             end
@@ -1343,10 +1408,11 @@ and tcVal_ g h goal = function
   | {value=VFun(x,e)} -> begin
       let ruleName = "TC-Fun" in
       let g = removeLabels g in
-      let checkOne ((ts,ls,hs),y,t1,h1,t2,h2) =
-        checkBinder (spr "%s: formal %s" ruleName y) g y;
-        let (t1,h1,t2,h2) = fixupThisArg x t1 h1 t2 h2 in
-        let u = UArrow ((ts,ls,hs),y,t1,h1,t2,h2) in
+      let checkOne arr =
+        checkBinderPat (spr "%s: formal pattern" ruleName) g x;
+        let arr = fixupThisArg x arr in
+        let ((ts,ls,hs),y,t1,h1,t2,h2) = arr in
+        let u = UArrow arr in
         Wf.typeTerm (spr "%s: arrow:\n  %s" ruleName (strTT u)) g u;
         (* let subst = ([(y, wVar x)], [], [], []) in *)
         let vsubst =
@@ -1390,9 +1456,9 @@ and tcExp_ g h goal = function
       ignore (Sub.heapSat (spr "TC-Val: %s" (strVal v)) g h hGoal)
     end
 
-  | ENewref(l,EVal(v)) ->
+  | ENewref(l,EVal(v),ci) ->
       let cap = spr "TC-Newref: ref (%s, %s)" (strLoc l) (strVal v) in
-      let w = tsExp g h (ENewref(l,EVal(v))) in
+      let w = tsExp g h (ENewref(l,EVal(v),ci)) in
       let _ = Zzz.queryRoot := "TC-Newref" in
       ignore (Sub.worldSat cap g w goal)
 
@@ -1408,10 +1474,10 @@ and tcExp_ g h goal = function
       let _ = Zzz.queryRoot := "TC-Setref" in
       ignore (Sub.worldSat cap g w goal)
 
-  | ENewObj(EVal(v1),l1,EVal(v2),l2) ->
+  | ENewObj(EVal(v1),l1,EVal(v2),l2,ci) ->
       let cap = spr "TC-NewObj: new (%s, %s, %s, %s)"
         (strVal v1) (strLoc l1) (strVal v2) (strLoc l2) in
-      let w = tsExp g h (ENewObj(EVal(v1),l1,EVal(v2),l2)) in
+      let w = tsExp g h (ENewObj(EVal(v1),l1,EVal(v2),l2,ci)) in
       let _ = Zzz.queryRoot := "TC-NewObj" in
       ignore (Sub.worldSat cap g w goal)
 
@@ -1534,7 +1600,7 @@ and tsAppQuick g h (poly,vFun,vArg) = match (poly,vFun,vArg) with
       let (t1,t2) = (tsVal g h v1, tsVal g h v2) in
       let l1 = singleRefTermOf cap g t1 in
       match findCell l1 h with
-        | Some(HEConcObj(d1,l2)) ->
+        | Some(HEStrong(d1,Some(l2),_)) ->
             (match matchQRecd (tsVal g h d1), matchQStrLit t2 with
                | Some(recd,exactDom), Some(f) ->
                    (match getPropObj g h recd exactDom f l2 with
@@ -1551,7 +1617,7 @@ and tsAppQuick g h (poly,vFun,vArg) = match (poly,vFun,vArg) with
       let (t1,t2) = (tsVal g h v1, tsVal g h v2) in
       let l1 = singleRefTermOf cap g t1 in
       match findAndRemoveCell l1 h with
-        | Some(HEConcObj(d1,l2),h0) ->
+        | Some(HEStrong(d1,Some(l2),ci),h0) ->
             (match matchQRecd (tsVal g h d1), matchQStrLit t2 with
                | Some(recd,exactDom), Some(f) ->
                    let t3 = tsVal g h v3 in
@@ -1559,7 +1625,7 @@ and tsAppQuick g h (poly,vFun,vArg) = match (poly,vFun,vArg) with
                    let vUpd = wrapVal pos0 (VExtend(d1,v2,v3)) in
                    let s = updQRecd vUpd (recd,exactDom) f t3 in
                    let s = addPredicate (pNot (eq (WVal v1) wNull)) s in
-                   let h' = (fst h0, snd h0 @ [(l1, HEConcObj (vVar d, l2))]) in
+                   let h' = (fst h0, snd h0 @ [(l1, HEStrong (vVar d, Some l2, ci))]) in
                    Some (TExists (d, s, Typ (selfifyVal g v3)), h')
                | _ -> None)
         | _ -> err [cap; spr "%s not an object in heap" (strLoc l1)]
@@ -1571,7 +1637,7 @@ and tsAppQuick g h (poly,vFun,vArg) = match (poly,vFun,vArg) with
       let (t1,t2) = (tsVal g h v1, tsVal g h v2) in
       let l1 = singleRefTermOf cap g t1 in
       match findCell l1 h with
-        | Some(HEConcObj(a,l2)) ->
+        | Some(HEStrong(a,Some(l2),_)) ->
             (match tsVal g h a, matchQStrLit t2 with
                (* resolve "length" directly *)
                | TQuick(_,QBoxes[UArray(_)],_), Some("length") ->
@@ -1610,7 +1676,7 @@ and getPropObj g h recd exactDom f lPro =
   else if lPro = lRoot then Some tyUndef
   else begin
     match findCell lPro h with
-      | Some(HEConcObj(d2,lProPro)) ->
+      | Some(HEStrong(d2,Some(lProPro),_)) ->
           (match matchQRecd (tsVal g h d2) with
              | Some(recd2,exactDom2) -> getPropObj g h recd2 exactDom2 f lProPro
              | None -> None)
@@ -1651,7 +1717,7 @@ let initialEnvs () =
   let g = [HVar h_init] in
   let g = tcAddBinding g "v" tyAny in
   let g = addSkolems g in
-  let h = ([h_init], [lRoot, HEConcObj (vNull, lRoot)]) in
+  let h = ([h_init], [lRoot, HEStrong (vNull, Some lRoot, None)]) in
   let _ = maybePrintHeapEnv h ([],[]) in
   (g, h)
 

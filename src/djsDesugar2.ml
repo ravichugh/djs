@@ -26,11 +26,11 @@ let rec foo curFunc lexScope varScope = function
   | E.VarExpr (_, x) ->
       if        not (IdSet.mem x lexScope) &&
                 IdSet.mem x varScope &&
-                not (!Settings.doVarLifting) then
+                true (* not (!Settings.doVarLifting) *) then
                   raise (NeedVarLifting (curFunc, x))
       else if   not (IdSet.mem x lexScope) &&
                 not (IdSet.mem x varScope) &&
-                not (!Settings.doImplicitGlobal) then
+                true (* not (!Settings.doImplicitGlobal) *) then
                   raise (NeedImplicitGlobal (curFunc, x))
       else      lexScope
   | E.FuncExpr (_, l, e) ->
@@ -210,9 +210,9 @@ let freshenLabels e = foo e
 
 (***** Desugaring variables ***************************************************)
 
-(* normal desugaring creates a local variable "x" for JS formal "x",
+(* LamJS desugaring creates a local variable "x" for JS formal "x",
    set to the initial value passed in. so that i can still use the JS
-   formals inside types, using a different name for the corresponding
+   formals inside types, i'm using a different name for the corresponding
    local variable. *)
 let dsVar x = spr "__%s" x
 
@@ -283,9 +283,9 @@ let lObjectPro   = LocConst "lObjPro"
 let lArrayPro    = LocConst "lArrPro"
 let lFunctionPro = LocConst "lFunPro"
 
-let eObjectPro ()   = eVar (dsVar "__ObjPro")
-let eArrayPro ()    = eVar (dsVar "__ArrPro")
-let eFunctionPro () = eVar (dsVar "__FunPro")
+let eObjectPro ()   = eVar "____ObjPro"
+let eArrayPro ()    = eVar "____ArrPro"
+let eFunctionPro () = eVar "____FunPro"
 
 (*
 let eNativePro f l1 l2 =
@@ -344,7 +344,7 @@ type env = { flags: bool IdMap.t; (* types: jstyp IdMap.t *) funcNum: int }
 let emptyEnv = {
   funcNum = 0;
   flags = List.fold_left
-            (fun acc x -> IdMap.add (dsVar x) false acc)
+            (fun acc x -> IdMap.add x false acc)
             IdMap.empty predefinedVars;
   (* types = IdMap.empty *)
 }
@@ -391,9 +391,6 @@ let augmentFrame frame env freeVars =
 
 let oc_desugar_hint = open_out (Settings.out_dir ^ "desugar_hint.txt")
 
-let dsArrowWithArgsArray arr =
-  failwith "no longer implemented. see DjsDesugar.ml for reference"
-
 let maybeAddDummyThis = function
   | ((ts,ls,hs),x,TQuick("v",QTuple(tup,b),p),h1,t2,h2)
     when List.length tup = 0 || fst (List.nth tup 0) <> Some("this") ->
@@ -403,7 +400,6 @@ let maybeAddDummyThis = function
       arr
 
 let dsArrow arr =
-  if !Settings.doArgsArray then dsArrowWithArgsArray arr else
   arr |> maybeAddDummyThis |> ParseUtils.maybeAddHeapPrefixVar
 
 let dsTT = function
@@ -479,12 +475,8 @@ let mkApp ?(curried=false) f args =
   end
 
 let mkCall ts ls func recvOpt args =
-  (* let recv = match recvOpt with Some(e) -> [e] | None -> [] in *)
   let recv = match recvOpt with Some(e) -> [e] | None -> [EVal vNull] in
-  if !Settings.doArgsArray then
-    failwith "no longer implemented. see DjsDesugar.ml for reference"
-  else
-    EApp ((ts, ls, []), func, ParseUtils.mkTupleExp (recv @ args))
+  EApp ((ts, ls, []), func, ParseUtils.mkTupleExp (recv @ args))
 
 
 (***** Desugaring expressions *************************************************)
@@ -493,9 +485,9 @@ let funcCount = ref 0
 
 let mkThis i = spr "this%02d" i
 
-let annotateExp e f =
+let annotateExp ?(lbl="djsAnnotate") e f =
   (* EAs (e, f) *)
-  let x = freshVar "dsAnnotate" in ELet (x, Some f, e, eVar x)
+  let x = freshVar lbl in ELet (x, Some f, e, eVar x)
 
 let rec ds (env:env) = function
 
@@ -512,48 +504,43 @@ let rec ds (env:env) = function
   | E.ConstExpr (_, c) -> convertConst c
 
   | E.HintExpr (_, h, E.ObjectExpr (p, fields)) ->
-      let l1 = parseLoc h in
-      ENewObj (mkEDict env fields, l1, eObjectPro (), lObjectPro)
+      let (l,ci) =
+        match maybeParseWith LangParser.jsLoc h with
+          | Some(l) -> (l, None)
+          | None    -> (LocConst (freshVar "objLit"), Some (parseTyp h))
+      in
+      ENewObj (mkEDict env fields, l, eObjectPro (), lObjectPro, ci)
 
   | E.ObjectExpr (p, fields) ->
-      let s = freshVar "objLit" in
-      ds env (E.HintExpr (p, s, E.ObjectExpr (p, fields)))
+      ENewObj (mkEDict env fields, LocConst (freshVar "objLit"),
+               eObjectPro (), lObjectPro, None)
 
   | E.HintExpr (_, h, E.ArrayExpr (_, es)) ->
+      (* TODO handle array annotations like objects above *)
       let (l,t) = parseArrLit h in
-      ENewObj (mkEArray (Some t) env es, l, eArrayPro (), lArrayPro)
+      ENewObj (mkEArray (Some t) env es, l, eArrayPro (), lArrayPro, None)
 
   | E.ArrayExpr (_, es) ->
       ENewObj (mkEArray None env es, LocConst (freshVar "arrLit"),
-               eArrayPro (), lArrayPro)
+               eArrayPro (), lArrayPro, None)
 
   | E.ThisExpr p ->
       (* eVar "this" *)                                     (* original LamJS *)
       (* EDeref (eVar (dsVar "this")) *)   (* __this ref cell for thaw/freeze *)
       EDeref (eVar (dsVar (mkThis env.funcNum)))    (* unique "this" per func *)
 
-  (* TODO 3/15
-  | E.IdExpr (p, x) -> let _ = failwith "rkc: ds idexpr" in EVar x
-  *)
   | E.IdExpr (p, x) -> ds env (E.VarExpr (p, x))
 
-  | E.VarExpr (p, x) -> begin
-      let x = dsVar x in
-      (* TODO: IdExpr makes the else clause unnecessary *)
-      try 
-        if IdMap.find x env.flags then
-          (* var-lifting would have introduced a binding for x. *)
-          EDeref (eVar x)
-        else
-          eVar x
-      with Not_found ->
-        (* TODO *)
-        let _ = failwith (spr "rkc: think about top-level VarExpr [%s]" x) in
-        mkApp "get" [EDeref (eVar "global"); eStr x]
-    end
+  | E.VarExpr (p, x) ->
+      let _x = dsVar x in
+      if not (IdMap.mem x env.flags) then
+        Log.printParseErr (spr "bad VarExpr: [%s] undefined" x)
+      else if IdMap.find x env.flags then
+        EDeref (eVar _x)
+      else
+        eVar _x
 
   | E.BracketExpr (_, e1, e2) -> begin
-      let (e1Orig,e2Orig) = (e1, e2) in
       let ((ts,ls,hs),e1) =
         match e1 with
           | E.HintExpr (_, h, e1) -> (parseAppArgs h, e1)
@@ -585,13 +572,6 @@ let rec ds (env:env) = function
 
   | E.PrefixExpr (_, "prefix:delete", _) ->
       Log.printParseErr "delete not applied to property"
-
-(*
-  (* TODO move this back below, and remove 1-elt tuple from basics.dref  *)
-  | E.PrefixExpr (_, "prefix:typeof", e) ->
-      (* going through mkTupleExp since typ/loc inference looks for tuples *)
-      EApp (([],[],[]), eVar "js_typeof", ParseUtils.mkTupleExp [ds env e])
-*)
 
   | E.PrefixExpr (_, op, e) ->
       let e0 =
@@ -646,65 +626,23 @@ let rec ds (env:env) = function
   | E.IfExpr (_, e1, e2, e3) -> 
       EIf (ds env e1, ds env e2, ds env e3)
 
-  (* TODO for freeze and thaw, figure out how to handle this (_this) and
-     other formals, which aren't ref cells so can't setref *)
-
-(*
-  | E.SeqExpr (_, E.HintExpr (_, h, E.ConstExpr (_, J.CString "#freeze")), e2)
-        when !Settings.typedDesugaring ->
-      let (x,l,thaw) = parseFreeze h in
-      let x = dsVar x in
-      let env = updateVarType env x l in
-      eSeq [ESetref (eVar x, EFreeze (l, thaw, EDeref (eVar x))); ds env e2]
-*)
-
   | E.HintExpr (_, h, E.ConstExpr (_, J.CString "#freeze")) ->
       let (x,l,thaw) = parseFreeze h in
-      let x = eVar (dsVar x) in
-      ESetref (x, EFreeze (l, thaw, EDeref x))
-
-(*
-  | E.SeqExpr (_, E.HintExpr (_, h, E.ConstExpr (_, J.CString "#thaw")), e2)
-        when !Settings.typedDesugaring ->
-      let (x,l) = parseThaw h in
-      let x = dsVar x in
-      let env = updateVarType env x l in
-      eSeq [ESetref (eVar x, EThaw (l, EDeref (eVar x))); ds env e2]
-*)
+      let _x = eVar (dsVar x) in
+      ESetref (_x, EFreeze (l, thaw, EDeref _x))
 
   | E.HintExpr (_, h, E.ConstExpr (_, J.CString "#thaw")) ->
       let (x,l) = parseThaw h in
-      let x = eVar (dsVar x) in
-      ESetref (x, EThaw (l, EDeref x))
-
-(*
-  | E.AssignExpr (_,
-      E.VarLValue (_, x), E.HintExpr (_, h, E.ConstExpr (_, J.CString s)))
-    when s = "#freeze" || s = "#thaw" || s = "#refreeze" ->
-      (* TODO this still doesn't work, because of desugaring formals
-         doesn't get wrapped in a ref... *)
-      let x = if x = "_this" then eVar "this" else eVar (dsVar x) in
-      (* let x = eVar (dsVar x) in *)
-      let l = parseLoc h in
-      ESetref (x,
-        match s with
-          | "#freeze"   -> EFreeze (l, Frzn, EDeref x) (* TODO *)
-          | "#thaw"     -> EThaw (l, EDeref x)
-          | "#refreeze" -> ERefreeze (l, EDeref x)
-          | _           -> Log.printParseErr "freeze/thaw/refreeze impossible")
-*)
+      let _x = eVar (dsVar x) in
+      ESetref (_x, EThaw (l, EDeref _x))
 
   | E.AssignExpr (_, E.VarLValue (_, x), e) -> 
-      let x = dsVar x in
-      if IdMap.mem x env.flags then (* assume var-bound *)
-        ESetref (eVar x, ds env e)
-      else
-        let _ = failwith (spr "assignexpr global [%s]" x) in
-        ESetref (eVar "global",
-                 mkApp "set" [EDeref (eVar "global"); eStr x; ds env e])
+      let _x = dsVar x in
+      if IdMap.mem x env.flags
+      then ESetref (eVar _x, ds env e)
+      else Log.printParseErr (spr "can't assign to undefined var [%s]" x)
 
   | E.AssignExpr (_, E.PropLValue (_, e1, e2), e3) -> begin
-      let e1Orig = e1 in
       let ((ts,ls,hs),e1) =
         match e1 with
           | E.HintExpr (_, h, e1) -> (parseAppArgs h, e1)
@@ -720,14 +658,14 @@ let rec ds (env:env) = function
     end
 
   | E.LetExpr (_, x, e1, e2) ->
-      let x = dsVar x in
-      ELet (x, None, ds env e1, ds (addFlag x false env) e2)
+      let _x = dsVar x in
+      ELet (_x, None, ds env e1, ds (addFlag x false env) e2)
 
   (* rkc: catching VarDeclExpr within SeqExpr so i can turn it into a
        normal let-binding instead of doing var lifting or implicit
        updates to global *)
 
-  (* var f = function (...) { ... }; ...
+  (* var f = function (...) { ... }; e2
      insert the hint "f" so that the type macro f is used *)
   | E.SeqExpr (p0,
         E.VarDeclExpr (p1, x, (E.FuncExpr _ as e1)),
@@ -735,7 +673,7 @@ let rec ds (env:env) = function
       let e1 = E.HintExpr (p1, x, e1) in
       ds env (E.SeqExpr (p0, E.VarDeclExpr (p1, x, e1), e2))
 
-  (* x.f = function (...) { ... }; ...
+  (* x.f = function (...) { ... }; e2
      insert the hint "f" so that the type macro f is used *)
   | E.SeqExpr (p0,
         E.AssignExpr (p1,
@@ -745,24 +683,18 @@ let rec ds (env:env) = function
       let eRHS = E.HintExpr (p1, f, eRHS) in
       ds env (E.SeqExpr (p0, E.AssignExpr (p1, eLHS, eRHS), e2))
 
-(*
-  (* rkc TODO figure out what annotation for x should be *)
-  | E.SeqExpr (_, E.HintExpr (_, s, E.VarDeclExpr (p1, x, xInit)), e) ->
-    begin
-      (match xInit with
-         | E.ConstExpr (_, J.CUndefined) -> ()
-         | _ -> printParseErr "EJS should've set HintVarDecl init to undef"
-      );
-      failwith "hint var"
-    end
-*)
+  (* var x /*: T */ = e1; e2
+     i added this case to the JS parser and JS-to-EJS conversion *)
+  | E.SeqExpr (_, E.HintExpr (_, s, E.VarDeclExpr (_, x, e1)), e2) ->
+      let t = desugarTypHint s env in
+      dsVarDecl ~locInvariant:(Some(t)) env x e1 e2
 
+  (* var x = /*: T */ "#extern"; e2 *)
   | E.SeqExpr (_,
       E.VarDeclExpr (_, x,
         E.HintExpr (_, s, E.ConstExpr (_, J.CString "#extern"))), e2) ->
-      (* TODO could addVarType here for Ref(lObjectProto) *)
-      let x = dsVar x in
-      EExtern (x, desugarTypHint s env, ds (addFlag x false env) e2)
+      let _x = dsVar x in
+      EExtern (_x, desugarTypHint s env, ds (addFlag x false env) e2)
 
   (* rkc: 3/15 match this case if i wanted to look for recursive functions as
          var fact = function f(n) /*: ... */ {};
@@ -771,28 +703,12 @@ let rec ds (env:env) = function
       printParseErr "good"
   *)
 
-  | E.SeqExpr (_, E.VarDeclExpr (_, x, e), e2) -> begin
-      let (lo,e) =
-        match e with
-          | E.HintExpr (_, s, (E.ConstExpr (_, J.CUndefined) as eUndef)) ->
-               (Some (parseLoc s), eUndef)
-          | _ ->
-               (None, e) in
+  (* var x = e1; e2 *)
+  | E.SeqExpr (_, E.VarDeclExpr (_, x, e1), e2) ->
+      dsVarDecl env x e1 e2
 
-      if IdMap.mem x env.flags then (* x is local variable *)
-        (if !Settings.doVarLifting (* do what LamJS normally does *)
-         then eSeq [dsVarDeclOrig env x e; ds env e2]
-         else dsVarDecl env x lo e e2)
-
-      else (* x is declared at the top-level scope *)
-        (if !Settings.doImplicitGlobal (* do what LamJS normally does *)
-         then eSeq [dsVarDeclOrig env x e; ds env e2]
-         else dsVarDecl env x lo e e2)
-    end
-
-  | E.VarDeclExpr _ -> Log.printParseErr "ds VarDeclExpr: shouldn't get here"
-
-  (* TODO 9/2/12 moved next two cases down after vardecls, should be fine *)
+  | E.VarDeclExpr _ ->
+      Log.printParseErr "ds VarDeclExpr: shouldn't get here"
 
   | E.SeqExpr (_, E.HintExpr (_, s, E.ConstExpr (_, J.CString "#weak")), e2) ->
       let (m,t,l) = parseWeakLoc s in
@@ -806,8 +722,7 @@ let rec ds (env:env) = function
       EMacro (x, m, ds env e2)
 
   | E.SeqExpr (_, E.HintExpr (_, s, E.FuncStmtExpr (p, f, args, body)), e2) ->
-      let fOrig = f in
-      let f = dsVar f in
+      let _f = dsVar f in
       let t = desugarCtorHint s env in
       let env = addFormals t env in
 
@@ -817,37 +732,21 @@ let rec ds (env:env) = function
       let t = augmentType t env (fvExps "dsFuncStmtExpr recursive" env [body]) in
 
       let ctorFun =
-        annotateExp (dsFunc(*true*)env p args body) (ParseUtils.typToFrame t) in
+        annotateExp ~lbl:"djsCtorType"
+          (dsFunc(*true*)env args body) (ParseUtils.typToFrame t) in
       let protoObj =
         ENewObj (EDict [],
-                 LocConst (spr "l%sProto" fOrig),
-                 eObjectPro (), lObjectPro) in
+                 LocConst (spr "l%sProto" f),
+                 eObjectPro (), lObjectPro, None) in
       let ctorObj = 
         ENewObj (EDict [(eStr "code", ctorFun); (eStr "prototype", protoObj)],
-                 LocConst (spr "l%sObj" fOrig),
-                 eFunctionPro (), lFunctionPro) in
+                 LocConst (spr "l%sObj" f),
+                 eFunctionPro (), lFunctionPro, None) in
       let env = addFlag f true env in
       let env = addCtorType f t env in
-      ELet (f, None, ENewref (LocConst (spr "&%s" fOrig), ctorObj),
+      ELet (_f, None, ENewref (LocConst (spr "&%s" f), ctorObj, None),
             ds env e2)
 
-(*
-  (* rkc: turning this into a letrec *)
-  | E.SeqExpr (_, E.HintExpr (_, s, E.FuncStmtExpr (p, f, args, body)), e2) ->
-    begin
-      printParseErr "djsDesugar 11/27: letrec"
-(*
-      let (scm,wrapE) = desugarHint s in
-      let env = IdMap.add f false env in
-      (* TODO is this right place to wrap? try polymorphic rec fun. *)
-      let e1 = wrapE (dsFunc env p args body) in
-      let e2 = ds env e2 in
-      ParseUtils.mkLetRec f scm e1 e2
-*)
-    end
-*)
-
-  (* rkc: the original LamJS case *)
   | E.SeqExpr (_, e1, e2) -> 
       eSeq [ds env e1; ds env e2]
 
@@ -874,7 +773,10 @@ let rec ds (env:env) = function
     end
 
   | E.LabelledExpr (_, bl, E.WhileExpr (_, test, e2)) when isBreakLabel bl ->
+(*
       if !Settings.augmentHeaps then begin
+*)
+      if true then begin
         match e2 with
           | E.LabelledExpr(_,cl,body) when isContLabel cl ->
               dsWhile env bl cl test body dummyFrame
@@ -905,21 +807,6 @@ let rec ds (env:env) = function
 
   | E.ForInExpr (p, x, obj, body) -> failwith "forin"
 
-(*
-  | ForInExpr (p, x, obj, body) ->
-      EFix
-        (p,
-         [ ("%forin",
-            ELambda 
-              (p, [x],
-               (* TODO: Infinite loop below, but adequate for typing *)
-               ESeq (p, ds_expr env body,
-                     EApp (p, EId (p, "%forin"), [])))) ],
-         EApp (p, EId (p, "%forin"), []))
-
-*)
-
-  (* rkc: fall through to original Lam JS case *)
   | E.LabelledExpr (_, l, e) -> ELabel (trimLabel l, ds env e)
 
   | E.BreakExpr (_, l, e) -> EBreak (trimLabel l, ds env e)
@@ -973,27 +860,24 @@ let rec ds (env:env) = function
           | lObj::_ -> lObj
           | _ -> Log.printParseErr "new annot: must have at least 1 loc arg"
       in
-      let obj = ENewObj (EVal (wrapVal pos0 VEmpty), lObj, proto, lProto) in
+      let obj =
+        ENewObj (EVal (wrapVal pos0 VEmpty), lObj, proto, lProto, None) in
       mkCall ts ls ctor (Some obj) (List.map (ds env) args)
     end
 
   | E.NewExpr _ -> Log.printParseErr "new must have annotations"
-
-  (* rkc: LamJS desugaring normally writes to a non-existent reference *)
-  (* | FuncStmtExpr (p, f, args, body) -> *)
-  (*    EOp2 (p, SetRef, EId (p, f), ds_expr env (FuncExpr (p, args, body))) *)
-
-  (* rkc: LamJS desugaring normally discards hints *)
-  (* | HintExpr (_, _, e) -> ds_expr env e *)
 
   | E.FuncExpr (_, args, _) ->
       Log.printParseErr (spr
         "function expression with formals [%s] not annotated"
            (String.concat ", " args))
 
+  (* TODO test recursion *)
   | E.HintExpr (_, s, E.FuncStmtExpr (p, f, args, body)) ->
       let t = desugarTypHint s env in
-      let f = dsVar f in
+(*
+      let _f = dsVar f in
+*)
       let env = addFlag f false env in
       let env = addFormals t env in
       (* 4/9: unfortunate that have to call addFlag here, since dsFunc does
@@ -1004,25 +888,22 @@ let rec ds (env:env) = function
       let env = addFlag "this" true env in
       let t = augmentType t env (fvExps "dsFuncStmtExpr recursive" env [body]) in
       (* let func = dsFunc (hasThisParam t) env p args body in *)
-      let func = dsFunc env p args body in
+      let func = dsFunc env args body in
       EApp (([t],[],[]), eVar "fix", EFun (PLeaf f, func))
 
   | E.FuncStmtExpr (_, f, _, _) ->
       Log.printParseErr (spr "function statement [%s] not annotated" f)
 
-  | E.HintExpr (_, s, e) -> dsAnnotatedFuncExpr env s e
+  | E.HintExpr (_, s, E.FuncExpr (_, args, body)) ->
+      dsAnnotatedFuncExpr env s args body
+
+  | E.HintExpr (_, s, _) ->
+      Log.printParseErr
+        (spr "use assert(...) rather than general annotation\n\n[%s]" s)
 
   | E.ThrowExpr _ -> failwith "throwexpr"
   | E.TryFinallyExpr _ -> failwith "try finally"
   | E.TryCatchExpr _ -> failwith "try catch"
-
-(*
-  | TryCatchExpr (p, body, x, catch) ->
-      ETryCatch (p, ds_expr env body, ELambda (p, [x], ds_expr env catch))
-  | TryFinallyExpr (p, e1, e2) -> 
-      ETryFinally (p, ds_expr env e1, ds_expr env e2)
-  | ThrowExpr (p, e) -> EThrow (p, ds_expr env e)
-*)
 
 and mkEDict env fields =
   EDict (List.map (fun (_, x, e) -> (eStr x, ds env e)) fields)
@@ -1031,22 +912,19 @@ and mkEArray topt env es =
   let t = match topt with Some(t) -> t | None -> tyArrDefault in
   EArray (t, List.map (ds env) es)
 
-and dsAnnotatedFuncExpr env s = function
-  | E.FuncExpr(p,args,body) ->
-      let t = desugarTypHint s env in
-      let env = addFormals t env in
-      let env = List.fold_left (fun env arg -> addFlag arg true env) env args in
-      let t = augmentType t env (fvExps "dsAnnotatedFuncExpr" env [body]) in
-      (* let e = dsFunc (hasThisParam t) env p args body in *)
-      let e = dsFunc env p args body in
-      annotateExp e (ParseUtils.typToFrame t)
-  | _ ->
-      Log.printParseErr
-        (spr "use assert(...) rather than general annotation\n\n[%s]" s)
+and dsAnnotatedFuncExpr env s args body =
+  let t = desugarTypHint s env in
+  let env = addFormals t env in
+  let env = List.fold_left (fun env arg -> addFlag arg true env) env args in
+  let t = augmentType t env (fvExps "dsAnnotatedFuncExpr" env [body]) in
+  (* let e = dsFunc (hasThisParam t) env p args body in *)
+  let e = dsFunc env args body in
+  annotateExp ~lbl:"djsFuncType" e (ParseUtils.typToFrame t)
 
-and dsAssert env s = function
+and dsAssert ?(lbl="djsAssert") env s = function
   | E.FuncExpr _ -> Log.printParseErr "don't put lambda inside assert(...)"
-  | e -> annotateExp (ds env e) (ParseUtils.typToFrame (desugarTypHint s env))
+  | e -> let f = ParseUtils.typToFrame (desugarTypHint s env) in
+         annotateExp ~lbl (ds env e) f
 
 and dsMethCall env ts ls obj prop args =
   let obj = ds env obj in
@@ -1061,36 +939,19 @@ and dsMethCall env ts ls obj prop args =
     will not work in general *)
   mkCall ts ls func (Some obj) (List.map (ds env) args)
 
-and dsFunc (* thisParam *) env p args body =
-  if !Settings.doArgsArray
-  then dsFuncWithArgsArray (* thisParam *) env p args body
-  else dsFuncWithoutArgsArray (* thisParam *) env p args body
-
-and dsFuncWithoutArgsArray (* thisParam *) env p args body =
-(*
-  let (args,env) =
-    if not thisParam then (args, env)
-    else (* generate a fresh "this" and store it in env *)
-      let thisi = incr funcCount; mkThis !funcCount in
-      let env = { env with funcNum = !funcCount } in
-      (thisi::args, env) in
-*)
+(* this version does not use an "arguments" array *)
+and dsFunc env args body =
   (* generate a fresh "this" and store it in env *)
   let thisi = incr funcCount; mkThis !funcCount in
   let args = thisi :: args in
   let env = { env with funcNum = !funcCount } in
-  let env =
-    List.fold_left (fun env x -> addFlag (dsVar x) true env) env args in
+  let env = List.fold_left (fun env x -> addFlag x true env) env args in
   let body =
     List.fold_left (fun acc x ->
       let _x = dsVar x in
-      ELet (_x, None, ENewref (LocConst (spr "&%s" x), eVar x), acc)
-    ) (ds env body) args in
+      ELet (_x, None, ENewref (LocConst (spr "&%s" x), eVar x, None), acc)
+    ) (ds env body) (List.rev args) in
   eLambda args body
-
-(* rkc: based on LamJS E.FuncExpr case *)
-and dsFuncWithArgsArray (* thisParam *) env p args body =
-  failwith "no longer implemented. see DjsDesugar.ml for reference"
 
 (* rkc: based on LamJS E.WhileExpr case *)
 and dsWhile env breakL continueL test body frame =
@@ -1191,35 +1052,12 @@ and dsForIn env breakL k obj body frame =
   else fixloop
 
 (* rkc: creates a traditional lexically-scoped let-binding to a reference *)
-and dsVarDecl env x lo e e2 =
-  (* let l = match lo with Some(l) -> l | None -> freshVar x in *)
-  let l = match lo with Some(l) -> l | None -> LocConst (spr "&%s" x) in
-  let x = dsVar x in
+and dsVarDecl ?(lxo=None) ?(locInvariant=None) env x e e2 =
+  let _x = dsVar x in
   let e = ds env e in
   let env = addVarType env x e in
-  ELet (x, None, ENewref (l, e), ds (addFlag x true env) e2)
-
-  (* could even forgo the ref if a reason should arise ... *)
-  (* ELet (x, None, None,
-            ds env e,
-            ds (IdMap.add x false env) e2) *)
-
-and dsVarDeclOrig env x e =
-  Log.printParseErr (spr "dsVarDeclOrig [%s]" x)
-(*
-  (* rkc: this is the original LamJS case. *)
-  | VarDeclExpr (p, x, e) -> 
-      let _ = failwith "rkc: original VarDeclExpr case called" in
-      if IdMap.mem x env then
-        (* var-lifting would have introduced a binding for x. *)
-        EOp2 (p, SetRef, EId (p, x), ds_expr env e)
-      else 
-        let _ = failwith "rkc: think about top-level VarDecl" in
-        EOp2 (p, SetRef, EId (p, "[[global]]"),
-              EUpdateField (p, EOp1 (p, Deref, EId (p, "[[global]]")),
-                            EConst (p, JavaScript_syntax.CString x),
-                            ds_expr env e))
-*)
+  let lx = match lxo with Some(l) -> l | None -> LocConst (spr "&%s" x) in
+  ELet (_x, None, ENewref (lx, e, locInvariant), ds (addFlag x true env) e2)
 
 let desugar e =
   checkVars e;

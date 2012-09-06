@@ -18,11 +18,9 @@ let noDupeFormal errList s l =
 
 let heapBinders (_,cs) =
   List.fold_left (fun acc -> function
-    | (_,HConc(None,t))
-    | (_,HConcObj(None,t,_)) -> depTupleBindersEnv t @ acc
-    | (_,HConc(Some(x),t))
-    | (_,HConcObj(Some(x),t,_)) -> Var(x,tyAny) :: depTupleBindersEnv t @ acc
-    | (_,HWeakTok _) -> acc
+    | (_,HStrong(None,t,_)) -> depTupleBindersEnv t @ acc
+    | (_,HStrong(Some(x),t,_)) -> Var(x,tyAny) :: depTupleBindersEnv t @ acc
+    | (_,HWeak _) -> acc
   ) [] cs
 
 let envToStrings g =
@@ -148,27 +146,25 @@ and checkHeap errList g h =
        if List.exists (function HVar(y) -> x = y | _ -> false) g then ()
        else err (errList @ [spr "unbound heap variable: [%s]" x]))
     (fst h);
-  checkConstraints errList g h (snd h)
+  let g = g @ heapBinders h in
+  checkConstraints errList g (snd h)
 
-and checkConstraints errList g h = function
+and checkConstraints errList g = function
   | [] -> ()
-  | (l,HConc(x,s))::rest -> begin
+  | (l,HStrong(x,s,lo))::rest -> begin
       checkLoc errList g l;
       (if List.exists (function (l',_) -> l = l') rest
        then err (errList @ [spr "loc [%s] bound multiple times" (strLoc l);
          "perhaps you are running into the cap-avoiding subst bug..."])
        else ());
       checkType errList g s;
-      checkConstraints errList g h rest
+      (match lo with Some(l') -> checkLoc errList g l' | None -> ());
+      checkConstraints errList g rest
     end
-  | (l,HConcObj(x,s,l'))::rest -> begin
-      checkLoc errList g l';
-      checkConstraints errList g h ((l,HConc(x,s))::rest)
-    end
-  | (l,HWeakTok(tok))::rest -> begin
+  | (l,HWeak(tok))::rest -> begin
       checkLoc errList g l;
       (match tok with Frzn -> () | Thwd(l') -> checkLoc errList g l');
-      checkConstraints errList g h rest;
+      checkConstraints errList g rest;
     end
 
 and checkWorld errList g (t,h) =

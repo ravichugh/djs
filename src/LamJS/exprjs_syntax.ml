@@ -256,6 +256,9 @@ and varDecl p (decl : S.varDecl) = match decl with
   | S.VarDecl (a, x, e) -> VarDeclExpr (a, x, expr e)
   | S.HintVarDecl (a, s, x) -> 
       VarDeclExpr (a, x, HintExpr (a, s, ConstExpr (p, S.CUndefined)))
+  (* rkc *)
+  | S.HintVarDeclInit (a, s, x, e) -> 
+      HintExpr (a, s, VarDeclExpr (a, x, expr e))
 
 and collectClauseExprs exprs clauses = match clauses with
   | S.CaseClause (p, e, s) :: rest -> begin match stmt s with

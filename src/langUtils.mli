@@ -170,6 +170,10 @@ val strWorld : world -> string
 val strFrame : frame -> string
 val strBinding : vvar * typ -> string
 
+(***** Free variable computation **********************************************)
+
+val freeVarsExp : exp -> vvar list
+
 (***** Type substitution ******************************************************)
 
 type vsubst = (vvar * walue) list
@@ -187,6 +191,7 @@ val substTyp  : MasterSubst.t -> typ     -> typ
 val substHeap : MasterSubst.t -> heap    -> heap
 val substWal  : MasterSubst.t -> walue   -> walue
 val substLoc  : MasterSubst.t -> loc     -> loc
+val substLocOpt  : MasterSubst.t -> loc option     -> loc option
 val substPrenexTyp  : MasterSubst.t -> prenextyp -> prenextyp
 
 val applyTyp : typ -> walue -> formula

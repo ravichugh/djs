@@ -72,6 +72,8 @@ type varDecl =
   | VarDeclNoInit of pos * id
   | VarDecl of pos * id * expr
   | HintVarDecl of pos * string * id
+  (* rkc: added to support var x /*: T */ = e *)
+  | HintVarDeclInit of pos * string * id * expr
 
 and forInit =
   | NoForInit

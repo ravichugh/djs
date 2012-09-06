@@ -351,6 +351,9 @@ varDecl
   : Id { VarDeclNoInit (($startpos, $endpos),$1) }
   | Id Assign assign_expr { VarDecl (($startpos, $endpos),$1,$3) }
   | Id HINT { HintVarDecl (($startpos, $endpos), $2, $1) }
+  (* rkc: added to support var x /*: T */ = e *)
+  | Id HINT Assign assign_expr
+      { HintVarDeclInit (($startpos, $endpos), $2, $1, $4) }
 
 varDecl_noin
   : Id { VarDeclNoInit (($startpos, $endpos),$1) }

@@ -75,48 +75,45 @@ let mapTyp ?fTyp:(fTyp=(fun x -> x))
     | QBase(bt)   -> QBase bt
     | QRecd(l,b)  -> QRecd (List.map (fun (f,t) -> (f, fooTyp t)) l, b)
     | QTuple(l,b) -> QTuple (List.map (fun (f,t) -> (f, fooTyp t)) l, b)
-    | QBoxes(l)   -> if onlyTopForm then QBoxes l else QBoxes (List.map fooTT l)
-                        (* NOTE flag to guard recursing into boxes*)
+    | QBoxes(l)   -> QBoxes (List.map fooTT l)
 
   and fooForm = function
     | PEq(w1,w2)         -> fForm (PEq (fooWal w1, fooWal w2))
     | PApp(s,ws)         -> fForm (PApp (s, List.map fooWal ws))
-    | PHasTyp(w,u)       -> let u = if onlyTopForm then u else fooTT u in
-                            fForm (PHasTyp (fooWal w, u))
-    | PHeapHas(h,l,w)    -> let h = if onlyTopForm then h else fooHeap h in
-                            fForm (PHeapHas (h, l, fooWal w))
+    | PHasTyp(w,u)       -> fForm (PHasTyp (fooWal w, fooTT u))
+    | PHeapHas(h,l,w)    -> fForm (PHeapHas (fooHeap h, l, fooWal w))
     | PConn(s,ps)        -> fForm (PConn (s, List.map fooForm ps))
     | PHas(w,ws)         -> fForm (PHas (fooWal w, List.map fooWal ws))
     | PDomEq(w,ws)       -> fForm (PDomEq (fooWal w, List.map fooWal ws))
     | PEqMod(w1,w2,ws)   -> let ws = List.map fooWal ws in
                             fForm (PEqMod (fooWal w1, fooWal w2, ws))
-    | PObjHas(ds,k,h,l)  -> let h = if onlyTopForm then h else fooHeap h in
-                            let ds = List.map fooWal ds in
-                            fForm (PObjHas (ds, fooWal k, h, l))
+    | PObjHas(ds,k,h,l)  -> let ds = List.map fooWal ds in
+                            fForm (PObjHas (ds, fooWal k, fooHeap h, l))
     | PAll(x,p)          -> fForm (PAll (x, fooForm p))
     (* | PAll _             -> failwith "mapForm: PAll shouldn't appear" *)
 
   and fooTT = function
-    | UVar(x)       -> fTT (UVar x)
-    | UNull         -> fTT UNull
-    | URef(al)      -> fTT (URef al)
-    | UArray(t)     -> fTT (UArray (fooTyp t))
-    | UMacro(x)     -> fTT (UMacro x)
-    | UArrow(l,x,t1,h1,t2,h2) ->
-        let (t1,h1) = fooTyp t1, fooHeap h1 in
-        let (t2,h2) = fooTyp t2, fooHeap h2 in
-        fTT (UArrow (l, x, t1, h1, t2, h2))
+    | UNull     -> fTT UNull
+    | UVar(x)   -> fTT (UVar x)
+    | URef(al)  -> fTT (URef al)
+    | UMacro(x) -> fTT (UMacro x)
+    | UArray(t) ->
+        if onlyTopForm then fTT (UArray t)
+        else fTT (UArray (fooTyp t))
+    | UArrow(l,x,t1,h1,t2,h2) as u ->
+        if onlyTopForm then fTT u
+        else let (t1,h1) = fooTyp t1, fooHeap h1 in
+             let (t2,h2) = fooTyp t2, fooHeap h2 in
+             fTT (UArrow (l, x, t1, h1, t2, h2))
 
   and fooWal = function
     | WVal(v)         -> fWal (WVal (fooVal v))
     | WApp(s,ws)      -> fWal (WApp (s, List.map fooWal ws))
     | WBot            -> fWal WBot
-    | WHeapSel(h,l,w) -> let h = if onlyTopForm then h else fooHeap h in
-                         fWal (WHeapSel (h, l, fooWal w))
+    | WHeapSel(h,l,w) -> fWal (WHeapSel (fooHeap h, l, fooWal w))
     | WObjSel(ds,k,h,l) ->
-        let h = if onlyTopForm then h else fooHeap h in
         let ds = List.map fooWal ds in
-        fWal (WObjSel (ds, fooWal k, h, l))
+        fWal (WObjSel (ds, fooWal k, fooHeap h, l))
 
   (* TODO if var elim does not end up using this, might get rid of it *)
   and fooVal v = { v with value = match v.value with
@@ -128,9 +125,8 @@ let mapTyp ?fTyp:(fTyp=(fun x -> x))
   and fooHeap (hs,cs) =
     let cs =
       List.map (function
-        | (l,HConc(x,s))       -> (l, HConc (x, fooTyp s))
-        | (l,HConcObj(x,s,l')) -> (l, HConcObj (x, fooTyp s, l'))
-        | (l,HWeakTok(tok))    -> (l, HWeakTok tok)
+        | (l,HStrong(x,s,lo)) -> (l, HStrong (x, fooTyp s, lo))
+        | (l,HWeak(tok))      -> (l, HWeak tok)
       ) cs
     in
     (hs, cs)
@@ -224,8 +220,8 @@ let foldTyp (fForm: 'a -> formula -> 'a)
 
   and fooHeap acc (_,cs) =
     List.fold_left (fun acc -> function
-      | (_,HConc(_,s)) | (_,HConcObj(_,s,_)) -> fooTyp acc s
-      | (_,HWeakTok(_)) -> acc
+      | (_,HStrong(_,s,_)) -> fooTyp acc s
+      | (_,HWeak(_)) -> acc
     ) acc cs
 
   in fooTyp init t
@@ -255,7 +251,7 @@ let mapExp fE e =
     | EMacro(x,m,e) -> fE (EMacro (x, m, fooExp e))
     | ETcFail(s,e) -> fE (ETcFail (s, fooExp e))
     | EAsW(e,w) -> fE (EAsW (fooExp e, w))
-    | ENewref(l,e) -> fE (ENewref (l, fooExp e))
+    | ENewref(l,e,ci) -> fE (ENewref (l, fooExp e, ci))
     | EDeref(e) -> fE (EDeref (fooExp e))
     | ESetref(e1,e2) -> fE (ESetref (fooExp e1, fooExp e2))
     | EFreeze(l,x,e) -> fE (EFreeze (l, x, fooExp e))
@@ -266,7 +262,7 @@ let mapExp fE e =
     | EThrow(e) -> fE (EThrow (fooExp e))
     | ETryCatch(e1,x,e2) -> fE (ETryCatch (fooExp e1, x, fooExp e2))
     | ETryFinally(e1,e2) -> fE (ETryFinally (fooExp e1, fooExp e2))
-    | ENewObj(e1,l1,e2,l2) -> fE (ENewObj (fooExp e1, l1, fooExp e2, l2))
+    | ENewObj(e1,l1,e2,l2,ci) -> fE (ENewObj (fooExp e1, l1, fooExp e2, l2, ci))
     | ELoadSrc(s,e) -> fE (ELoadSrc (s, fooExp e))
     | ELoadedSrc(s,e) -> fE (ELoadedSrc (s, fooExp e))
   and fooVal v = { v with value = match v.value with
@@ -302,7 +298,7 @@ let foldExp fE fV init e =
     | EMacro(x,m,e) -> fE (fooExp acc e) exp
     | ETcFail(s,e) -> fE (fooExp acc e) exp
     | EAsW(e,w) -> fE (fooExp acc e) exp
-    | ENewref(l,e) -> fE (fooExp acc e) exp
+    | ENewref(l,e,ci) -> fE (fooExp acc e) exp
     | EDeref(e) -> fE (fooExp acc e) exp
     | ESetref(e1,e2) -> fE (List.fold_left fooExp acc [e1;e2]) exp
     | EFreeze(l,x,e) -> fE (fooExp acc e) exp
@@ -313,7 +309,7 @@ let foldExp fE fV init e =
     | EThrow(e) -> fE (fooExp acc e) exp
     | ETryCatch(e1,x,e2) -> fE (List.fold_left fooExp acc [e1;e2]) exp
     | ETryFinally(e1,e2) -> fE (List.fold_left fooExp acc [e1;e2]) exp
-    | ENewObj(e1,l1,e2,l2) -> fE (List.fold_left fooExp acc [e1;e2]) exp
+    | ENewObj(e1,l1,e2,l2,ci) -> fE (List.fold_left fooExp acc [e1;e2]) exp
     | ELoadSrc(s,e) -> fE (fooExp acc e) exp
     | ELoadedSrc(s,e) -> fE (fooExp acc e) exp
   and fooVal acc v = match v.value with
@@ -464,6 +460,22 @@ let tyArrDefault = tyNotUndef
 let bindersOfDepTuple l =
   List.fold_left (fun acc -> function Some(x) -> x::acc | None -> acc)
     [] (List.map fst l)
+
+(* maybeValOfSingleton used by TcDref3 and Sub to manipulate heap bindings with
+   singleton types. can make maybeValOfWal better by "evaluating" record walues
+   to values *)
+
+(* TODO might phase this out for HSing *)
+
+let rec maybeValOfWal = function
+  | WVal(v) -> Some v
+  | _ -> None
+
+let valToSingleton v = ty (PEq (theV, WVal v))
+
+let maybeValOfSingleton = function
+  | TRefinement("v",PEq(WVal({value=VVar"v"}),w)) -> maybeValOfWal w
+  | _ -> None
 
 
 (***** Id Tables **************************************************************)
@@ -872,11 +884,11 @@ and registerHeap h =
 and strTTFlat u = Str.global_replace (Str.regexp "\n") " " (strTT u)
 
 and strHeapCell = function
-  | HConc(None,s)         -> spr "%s" (strTyp s)
-  | HConc(Some(x),s)      -> spr "%s:%s" x (strTyp s)
-  | HConcObj(None,s,l)    -> spr "(%s, %s)" (strTyp s) (strLoc l)
-  | HConcObj(Some(x),s,l) -> spr "(%s:%s, %s)" x (strTyp s) (strLoc l)
-  | HWeakTok(ts)          -> strThawState ts
+  | HStrong(None,s,None)       -> spr "%s" (strTyp s)
+  | HStrong(Some(x),s,None)    -> spr "%s:%s" x (strTyp s)
+  | HStrong(None,s,Some(l))    -> spr "(%s, %s)" (strTyp s) (strLoc l)
+  | HStrong(Some(x),s,Some(l)) -> spr "(%s:%s, %s)" x (strTyp s) (strLoc l)
+  | HWeak(ts)                  -> strThawState ts
 
 and strHeapBinding (l,hc) = spr "%s |-> %s" (strLoc l) (strHeapCell hc)
 
@@ -900,10 +912,9 @@ let strFrame (l,h,w) =
 let strBinding (x,s) = spr "%s:%s" x (strTyp s)
 
 let strHeapEnvCell = function
-  | HEWeakTok(ts)  -> strThawState ts
-  | HEConc(v)      -> strVal v
-  | HEConcObj(v,l) -> spr "%s |> %s" (strVal v) (strLoc l)
-  (* | HEConcObj(v,l) -> spr "(%s, %s)" (strVal v) (strLoc l) *)
+  | HEWeak(ts)            -> strThawState ts
+  | HEStrong(v,None,_)    -> strVal v
+  | HEStrong(v,Some(l),_) -> spr "%s |> %s" (strVal v) (strLoc l)
 
 let strHeapEnvBinding (l,hc) = spr "%s |-> %s" (strLoc l) (strHeapEnvCell hc)
 
@@ -969,10 +980,9 @@ let depTupleBinders t =
 let heapBinders (_,cs) =
   List.fold_left
     (fun acc (l,hc) ->
-       match hc with HWeakTok _ -> acc
-                   | HConc(None,_) | HConcObj(None,_,_) -> acc
-                   | HConc(Some(x),_) | HConcObj(Some(x),_,_) -> x::acc)
-    [] cs
+       match hc with HWeak _ -> acc
+                   | HStrong(None,_,_) -> acc
+                   | HStrong(Some(x),_,_) -> x::acc) [] cs
 
 (* all the freeVarsX functions are of the form env:Quad.t -> x:X -> Quad.t *)
 
@@ -1062,10 +1072,9 @@ and freeVarsHeap env (hs,cs) =
   let xs = heapBinders (hs,cs) in
   let env = List.fold_left (fun env x -> Quad.addV x env) env xs in
   List.fold_left (fun acc -> function
-    | (l,HConc(_,t))
-    | (l,HConcObj(_,t,_)) ->
+    | (l,HStrong(_,t,_)) ->
          Quad.combineList [freeVarsLoc env l; freeVarsTyp env t; acc]
-    | (l,HWeakTok(_)) ->
+    | (l,HWeak(_)) ->
          freeVarsLoc env l
   ) free cs
 
@@ -1077,6 +1086,8 @@ and freeVarsWorld env (t,h) =
 and freeVarsLoc env = function
   | LocVar(x)  -> if Quad.memL x env then Quad.empty else Quad.addL x Quad.empty
   | LocConst _ -> Quad.empty
+
+let freeVarsExp e = failwith "freeVarsExp not implemented"
 
 
 (***** Type substitution ******************************************************)
@@ -1273,23 +1284,16 @@ and substHeap subst (hs,cs) =
   let cs =
     (* binders should've already been refreshed by arrow case to avoid capture *)
     List.map (function
-      | (l,HConc(xo,s)) ->
+      | (l,HStrong(xo,s,lo)) ->
           let subst =
             match xo with
               | None -> subst
               | Some(x) -> MasterSubst.removeVVars [x] subst in
-          (substLoc subst l, HConc (xo, substTyp subst s))
-      | (l,HConcObj(xo,s,l')) ->
-          let subst =
-            match xo with
-              | None -> subst
-              | Some(x) -> MasterSubst.removeVVars [x] subst in
-          (substLoc subst l,
-           HConcObj (xo, substTyp subst s, substLoc subst l'))
-      | (l,HWeakTok(Frzn)) ->
-          (substLoc subst l, HWeakTok Frzn)
-      | (l,HWeakTok(Thwd(l'))) ->
-          (substLoc subst l, HWeakTok (Thwd (substLoc subst l')))
+          (substLoc subst l, HStrong(xo, substTyp subst s, substLocOpt subst lo))
+      | (l,HWeak(Frzn)) ->
+          (substLoc subst l, HWeak Frzn)
+      | (l,HWeak(Thwd(l'))) ->
+          (substLoc subst l, HWeak (Thwd (substLoc subst l')))
     ) cs
   in
   (hs, cs)
@@ -1299,6 +1303,10 @@ and substLoc subst = function
   | LocVar(x) -> (* location variable substitution *)
       let (_,_,sub,_) = subst in
       if List.mem_assoc x sub then List.assoc x sub else LocVar x
+
+and substLocOpt subst = function
+  | Some(l) -> Some (substLoc subst l)
+  | None    -> None
 
 (* [[T]](w) *)
 and applyTyp t w =
@@ -1405,12 +1413,13 @@ and freshenDepTuple free l =
 and freshenHeap free (hs,cs) =
   let binderSubst =
     List.fold_left (fun acc -> function
-      | (_,HConc(None,_)) -> failwith "freshenHeap 1"
-      | (_,HConcObj(None,_,_)) -> failwith "freshenHeap 2"
-      | (_,HConc(Some(x),_))
-      | (_,HConcObj(Some(x),_,_)) ->
+      | (_,HStrong(None,t,_)) ->
+          (match maybeValOfSingleton t with
+             | None -> failwith "freshenHeap 1"
+             | Some(v) -> acc)
+      | (_,HStrong(Some(x),_,_)) ->
           if Quad.memV x free then (x, freshVar x)::acc else acc
-      | (_,HWeakTok _) ->
+      | (_,HWeak _) ->
           acc
     ) [] cs
   in
@@ -1418,22 +1427,18 @@ and freshenHeap free (hs,cs) =
   let subst = (binderSubstW,[],[],[]) in
   let cs =
     List.map (function
-      | (_,HConc(None,_)) -> failwith "freshenHeap 3"
-      | (_,HConcObj(None,_,_)) -> failwith "freshenHeap 4"
-      | (l,HConc(Some(x),s)) ->
+      | (l,HStrong(None,t,lo)) ->
+          (match maybeValOfSingleton t with
+             | None -> failwith "freshenHeap 2"
+             | Some(v) -> (l, HStrong (None, valToSingleton v, lo)))
+      | (l,HStrong(Some(x),s,lo)) ->
           let x =
             if List.mem_assoc x binderSubst
             then List.assoc x binderSubst
             else x in
-          (l, HConc (Some x, substTyp subst s))
-      | (l,HConcObj(Some(x),s,l')) ->
-          let x =
-            if List.mem_assoc x binderSubst
-            then List.assoc x binderSubst
-            else x in
-          (l, HConcObj (Some x, substTyp subst s, l'))
-      | (l,HWeakTok(tok)) ->
-          (l, HWeakTok tok)
+          (l, HStrong (Some x, substTyp subst s, lo))
+      | (l,HWeak(tok)) ->
+          (l, HWeak tok)
     ) cs
   in
   (binderSubstW, (hs, cs))
@@ -1457,22 +1462,6 @@ let substVarInExp z x e =
 
 
 (***** Misc *******************************************************************)
-
-(* maybeValOfSingleton used by TcDref3 and Sub to manipulate heap bindings with
-   singleton types. can make maybeValOfWal better by "evaluating" record walues
-   to values *)
-
-(* TODO might phase this out for HSing *)
-
-let rec maybeValOfWal = function
-  | WVal(v) -> Some v
-  | _ -> None
-
-let valToSingleton v = ty (PEq (theV, WVal v))
-
-let maybeValOfSingleton = function
-  | TRefinement("v",PEq(WVal({value=VVar"v"}),w)) -> maybeValOfWal w
-  | _ -> None
 
 let valOfSingleton t =
   match maybeValOfSingleton t with
@@ -1520,9 +1509,9 @@ let rec expandHH (hs,cs) l k =
     else if not (List.mem_assoc l cs) then PHeapHas ((hs,[]), l, k)
     else begin
       match List.assoc l cs with
-        | HConcObj(None,t,l') ->
+        | HStrong(None,t,Some(l')) ->
             pOr [has (WVal (valOfSingleton t)) k; expandHH (hs,cs) l' k]
-        | HConcObj(Some(d),_,l') -> 
+        | HStrong(Some(d),_,Some(l')) -> 
             pOr [has (wVar d) k; expandHH (hs,cs) l' k]
         | _ -> failwith (spr "expandHH: %s" (strLoc l))
     end
@@ -1539,8 +1528,8 @@ let expandOH ds k (hs,cs) l =
     else if not (List.mem_assoc l cs) then PObjHas (ds, k, (hs,[]), l)
     else begin
       match List.assoc l cs with
-        | HConcObj(None,t,l') -> foo (ds @ [WVal (valOfSingleton t)]) l'
-        | HConcObj(Some(d),_,l') -> foo (ds @ [wVar d]) l'
+        | HStrong(None,t,Some(l')) -> foo (ds @ [WVal (valOfSingleton t)]) l'
+        | HStrong(Some(d),_,Some(l')) -> foo (ds @ [wVar d]) l'
         | _ -> failwith "expandOH: not conc constraint"
     end
   in
@@ -1559,8 +1548,8 @@ let expandHS (hs,cs) l k =
     else if not (List.mem_assoc l cs) then WObjSel (ds, k, (hs,[]), l)
     else begin
       match List.assoc l cs with
-        | HConcObj(None,t,l') -> foo (ds @ [WVal (valOfSingleton t)]) l'
-        | HConcObj(Some(d),_,l') -> foo (ds @ [wVar d]) l'
+        | HStrong(None,t,Some(l')) -> foo (ds @ [WVal (valOfSingleton t)]) l'
+        | HStrong(Some(d),_,Some(l')) -> foo (ds @ [wVar d]) l'
         | _ -> failwith "expandHS: not conc constraint"
     end
   in
@@ -1577,8 +1566,8 @@ let expandOS ds k (hs,cs) l =
     else if not (List.mem_assoc l cs) then WObjSel (ds, k, (hs,[]), l)
     else begin
       match List.assoc l cs with
-        | HConcObj(None,t,l') -> foo (ds @ [WVal (valOfSingleton t)]) l'
-        | HConcObj(Some(d),_,l') -> foo (ds @ [wVar d]) l'
+        | HStrong(None,t,Some(l')) -> foo (ds @ [WVal (valOfSingleton t)]) l'
+        | HStrong(Some(d),_,Some(l')) -> foo (ds @ [wVar d]) l'
         | _ -> failwith "expandOS: not conc constraint"
     end
   in
@@ -1629,9 +1618,8 @@ let rec expandPreTyp t =
 let expandPreHeap (hs,cs) =
   let cs =
     List.map (fun (l,hc) -> match hc with
-      | HConc(x,s)       -> (l, HConc (x, expandPreTyp s))
-      | HConcObj(x,s,l') -> (l, HConcObj (x, expandPreTyp s, l'))
-      | HWeakTok(tok)    -> (l, HWeakTok tok)
+      | HStrong(x,s,lo) -> (l, HStrong (x, expandPreTyp s, lo))
+      | HWeak(tok)      -> (l, HWeak tok)
     ) cs
   in
   (hs, cs)
