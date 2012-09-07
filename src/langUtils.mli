@@ -24,6 +24,7 @@ val mapTyp :
   ?fTT:(typterm -> typterm) ->
   ?fWal:(walue -> walue) ->
   ?fVal:(value_ -> value_) ->
+  ?fLoc:(loc -> loc) ->
   ?onlyTopForm:bool -> typ -> typ
 
 val mapForm :
@@ -31,7 +32,13 @@ val mapForm :
   ?fTT:(typterm -> typterm) ->
   ?fWal:(walue -> walue) ->
   ?fVal:(value_ -> value_) ->
+  ?fLoc:(loc -> loc) ->
   ?onlyTopForm:bool -> formula -> formula
+
+val mapHeap :
+  ?fForm:(formula -> formula) ->
+  ?fWal:(walue -> walue) ->
+  ?fLoc:(loc -> loc) -> heap -> heap
 
 val foldTyp :
   ('a -> formula -> 'a) ->
@@ -179,7 +186,7 @@ val freeVarsExp : exp -> vvar list
 
 type vsubst = (vvar * walue) list
 type tsubst = (tvar * typ) list
-type lsubst = (hvar * loc) list
+type lsubst = (lvar * loc) list
 type hsubst = (hvar * heap) list
 
 module MasterSubst : sig

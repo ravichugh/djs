@@ -60,7 +60,7 @@ let mkSugarTyp x s p =
     | _      -> printParseErr (spr "bad sugar {%s:%s|%s}" x s (strForm p))
 
 
-(***** Stuff for System !D ****************************************************)
+(***** Syntactic sugar: "same" ************************************************)
 
 let heapStack : heap list ref = ref []
 (* every time a heap is parsed inside a type, push it onto this stack.
@@ -99,6 +99,100 @@ let sameCell exact l =
     printParseErr "sameCell: empty heap"
 
 
+(***** Syntactic sugar: "x:Ref", "x:Ref?", "x.pro", "cur" *********************)
+
+let tyAnonRef = tyTypTerm (URef (LocConst "Ref"))
+let tyAnonMaybeRef = tyTypTerm (URef (LocConst "Ref?"))
+let curHeap = "Cur"
+
+let replaceCurInHeap hvar (hs,cs) =
+  let hs = List.map (fun h -> if h = curHeap then hvar else h) hs in
+  (hs, cs)
+
+let replaceCurInForm hvar = function
+  | PHeapHas(h,l,k)   -> PHeapHas (replaceCurInHeap hvar h, l, k)
+  | PObjHas(ds,k,h,l) -> PObjHas (ds, k, replaceCurInHeap hvar h, l)
+  | p                 -> p
+
+let replaceCurInWal hvar = function
+  | WHeapSel(h,l,k)   -> WHeapSel (replaceCurInHeap hvar h, l, k)
+  | WObjSel(ds,k,h,l) -> WObjSel (ds, k, replaceCurInHeap hvar h, l)
+  | w                 -> w
+
+let expandHeapLocSugar (arr: uarrow) : uarrow =
+
+  let arr = ParseUtils.maybeAddHeapPrefixVar arr in
+  let ((ts,ls,hs),xArg,t1,h1,t2,h2) = arr in
+
+  let locSubst = ref [] in
+  let addToSubst y ly =
+    if not (List.mem_assoc y !locSubst) then locSubst := (y,ly) :: !locSubst in
+
+  (* collect the x's such that x:Ref or x:Ref? appear in input tuple type
+     and generate a correspond Lx variable *)
+  let t1 =
+    match t1 with
+      | TQuick("v",QTuple(tup,false),p) when p = pTru ->
+          let tup =
+            List.map (function
+              | Some(y), s when s = tyAnonRef ->
+                  let ly = spr "L%s" y in
+                  let _ = addToSubst y ly in
+                  (Some y, tyRef (LocVar ly))
+              | Some(y), s when s = tyAnonMaybeRef ->
+                  let ly = spr "L%s" y in
+                  let _ = addToSubst y ly in
+                  (Some y, TMaybeNull (tyRef (LocVar ly)))
+              | yo, s ->
+                  (yo, s)
+            ) tup
+          in
+          TQuick ("v", QTuple (tup, false), pTru)
+      | _ ->
+          t1 in
+  
+  (* for each x computed above, map each use of x in a location position to Lx.
+     also, for each occurrence of x.pro location position, generate a fresh Lxpro
+     and map x.pro to Lxpro. *)
+  let fLoc = function
+    | LocConst(y) when List.mem_assoc y !locSubst ->
+        LocVar (List.assoc y !locSubst)
+    | LocConst(y) when Str.string_match (Str.regexp "^\\(.*\\)[.]pro$") y 0 ->
+        let y_prefix = Str.matched_group 1 y in
+        if List.mem_assoc y_prefix !locSubst then
+          let lypro = spr "L%spro" y_prefix in
+          let _ = addToSubst y lypro in
+          LocVar lypro
+        else
+          LocConst y
+    | LocConst(y) when Str.string_match (Str.regexp "^.*[.].*$") y 0 ->
+        Log.printParseErr (spr "location identifier [%s] contains a \".\" \
+          that isn't part of a \".pro\" location" y)
+    | LocConst(y) -> LocConst y
+    | LocVar(y) -> LocVar y in
+
+  let (t1,t2) = (mapTyp ~fLoc t1, mapTyp ~fLoc t2) in
+  let (h1,h2) = (mapHeap ~fLoc h1, mapHeap ~fLoc h2) in
+
+  (* add the Lx and Lxpro location variables *)
+  let ls = ls @ (List.rev (List.map snd !locSubst)) in
+
+  (* replace Cur with the heap variable *)
+  let (t1,t2,h1,h2) =
+    match hs with
+      | [hvar] ->
+        (* the intention is that this hvar was added by maybeAddPrefixHeap.
+           if the variable was explicitly provided, then could signal an error
+           that Cur should not be used. *)
+          let (fForm,fWal) = (replaceCurInForm hvar, replaceCurInWal hvar) in
+          let (mapTyp,mapHeap) = (mapTyp ~fForm ~fWal, mapHeap ~fForm ~fWal) in
+          (mapTyp t1, mapTyp t2, mapHeap h1, mapHeap h2)
+      | _ ->
+          (t1, t2, h1, h2) in
+
+  ((ts,ls,hs), xArg, t1, h1, t2, h2)
+
+
 (******************************************************************************)
 
 %}
@@ -119,7 +213,7 @@ let sameCell exact l =
   TYPE NULL NULLBOX NEW BANG QMARK
   PLUS MINUS (* MUL *) DIV LT LE GE (* NE EQEQ AMPAMP PIPEPIPE PLUSPLUS *)
   ASSGN NEWREF REFTYPE (* AT *) MAPSTO SAME HEAP
-  SAME_TYPE SAME_EXACT
+  SAME_TYPE SAME_EXACT CUR
   WEAK FRZN THWD FREEZE THAW
   ARRTYPE PACKED LEN TRUTHY FALSY INTEGER
   BREAK THROW TRY CATCH FINALLY
@@ -317,15 +411,18 @@ real_typ_term :
 
 arrow_typ :
  | xt=arrow_dom ARROW t2=typ
-     { ParseUtils.maybeAddHeapPrefixVar (([],[],[]),fst xt,snd xt,emp,t2,emp) }
+     { expandHeapLocSugar (([],[],[]),fst xt,snd xt,emp,t2,emp) }
+
  | l=poly_formals xt=arrow_dom ARROW t2=typ
-     { ParseUtils.maybeAddHeapPrefixVar (l,fst xt,snd xt,emp,t2,emp) }
+     { expandHeapLocSugar (l,fst xt,snd xt,emp,t2,emp) }
+
  | xt=arrow_dom DIV h1=dheap ARROW t2=typ DIV h2=rheap
      { popDHeap ();
-       ParseUtils.maybeAddHeapPrefixVar (([],[],[]),fst xt,snd xt,h1,t2,h2) }
+       expandHeapLocSugar (([],[],[]),fst xt,snd xt,h1,t2,h2) }
+
  | l=poly_formals xt=arrow_dom DIV h1=dheap ARROW t2=typ DIV h2=rheap
      { popDHeap ();
-       ParseUtils.maybeAddHeapPrefixVar (l,fst xt,snd xt,h1,t2,h2) }
+       expandHeapLocSugar (l,fst xt,snd xt,h1,t2,h2) }
 
 arrow_dom :
  | dt=deptuple         { (dummyBinder (), tyTupleSome dt) }
@@ -342,7 +439,8 @@ poly_formals :
 
 poly_actuals :
  | LBRACK ts=typs RBRACK                               { (ts,[],[]) }
- | LBRACK ts=typs ls=semi_locs RBRACK                  { (ts,ls,[]) }
+ | LBRACK ts=typs ls=semi_locs RBRACK
+ | LBRACK ts=typs ls=semi_locs SEMI RBRACK             { (ts,ls,[]) }
  | LBRACK SEMI ls=locs RBRACK                          { ([],ls,[]) }
  | LBRACK SEMI ls=locs SEMI RBRACK                     { ([],ls,[]) }
  | LBRACK SEMI SEMI RBRACK                             { ([],[],[]) }
@@ -359,7 +457,7 @@ formula :
  (***** uninterpreted predicates *****)
  | LPAREN w=walue DCOLON u=typ_term RPAREN         { PHasTyp(w,u) }
  (* | LPAREN w=walue DCOLON u=typ_term BANG RPAREN    { pIsBang w u }  *)
- | LPAREN HEAPHAS h=TVAR l=loc k=walue RPAREN      { PHeapHas(([h],[]),l,k) }
+ | LPAREN HEAPHAS h=hvar_ l=loc k=walue RPAREN     { PHeapHas(h,l,k) }
  | LPAREN PACKED w=walue RPAREN                    { packed w }
  | LPAREN INTEGER w=walue RPAREN                   { integer w }
 
@@ -378,8 +476,7 @@ formula :
  | HAS LPAREN x=walue COMMA y=walue RPAREN         { PHas(x,[y]) }
  | LPAREN DOM x=walue ys=walueset RPAREN           { PDomEq(x,ys) }
  | LPAREN EQMOD x=walue y=walue zs=walueset RPAREN { PEqMod(x,y,zs) }
- | LPAREN OBJHAS ds=waluelist k=walue h=TVAR l=loc RPAREN
-     { PObjHas(ds,k,([h],[]),l) }
+ | LPAREN OBJHAS ds=waluelist k=walue h=hvar_ l=loc RPAREN { PObjHas(ds,k,h,l) }
 
  (***** syntactic macros *****)
  | LPAREN EQ x=walue ys=walueset RPAREN  { pOr (List.map (eq x) ys) }
@@ -401,15 +498,13 @@ walue :
  | WBOT                                       { WBot }
  | v=value                                    { WVal v }
  | LPAREN TAG x=walue RPAREN                  { tag x }
- | TAG LPAREN x=walue RPAREN                  { tag x }
  | LPAREN SEL x=walue y=walue RPAREN          { sel x y }
  | LPAREN PLUS x=walue y=walue RPAREN         { plus x y }
  | LPAREN MINUS x=walue y=walue RPAREN        { minus x y }
  | LPAREN UPD x=walue y=walue z=walue RPAREN  { upd x y z }
  | LPAREN LEN x=walue RPAREN                  { arrlen x }
- | LPAREN HEAPSEL h=TVAR l=loc k=walue RPAREN { WHeapSel(([h],[]),l,k) }
- | LPAREN OBJSEL ds=waluelist k=walue h=TVAR l=loc RPAREN
-     { WObjSel(ds,k,([h],[]),l) }
+ | LPAREN HEAPSEL h=hvar_ l=loc k=walue RPAREN             { WHeapSel(h,l,k) }
+ | LPAREN OBJSEL ds=waluelist k=walue h=hvar_ l=loc RPAREN { WObjSel(ds,k,h,l) }
 
 walueset :
  | LBRACE RBRACE                         { [] }
@@ -439,6 +534,10 @@ rheap :
  | SAME                                             { sameHeap true }
  | SAME_EXACT                                       { sameHeap true }
  | SAME_TYPE                                        { sameHeap false }
+
+hvar_ :
+ | h=TVAR                                           { ([h],[]) }
+ | CUR                                              { ([curHeap],[]) }
 
 frame :
  | LBRACK l=tvars RBRACK h1=dheap ARROW t2=typ DIV h2=rheap { (l,h1,(t2,h2)) }
@@ -509,9 +608,14 @@ varopt :
  | UNDERSCORE               { dummyBinder() }
 
 varopttyp :
- | x=VAR COLON t=typ        { (Some x, t) }
- | UNDERSCORE COLON t=typ   { (None, t) }
- | t=typ                    { (None, t) }
+ | x=VAR COLON t=sugar_typ       { (Some x, t) }
+ | UNDERSCORE COLON t=sugar_typ  { (None, t) }
+ | t=sugar_typ                   { (None, t) }
+
+sugar_typ :
+ | t=typ                         { t }
+ | REFTYPE                       { tyAnonRef }
+ | REFTYPE QMARK                 { tyAnonMaybeRef }
 
 vartyp :
  | xt=vartyp_strict         { xt }

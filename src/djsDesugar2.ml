@@ -905,11 +905,19 @@ let rec ds (env:env) = function
   | E.TryCatchExpr _ -> failwith "try catch"
 
 and mkEDict env fields =
-  EDict (List.map (fun (_, x, e) -> (eStr x, ds env e)) fields)
+  EDict (List.map (fun (_, f, e) -> (eStr f, ds env e)) (dsFields fields))
 
 and mkEArray topt env es =
   let t = match topt with Some(t) -> t | None -> tyArrDefault in
   EArray (t, List.map (ds env) es)
+
+and dsFields fields =
+  List.map (fun (p,f,e) ->
+    match e with
+      (* { f: function (...) { ... }, ...}
+         insert the hint "f" so that the type macro f is used *)
+      | E.FuncExpr _ -> (p, f, E.HintExpr (p, f, e))
+      | _            -> (p, f, e)) fields
 
 and dsAnnotatedFuncExpr env s args body =
   let t = desugarTypHint s env in

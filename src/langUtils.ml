@@ -53,12 +53,13 @@ let freshVarX =
 
 (***** Map ********************************************************************)
 
-let mapTyp ?fTyp:(fTyp=(fun x -> x))
-           ?fForm:(fForm=(fun x -> x))
-           ?fTT:(fTT=(fun x -> x))
-           ?fWal:(fWal=(fun x -> x))
-           ?fVal:(fVal=(fun x -> x)) 
-           ?onlyTopForm:(onlyTopForm=false)
+let mapTyp ?(fTyp  = fun x -> x)
+           ?(fForm = fun x -> x)
+           ?(fTT   = fun x -> x)
+           ?(fWal  = fun x -> x)
+           ?(fVal  = fun x -> x) 
+           ?(fLoc  = fun x -> x)
+           ?(onlyTopForm=false)
            t =
 
   let rec fooTyp = function
@@ -81,21 +82,21 @@ let mapTyp ?fTyp:(fTyp=(fun x -> x))
     | PEq(w1,w2)         -> fForm (PEq (fooWal w1, fooWal w2))
     | PApp(s,ws)         -> fForm (PApp (s, List.map fooWal ws))
     | PHasTyp(w,u)       -> fForm (PHasTyp (fooWal w, fooTT u))
-    | PHeapHas(h,l,w)    -> fForm (PHeapHas (fooHeap h, l, fooWal w))
+    | PHeapHas(h,l,w)    -> fForm (PHeapHas (fooHeap h, fLoc l, fooWal w))
     | PConn(s,ps)        -> fForm (PConn (s, List.map fooForm ps))
     | PHas(w,ws)         -> fForm (PHas (fooWal w, List.map fooWal ws))
     | PDomEq(w,ws)       -> fForm (PDomEq (fooWal w, List.map fooWal ws))
     | PEqMod(w1,w2,ws)   -> let ws = List.map fooWal ws in
                             fForm (PEqMod (fooWal w1, fooWal w2, ws))
     | PObjHas(ds,k,h,l)  -> let ds = List.map fooWal ds in
-                            fForm (PObjHas (ds, fooWal k, fooHeap h, l))
+                            fForm (PObjHas (ds, fooWal k, fooHeap h, fLoc l))
     | PAll(x,p)          -> fForm (PAll (x, fooForm p))
     (* | PAll _             -> failwith "mapForm: PAll shouldn't appear" *)
 
   and fooTT = function
     | UNull     -> fTT UNull
     | UVar(x)   -> fTT (UVar x)
-    | URef(al)  -> fTT (URef al)
+    | URef(l)   -> fTT (URef (fLoc l))
     | UMacro(x) -> fTT (UMacro x)
     | UArray(t) ->
         if onlyTopForm then fTT (UArray t)
@@ -110,10 +111,10 @@ let mapTyp ?fTyp:(fTyp=(fun x -> x))
     | WVal(v)         -> fWal (WVal (fooVal v))
     | WApp(s,ws)      -> fWal (WApp (s, List.map fooWal ws))
     | WBot            -> fWal WBot
-    | WHeapSel(h,l,w) -> fWal (WHeapSel (fooHeap h, l, fooWal w))
+    | WHeapSel(h,l,w) -> fWal (WHeapSel (fooHeap h, fLoc l, fooWal w))
     | WObjSel(ds,k,h,l) ->
         let ds = List.map fooWal ds in
-        fWal (WObjSel (ds, fooWal k, fooHeap h, l))
+        fWal (WObjSel (ds, fooWal k, fooHeap h, fLoc l))
 
   (* TODO if var elim does not end up using this, might get rid of it *)
   and fooVal v = { v with value = match v.value with
@@ -125,24 +126,37 @@ let mapTyp ?fTyp:(fTyp=(fun x -> x))
   and fooHeap (hs,cs) =
     let cs =
       List.map (function
-        | (l,HStrong(x,s,lo)) -> (l, HStrong (x, fooTyp s, lo))
-        | (l,HWeak(tok))      -> (l, HWeak tok)
+        | (l,HStrong(x,s,lo)) ->
+            let lo = match lo with Some(l') -> Some (fLoc l') | None -> None in
+            (fLoc l, HStrong (x, fooTyp s, lo))
+        | (l,HWeak(tok)) ->
+            (fLoc l, HWeak tok)
       ) cs
     in
     (hs, cs)
 
   in fooTyp t
 
-let mapForm ?fForm:(fForm=(fun x -> x))
-            ?fTT:(fTT=(fun x -> x))
-            ?fWal:(fWal=(fun x -> x))
-            ?fVal:(fVal=(fun x -> x))
-            ?onlyTopForm:(onlyTopForm=false)
+let mapForm ?(fForm = fun x -> x)
+            ?(fTT   = fun x -> x)
+            ?(fWal  = fun x -> x)
+            ?(fVal  = fun x -> x)
+            ?(fLoc  = fun x -> x)
+            ?(onlyTopForm=false)
             f =
-  let t = TRefinement ("dummy", f) in
-  match mapTyp ~fForm ~fTT ~fWal ~fVal ~onlyTopForm t with
-    | TRefinement("dummy",f') -> f'
+  let t = TRefinement ("dummyMapForm", f) in
+  match mapTyp ~fForm ~fTT ~fWal ~fVal ~fLoc ~onlyTopForm t with
+    | TRefinement("dummyMapForm",f') -> f'
     | _ -> failwith "mapForm: should never fail"
+
+let mapHeap ?(fForm = fun x -> x)
+            ?(fWal  = fun x -> x)
+            ?(fLoc  = fun x -> x)
+            h =
+  let p = PHeapHas (h, LocConst "dummyMapHeap", WBot) in
+  match mapForm ~fForm ~fWal ~fLoc p with
+    | PHeapHas(h',_,_) -> h'
+    | _ -> failwith "mapHeap: impossible"
 
 
 (***** Fold *******************************************************************)

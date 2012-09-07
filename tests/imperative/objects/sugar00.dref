@@ -1,0 +1,9 @@
+val f :: (x:Ref) / (x: d:Dict > lObjPro) -> Ref(x) / same
+
+val g :: (x:Ref?) / (x: d:Dict > lObjPro) -> Int / same
+
+val h :: (x:Ref) / (x: d:Dict > x.pro) -> Ref(x.pro) / same
+
+val i :: (x:Ref) / (x: d:Dict > x.pro) -> {(= v (heapsel Cur x.pro "f"))} / same
+
+0

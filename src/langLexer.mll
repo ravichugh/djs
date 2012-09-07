@@ -8,7 +8,8 @@ let letter  = ['A'-'Z''a'-'z''_']
 let digit   = ['0'-'9']
 (* let ident   = ['a'-'z''_'] (letter|digit)* *)
 (* let ident   = ['a'-'z''_'] (letter|digit|''')* *)
-let ident   = ['a'-'z''_''&'] (letter|digit|''')*
+(* let ident   = ['a'-'z''_''&'] (letter|digit|''')* *)
+let ident   = ['a'-'z''_''&'] (letter|digit|'''|'.')*
 let tyvar   = ['A'-'Z'] (letter|digit)*
 let white   = [' ' '\t' '\r']
 let newline = ['\n']
@@ -48,6 +49,7 @@ rule token = parse
   | "same"         { SAME }
   | "sameType"     { SAME_TYPE }
   | "sameExact"    { SAME_EXACT }
+  | "cur"          { CUR }
   (* | "fold"         { FOLD } *)
   (* | "unfold"       { UNFOLD } *)
   | "frzn"         { FRZN }

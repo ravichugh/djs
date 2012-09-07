@@ -17,13 +17,13 @@ val ____FunPro :: Ref(lFunPro)
 (* the Object.prototype dictionary *)
 val theObjPro :: { Dict | (and (dom v {"hasOwnProperty"})
   ((sel v "hasOwnProperty") ::
-        (this:Ref, kk:Str) / (this: dd:Dict > this.pro)
+        [; L1,L2] (this:Ref(L1), kk:Str) / (L1: dd:Dict > L2)
      -> {Bool|(iff (= v true) (has dd {kk}))} / same)
   ((sel v "hasOwnProperty") ::
-        [A] (this:Ref, kk:Str) / (this: Arr(A) > this.pro)
+        [A; L1,L2] (this:Ref(L1), kk:Str) / (L1: Arr(A) > L2)
      -> {Bool|(iff (= v true) (= kk "length"))} / same)
   ((sel v "hasOwnProperty") ::
-        [A] (this:Ref, i:Int) / (this: aa:Arr(A) > this.pro)
+        [A; L1,L2] (this:Ref(L1), i:Int) / (L1: aa:Arr(A) > L2)
      -> {Bool|(implies (and (packed aa) (>= i 0))
                        (iff (= v true) (< i (len aa))))} / same)
 )}
@@ -31,30 +31,32 @@ val theObjPro :: { Dict | (and (dom v {"hasOwnProperty"})
 (* the Array.prototype dictionary *)
 val theArrPro :: { Dict | (and (dom v {"push","pop"})
   ((sel v "push") ::
-        [A] (this:Ref, xx:A) / (this: aa:Arr(A) > this.pro)
-     -> {Int|(implies (packed aa) (= v (+ 1 (len aa))))}
-      / (this: {(and (v::Arr(A)) 
+     [A; L1,L2]
+          (this:Ref(L1), xx:A) / (L1: aa:Arr(A) > L2)
+       -> {Int|(implies (packed aa) (= v (+ 1 (len aa))))}
+        / (L1: {(and (v::Arr(A)) 
                 (implies (packed aa)
                          (and (packed v)
                               (= (len v) (+ 1 (len aa)))
-                              (= (sel aa (len aa)) xx))))} > this.pro))
+                              (= (sel aa (len aa)) xx))))} > L2))
   ((sel v "pop") ::
-        [A] (this:Ref) / (this: aa:Arr(A) > this.pro)
-     -> {(ite (packed aa)
-              (and (v::A) (= v (sel aa (- (len aa) 1))))
-              (or (v::A) (= v undefined)))}
-      / (this: {(and (v::Arr(A))
+     [A; L1,L2]
+          (this:Ref(L1)) / (L1: aa:Arr(A) > L2)
+       -> {(ite (packed aa)
+                (and (v::A) (= v (sel aa (- (len aa) 1))))
+                (or (v::A) (= v undefined)))}
+        / (L1: {(and (v::Arr(A))
                 (implies (packed aa)
                          (and (packed v)
                               (= (len v) (- (len aa) 1))
-                              (> (len aa) 0))))} > this.pro))
+                              (> (len aa) 0))))} > L2))
 )}
 
 (* Array.isArray *)
 val __isArray ::
-  {(and (v :: [A] (this:Top, xx:Ref) / (xx: Arr(A) > xx.pro)
+  {(and (v :: [A;L1,L2] (this:Top, Ref(L1)) / (L1: Arr(A) > L2)
            -> {(= v true)} / same)
-        (v :: (this:Top, xx:Ref) / (xx: Dict > xx.pro)
+        (v :: [;L1,L2] (this:Top, Ref(L1)) / (L1: Dict > L2)
            -> {(= v false)} / same)
         (v :: (this:Top, {(or (= (tag v) "number") (= (tag v) "boolean")
                               (= (tag v) "string") (= (tag v) "undefined")
