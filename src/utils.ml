@@ -105,6 +105,15 @@ let take k l =
   foo k [] l
 
 
+let maybeAddToList l x = if List.mem x l then l else x :: l
+
+
+let subtractList l1 l2 = (* subtract l2 from l1, maintain order of l1 *)
+  List.rev
+    (List.fold_left
+      (fun acc x -> if List.mem x l2 then acc else x :: acc) [] l1)
+
+
 let splitInMiddle l =
   if (List.length l) mod 2 = 1 then failwith "splitInMiddle: odd length";
   let rec foo acc i rest =

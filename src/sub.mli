@@ -3,21 +3,20 @@ open Lang
 
 (***** Meet/Join **************************************************************)
 
-val doMeet : bool ref
-
-val maxJoinSize : int ref
-
-val meetAll : TypeTerms.t -> typterm option
-
-val joinAll : TypeTerms.t -> typterm option
+(* val doMeet : bool ref *)
+(* val maxJoinSize : int ref *)
+(* val meetAll : TypeTerms.t -> typterm option *)
+(* val joinAll : TypeTerms.t -> typterm option *)
 
 (***** Extraction *************************************************************)
 
-val mustFlow : ?filter:(typterm -> bool) -> env -> typ -> TypeTerms.t
+(* val mustFlow : ?filter:(typterm -> bool) -> env -> typ -> TypeTerms.t *)
+(* val canFlow : ?filter:(typterm -> bool) -> env -> typ -> TypeTerms.t *)
+(* val writeStats : unit -> unit *)
 
-val canFlow : ?filter:(typterm -> bool) -> env -> typ -> TypeTerms.t
+val mustFlowIterator : ?filter:(typterm -> bool) -> env -> typ
+  -> (unit -> typterm option)
 
-val writeStats : unit -> unit
 
 (***** Subtyping **************************************************************)
 

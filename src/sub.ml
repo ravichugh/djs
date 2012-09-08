@@ -2,151 +2,62 @@
 open Lang
 open LangUtils
 
-let doMeet        = ref false
-let maxJoinSize   = ref 1 (* anything <= 1 means not doing joins *)
-
 
 (***** Collecting type terms, or "boxes" **************************************)
 
-(* TODO rig registerBox to add/remove boxes along with logical scope, then
-   all the boxes will be readily available, no need to compute *)
+(* TODO so that all boxes are readily available and no need to re-compute:
+   - rig registerBox to add/remove boxes along with logical scope.
+   - maintain boxes incrementally in sync with type env.
+*)
 
-let typeTermsTyp acc t = (* naive way to compute this *)
-  foldForm (fun acc -> function
-    | PHasTyp(_,u) -> TypeTerms.add u acc
-    | _            -> acc
-  ) acc t
+let typeTerms_ g =
+  let boxes = [UNull] in
+  let pastPrelude = ref false in
 
-let typeTerms g =
-  let init = TypeTerms.singleton UNull in
+  (* iterate over bindings in the order in which they appear in the
+     program. by default, excluding the boxes from objects.dref since type
+     checking will syntactically track those arrows. use the -tryAllBoxes
+     flag to force them to be included. _not_ excluding the boxes from
+     js_natives.dref since the functions in Object.prototype and
+     Array.prototype may be inherited. boxes from more recent bindings
+     appear earlier in the output list, so the arrows from js_natives
+     will be at the end. *)
+
+  let g = List.rev g in
+  if !Settings.tryAllBoxesHack then pastPrelude := true;
   List.fold_left (fun acc -> function
-    | Var(x,t) ->
-        (* since foldForm takes a type, jumping through TRefinement hoop *)
-        let p = applyTyp t (wVar x) in
-        typeTermsTyp acc (TRefinement ("DUMMY TYPE TERMS", p))
-    | _ ->
-        acc
-  ) init g
+    | Var(x,t) when !pastPrelude   -> foldTyp ~fTT:Utils.maybeAddToList acc t
+    | Var("end_of_dref_objects",_) -> (pastPrelude := true; acc)
+    | _                            -> acc) boxes g
 
-(* 3/19 TODO hack since simpleSnapshot doesn't dive into arrows on the heap.
-   running with -tryAllBoxes just tries all of them instead of what's
-   in the current type env. sound, but slower. *)
-let typeTerms g =
-  if !Settings.tryAllBoxesHack then
-    List.fold_left
-      (fun acc i -> TypeTerms.add (Utils.IdTable.getVal idTypTerms i) acc)
-      TypeTerms.empty (Utils.list1N (Utils.IdTable.size idTypTerms))
-  else
-    typeTerms g
-
-let typeTerms g =
-  BNstats.time "Sub.typeTerms" typeTerms g
-
-
-(***** Meet/Join **************************************************************)
-
-let meet u1 u2 = failwith "meet nyi"
-
-let join u1 u2 = failwith "join nyi"
-
-let combineArrows f boxes =
-  TypeTerms.fold (fun ut acc ->
-    match ut, acc with
-      | UArrow _, None    -> Some ut
-      | UArrow _, Some(u) -> Some (f ut u)
-      | _                 -> acc
-  ) boxes None
-
-let meetAll = combineArrows meet
-let joinAll = combineArrows join
+let typeTerms_ g =
+  BNstats.time "Sub.typeTerms_" typeTerms_ g
 
 
 (***** Type extraction, or "unboxing" *****************************************)
 
-let boxNumbers s = 
-  let l = TypeTerms.elements s in
-  let il =
-    List.map (function tt ->
-      try Utils.IdTable.getId idTypTerms tt
-      with Not_found -> failwith (spr "Sub.boxNumbers:\n\n %s" (strTT tt))
-    ) l in
-  il
-
-let setUpExtract t usedBoxes =
-  let x = freshVarX "extract" in
-  Zzz.addBinding x t;
-  Zzz.dump (spr "; off limits: %s" (Utils.strIntList (boxNumbers usedBoxes)));
-  Zzz.doingExtract := true;
-  x
-
-let tearDownExtract () =
-  Zzz.doingExtract := false;
-  ()
-
-let mustFlow_ usedBoxes ?filter:(f=(fun _ -> true)) g t =
-  (* Log.smallTitle "MustFlow"; *)
-  let boxes = TypeTerms.diff (typeTerms g) usedBoxes in
-  let boxes = TypeTerms.filter f boxes in
-  let boxes = TypeTerms.add UNull boxes in (* 3/15 *)
-  Zzz.inNewScope (fun () ->
-    let x = setUpExtract t usedBoxes in
-    (*
-    let extracted =
-      TypeTerms.fold
-        (fun ut acc ->
-           if Zzz.checkValid "mustFlow" (hastyp (wVar x) ut)
-             then TypeTerms.add ut acc
-             else acc)
-        boxes
-        TypeTerms.empty
-    in
-    *)
-    (* 4/1: once a Ref term is extracted, don't try any more *)
-    let (_,extracted) =
-      TypeTerms.fold
-        (fun ut (stop,acc) ->
-           if not stop && Zzz.checkValid "mustFlow" (hastyp (wVar x) ut) then
-             let stop = match ut with URef _ -> true | _ -> false in
-             (stop, TypeTerms.add ut acc)
-           else
-             (stop, acc))
-        boxes
-        (false, TypeTerms.empty)
-    in
-    tearDownExtract ();
-    let il = boxNumbers extracted in
-    Zzz.dump (spr "; extracted: is(%s, %s)" x (Utils.strIntList il));
-    (* Log.log (spr "%s\n" (Utils.strIntList il)); *)
-    extracted)
-
-let mustFlow_ usedBoxes ?filter:(f=(fun _ -> true)) g t =
-  BNstats.time "Sub.mustFlow_" (mustFlow_ usedBoxes ~filter:f g) t
-
-let canFlow_ usedBoxes ?filter:(f=(fun _ -> true)) g t =
-  (* Log.smallTitle "CanFlow"; *)
-  let boxes = TypeTerms.diff (typeTerms g) usedBoxes in
-  let boxes = TypeTerms.filter f boxes in
-  Zzz.inNewScope (fun () ->
-    let x = setUpExtract t usedBoxes in
-    (* subsets of size 1 to !maxJoinSize in increasing order of size *)
-    let subsets =
-      boxes
-      |> TypeTerms.elements
-      |> Utils.powersetMaxSize !maxJoinSize
-      (* |> List.filter (fun l -> List.length l > 1) *)
-      |> List.sort (fun l1 l2 -> List.length l1 - List.length l2)
-    in
-    let extracted =
-      try
-        List.find (function subset ->
-          let upperBound = pOr (List.map (hastyp (wVar x)) subset) in
-          Zzz.checkValid "canFlow" upperBound
-        ) subsets
-      with Not_found ->
-        []
-    in
-    tearDownExtract ();
-    mkTypeTerms extracted)
+let mustFlowIterator_ usedBoxes ?(filter = fun _ -> true) g t =
+  let boxes =
+    Utils.subtractList (typeTerms_ g) usedBoxes
+    |> List.append [UNull]
+    |> List.filter filter
+    |> ref
+  in
+  let rec next () =
+    match !boxes with
+      | [] -> None
+      | u::rest ->
+          let _ = boxes := rest in
+          Zzz.inNewScope begin fun () ->
+            let x = freshVarX "extract" in
+            Zzz.addBinding x t;
+            Zzz.doingExtract := true;
+            let b = Zzz.checkValid "mustFlow" (hastyp (wVar x) u) in
+            Zzz.doingExtract := false;
+            if b then Some u else next ()
+          end
+  in
+  next
 
 
 (***** Heap Manipulation ******************************************************)
@@ -373,26 +284,15 @@ and checkUnPreds errList usedBoxes g qs =
   else die errList "Cannot discharge this clause."
 
 and checkHasTyp errList usedBoxes g (w,u) =
-(*
-  let errList =
-    errList @ [spr "checkHasTyp %s :: %s" (strWal w) (strTT u)] in
-*)
-
-  if !maxJoinSize = 1 then begin
-    let mustFlowBoxes = mustFlow_ usedBoxes g (ty(PEq(theV,w))) in
-    let usedBoxes = TypeTerms.union usedBoxes mustFlowBoxes in
-    let n = TypeTerms.cardinal mustFlowBoxes in
-    if n = 0 then die errList (spr "0 boxes must-flow to %s" (strWal w))
-    else if n > 0 && !doMeet then die errList "meet nyi"
-    else TypeTerms.exists
-           (function u' -> checkTypeTerms errList usedBoxes g u' u)
-           mustFlowBoxes
-
-  end else begin
-    let smallestCanFlowSet = canFlow_ usedBoxes g (ty(PEq(theV,w))) in
-    ignore smallestCanFlowSet;
-    die errList "join nyi!"
-  end
+  let iterator = mustFlowIterator_ usedBoxes g (ty (eq theV w)) in
+  let rec tryOne () =
+    match iterator () with
+      | None     -> false
+      | Some(u') -> if checkTypeTerms errList usedBoxes g u' u
+                    then true
+                    else tryOne ()
+  in
+  tryOne ()
 
 and checkTypeTerms errList usedBoxes g u1 u2 =
   if u1 = u2 then true else
@@ -604,16 +504,15 @@ let checkWorldSat errList usedBoxes g (t,heapEnv) (s,heapTyp) =
 
 (***** Entry point ************************************************************)
 
-let types cap = checkTypes [spr "Sub.types: %s" cap] TypeTerms.empty
-let heapSat cap = checkHeapSat [spr "Sub.heapSat: %s" cap] TypeTerms.empty
-let worldSat cap = checkWorldSat [spr "Sub.worldSat: %s" cap] TypeTerms.empty
+let types cap = checkTypes [spr "Sub.types: %s" cap] []
+let heapSat cap = checkHeapSat [spr "Sub.heapSat: %s" cap] []
+let worldSat cap = checkWorldSat [spr "Sub.worldSat: %s" cap] []
 
-let mustFlow   = mustFlow_ TypeTerms.empty
+(* let mustFlow   = mustFlow_ TypeTerms.empty
 
 let mustFlowCache = Hashtbl.create 17
 let mustFlowCounters = Hashtbl.create 17
 
-(*
 let mustFlow ?filter:(filter=(fun _ -> true)) g t = 
   if !depth >= 0 && Hashtbl.mem mustFlowCache t then begin
     Hashtbl.replace mustFlowCounters t (1 + Hashtbl.find mustFlowCounters t);
@@ -624,7 +523,6 @@ let mustFlow ?filter:(filter=(fun _ -> true)) g t =
     Hashtbl.add mustFlowCounters t 1;
     boxes
   end
-*)
 
 let writeStats () =
   let oc = open_out (Settings.out_dir ^ "extract-cache.txt") in
@@ -637,6 +535,9 @@ let writeStats () =
   fpr oc_quick "-----------------------\n";
   fpr oc_quick "Total Subtypings: %4d" (!count_quick + !count_slow);
   ()
+*)
 
-let canFlow    = canFlow_ TypeTerms.empty
+(* let canFlow    = canFlow_ TypeTerms.empty *)
+
+let mustFlowIterator   = mustFlowIterator_ []
 

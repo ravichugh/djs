@@ -1,11 +1,9 @@
-val ____ObjectProto :: Ref(lObjectProto)
-
-weak [~lWeak |-> ({Dict|((sel v "f") : Int)}, lObjectProto)]
+weak [~lWeak |-> ({Dict|(Int (sel v "f"))}, lROOT)]
 
 val weak_obj :: Ref(~lWeak)
 
 let thaw_obj_1 = thaw (lThaw1, weak_obj) in
 
-let _ :: Int = ([;lThaw1,lObjectProto;] getPropObj) (thaw_obj_1, "f") in
+let _ :: Int = ([;lThaw1,lROOT;] getPropObj) (thaw_obj_1, "f") in
 
 0

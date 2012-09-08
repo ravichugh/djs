@@ -33,14 +33,6 @@ let argSpecs = [
                   "  default is just top-level definitions");
   ("-printFullQuick", Arg.Clear S.printShortQuick,
                    " don't abbreviate quick types");
-  ("-meet", Arg.Set Sub.doMeet,
-         "           use meet to combine type terms");
-  ("-join", Arg.Int (fun i -> Sub.maxJoinSize := i),
-         "           <int> max size for CanFlow (default is 1, i.e. no join)");
-(*
-  ("-useLA", Arg.Unit (fun () -> S.useTheoryLA := true),
-          "          use theory of linear arithmetic");
-*)
   ("-tryAllBoxes", Arg.Set S.tryAllBoxesHack,
                 "    try all boxes, in case typeTerms misses some");
   ("-doFalseChecks", Arg.Set S.doFalseChecks,
@@ -79,8 +71,7 @@ let checkSuffix s =
     Log.warn (Utils.yellowString
       (spr "File has suffix %s. Did you mean to be in %s mode?" suf s)) in
   if !doRaw then ()
-  (* else if check ".ml" && !S.langMode <> S.D then warn ".ml" "D" *)
-  (* else if check ".dref" && !S.langMode <> S.DREF then warn ".dref" "DREF" *)
+  else if check ".dref" && !S.djsMode then warn ".dref" "DREF"
   else if check ".js" && !S.djsMode = false then warn ".js" "DJS"
   else ()
 
@@ -194,17 +185,12 @@ let parseDJS () =
 (***** Main *******************************************************************)
 
 let _ = 
-
   Arg.parse argSpecs anonArgFun usage;
   let e = if !S.djsMode then parseDJS () else parseSystemDref () in
   if !parseOnly then begin
     pr "\n%s\n" (Utils.greenString "PARSE SUCCEEDED");
     exit 0
   end;
-
-  if !Sub.doMeet then failwith "meet not implemented in dref/djs";
-  if !Sub.maxJoinSize > 1 then failwith "join not implemented in dref/djs";
-
   Zzz.emitPreamble ();
   TcDref3.typecheck e;
   BNstats.print (open_out (S.out_dir ^ "stats.txt")) "";

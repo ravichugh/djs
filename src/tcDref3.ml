@@ -353,62 +353,51 @@ let stripExists t =
 
 (***** Box operations *********************************************************)
 
-(* 4/10 adding strong param to refsTermsOf, to use different filtering funcs *)
-(* TODO might want a separate version for local inf, where maybenulls should be
-   considered, and a version for type checking, where they shouldn't *)
-(* TODO 8/24: check whether this still avoids extraction. generally clean up *)
+(* TODO keep stats about how often extraction is avoided *)
 
-let refTermsOf g ?(strong=None) = function
-  | TMaybeNull(TQuick(_,QBoxes[URef(l)],_))
-  | TQuick(_,QBoxes[URef(l)],_) ->
-      (* let _ = Log.log1 "don't call extract [Ref(%s)]\n" (strLoc l) in *)
-      [URef l]
-  | t ->
-      (* let _ = Log.log1 "call extract refTermsOf [%s]\n" (prettyStrTyp t) in *)
-      let filter = function
-        | URef(l) -> (match strong with
-                        | None -> true
-                        | Some(b) -> if b then not (isWeakLoc l) else isWeakLoc l)
-        | _       -> false in
-      TypeTerms.elements (Sub.mustFlow g t ~filter)
+(* For the TQuick cases below, considering only the list of boxes, not
+   the refinement predicate. The predicate might result in additional
+   boxes flowing to the type, but selfify, etc. should keep all the
+   relevant boxes in QBoxes. *)
 
-let singleRefTermOf ?(strong=None) cap g t =
-  match refTermsOf g ~strong t, strong with
-    | [URef(l)], None -> l
-    | [URef(l)], Some(true) ->
-        if isStrongLoc l then l
-        else err [cap; spr "[%s] flows to value, but is not strong" (strLoc l)]
-    | [URef(l)], Some(false) ->
-        if isWeakLoc l then l
-        else err [cap; spr "[%s] flows to value, but is not weak" (strLoc l)]
-    | [], _ -> err ([cap; "0 ref terms flow to value"])
-    | l, _  -> err ([cap; "multiple ref terms flow to value";
-                     String.concat ", " (List.map strTT l)])
+(* Clients in type checking are no longer trying to extract all possible
+   ref boxes and ensure that there is exactly one. *)
 
-let singleStrongRefTermOf cap g t = singleRefTermOf ~strong:(Some true) cap g t
-let singleWeakRefTermOf cap g t   = singleRefTermOf ~strong:(Some false) cap g t
+let mkIterator boxes =
+  let l = ref boxes in
+  let rec next () =
+    match !l with
+      | []      -> None
+      | u::rest -> (l := rest; Some u)
+  in
+  next
 
-let arrayTermsOf g = function
-  | TQuick(_,QBoxes[UArray(t)],_) ->
-      (* let _ = Log.log1 "don't call extract [Array(%s)]\n" (strTyp t) in *)
-      [UArray t]
-  | t ->
-      (* Log.log1 "call extract arrayTermsOf [%s]\n" (prettyStrTyp t); *)
-      let filter = function UArray _ -> true | _ -> false in
-      TypeTerms.elements (Sub.mustFlow g t ~filter)
-
-let arrowTermsOf g t =
+let boxIteratorOf g t filter =
   match t with
-    | TQuick(_,QBoxes(us),_) ->
-        (* this means that if there are any type terms at the top-level of
-           the type, return them. not _also_ considering the refinement to
-           see if that leads to more must flow boxes. *)
-        (* let _ = Log.log1 "don't call extract EApp [%s]\n" (prettyStrTyp t) in *)
-        us
-    | _ ->
-        (* let _ = Log.log1 "call extract EApp [%s]\n" (prettyStrTyp t) in *)
-        let filter = function UArrow _ -> true | _ -> false in
-        TypeTerms.elements (Sub.mustFlow g t ~filter)
+    | TQuick(_,QBoxes(l),_) -> mkIterator (List.filter filter l)
+    | _ -> Sub.mustFlowIterator g t ~filter
+
+let arrowIteratorOf g t =
+  boxIteratorOf g t (function UArrow _ -> true | _ -> false)
+
+let arrayIteratorOf g t =
+  boxIteratorOf g t (function UArray _ -> true | _ -> false)
+
+let refIteratorOf ?(strong=None) g t =
+  boxIteratorOf g t begin fun u ->
+    match u, strong with
+      | URef(l), Some(true)  -> isStrongLoc l
+      | URef(l), Some(false) -> isWeakLoc l
+      | URef _,  None        -> true
+      | _                    -> false
+        (* TODO need to add case for UNull ? *)
+  end
+
+let getNextRef cap iterator =
+  match iterator () with
+    | Some(URef(l)) -> l
+    | Some _ -> err [cap; "getNextRef: not ref"]
+    | None -> err [cap; "getNextRef: None"]
 
 
 (**** Join for T-If ***********************************************************)
@@ -767,11 +756,11 @@ let findActualFromRefValue g lVar tTup vTup =
         if i >= List.length vTup then None
         else
           let vi = List.nth vTup i in
-          begin match refTermsOf g (selfifyVal g vi) with
-            | [URef(lAct)] ->
+          let iterator = refIteratorOf g (selfifyVal g vi) in
+          begin match iterator () with
+            | Some(URef(lAct)) ->
                 let _ = fpr oc_local_inf "  %s |-> %s\n" lVar (strLoc lAct) in
                 Some lAct
-            (* 3/31 might want to check case with multiple ref terms *)
             | _ -> foo (i+1) ts
           end
     | _ :: ts -> foo (i+1) ts
@@ -811,11 +800,12 @@ let findArrayActual g tVar locSubst hForm hAct =
               if not (List.mem_assoc lAct (snd hAct)) then foo cs
               else begin match List.assoc lAct (snd hAct) with
                 | HEStrong(a,_,_) ->
-                    (match arrayTermsOf g (selfifyVal g a) with
-                       | [UArray(t)] -> Some t
-                       (* 3/31 Arr({v|v != undef}) and Arr({v'|v' != undef}) *)
-                       | UArray(t)::_ -> Some t
-                       | _           -> foo cs)
+                    let iterator = arrayIteratorOf g (selfifyVal g a) in
+                    (match iterator () with
+                       (* TODO look out for
+                          Arr({v|v != undef}) and Arr({v'|v' != undef}) *)
+                       | Some(UArray(t)) -> Some t
+                       | _               -> foo cs)
                 | HEWeak _ -> foo cs
               end
         end
@@ -987,19 +977,19 @@ and tsExp_ g h = function
   | EDeref(EVal(v)) ->
       let cap = spr "TS-Deref: !(%s)" (strVal v) in
       let t1 = tsVal g h v in
-      let l = singleRefTermOf cap g t1 in
+      let l = getNextRef cap (refIteratorOf g t1) in
       begin match findCell l h with
         | Some(HEStrong(v',None,_)) -> (Typ (selfifyVal g v'), h)
-        | Some(HEStrong _) -> err ([cap; "can't deref object location"])
-        | Some(HEWeak _) -> err ([cap; "can't deref weak location"])
-        | None -> err ([cap; spr "unbound loc [%s]" (strLoc l)])
+        | Some(HEStrong _) -> err [cap; "can't deref object location"]
+        | Some(HEWeak _) -> err [cap; "can't deref weak location"]
+        | None -> err [cap; spr "unbound loc [%s]" (strLoc l)]
       end
 
   | ESetref(EVal(v1),EVal(v2)) ->
       let cap = spr "TS-Setref: (%s) := (%s)" (strVal v1) (strVal v2) in
       let t = tsVal g h v1 in
       let _ = tsVal g h v2 in
-      let l = singleRefTermOf cap g t in
+      let l = getNextRef cap (refIteratorOf g t) in
       begin match findAndRemoveCell l h with
         | Some(HEStrong(v,None,ci), h0) ->
             let h' = (fst h0, snd h0 @ [(l, HEStrong (v2, None, ci))]) in
@@ -1182,7 +1172,7 @@ and tsExp_ g h = function
       begin match findAndRemoveCell m h with
         | Some(HEWeak(ts'),h0) when ts' = ts ->
             let s = tsVal g h v in
-            let l = singleStrongRefTermOf "ts EFreeze" g s in
+            let l = getNextRef cap (refIteratorOf g s ~strong:(Some true)) in
             begin match findAndRemoveCell l h0 with
               | Some(HEStrong(v',Some(l''),_), h1) when l' = l'' ->
                   let _ = Zzz.queryRoot := "TS-Freeze" in
@@ -1207,7 +1197,7 @@ and tsExp_ g h = function
         | Some _ -> err [cap; "already bound"] (* TODO also check DEAD *)
         | None ->
             let t1 = tsVal g h v in
-            let m = singleWeakRefTermOf cap g t1 in
+            let m = getNextRef cap (refIteratorOf g t1 ~strong:(Some false)) in
             let (tFrzn,l') = findWeakLoc g m in
             begin match findAndRemoveCell m h with
               | Some(HEWeak(Frzn), h0) ->
@@ -1293,8 +1283,6 @@ and tsAppSlow g curHeap ((tActs,lActs,hActs), v1, v2) =
 
   Zzz.queryRoot := "TS-App";
   let cap = spr "TS-App: [...] (%s) (%s)" (strVal v1) (strVal v2) in
-  let t1 = tsVal g curHeap v1 in
-  let boxes = arrowTermsOf g t1 in
 
   let checkLength s l1 l2 s2 =
     let (n1,n2) = (List.length l1, List.length l2) in
@@ -1374,28 +1362,34 @@ and tsAppSlow g curHeap ((tActs,lActs,hActs), v1, v2) =
     let t = mkExists heapBindings (Typ t12) in
     AppOk (t, h) in (* end tryOne *)
 
-  let result = (* use the first arrow that type checks the call *)
-    Utils.fold_left_i (fun acc u i ->
-      match acc, u with
-        | AppOk _, _ -> acc
-        | AppFail(l), UArrow(uarr) -> begin
-            (* TODO no need for inNewScope, right? *)
-            try tryOne uarr
-            with Tc_error(errList) ->
-              AppFail (l @ [spr "\n*** box %d: %s" i (strTT u)] @ errList)
-          end
-        | AppFail(l), _ ->
-            AppFail (l @ [spr "box %d isn't an arrow: %s" i (strTT u)])
-    ) (AppFail []) boxes in
+  let t1 = tsVal g curHeap v1 in
+  let iterator = arrowIteratorOf g t1 in
+  let rec tryNextArrow acc =
+    match acc with
+      | AppOk _ -> acc (* use the first arrow that type checks the call *)
+      | AppFail(l) -> begin
+          match iterator () with
+            | None -> acc
+            | Some(UArrow(uarr)) -> begin
+                (* TODO no need for inNewScope, right? *)
+                try tryOne uarr
+                with Tc_error(errList) ->
+                  tryNextArrow
+                    (AppFail (l @ [spr "\n*** box: %s" (strTT (UArrow(uarr)))]
+                                @ errList))
+              end
+            | Some(u) ->
+                AppFail (l @ [spr "box isn't an arrow: %s" (strTT u)])
+        end in
 
+  let result = tryNextArrow (AppFail []) in
   match result with
     | AppOk(t,h) -> (t, h)
     | AppFail([]) ->
         let s = spr "0 boxes extracted from type: %s" (strTyp t1) in
         Log.printTcErr [cap; s]
     | AppFail(errors) ->
-        let n = List.length boxes in
-        let s = spr "%d boxes but none type check the call" n in
+        let s = "some boxes but none type check the call" in
         Log.printTcErr (cap :: s :: errors)
         (* the buck stops here, instead of raising Tc_error, since otherwise
            get lots of cascading let-bindings *)
@@ -1598,7 +1592,7 @@ and tsAppQuick g h (poly,vFun,vArg) = match (poly,vFun,vArg) with
       let cap = spr "TS-App-GetPropObj: getPropObj (%s)" (strVal vArg) in
       let (v1,v2) = twoVals cap vs in
       let (t1,t2) = (tsVal g h v1, tsVal g h v2) in
-      let l1 = singleRefTermOf cap g t1 in
+      let l1 = getNextRef cap (refIteratorOf g t1) in
       match findCell l1 h with
         | Some(HEStrong(d1,Some(l2),_)) ->
             (match matchQRecd (tsVal g h d1), matchQStrLit t2 with
@@ -1615,7 +1609,7 @@ and tsAppQuick g h (poly,vFun,vArg) = match (poly,vFun,vArg) with
       if List.length vs <> 3 then err [cap; "wrong number of arguments"];
       let (v1,v2,v3) = threeVals cap vs in
       let (t1,t2) = (tsVal g h v1, tsVal g h v2) in
-      let l1 = singleRefTermOf cap g t1 in
+      let l1 = getNextRef cap (refIteratorOf g t1) in
       match findAndRemoveCell l1 h with
         | Some(HEStrong(d1,Some(l2),ci),h0) ->
             (match matchQRecd (tsVal g h d1), matchQStrLit t2 with
@@ -1635,7 +1629,7 @@ and tsAppQuick g h (poly,vFun,vArg) = match (poly,vFun,vArg) with
       let cap = spr "TS-App-GetPropArr: getPropArr (%s)" (strVal vArg) in
       let (v1,v2) = twoVals cap vs in
       let (t1,t2) = (tsVal g h v1, tsVal g h v2) in
-      let l1 = singleRefTermOf cap g t1 in
+      let l1 = getNextRef cap (refIteratorOf g t1) in
       match findCell l1 h with
         | Some(HEStrong(a,Some(l2),_)) ->
             (match tsVal g h a, matchQStrLit t2 with
@@ -1727,7 +1721,7 @@ let typecheck e =
   let (g,h) = initialEnvs () in
   try begin
     ignore (tsExp g h e);
-    Sub.writeStats ();
+    (* Sub.writeStats (); *)
     Zzz.writeQueryStats ();
     let s = spr "OK! %d queries." !Zzz.queryCount in
     fpr oc_num_q "%d" !Zzz.queryCount;

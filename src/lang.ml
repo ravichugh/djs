@@ -212,12 +212,6 @@ type env = envbinding list
 
 type clause = formula * hastyp list
 
-module TypeTerms =
-  Set.Make (struct type t = typterm let compare = compare end)
-
-let mkTypeTerms l =
-  List.fold_left (fun acc ut -> TypeTerms.add ut acc) TypeTerms.empty l
-
 let wrapVal pos value = { pos = pos; value = value }
 
 let lRoot = LocConst "lROOT"

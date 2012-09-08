@@ -1,24 +1,22 @@
-val ____ObjectProto :: Ref(lObjectProto)
+weak [~lWeak |-> ({Dict|(Int (sel v "f"))}, lROOT)]
 
-weak [~lWeak |-> ({Dict|((sel v "f") : Int)}, lObjectProto)]
-
-let strong_obj_1 = new ({"f" = 100}, lStrong1, ____ObjectProto, lObjectProto) in
-let _ :: {(= v 100)} = ([;lStrong1,lObjectProto;] getPropObj) (strong_obj_1, "f") in
+let strong_obj_1 = new ({"f" = 100}, lStrong1, objROOT, lROOT) in
+let _ :: {(= v 100)} = ([;lStrong1,lROOT;] getPropObj) (strong_obj_1, "f") in
 
 let weak_obj_1 = freeze (~lWeak, frzn, strong_obj_1) in
 
 let thaw_obj_1 = thaw (lThaw1, weak_obj_1) in
 
-let _ :: Int = ([;lThaw1,lObjectProto;] getPropObj) (thaw_obj_1, "f") in
+let _ :: Int = ([;lThaw1,lROOT;] getPropObj) (thaw_obj_1, "f") in
 
 let weak_obj_2 = freeze (~lWeak, thwd lThaw1, thaw_obj_1) in
 
 let thaw_obj_2 = thaw (lThaw2, weak_obj_2) in
 
 (* invariant violation *)
-let _ = ([;lThaw2,lObjectProto;] setPropObj) (thaw_obj_2, "f", true) in
+let _ = ([;lThaw2,lROOT;] setPropObj) (thaw_obj_2, "f", true) in
 
 (* invariant not restored *)
-let _ :: Int = ([;lThaw2,lObjectProto;] getPropObj) (thaw_obj_2, "f") in
+let _ :: Int = ([;lThaw2,lROOT;] getPropObj) (thaw_obj_2, "f") in
 
 0

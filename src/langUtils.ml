@@ -163,9 +163,9 @@ let mapHeap ?(fForm = fun x -> x)
 
 (* gives the client access to all formulas, walues, and type terms *)
 
-let foldTyp (fForm: 'a -> formula -> 'a)
-            (fTT: 'a -> typterm -> 'a)
-            (fWal: 'a -> walue -> 'a) (init: 'a) (t: typ) : 'a =
+let foldTyp ?(fForm = fun acc _ -> acc)
+            ?(fTT   = fun acc _ -> acc)
+            ?(fWal  = fun acc _ -> acc) (init: 'a) (t: typ) : 'a =
 
   let rec fooTyp acc = function
     | TRefinement(_,p)   -> fooForm acc p
@@ -239,12 +239,6 @@ let foldTyp (fForm: 'a -> formula -> 'a)
     ) acc cs
 
   in fooTyp init t
-
-let foldForm fForm init t =
-  foldTyp fForm (fun acc _ -> acc) (fun acc _ -> acc) init t
-
-let foldTT fTT init t =
-  foldTyp (fun acc _ -> acc) fTT (fun acc _ -> acc) init t
 
 
 (***** Map Exp ****************************************************************)
@@ -551,6 +545,23 @@ let idSkolems = Id.create ()
 let newObjId =
   let c = Utils.Counter.create () in
   fun () -> Utils.Counter.next c
+
+
+(***** DJS native prototypes **************************************************)
+
+let lObjPro = LocConst "lObjPro"
+let lArrPro = LocConst "lArrPro"
+let lFunPro = LocConst "lFunPro"
+
+let frozenNatives = [
+  (lRoot, HStrong (None, valToSingleton vNull, Some lRoot));
+  (lObjPro, HStrong (None, valToSingleton (vVar "theObjPro"), Some lRoot));
+  (lArrPro, HStrong (None, valToSingleton (vVar "theArrPro"), Some lObjPro));
+  (lFunPro, HStrong (None, valToSingleton (vVar "theFunPro"), Some lArrPro));
+]
+
+let filterNatives cs =
+  List.filter (fun (l,hc) -> not (List.mem (l,hc) frozenNatives)) cs
 
 
 (***** Printing to SMT-LIB-2 format and stdout ********************************)
@@ -904,6 +915,7 @@ and strHeapBinding (l,hc) = spr "%s %s" (strLocBinds l) (strHeapCell hc)
 and strHeapBindings cs = String.concat ", " (List.map strHeapBinding cs)
 
 and strHeap ?(arrowOutHeap=false) (hs,cs) =
+  let cs = filterNatives cs in
   match hs, cs with
     | [h], [] when arrowOutHeap -> spr "(%s)" h (* parens to avoid conflict *)
     | [h], [] -> h

@@ -41,13 +41,9 @@ val mapHeap :
   ?fLoc:(loc -> loc) -> heap -> heap
 
 val foldTyp :
-  ('a -> formula -> 'a) ->
-  ('a -> typterm -> 'a) ->
-  ('a -> walue -> 'a) -> 'a -> typ -> 'a
-
-val foldForm : ('a -> formula -> 'a) -> 'a -> typ -> 'a
-
-(* val foldTT : ('a -> typterm -> 'a) -> 'a -> typ -> 'a *)
+  ?fForm:('a -> formula -> 'a) ->
+  ?fTT:('a -> typterm -> 'a) ->
+  ?fWal:('a -> walue -> 'a) -> 'a -> typ -> 'a
 
 val mapExp : (exp -> exp) -> exp -> exp
 
