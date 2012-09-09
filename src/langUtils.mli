@@ -222,6 +222,6 @@ val bindersOfDepTuple : deptuple -> vvar list
 val newObjId : unit -> int
 
 val valToSingleton : value -> typ
-val valOfSingleton : typ -> value
+val valOfSingleton : string -> typ -> value
 val maybeValOfSingleton : typ -> value option
 

@@ -239,12 +239,13 @@ let applyFrame (hAct: heapenv) (f: frame) : world =
         failwith "applyFrame: need to implement general case"
 
 (* TODO 8/14 need to deal with depTupleBinders as in snapshot below? *)
-let heapEnvOfHeap (hs,cs) : ((vvar * typ) list * heapenv) =
+let heapEnvOfHeap cap (hs,cs) : ((vvar * typ) list * heapenv) =
   let (bindings,cs) =
     List.fold_left (fun (acc1,acc2) -> function
       | (m,HWeak(x)) -> (acc1, (m, HEWeak x) :: acc2)
       | (l,HStrong(None,t,lo)) ->
-          (acc1, (l, HEStrong (valOfSingleton t, lo, None)) :: acc2)
+          let cap = spr "heapEnvOfHeap [%s]" cap in
+          (acc1, (l, HEStrong (valOfSingleton cap t, lo, None)) :: acc2)
       | (l,HStrong(Some(x),t,lo)) ->
           ((x,t) :: acc1, (l, HEStrong (vVar x, lo, None)) :: acc2) 
     ) ([],[]) cs
@@ -482,6 +483,8 @@ let frameIsNonArrowType (_,_,(t,h)) =
   match isArrows t with
     | None   -> true
     | Some _ -> false
+
+let frameIsArrowType f = not (frameIsNonArrowType f)
 
 let destructNonArrowTypeFrame (_,_,(t,h)) =
   match isArrows t with
@@ -1055,7 +1058,7 @@ and tsExp_ g h = function
      annotation is for a function type or not. *)
 
   | ELet(x,Some(frame),e1,e2) -> begin
-      let frame = expandMacros (spr "TC-Let-Ann: let %s = ..." x) frame in
+      let frame = expandMacros (spr "TS-Let-Ann: let %s = ..." x) frame in
       if frameIsNonArrowType frame then
       begin
         let gInit = g in
@@ -1085,7 +1088,7 @@ and tsExp_ g h = function
         let frame = augmentFrame h frame in
         let (s1,h1) = applyFrame h frame in
         Zzz.inNewScope (fun () -> tcExp g h (s1,h1) e1);
-        let (bindings,h1) = heapEnvOfHeap h1 in
+        let (bindings,h1) = heapEnvOfHeap ruleName h1 in
         let g = tcAddBindings g bindings in
         let g = tcAddBinding g x s1 in
         maybePrintHeapEnv h1 h;
@@ -1137,10 +1140,11 @@ and tsExp_ g h = function
     end
 
   | EAsW(e,w) -> begin
-      Wf.world "TS-EAsW:" g w;
+      let ruleName = "TS-EAsW" in
+      Wf.world ruleName g w;
       let (tGoal,hGoal) = freshenWorld w in
       tcExp g h (tGoal,hGoal) e;
-      let (binders,h) = heapEnvOfHeap hGoal in
+      let (binders,h) = heapEnvOfHeap ruleName hGoal in
       (* TODO use a version of mkExists that adds dummy binders first,
          since binders can mutually refer to each other? *)
       (mkExists binders (Typ tGoal), h)
@@ -1281,8 +1285,9 @@ and tsExp_ g h = function
 
 and tsAppSlow g curHeap ((tActs,lActs,hActs), v1, v2) =
 
-  Zzz.queryRoot := "TS-App";
-  let cap = spr "TS-App: [...] (%s) (%s)" (strVal v1) (strVal v2) in
+  let ruleName = "TS-App" in
+  Zzz.queryRoot := ruleName;
+  let cap = spr "%s: [...] (%s) (%s)" ruleName (strVal v1) (strVal v2) in
 
   let checkLength s l1 l2 s2 =
     let (n1,n2) = (List.length l1, List.length l2) in
@@ -1357,7 +1362,7 @@ and tsAppSlow g curHeap ((tActs,lActs,hActs), v1, v2) =
     let (t12,e12) = (expandPreTyp t12, expandPreHeap e12) in
     Wf.heap "e12 after instantiation" g e12;
 
-    let (heapBindings,h) = heapEnvOfHeap e12 in
+    let (heapBindings,h) = heapEnvOfHeap cap e12 in
     let (heapBindings,h) = avoidSingletonExistentials (heapBindings,h) in
     let t = mkExists heapBindings (Typ t12) in
     AppOk (t, h) in (* end tryOne *)
@@ -1422,7 +1427,7 @@ and tcVal_ g h goal = function
         Zzz.inNewScope (fun () ->
           (* since input heap can refer to arg binders, need to process t1 first *)
           let g = tcAddBindingPat g x t1 in
-          let (bindings,h) = heapEnvOfHeap h1 in
+          let (bindings,h) = heapEnvOfHeap ruleName h1 in
           let g = tcAddBindings g bindings in
           tcExp g h (t2,h2) e;
         )
@@ -1433,136 +1438,51 @@ and tcVal_ g h goal = function
                             ruleName (strTyp goal)]
     end
 
-  | v ->
-      let s = tsVal g h v in
-      let _ = Zzz.queryRoot := "TC-EVal" in
-      Sub.types (spr "TC-EVal: %s" (strVal v)) g (Typ s) goal
+  | {value=VTuple(vs)} as v -> begin
+      match goal with
+        | TQuick("v",QTuple(tup,false),p)
+          when p = pTru && bindersOfDepTuple tup = [] ->
+            let cap = spr "TC-Tuple: %s" (strVal v) in
+            if List.length vs < List.length tup then
+              err [cap; "fewer values than types"]
+            else
+              let ts = List.map snd tup in
+              List.iter
+                (fun (ti,vi) -> tcVal g h ti vi)
+                (Utils.safeCombine cap ts (Utils.take (List.length ts) vs))
+        | _ ->
+            tcEVal g h goal v
+    end
+
+  | v -> tcEVal g h goal v
+
+and tcEVal g h goal v =
+  let s = tsVal g h v in
+  let _ = Zzz.queryRoot := "TC-EVal" in
+  Sub.types (spr "TC-EVal: %s" (strVal v)) g (Typ s) goal
 
 
 (***** Expression type conversion *********************************************)
 
 and tcExp_ g h goal = function
 
-  | EVal(v) -> begin
-      let (sGoal,hGoal) = goal in
-      tcVal g h sGoal v;
-      Zzz.queryRoot := "TC-EVal";
-      ignore (Sub.heapSat (spr "TC-Val: %s" (strVal v)) g h hGoal)
-    end
+  | EVal(v) ->
+      let _ = tcVal g h (fst goal) v in
+      ignore (Sub.heapSat (spr "TC-Val: %s" (strVal v)) g h (snd goal))
 
-  | ENewref(l,EVal(v),ci) ->
-      let cap = spr "TC-Newref: ref (%s, %s)" (strLoc l) (strVal v) in
-      let w = tsExp g h (ENewref(l,EVal(v),ci)) in
-      let _ = Zzz.queryRoot := "TC-Newref" in
-      ignore (Sub.worldSat cap g w goal)
+  | ELet(x,ao,e1,e2) ->
+      ignore (tsExp g h (ELet (x, ao, e1, EAsW (e2, goal))))
 
-  | EDeref(EVal(v)) ->
-      let w = tsExp g h (EDeref(EVal(v))) in
-      let cap = spr "TC-Deref: !(%s)" (strVal v) in
-      let _ = Zzz.queryRoot := "TC-Deref" in
-      ignore (Sub.worldSat cap g w goal)
-
-  | ESetref(EVal(v1),EVal(v2)) ->
-      let cap = spr "TC-Setref: (%s) := (%s)" (strVal v1) (strVal v2) in
-      let w = tsExp g h (ESetref(EVal(v1),EVal(v2))) in
-      let _ = Zzz.queryRoot := "TC-Setref" in
-      ignore (Sub.worldSat cap g w goal)
-
-  | ENewObj(EVal(v1),l1,EVal(v2),l2,ci) ->
-      let cap = spr "TC-NewObj: new (%s, %s, %s, %s)"
-        (strVal v1) (strLoc l1) (strVal v2) (strLoc l2) in
-      let w = tsExp g h (ENewObj(EVal(v1),l1,EVal(v2),l2,ci)) in
-      let _ = Zzz.queryRoot := "TC-NewObj" in
-      ignore (Sub.worldSat cap g w goal)
-
-  | EApp(l,EVal(v1),EVal(v2)) ->
-      let cap = spr "TC-App: [...] (%s) (%s)" (strVal v1) (strVal v2) in
-      let w = tsExp g h (EApp(l,EVal(v1),EVal(v2))) in
-      let _ = Zzz.queryRoot := "TC-App" in
-      ignore (Sub.worldSat cap g w goal)
-
-  (***** all typing rules that use special let-bindings should be above *****)
-
-  | ELet(x,None,e1,e2) ->
-      (* let cap = spr "TC-Let-Bare: let %s = ..." x in *)
-      ignore (tsExp g h (ELet (x, None, e1, EAsW (e2, goal))))
-
-  | ELet(x,Some(a1),e1,e2) ->
-      (* let cap = spr "TC-Let-Ann: let %s = ..." x in *)
-      ignore (tsExp g h (ELet (x, Some a1, e1, EAsW (e2, goal))))
-
-  | EIf(EVal(v),e1,e2) -> begin
-      (* TODO check if false is provable? *)
-      tcVal g h tyAny v;
-      Zzz.inNewScope (fun () ->
-        Zzz.assertFormula (pTruthy (WVal v));
-        tcExp g h goal e1
-      );
-      Zzz.inNewScope (fun () ->
-        Zzz.assertFormula (pFalsy (WVal v));
-        tcExp g h goal e2
-      );
-    end
-
-  | EWeak(h,e) -> failwith "tc EWeak"
-
-  | EExtern _ -> failwith "tc EExtern"
-
-  | EAsW(e,w) -> begin
-      failwith "tcexp eas heapenv"
-(*
-      tcExp g h w e;
-      Zzz.queryRoot := "TC-AsW";
-      ignore (Sub.worlds "TC-EAsW" g w goal)
-*)
-    end
+  | EIf(EVal(v),e1,e2) ->
+      ignore (tsExp g h (EIf (EVal v, EAsW (e1, goal), EAsW (e2, goal))))
 
   | ELabel(x,e) ->
-      tcExp (Lbl(x,Some(goal))::g) h goal e
+      ignore (tsExp (Lbl(x,Some(goal))::g) h e)
 
-  | EBreak(x,EVal(v)) ->
-      let w = tsExp g h (EBreak(x,EVal(v))) in
-      let cap = spr "TC-Break: %s" x in
-      let _ = Zzz.queryRoot := "TC-Break" in
-      ignore (Sub.worldSat cap g w goal)
-
-  | EFreeze _ -> failwith "tc EFreeze"
-  | EThaw _ -> failwith "tc EThaw"
-
-  | EHeapEnv _ -> failwith "tc EHeapEnv"
-  | EMacro _ -> failwith "tc EMacro"
-
-  | ELoadedSrc _ -> failwith "tc ELoadedSrc"
-  | ELoadSrc(s,_) ->
-      failwith (spr "tc ELoadSrc [%s]: should've been expanded" s)
-
-  | EThrow _ -> failwith "tc EThrow"
-  | ETryCatch _ -> failwith "tc ETryCatch"
-  | ETryFinally _ -> failwith "tc ETryFinally"
-
-  | ETcFail(s,e) ->
-      let fail =
-        try let _ = tcExp g h goal e in false
-        with Tc_error _ -> true in
-      if fail
-        then ()
-        else err [spr "TC-Fail: [\"%s\"] should have failed" s]
-
-  (* the remaining cases should not make it to type checking, so they indicate
-     some failure of parsing or ANFing *)
-
-  | EDict _    -> Anf.badAnf "tc EDict"
-  | ETuple _   -> Anf.badAnf "tc ETuple"
-  | EArray _   -> Anf.badAnf "tc EArray"
-  | EFun _     -> Anf.badAnf "tc EFun"
-  | EIf _      -> Anf.badAnf "tc EIf"
-  | EApp _     -> Anf.badAnf "tc EApp"
-  | ENewref _  -> Anf.badAnf "tc ENewref"
-  | EDeref _   -> Anf.badAnf "tc EDeref"
-  | ESetref _  -> Anf.badAnf "tc ESetref"
-  | ENewObj _  -> Anf.badAnf "tc ENewObj"
-  | EBreak _   -> Anf.badAnf "tc EBreak"
-
+  | e ->
+      let w = tsExp g h e in
+      ignore (Sub.worldSat "TC-Exp" g w goal)
+      
 
 (***** TS-App optimized rules *************************************************)
 
@@ -1721,7 +1641,7 @@ let typecheck e =
   let (g,h) = initialEnvs () in
   try begin
     ignore (tsExp g h e);
-    (* Sub.writeStats (); *)
+    Sub.writeStats ();
     Zzz.writeQueryStats ();
     let s = spr "OK! %d queries." !Zzz.queryCount in
     fpr oc_num_q "%d" !Zzz.queryCount;

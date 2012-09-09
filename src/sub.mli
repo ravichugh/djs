@@ -1,6 +1,8 @@
 
 open Lang
 
+val writeStats : unit -> unit
+
 (***** Meet/Join **************************************************************)
 
 (* val doMeet : bool ref *)
@@ -12,11 +14,9 @@ open Lang
 
 (* val mustFlow : ?filter:(typterm -> bool) -> env -> typ -> TypeTerms.t *)
 (* val canFlow : ?filter:(typterm -> bool) -> env -> typ -> TypeTerms.t *)
-(* val writeStats : unit -> unit *)
 
 val mustFlowIterator : ?filter:(typterm -> bool) -> env -> typ
   -> (unit -> typterm option)
-
 
 (***** Subtyping **************************************************************)
 

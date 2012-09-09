@@ -11,18 +11,18 @@ for (; i < mat.length; i++) {
   }
 }
 
-/*: #define outerLoop [
+/*: #define outerLoop (
        &mat  |-> _:Ref(lMat),
-       lMat  |-> (_:<Ref(lRow),Ref(lRow)>, lArrPro),
-       lRow  |-> (_:<Str,Str>, lArrPro),
+       lMat  |-> _:<Ref(lRow),Ref(lRow)> > lArrPro,
+       lRow  |-> _:<Str,Str> > lArrPro,
        &i    |-> _:{Int|(>= v 0)},
        &j    |-> _:{Int|(>= v 0)}
-] */ "#define";
+) */ "#define";
 
-/*: #define innerLoop [
+/*: #define innerLoop (
        &mat  |-> _:Ref(lMat),
-       lMat  |-> (innerMat:<Ref(lRow),Ref(lRow)>, lArrPro),
-       lRow  |-> (_:<Str,Str>, lArrPro),
+       lMat  |-> innerMat:<Ref(lRow),Ref(lRow)> > lArrPro,
+       lRow  |-> _:<Str,Str> > lArrPro,
        &i    |-> _:{Int|(and (>= v 0) (< v (len innerMat)))},
        &j    |-> _:{Int|(and (>= v 0))}
-] */ "#define";
+) */ "#define";

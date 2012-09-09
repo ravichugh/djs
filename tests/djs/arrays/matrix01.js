@@ -10,8 +10,8 @@ for (i=0; i < mat.length; i++) {
 }
 
 /*: #define heapAnn
-    [&i    |-> _:{Int|(>= v 0)},
+    (&i    |-> _:{Int|(>= v 0)},
      &mat  |-> _:Ref(lMat),
      &row1 |-> _:Ref(lRow),
-     lRow  |-> (_:<Str,Str>, lArrPro),
-     lMat  |-> (_:<Ref(lRow), Ref(lRow)>, lArrPro)] */ '#define';
+     lRow  |-> _:<Str,Str> > lArrPro,
+     lMat  |-> _:<Ref(lRow), Ref(lRow)> > lArrPro) */ '#define';

@@ -190,8 +190,8 @@ let filterObligations obligations = function
 
 *)
 
-let equalArrows (((ts1,ls1,hs1),x1,t11,e11,t12,e12) as arr1)
-                (((ts2,ls2,hs2),x2,t21,e21,t22,e22) as arr2) =
+let equalArrows ((ts1,ls1,hs1),x1,t11,e11,t12,e12)
+                ((ts2,ls2,hs2),x2,t21,e21,t22,e22) =
   Utils.strPrefix x1 "_underscore" (* to match LangParser *)
    && Utils.strPrefix x2 "_underscore"
    && (ts1,ls1,hs1,t11,e11,t12,e12) = (ts2,ls2,hs2,t21,e21,t22,e22)
@@ -208,19 +208,16 @@ let tallyQuick s1 s2 =
 let tallySlow s1 s2 =
   fpr oc_quick "Discharged slow:\n  %s\n  %s\n\n" s1 s2; incr count_slow
 
-let rec bindExistentials errList = function
-  | Typ(s) -> s
-  | TExists(x,s1,s2) ->
-      (* let _ = Log.log2 "bind %s :: %s\n" x (prettyStrTyp s1) in *)
-      let _ = Zzz.addBinding x s1 in
-      bindExistentials errList s2
+let rec bindExistentials = function
+  | TExists(x,s1,s2) -> (Zzz.addBinding x s1; bindExistentials s2)
+  | Typ(s)           -> s
 
 let rec checkTypes errList usedBoxes g t1 t2 =
   let (s1,s2) = (strPrenexTyp t1, strTyp t2) in
   let errList =
     errList @ [spr "Sub.checkTypes:\n   t1 = %s\n   t2 = %s" s1 s2] in
   Zzz.inNewScope (fun () ->
-    let t1 = bindExistentials errList t1 in
+    let t1 = bindExistentials t1 in
     if !Settings.quickTypes && quickCheckTypes errList usedBoxes g (t1,t2)
     then tallyQuick s1 s2
     else let v = freshVar "v" in
@@ -498,8 +495,10 @@ let checkHeapSat errList usedBoxes g heapEnv heapTyp =
   subst
 
 let checkWorldSat errList usedBoxes g (t,heapEnv) (s,heapTyp) =
-  checkTypes errList usedBoxes g t s;
-  checkHeapSat errList usedBoxes g heapEnv heapTyp
+  Zzz.inNewScope (fun () ->
+    let t = bindExistentials t in
+    checkTypes errList usedBoxes g (Typ t) s;
+    checkHeapSat errList usedBoxes g heapEnv heapTyp)
 
 
 (***** Entry point ************************************************************)
@@ -509,6 +508,7 @@ let heapSat cap = checkHeapSat [spr "Sub.heapSat: %s" cap] []
 let worldSat cap = checkWorldSat [spr "Sub.worldSat: %s" cap] []
 
 (* let mustFlow   = mustFlow_ TypeTerms.empty
+   let canFlow    = canFlow_ TypeTerms.empty
 
 let mustFlowCache = Hashtbl.create 17
 let mustFlowCounters = Hashtbl.create 17
@@ -523,21 +523,21 @@ let mustFlow ?filter:(filter=(fun _ -> true)) g t =
     Hashtbl.add mustFlowCounters t 1;
     boxes
   end
+*)
 
 let writeStats () =
+(*
   let oc = open_out (Settings.out_dir ^ "extract-cache.txt") in
   Hashtbl.iter (fun t _ ->
     let c = Hashtbl.find mustFlowCounters t in
     fpr oc "%s %d\n" (strTyp t) c
   ) mustFlowCache;
+*)
   fpr oc_quick "Total Quick:      %4d\n" !count_quick;
   fpr oc_quick "Total Slow:       %4d\n" !count_slow;
   fpr oc_quick "-----------------------\n";
   fpr oc_quick "Total Subtypings: %4d" (!count_quick + !count_slow);
   ()
-*)
-
-(* let canFlow    = canFlow_ TypeTerms.empty *)
 
 let mustFlowIterator   = mustFlowIterator_ []
 

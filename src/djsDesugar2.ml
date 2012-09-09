@@ -871,12 +871,9 @@ let rec ds (env:env) = function
         "function expression with formals [%s] not annotated"
            (String.concat ", " args))
 
-  (* TODO test recursion *)
   | E.HintExpr (_, s, E.FuncStmtExpr (p, f, args, body)) ->
       let t = desugarTypHint s env in
-(*
       let _f = dsVar f in
-*)
       let env = addFlag f false env in
       let env = addFormals t env in
       (* 4/9: unfortunate that have to call addFlag here, since dsFunc does
@@ -888,7 +885,7 @@ let rec ds (env:env) = function
       let t = augmentType t env (fvExps "dsFuncStmtExpr recursive" env [body]) in
       (* let func = dsFunc (hasThisParam t) env p args body in *)
       let func = dsFunc env args body in
-      EApp (([t],[],[]), eVar "fix", EFun (PLeaf f, func))
+      EApp (([t],[],[]), eVar "fix", EFun (PLeaf _f, func))
 
   | E.FuncStmtExpr (_, f, _, _) ->
       Log.printParseErr (spr "function statement [%s] not annotated" f)

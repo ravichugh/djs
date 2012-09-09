@@ -247,7 +247,7 @@ and strExp k exp = match exp with
   | EApp(([],[],[]),EVal(w1),EVal(w2)) ->
       let s1 = strVal k w1 in
       let s2 = strVal k w2 in
-      spr "%s %s(%s)" (tab k) (clip s1) (clip s2)
+      spr "%s%s(%s)" (tab k) (clip s1) (clip s2)
   | EApp((ts,ls,hs),EVal(w1),EVal(w2)) ->
       let s1 = strVal k w1 in
       let s2 = strVal k w2 in

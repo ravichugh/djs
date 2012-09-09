@@ -482,7 +482,8 @@ let rec maybeValOfWal = function
 let valToSingleton v = ty (PEq (theV, WVal v))
 
 let maybeValOfSingleton = function
-  | TRefinement("v",PEq(WVal({value=VVar"v"}),w)) -> maybeValOfWal w
+  (* | TRefinement("v",PEq(WVal({value=VVar"v"}),w)) -> maybeValOfWal w *)
+  | TRefinement(x,PEq(WVal({value=VVar(x')}),w)) when x = x' -> maybeValOfWal w
   | _ -> None
 
 
@@ -1487,10 +1488,10 @@ let substVarInExp z x e =
 
 (***** Misc *******************************************************************)
 
-let valOfSingleton t =
+let valOfSingleton cap t =
   match maybeValOfSingleton t with
     | Some(v) -> v
-    | None -> failwith (spr "valOfSingleton: %s" (strTyp t))
+    | None -> failwith (spr "valOfSingleton [%s]: %s" cap (strTyp t))
 
 
 (***** Expanding pre-formulas *************************************************)
@@ -1534,7 +1535,8 @@ let rec expandHH (hs,cs) l k =
     else begin
       match List.assoc l cs with
         | HStrong(None,t,Some(l')) ->
-            pOr [has (WVal (valOfSingleton t)) k; expandHH (hs,cs) l' k]
+            pOr [has (WVal (valOfSingleton "expandHH" t)) k;
+                 expandHH (hs,cs) l' k]
         | HStrong(Some(d),_,Some(l')) -> 
             pOr [has (wVar d) k; expandHH (hs,cs) l' k]
         | _ -> failwith (spr "expandHH: %s" (strLoc l))
@@ -1552,7 +1554,8 @@ let expandOH ds k (hs,cs) l =
     else if not (List.mem_assoc l cs) then PObjHas (ds, k, (hs,[]), l)
     else begin
       match List.assoc l cs with
-        | HStrong(None,t,Some(l')) -> foo (ds @ [WVal (valOfSingleton t)]) l'
+        | HStrong(None,t,Some(l')) ->
+            foo (ds @ [WVal (valOfSingleton "expandOH" t)]) l'
         | HStrong(Some(d),_,Some(l')) -> foo (ds @ [wVar d]) l'
         | _ -> failwith "expandOH: not conc constraint"
     end
@@ -1572,7 +1575,8 @@ let expandHS (hs,cs) l k =
     else if not (List.mem_assoc l cs) then WObjSel (ds, k, (hs,[]), l)
     else begin
       match List.assoc l cs with
-        | HStrong(None,t,Some(l')) -> foo (ds @ [WVal (valOfSingleton t)]) l'
+        | HStrong(None,t,Some(l')) ->
+            foo (ds @ [WVal (valOfSingleton "expandHS" t)]) l'
         | HStrong(Some(d),_,Some(l')) -> foo (ds @ [wVar d]) l'
         | _ -> failwith "expandHS: not conc constraint"
     end
@@ -1590,7 +1594,8 @@ let expandOS ds k (hs,cs) l =
     else if not (List.mem_assoc l cs) then WObjSel (ds, k, (hs,[]), l)
     else begin
       match List.assoc l cs with
-        | HStrong(None,t,Some(l')) -> foo (ds @ [WVal (valOfSingleton t)]) l'
+        | HStrong(None,t,Some(l')) ->
+            foo (ds @ [WVal (valOfSingleton "expandOS" t)]) l'
         | HStrong(Some(d),_,Some(l')) -> foo (ds @ [wVar d]) l'
         | _ -> failwith "expandOS: not conc constraint"
     end
