@@ -7,29 +7,19 @@ var mammal = function(priv) /*: ty_init_mammal */ {
   return x;
 };
 
-/*: #define ty_priv
-    {(and (= (tag v) "Dict") (Str (sel v "name")))} */ '#define';
+/*: ty_priv {Dict|(Str (sel v "name"))} */ '#define';
 
-/*: #define ty_init_mammal
-    [;Lnew,Lpriv;Heap]
-        (priv:Ref(Lpriv))
-      / Heap + (lObjPro |-> do:Dict > lROOT, Lpriv |-> dPriv:ty_priv > lObjPro)
-     -> Ref(Lnew)
-      / Heap + (lObjPro |-> same, Lpriv |-> same,
-                &priv |-> blah1:Ref(Lpriv),
-                Lnew |-> dNew:ty_mam > lObjPro) */ '#define';
+/*: ty_init_mammal [;Lnew,Lpriv]
+        (priv:Ref(Lpriv)) / (Lpriv |-> dPriv:ty_priv > lObjPro)
+     -> Ref(Lnew) / (Lpriv |-> same, &priv |-> blah1:Ref(Lpriv),
+                     Lnew  |-> dNew:ty_mam > lObjPro) */ '#define';
 
-/*: #define ty_mam
-    {(and (= (tag v) "Dict")
-          (dom v {"get_name"})
-          (ty_get_name (sel v "get_name")))} */ '#define';
+/*: ty_mam {Dict|(and (dom v {"get_name"})
+                      (ty_get_name (sel v "get_name")))} */ '#define';
 
-/*: #define ty_get_name
-    [;Dummy1;Heap]
-        (this:Ref(Dummy1))
-      / Heap + (Lpriv |-> ePriv:ty_priv > lObjPro, &priv |-> blah:Ref(Lpriv))
-     -> {(= v (sel ePriv "name"))}
-      / same */ '#define';
+/*: ty_get_name
+        (this:Top) / (Lpriv |-> ePriv:ty_priv > lObjPro, &priv |-> blah:Ref(Lpriv))
+     -> {(= v (sel ePriv "name"))} / same */ '#define';
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -56,24 +46,14 @@ var cat = function(priv2) /*: ty_init_cat */ {
   return obj;
 };
 
-/*: #define ty_init_cat
-    [;Lnew,Lpriv;Heap]
-        (priv2:Ref(Lpriv))
-      / Heap + (lObjPro |-> do:Dict > lROOT,
-                &mammal |-> blahMammal:ty_init_mammal,
-                Lpriv   |-> dPriv:ty_priv > lObjPro)
-     -> Ref(Lnew)
-      / Heap + (lObjPro |-> same,
-                Lpriv   |-> same,
-                &mammal |-> same,
-                &priv   |-> blah1:Ref(Lpriv),
-                Lnew    |-> dNew:ty_cat > lObjPro) */ '#define';
+/*: ty_init_cat [;Lnew,Lpriv]
+        (priv2:Ref(Lpriv)) / (Lpriv |-> dPriv:ty_priv > lObjPro)
+     -> Ref(Lnew) / (Lpriv |-> same, &priv |-> blah1:Ref(Lpriv),
+                     Lnew  |-> dNew:ty_cat > lObjPro) */ '#define';
 
-/*: #define ty_cat
-    {(and (= (tag v) "Dict")
-          (dom v {"get_name","purr"})
-          (ty_get_name (sel v "get_name"))
-          (ty_sound (sel v "purr")))} */ '#define';
+/*: ty_cat {Dict|(and (dom v {"get_name","purr"})
+                      (ty_get_name (sel v "get_name"))
+                      (ty_sound (sel v "purr")))} */ '#define';
 
-/*: #define ty_sound [;L1;] (this:Ref(L1)) -> Str */ '#define';
+/*: ty_sound (this:Top) -> Str */ '#define';
 

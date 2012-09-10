@@ -194,11 +194,43 @@ let filterObligations obligations = function
 
 *)
 
-let equalArrows ((ts1,ls1,hs1),x1,t11,e11,t12,e12)
-                ((ts2,ls2,hs2),x2,t21,e21,t22,e22) =
-  Utils.strPrefix x1 "_underscore" (* to match LangParser *)
-   && Utils.strPrefix x2 "_underscore"
-   && (ts1,ls1,hs1,t11,e11,t12,e12) = (ts2,ls2,hs2,t21,e21,t22,e22)
+(* allow a function type to be weakened by adding additional bindings for
+   locations l that are not needed by the arrow:
+
+     S1 / E1 -> S2 / E2   <:   S1 / E1 + (l |-> T) -> S2 / E2 + (l |-> T)
+*)
+let weakenArrowHeaps (cs11,cs12) (cs21,cs22) =
+  let toAdd =
+    List.fold_left (fun acc -> function
+      | (l,HStrong(None,t,lo)) ->
+          if not (List.mem_assoc l cs22) then acc
+          else if List.mem_assoc l cs11  then acc
+          else if List.mem_assoc l cs12  then acc
+          else begin
+            match List.assoc l cs22 with
+              | HStrong(None,t',lo') when t = t' && lo = lo' ->
+                  (l, HStrong (None, t, lo)) :: acc
+              | _ -> acc
+          end
+      | _ -> acc
+    ) [] cs21
+  in
+  (cs11 @ toAdd, cs12 @ toAdd)
+
+let isDummyBinder x = (* to match LangParser *)
+  Utils.strPrefix x "_underscore"
+
+let simpleCheckArrows
+      ((ts1,ls1,hs1),x1,t11,(hs11,cs11),t12,(hs12,cs12))
+      ((ts2,ls2,hs2),x2,t21,(hs21,cs21),t22,(hs22,cs22)) =
+
+  let (cs11,cs12) = weakenArrowHeaps (cs11,cs12) (cs21,cs22) in
+
+  (x1 = x2 || (isDummyBinder x1 && isDummyBinder x2))
+  && (ts1,ls1,hs1,t11,t12) = (ts2,ls2,hs2,t21,t22)
+  && (hs11, hs21) = (hs21, hs22)
+  && ((cs11 = cs21) || (List.sort compare cs11 = List.sort compare cs21))
+  && ((cs12 = cs22) || (List.sort compare cs12 = List.sort compare cs22))
 
 
 (***** Subtyping **************************************************************)
@@ -305,7 +337,7 @@ and checkTypeTerms errList usedBoxes g u1 u2 =
     | UVar(x), UVar(y) -> x = y
     | URef(x), URef(y) -> x = y
     | UNull, URef(y)   -> isWeakLoc y
-    | UArrow(arr1), UArrow(arr2) -> checkArrow errList usedBoxes g arr1 arr2
+    | UArrow(arr1), UArrow(arr2) -> checkArrows errList usedBoxes g arr1 arr2
     | UArray(t1), UArray(t2) -> t1 = t2 (* add bivariance back in if needed *)
 (*
        (try (* ideally want a version that returns bool instead of failing *)
@@ -318,15 +350,15 @@ and checkTypeTerms errList usedBoxes g u1 u2 =
     | _ -> die errList "Syntactic types don't match up."
 
 
-and checkArrow errList usedBoxes g
+and checkArrows errList usedBoxes g
       (((ts1,ls1,hs1),x1,t11,e11,t12,e12) as arr1)
       (((ts2,ls2,hs2),x2,t21,e21,t22,e22) as arr2) =
 
   (* TODO keep stats about checkArrow *)
 
-  if equalArrows arr1 arr2 then true else
+  if simpleCheckArrows arr1 arr2 then true else
 
-  die errList "need to restore Sub.checkArrow"
+  die errList "need to restore Sub.checkArrows"
 
 (*
 (* TODO 3/10

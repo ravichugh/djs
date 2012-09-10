@@ -1,5 +1,5 @@
 
-(*****************************************************************************)
+(******************************************************************************)
 
 exception Parse_error of string
 exception Z3_read_error of string
@@ -15,7 +15,7 @@ let indent () = String.make (2 * !depth) ' '
 let bigindent () = String.make (4 * !depth) ' '
 
 
-(*****************************************************************************)
+(******************************************************************************)
 
 type pos = Lexing.position * Lexing.position
 let pos0 = (Lexing.dummy_pos, Lexing.dummy_pos)
@@ -56,7 +56,6 @@ type exp =
   | EVal of value
   | EDict of (exp * exp) list
   | EArray of typ * exp list
-  | EFun of pat * exp
   | EIf of exp * exp * exp
   | EApp of (typs * locs * heaps) * exp * exp
   | ELet of vvar * frame option * exp * exp
@@ -212,10 +211,22 @@ type env = envbinding list
 
 type clause = formula * hastyp list
 
+module VVars = Set.Make (struct type t = vvar let compare = compare end)
+
+let strVVars xs = Printf.sprintf "{%s}" (String.concat ", " (VVars.elements xs))
+
+
+(******************************************************************************)
+
 let wrapVal pos value = { pos = pos; value = value }
 
 let lRoot = LocConst "lROOT"
 
 let isWeakLoc = function LocConst(x) | LocVar(x) -> x.[0] = '~'
 let isStrongLoc l = not (isWeakLoc l)
+
+(* locations of {Object,Array.Function}.prototype for DJS *)
+let lObjPro = LocConst "lObjPro"
+let lArrPro = LocConst "lArrPro"
+let lFunPro = LocConst "lFunPro"
 

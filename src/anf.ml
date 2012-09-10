@@ -36,8 +36,8 @@ let finish (l,e) =
   else (l, e)
 
 let rec anf = function
+  | EVal({value=VFun(x,e)}) -> ([], EVal (vFun (x, anfExp e)))
   | EVal(w) -> ([], EVal w)
-  | EFun(x,e) -> ([], EVal (wrapVal pos0 (VFun (x, anfExp e))))
   | EDict(xel) ->
       let (ll,xwl) =
         xel |> List.map (fun (e1,e2) ->
@@ -181,15 +181,7 @@ let tab k = String.make (2 * k) ' '
 
 let rec strVal_ k = function
   | VVar(x) -> spr "%s%s" (tab k) x
-(*
-  | VFun([],x,None,e) when !Settings.langMode = Settings.D -> strLam k x e
-  | VFun([],x,Some(t,[]),e) when !Settings.langMode = Settings.D ->
-      strLam k (spr "(%s)" (strBindingTyp (x,t))) e
-*)
-  (* 11/28: to avoid parsing conflict, function values wrapped in begin/end *)
-  | VFun(x,e) ->
-      let s = strLam k x e in
-      spr "%sbegin %s end" (tab k) (clip s)
+  | VFun(x,e) -> strLam k x e
   | VNull -> spr "%snull" (tab k)
   | VBase(c) -> spr "%s%s" (tab k) (strBaseValue c)
   (* | VEmpty -> spr "%s{}" (tab k) *)
@@ -200,23 +192,6 @@ let rec strVal_ k = function
       let s3 = strVal k v3 in
       (* spr "%s(upd %s %s %s)" (tab k) (clip s1) (clip s2) (clip s3) *)
       spr "%s(%s with %s = %s)" (tab k) (clip s1) (clip s2) (clip s3)
-(*
-  | VExtend(w1,w2,w3) ->
-      (* since no concrete syntax for record extension, using calls to set *)
-      let x1 = freshVar "tmp" in
-      let x2 = freshVar "tmp" in
-      let x3 = freshVar "tmp" in
-      let y1 = freshVar "vextend1" in
-      let y2 = freshVar "vextend2" in
-      let y3 = freshVar "vextend3" in
-      strExp k (ELet (y1, None, EVal w1,
-                ELet (y2, None, EVal w2,
-                ELet (y3, None, EVal w3,
-                ELet (x1, None, mkApp (eVar "set") [eVar y1],
-                ELet (x2, None, mkApp (eVar x1) [eVar y2],
-                ELet (x3, None, mkApp (eVar x2) [eVar y3],
-                  eVar x3)))))))
-*)
   | VArray(t,vs) ->
       let st = if t = tyArrDefault then "" else spr " as Arr(%s)" (strTyp t) in
       (* let st = spr " as %s" (strTyp t) in *)
@@ -345,7 +320,6 @@ and strExp k exp = match exp with
       spr "%sfreeze (%s, %s, %s)" (tab k) (strLoc l) sx (clip (strVal (succ k) v))
   | EThaw(l,EVal(v)) ->
       spr "%sthaw (%s, %s)" (tab k) (strLoc l) (clip (strVal (succ k) v))
-  | EFun _         -> badAnf "EFun"
   | EDict _        -> badAnf "EDict"
   | EIf _          -> badAnf "EIf"
   | EApp _         -> badAnf "EApp"
@@ -386,10 +360,10 @@ and coerceEVal from e =
     | _       -> failwith (spr "coerceEVal: called from %s" from)
 
 and coerce = function
+  | EVal({value=VFun(x,e)}) -> EVal (vFun (x, coerce e))
   | EVal(w) -> EVal w
   | EDict([]) -> EVal (wrapVal pos0 VEmpty)
   | EDict _ -> failwith "Anf.coerce EDict: should have become calls to set"
-  | EFun(x,e) -> EVal (wrapVal pos0 (VFun (x, coerce e)))
   | EArray(t,es) -> EVal (wrapVal pos0 (VArray (t, List.map coerceVal es)))
   | ETuple(es) -> EVal (wrapVal pos0 (VTuple (List.map coerceVal es)))
   | EIf(e1,e2,e3) -> EIf (coerceEVal "if" e1, coerce e2, coerce e3)

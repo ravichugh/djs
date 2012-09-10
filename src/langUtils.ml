@@ -250,7 +250,6 @@ let mapExp fE e =
         fE (EDict (List.map (fun (e1,e2) -> (fooExp e1, fooExp e2)) es))
     | EArray(t,es) -> fE (EArray (t, List.map fooExp es))
     | ETuple(es) -> ETuple (List.map fooExp es)
-    | EFun(x,e) -> EFun (x, fooExp e)
     | EIf(e1,e2,e3) -> fE (EIf (fooExp e1, fooExp e2, fooExp e3))
     | EApp(poly,e1,e2) -> fE (EApp (poly, fooExp e1, fooExp e2))
     | ELet(x,fo,e1,e2) -> fE (ELet (x, fo, fooExp e1, fooExp e2))
@@ -297,7 +296,6 @@ let foldExp fE fV init e =
                     (fun acc (e1,e2) -> fooExp (fooExp acc e1) e2) acc es in
         fE acc exp
     | EArray(t,es) -> fE (List.fold_left fooExp acc es) exp
-    | EFun(x,e) -> fE (fooExp acc e) exp
     | EIf(e1,e2,e3) -> fE (List.fold_left fooExp acc [e1;e2;e3]) exp
     | EApp(poly,e1,e2) -> fE (List.fold_left fooExp acc [e1;e2]) exp
     | ELet(x,fo,e1,e2) -> fE (List.fold_left fooExp acc [e1;e2]) exp
@@ -367,6 +365,8 @@ let vVar x        = {pos = pos0; value = VVar x}
 let vEmpty        = {pos = pos0; value = VEmpty}
 let vBase x       = {pos = pos0; value = VBase x}
 (* let vNewObjRef i  = {pos = pos0; value = VNewObjRef i} *)
+let vFun (p,e)    = {pos = pos0; value = VFun (p, e)}
+let eFun (p,e)    = EVal (vFun (p,e))
 
 let vProj i       = vStr (string_of_int i)
 
@@ -550,15 +550,11 @@ let newObjId =
 
 (***** DJS native prototypes **************************************************)
 
-let lObjPro = LocConst "lObjPro"
-let lArrPro = LocConst "lArrPro"
-let lFunPro = LocConst "lFunPro"
-
 let frozenNatives = [
   (lRoot, HStrong (None, valToSingleton vNull, Some lRoot));
   (lObjPro, HStrong (None, valToSingleton (vVar "theObjPro"), Some lRoot));
   (lArrPro, HStrong (None, valToSingleton (vVar "theArrPro"), Some lObjPro));
-  (lFunPro, HStrong (None, valToSingleton (vVar "theFunPro"), Some lArrPro));
+  (lFunPro, HStrong (None, valToSingleton (vVar "theFunPro"), Some lObjPro));
 ]
 
 let filterNatives cs =
@@ -909,10 +905,21 @@ and strHeapCell = function
 
 and strHeapBinding (l,hc) = spr "%s %s" (strLocBinds l) (strHeapCell hc)
 
-and strHeapBindings cs = String.concat ", " (List.map strHeapBinding cs)
+and strHeapBindings cs =
+  if not !Settings.augmentHeaps then
+    String.concat ", " (List.map strHeapBinding cs)
+  else
+    let (sNatives,cs) =
+      if List.for_all (fun (l,hc) ->
+           List.mem_assoc l cs && List.assoc l cs = hc
+         ) frozenNatives
+      then (["natives"], filterNatives cs)
+      else ([], cs)
+    in
+    spr "%s" (String.concat ", " (sNatives @ List.map strHeapBinding cs))
 
 and strHeap ?(arrowOutHeap=false) (hs,cs) =
-  let cs = filterNatives cs in
+  (* let cs = filterNatives cs in *)
   match hs, cs with
     | [h], [] when arrowOutHeap -> spr "(%s)" h (* parens to avoid conflict *)
     | [h], [] -> h
@@ -922,7 +929,7 @@ and strHeap ?(arrowOutHeap=false) (hs,cs) =
     | _  , _  -> failwith (spr "strHeap: multiple vars [%s]" (strStrs hs))
 
 and strWeakLoc (m,t,l) =
-  spr "[%s (%s, %s)]" (strLocBinds m) (strTyp t) (strLoc l)
+  spr "(%s %s > %s)" (strLocBinds m) (strTyp t) (strLoc l)
 
 and strWorld (s,h) =
   spr "%s / %s" (strTyp s) (strHeap h)
@@ -957,7 +964,7 @@ let _ = (* the ids for these boxes need to match theory.lisp *)
 
 (***** Free variable computation **********************************************)
 
-module VVars = Set.Make (struct type t = vvar let compare = compare end)
+(* module VVars = Set.Make (struct type t = vvar let compare = compare end) *)
 module TVars = Set.Make (struct type t = tvar let compare = compare end)
 module LVars = Set.Make (struct type t = lvar let compare = compare end)
 module HVars = Set.Make (struct type t = hvar let compare = compare end)
@@ -1103,7 +1110,44 @@ and freeVarsLoc env = function
   | LocVar(x)  -> if Quad.memL x env then Quad.empty else Quad.addL x Quad.empty
   | LocConst _ -> Quad.empty
 
-let freeVarsExp e = failwith "freeVarsExp not implemented"
+let rec bindersOfPat = function
+  | PLeaf(x) -> VVars.singleton x
+  | PNode(l) -> List.fold_left VVars.union VVars.empty (List.map bindersOfPat l)
+
+let rec freeVarsExp env = function
+  | EVal(v) -> freeVarsVal env v
+  | EDict(l) ->
+      List.fold_left VVars.union VVars.empty
+        (List.map (fun (e1,e2) ->
+           VVars.union (freeVarsExp env e1) (freeVarsExp env e2)) l)
+  | EArray(_,es) | ETuple(es) -> freeVarsExpList env es
+  | EIf(e1,e2,e3) -> freeVarsExpList env [e1;e2;e3]
+  | EApp(_,e1,e2) | ESetref(e1,e2) | ENewObj(e1,_,e2,_,_) ->
+      freeVarsExpList env [e1;e2]
+  | ELet(x,_,e1,e2) ->
+      VVars.union (freeVarsExp env e1) (freeVarsExp (VVars.add x env) e2)
+  | EExtern(x,_,e) -> freeVarsExp (VVars.add x env) e
+  | ELabel(_,e) | EBreak(_,e) | ENewref(_,e,_) | EDeref(e)
+  | EFreeze(_,_,e) | EThaw(_,e) | EWeak(_,e) | EHeapEnv(_,e)
+  | EMacro(_,_,e) | ETcFail(_,e) | EAsW(e,_) ->
+      freeVarsExp env e
+  | ELoadSrc _ | ELoadedSrc _ -> failwith "freeVarsExp eload"
+  | EThrow _ | ETryCatch _ | ETryFinally _ -> failwith "freeVarsExp exception"
+
+and freeVarsExpList env es =
+  List.fold_left VVars.union VVars.empty (List.map (freeVarsExp env) es)
+
+and freeVarsVal env v = match v.value with
+  | VBase _ | VNull | VEmpty -> VVars.empty
+  | VVar(x) -> if VVars.mem x env then VVars.empty else VVars.singleton x
+  | VFun(p,e) -> freeVarsExp (VVars.union env (bindersOfPat p)) e
+  | VExtend(v1,v2,v3) -> freeVarsValList env [v1;v2;v3]
+  | VArray(_,vs) | VTuple(vs) -> freeVarsValList env vs
+
+and freeVarsValList env vs =
+  List.fold_left VVars.union VVars.empty (List.map (freeVarsVal env) vs)
+
+let freeVarsExp e = freeVarsExp VVars.empty e
 
 
 (***** Type substitution ******************************************************)

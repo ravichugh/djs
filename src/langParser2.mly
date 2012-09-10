@@ -30,8 +30,8 @@ let eOp3 (s,x,y,z) = mkApp (eVar s) [x;y;z]
 let mkCurriedFuns xs e =
   let rec foo = function
     | []    -> printParseErr "mkCurriedFuns: need at least one value var"
-    | x::[] -> EFun (PLeaf x, e)
-    | x::xs -> EFun (PLeaf x, foo xs)
+    | x::[] -> vFun (PLeaf x, e)
+    | x::xs -> vFun (PLeaf x, EVal (foo xs))
   in foo xs
 
 let mkFun p e =
@@ -220,7 +220,7 @@ let expandHeapLocSugar (arr: uarrow) : uarrow =
   UNDEF
   UNDERSCORE TCOLON ELLIPSIS
   HEAPHAS HEAPSEL OBJHAS OBJSEL
-  WITH BEGIN END
+  WITH (* BEGIN END *)
   LTUP RTUP
 
 %type <Lang.exp> prog
@@ -270,14 +270,9 @@ value_ :
 
  | LPAREN x=value WITH y=value EQ z=value RPAREN { VExtend(x,y,z) } 
 
- (* quick hack: using begin/end to avoid conflicts *)
- | BEGIN e=lambda END
-     { match Anf.coerce e with (* no grammar for ANF exps, so coerce *)
-         | EVal(v) -> v.value
-         | _ -> printParseErr "coerce lambda"}
-
 value :
- | v=value_ { { pos=pos0; value=v } }
+ | v=value_        { wrapVal pos0 v }
+ | v=lambda        { v }
 
 exp :
  | exp1                                   { $1 }
@@ -337,7 +332,6 @@ exp1 :
 
 exp2 :
  | v=value                                   { EVal v }
- | e=lambda                                  { e }
  | LPAREN exp RPAREN                         { $2 }
  | LPAREN exp COMMA RPAREN                   { ParseUtils.mkTupleExp ($2::[]) }
  | LPAREN exp COMMA exps RPAREN              { ParseUtils.mkTupleExp ($2::$4) }

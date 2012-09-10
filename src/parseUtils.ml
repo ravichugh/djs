@@ -136,12 +136,12 @@ let patternToBindings4 initBinder pat =
   (newVar, mkApp (eVar "get_curried") [eVar initBinder]) :: (foo newVar pat)
 
 let mkPatFun pat e =
-  if useTuplesAndPats then EFun (pat, e)
+  if useTuplesAndPats then vFun (pat, e)
   else
     let initBinder = freshVar "pattern" in
     let newBindings = patternToBindings4 initBinder pat in
     let e' = addLets e newBindings in
-    EFun (PLeaf initBinder, e')
+    vFun (PLeaf initBinder, e')
 
 
 (***** Misc *******************************************************************)
@@ -236,7 +236,7 @@ let mkLetRec f uarr e1 e2 =
   let t = tyTypTerm (UArrow uarr) in
   ELet (f, Some (typToFrame t),
         EApp (([t],[],[]), eVar "fix",
-          EFun (PLeaf f, EFun (PLeaf x, e1))),
+          eFun (PLeaf f, eFun (PLeaf x, e1))),
         e2)
 
 

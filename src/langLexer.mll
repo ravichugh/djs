@@ -86,8 +86,8 @@ rule token = parse
   | "then"         { THEN }
   | "else"         { ELSE }
   | "with"         { WITH }
-  | "begin"        { BEGIN }
-  | "end"          { END }
+  (* | "begin"        { BEGIN } *)
+  (* | "end"          { END } *)
   | "tag"          { TAG }
   | "has"          { HAS }
   | "sel"          { SEL }

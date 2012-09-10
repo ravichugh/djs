@@ -517,16 +517,34 @@ let fixupThisArg p (polyArgs,y,t1,h1,t2,h2) =
 
 (***** Collecting heap bindings from DJS desugaring ***************************)
 
-(* TODO probably want to incorporate freeVars *)
-let collectClosureInvariants (_,cs) =
+(* NOTE: the next two filter locations based on how DJS desugars local refs *)
+
+let isNotLocalRef = function
+  | LocConst(x) -> not (Utils.strPrefix x "&")
+  | LocVar _ -> true
+
+let isFreeLocalRef fvs = function
+  | LocConst(x) when Utils.strPrefix x "&" ->
+      let y = String.sub x 1 (String.length x - 1) in
+      VVars.mem (spr "__%s" y) fvs
+  | _ -> false
+
+let includeLoc l fvs =
+  List.mem l [lRoot; lObjPro; lArrPro; lFunPro]
+  || isFreeLocalRef fvs l
+  (* || isNotLocalRef l *)
+
+let collectClosureInvariants fvs (_,cs) =
   List.fold_left (fun (acc1,acc2) -> function
-    | (l,HEStrong(_,lo,Some(t))) ->
+    | (l,HEStrong(_,lo,Some(t))) when includeLoc l fvs ->
         let hc1 = HStrong (Some (freshVar "locinvar"), t, lo) in
         let hc2 = HStrong (Some (freshVar "locinvar"), t, lo) in
         ((l,hc1)::acc1, (l,hc2)::acc2)
-    | (l,HEStrong(v,lo,None)) ->
+    | (l,HEStrong(v,lo,None)) when includeLoc l fvs ->
         let hc = HStrong (None, valToSingleton v, lo) in
         ((l,hc)::acc1, (l,hc)::acc2)
+    | (l,HEStrong _) ->
+        (acc1, acc2)
     | (l,HEWeak _) ->
         (acc1, acc2)
   ) ([],[]) cs
@@ -550,23 +568,66 @@ let addAutoLocBindings (hs,cs0) cs1 =
   fpr oc_local_inf "\n";
   (hs2, cs2)
 
-let augmentHeaps ((polyArgs,y,t1,h1,t2,h2) as arr) (cs1,cs2) =
-  if !Settings.augmentHeaps then
-    let h1 = addAutoLocBindings h1 cs1 in
-    let h2 = addAutoLocBindings h2 cs2 in
-    (polyArgs, y, t1, h1, t2, h2)
-  else
-    arr
+let augmentHeaps (polyArgs,y,t1,h1,t2,h2) (cs1,cs2) =
+  let h1 = addAutoLocBindings h1 cs1 in
+  let h2 = addAutoLocBindings h2 cs2 in
+  (polyArgs, y, t1, h1, t2, h2)
 
-let augmentFrame h f =
-  match isSimpleFrame f with
-    | None -> failwith "augmentFrame: shouldn't get here"
-    | Some(t) ->
-        let cloInvariants = collectClosureInvariants h in
-        let fTT = function
-          | UArrow(arr) -> UArrow (augmentHeaps arr cloInvariants)
-          | u -> u in
-        ParseUtils.typToFrame (mapTyp ~onlyTopForm:true ~fTT t)
+let funcFreeVars = Hashtbl.create 17
+
+let rec transitiveFreeVars y =
+  if not (Hashtbl.mem funcFreeVars y) then VVars.singleton y
+  else VVars.fold
+         (fun z acc -> VVars.add z (VVars.union acc (transitiveFreeVars z))) 
+         (Hashtbl.find funcFreeVars y)
+         (VVars.singleton y)
+
+let transitiveFreeVarsOfExp x e =
+  let fvs  = freeVarsExp e in
+  let fvs' = VVars.fold
+               (fun y acc -> VVars.union acc (transitiveFreeVars y))
+               fvs VVars.empty in
+  Hashtbl.replace funcFreeVars x fvs; (* store non-transitive fvs in table *)
+  if false then Log.log2 "transitiveFreeVarsOfExp(%s) = %s\n" x (strVVars fvs');
+  fvs'
+
+(* this depends on DJS desugaring of annotated functions as well as ANFing:
+     let __x =
+       let y = let djsFuncType_i :: _ = ... in djsFuncType_i in
+       ref (&x, y, _)
+
+   add __x |-> djsFuncType_i to the free vars hash table, so that subsequently
+   the transitive free vars of __x will include those in the function definition.
+*)
+let transitiveFreeVarsHack __x = function
+  | ELet(y,_,ELet(z,_,_,_), ENewref(_,EVal{value=VVar(y')},_))
+    when y = y' && Utils.strPrefix z "djsFuncType" ->
+      (* let _ = Log.log2 "ravi transitiveFreeVarsHack %s %s\n" x z in *)
+      Hashtbl.add funcFreeVars __x (VVars.singleton z)
+  | _ ->
+      ()
+
+let augmentFrameAndFix x h fr e =
+  if not !Settings.augmentHeaps then (fr, e)
+  else begin
+    let fvs = transitiveFreeVarsOfExp x e in
+    match isSimpleFrame fr with
+      | None -> failwith "augmentFrame: shouldn't get here"
+      | Some(t) ->
+          let cloInvariants = collectClosureInvariants fvs h in
+          let fTT = function
+            | UArrow(arr) -> UArrow (augmentHeaps arr cloInvariants)
+            | u -> u in
+          (* NOTE: recursing into _all_ arrow terms in the frame *)
+          let fr = ParseUtils.typToFrame (mapTyp ~onlyTopForm:false ~fTT t) in
+          let e = (* also need to augment the type parameter to fix *)
+            match e with
+              | EApp(([t],[],[]), (EVal({value=VVar("fix")}) as eFix) ,eArg) ->
+                  let t = mapTyp ~onlyTopForm:false ~fTT t in
+                  EApp (([t],[],[]), eFix, eArg)
+              | _ -> e in
+          (fr, e)
+  end
 
 
 (***** TS application helpers *************************************************)
@@ -1081,7 +1142,7 @@ and tsExp_ g h = function
         let ruleName = "TS-Let-Ann-Arrow" in
         let cap = spr "%s: let %s = ..." ruleName x in
         checkBinder cap g x;
-        let frame = augmentFrame h frame in
+        let (frame,e1) = augmentFrameAndFix x h frame e1 in
         let (s1,h1) = applyFrame h frame in
         Zzz.inNewScope (fun () -> tcExp g h (s1,h1) e1);
         let (bindings,h1) = heapEnvOfHeap ruleName h1 in
@@ -1094,6 +1155,7 @@ and tsExp_ g h = function
     end
 
   | ELet(x,None,e1,e2) -> begin
+      transitiveFreeVarsHack x e1;
       let gInit = g in
       let ruleName = "TS-Let-Bare" in
       let cap = spr "%s: let %s = ..." ruleName x in
@@ -1267,7 +1329,6 @@ and tsExp_ g h = function
   | EDict _    -> Anf.badAnf "ts EDict"
   | ETuple _   -> Anf.badAnf "ts ETuple"
   | EArray _   -> Anf.badAnf "ts EArray"
-  | EFun _     -> Anf.badAnf "ts EFun"
   | EIf _      -> Anf.badAnf "ts EIf"
   | EApp _     -> Anf.badAnf "ts EApp"
   | ENewref _  -> Anf.badAnf "ts ENewref"

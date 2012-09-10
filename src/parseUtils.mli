@@ -18,7 +18,7 @@ val mkTupleExp : exp list -> exp
 
 val addLets : exp -> (vvar * exp) list -> exp
 
-val mkPatFun : pat -> exp -> exp
+val mkPatFun : pat -> exp -> value
 
 val maybeAddHeapPrefixVar : uarrow -> uarrow
 

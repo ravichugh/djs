@@ -84,6 +84,8 @@ val vVar : vvar -> value
 val vEmpty : value
 val vBase : basevalue -> value
 (* val vNewObjRef : int -> value *)
+val vFun : pat * exp -> value
+val eFun : pat * exp -> exp
 
 val wBool : bool -> walue
 val wStr : string -> walue
@@ -176,7 +178,7 @@ val strBinding : vvar * typ -> string
 
 (***** Free variable computation **********************************************)
 
-val freeVarsExp : exp -> vvar list
+val freeVarsExp : exp -> VVars.t
 
 (***** Type substitution ******************************************************)
 

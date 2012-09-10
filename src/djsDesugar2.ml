@@ -245,25 +245,26 @@ let expandMacros s =
 let parseMacroDef sOrig =
   let s = Utils.clip sOrig in
   let s = Str.replace_first (Str.regexp "\n") " " s in
+  let s = if Utils.strPrefix s "#define " then
+            let n = String.length "#define " in
+            String.sub s n (String.length s - n)
+          else
+            s in
   try begin
-    if Utils.strPrefix s "#define" then
-      let n = String.length "#define " in
-      let s = String.sub s n (String.length s - n) in
-      let (macro,defn) = Utils.splitAround s ' ' in (* may raise Not_found *)
-      let defn = expandMacros defn in (* allow previous macros to be used *)
-      let _ = Hashtbl.add macroTable macro defn in
-      let _ = Hashtbl.add macroDefs sOrig macro in
-      let _ =
-        if debugMacros
-        then fpr oc_macros "%s\ndef [%s]\n\n%s\n" (String.make 80 '-') macro defn
-        else () in
-      Some (macro, defn)
-    else 
-      None
+    let (macro,defn) = Utils.splitAround s ' ' in (* may raise Not_found *)
+    let defn = expandMacros defn in (* allow previous macros to be used *)
+    let _ = Hashtbl.add macroTable macro defn in
+    let _ = Hashtbl.add macroDefs sOrig macro in
+    let _ =
+      if debugMacros
+      then fpr oc_macros "%s\ndef [%s]\n\n%s\n" (String.make 80 '-') macro defn
+      else () in
+    Some (macro, defn)
   end with Not_found -> None
 
 let rec collectMacros = function
   (* /*: #define name T */ '#define'; *)
+  (* /*: name T */ '#define'; *)
   | E.HintExpr (_, s, E.ConstExpr (_, J.CString "#define"))
   (* '#define name T'; *)
   | E.ConstExpr (_, J.CString(s)) -> ignore (parseMacroDef s)
@@ -279,9 +280,9 @@ let objOp ts ls fn args =
 (* {Object|Array|Function}.prototype cannot be replaced in DJS, so can
    desugar directly to the following locations and primitives *)
 
-let lObjectPro   = LocConst "lObjPro"
-let lArrayPro    = LocConst "lArrPro"
-let lFunctionPro = LocConst "lFunPro"
+let lObjectPro   = lObjPro (* LocConst "lObjPro" *)
+let lArrayPro    = lArrPro (* LocConst "lArrPro" *)
+let lFunctionPro = lFunPro (* LocConst "lFunPro" *)
 
 let eObjectPro ()   = eVar "____ObjPro"
 let eArrayPro ()    = eVar "____ArrPro"
@@ -450,7 +451,7 @@ let convertConst = function
 
 let eLambda xs e =
   let pat = PNode (List.map (fun x -> PLeaf x) xs) in
-  ParseUtils.mkPatFun pat e
+  EVal (ParseUtils.mkPatFun pat e)
 
 let rec eSeq = function
   | []    -> failwith "eSeq: must call with at least one exp"
@@ -887,7 +888,7 @@ let rec ds (env:env) = function
       let t = augmentType t env (fvExps "dsFuncStmtExpr recursive" env [body]) in
       (* let func = dsFunc (hasThisParam t) env p args body in *)
       let func = dsFunc env args body in
-      EApp (([t],[],[]), eVar "fix", EFun (PLeaf _f, func))
+      EApp (([t],[],[]), eVar "fix", eFun (PLeaf _f, func))
 
   | E.FuncStmtExpr (_, f, _, _) ->
       Log.printParseErr (spr "function statement [%s] not annotated" f)
@@ -925,6 +926,7 @@ and dsAnnotatedFuncExpr env s args body =
   let t = augmentType t env (fvExps "dsAnnotatedFuncExpr" env [body]) in
   (* let e = dsFunc (hasThisParam t) env p args body in *)
   let e = dsFunc env args body in
+  (* NOTE: the type checker looks for the "djsFuncType" string *)
   annotateExp ~lbl:"djsFuncType" e (ParseUtils.typToFrame t)
 
 and dsAssert ?(lbl="djsAssert") env s = function

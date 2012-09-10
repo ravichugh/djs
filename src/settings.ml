@@ -28,7 +28,7 @@ let doImplicitGlobal = ref false
 let doArgsArray = ref false
 *)
 
-let augmentHeaps = ref false (* TODO *)
+let augmentHeaps = ref true
 (*
 let greedyThaws = ref false
 *)
