@@ -1,4 +1,4 @@
-weak [~lWeak |-> ({(Int (sel v "f"))}, lROOT)]
+weak (~lWeak |-> {(Int (sel v "f"))} > lROOT)
 
 let strong_obj_1 = new ({"f" = 100}, lStrong1, objROOT, lROOT) in
 let weak_obj_1   = freeze (~lWeak, frzn, strong_obj_1) in

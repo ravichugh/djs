@@ -1,15 +1,15 @@
 
 /*: #define tyNode
     {Dict|(and TRU
-               ((sel v "key")   : Int)
-               ((sel v "value") : Str))} */ "#define";
+               (Int (sel v "key"))
+               (Str (sel v "value")))} */ "#define";
 
-/*: [~lNode |-> (tyNode, lNodeProto)] */ "#weak";
+/*: (~lNode |-> tyNode > lNodeProto) */ "#weak";
 
 function Node(key, value) /*: new [;Lnew]
-     [[this:Ref(Lnew), key:Int, value:Str]]
-   / [Lnew |-> (_:Empty, lNodeProto), ~lNode |-> frzn]
-  -> Ref(~lNode) / [~lNode |-> same] */
+     (this:Ref(Lnew), key:Int, value:Str)
+   / (Lnew |-> _:Empty > lNodeProto, ~lNode |-> frzn)
+  -> Ref(~lNode) / (~lNode |-> same) */
 {
   this.key = key;
   this.value = value;

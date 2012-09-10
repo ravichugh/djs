@@ -48,14 +48,18 @@ let mustFlowIterator_ usedBoxes ?(filter = fun _ -> true) g t =
       | [] -> None
       | u::rest ->
           let _ = boxes := rest in
-          Zzz.inNewScope begin fun () ->
-            let x = freshVarX "extract" in
-            Zzz.addBinding x t;
-            Zzz.doingExtract := true;
-            let b = Zzz.checkValid "mustFlow" (hastyp (wVar x) u) in
-            Zzz.doingExtract := false;
-            if b then Some u else next ()
-          end
+          let maybeBox =
+            Zzz.inNewScope (fun () ->
+              let x = freshVarX "extract" in
+              Zzz.addBinding x t;
+              Zzz.doingExtract := true;
+              let b = Zzz.checkValid "mustFlow" (hastyp (wVar x) u) in
+              Zzz.doingExtract := false;
+              if b then Some u else None)
+          in
+          (match maybeBox with
+            | Some(u) -> Some u
+            | None    -> next ())
   in
   next
 
@@ -255,8 +259,10 @@ and quickCheckTypes errList usedBoxes g = function
       end
   | TQuick(_,QBoxes(l1),_), TQuick(_,QBoxes(l2),p) when p = pTru ->
       List.for_all (fun u -> List.mem u l1) l2
-  | t1, TMaybeNull(t2) ->
-      quickCheckTypes errList usedBoxes g (t1, t2)
+  | TQuick(_,QBoxes(us),_), TMaybeNullRef(l,_) when List.mem (URef l) us ->
+      true
+  | TNonNullRef(l), TQuick(_,QBoxes[URef(l')],p) when p = pTru && l = l' ->
+      true
   | TQuick(_,QBase(bt),_), t when t = tyNotUndef && bt <> BUndef ->
       true
   | _ ->

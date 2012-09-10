@@ -1,4 +1,4 @@
-/*: [~lRow |-> (<Str,Str>, lArrayProto)] */ "#weak";
+/*: (~lRow |-> <Str,Str> > lArrPro) */ "#weak";
 
 var row1 = /*: lRow1 */ ["00","01"];
 var row2 = /*: lRow2 */ ["10","11"];

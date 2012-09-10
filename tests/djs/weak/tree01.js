@@ -1,17 +1,17 @@
 
-/*: [~lTreeNode |-> (tyTreeNode, lTreeNodeProto)] */ "#weak";
+/*: (~lTreeNode |-> tyTreeNode > lTreeNodeProto) */ "#weak";
 
 /*: #define tyTreeNode
     {Dict|(and (dom v {"item","left","right"})
-               ((sel v "item"):Int)
-               ((sel v "left"):Ref(~lTreeNode))
-               ((sel v "right"):Ref(~lTreeNode)))} */ "#define";
+               (Int (sel v "item"))
+               ((sel v "left")  :: Ref(~lTreeNode))
+               ((sel v "right") :: Ref(~lTreeNode)))} */ "#define";
 
 function TreeNode(left,right,item)
 /*: new [;Lthis]
-        [[this:Ref(Lthis), left:Ref(~lTreeNode), right:Ref(~lTreeNode), item:Int]]
-      / [Lthis |-> (d:Empty, lTreeNodeProto), ~lTreeNode |-> frzn]
-     -> Ref(~lTreeNode) / [~lTreeNode |-> same] */
+        (this:Ref(Lthis), left:Ref(~lTreeNode), right:Ref(~lTreeNode), item:Int)
+      / (Lthis |-> d:Empty > lTreeNodeProto, ~lTreeNode |-> frzn)
+     -> Ref(~lTreeNode) / (~lTreeNode |-> same) */
 {
   this.left = left;
   this.right = right;
@@ -33,7 +33,7 @@ function TreeNode(left,right,item)
 /////
 
 /*: #define tyItemCheck
-    [[this:Ref(~lTreeNode)]] / [~lTreeNode |-> frzn] -> Int / same */ "#define";
+    (this:Ref(~lTreeNode)) / (~lTreeNode |-> frzn) -> Int / same */ "#define";
 
 TreeNode.prototype.itemCheck = function itemCheck() /*: tyItemCheck */ {
   var i;

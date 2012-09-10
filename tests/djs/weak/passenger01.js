@@ -1,11 +1,10 @@
 /*: #define tyPassenger
-    {Dict|(implies (has v "weight") ((sel v "weight") : Num))} */ "#define";
+    {Dict|(implies (has v "weight") (Num (sel v "weight")))} */ "#define";
 
-/*: [~lPass |-> (tyPassenger, lObjectProto)] */ "#weak";
+/*: (~lPass |-> tyPassenger > lObjPro) */ "#weak";
 
 var readWeight = function(p) /*:
-    [[p:Ref(~lPass)]]
-  / [~lPass |-> frzn, lObjectProto |-> (_:{Dict|(not (has v "weight"))}, lROOT)]
+    (p:Ref(~lPass)) / (~lPass |-> frzn, lObjPro |-> {(= v theObjPro)} > lROOT)
  -> Num / same */
 {
   var n = 300;

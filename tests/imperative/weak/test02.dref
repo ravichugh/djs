@@ -1,4 +1,4 @@
-weak [~lWeak |-> ({Dict|(Int (sel v "f"))}, lROOT)]
+weak (~lWeak |-> {Dict|(Int (sel v "f"))} > lROOT)
 
 val weak_obj :: Ref(~lWeak)
 

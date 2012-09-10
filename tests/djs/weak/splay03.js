@@ -1,19 +1,19 @@
 
 /*: #define tyNode
     {(and (= (tag v) "Dict")
-          ((sel v "key")   : Int)
-          ((sel v "value") : Str)
-          (implies (has v "left")  ((sel v "left")  : Ref(~lNode)))
-          (implies (has v "right") ((sel v "right") : Ref(~lNode))))}
+          (Int (sel v "key"))
+          (Str (sel v "value"))
+          (implies (has v "left")  ((sel v "left")  :: Ref(~lNode)))
+          (implies (has v "right") ((sel v "right") :: Ref(~lNode))))}
 */ "#define";
 
-/*: [~lNode |-> (tyNode, lNodeProto)] */ "#weak";
+/*: (~lNode |-> tyNode > lNodeProto) */ "#weak";
 
 function Node(key, value)
  /*: new [;Lnew]
-     [[this:Ref(Lnew), key:Int, value:Str]]
-   / [Lnew |-> (_:Empty, lNodeProto), ~lNode |-> frzn]
-  -> Ref(~lNode) / [~lNode |-> same] */
+     (this:Ref(Lnew), key:Int, value:Str)
+   / (Lnew |-> _:Empty > lNodeProto, ~lNode |-> frzn)
+  -> Ref(~lNode) / (~lNode |-> same) */
 {
   this.key = key;
   this.value = value;
@@ -44,8 +44,8 @@ SplayTree.Node.prototype.right = null;
 // applying a function f at each node
 
 SplayTree.Node.prototype.traverse_ = function traverse_()
-/*: [[this:Ref(~lNode)]]
-  / [~lNode |-> frzn, lNodeProto |-> (_:leftAndRight , lObjectProto)]
+/*: (this:Ref(~lNode))
+  / (~lNode |-> frzn, lNodeProto |-> _:leftAndRight > lObjPro)
  -> Top / same */
 {
   // to support the original version       while(current)
@@ -59,10 +59,10 @@ SplayTree.Node.prototype.traverse_ = function traverse_()
   var b = current;
   /*: current (~lNode, thwd lThaw1) */ "#freeze"; 
 
-  /*: [&b |-> _:Top, &current |-> _:Ref(~lNode), ~lNode |-> frzn,
-       lNodeProto |-> (_:leftAndRight, lObjectProto)]
-   -> [&b |-> _:Top, &current |-> _:Ref(~lNode), ~lNode |-> frzn,
-       lNodeProto |-> same]*/
+  /*: (&b |-> _:Top, &current |-> _:Ref(~lNode), ~lNode |-> frzn,
+       lNodeProto |-> _:leftAndRight > lObjPr)
+   -> (&b |-> _:Top, &current |-> _:Ref(~lNode), ~lNode |-> frzn,
+       lNodeProto |-> same) */
   while (b) {
 
     /*: current lThaw2 */ "#thaw";

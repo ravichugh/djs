@@ -621,11 +621,13 @@ let rec ds (env:env) = function
 
   | E.HintExpr (_, h, E.ConstExpr (_, J.CString "#freeze")) ->
       let (x,l,thaw) = parseFreeze h in
+      let x = if x = "this" then mkThis !funcCount else x in
       let _x = eVar (dsVar x) in
       ESetref (_x, EFreeze (l, thaw, EDeref _x))
 
   | E.HintExpr (_, h, E.ConstExpr (_, J.CString "#thaw")) ->
       let (x,l) = parseThaw h in
+      let x = if x = "this" then mkThis !funcCount else x in
       let _x = eVar (dsVar x) in
       ESetref (_x, EThaw (l, EDeref _x))
 

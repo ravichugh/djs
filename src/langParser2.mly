@@ -142,7 +142,7 @@ let expandHeapLocSugar (arr: uarrow) : uarrow =
               | Some(y), s when s = tyAnonMaybeRef ->
                   let ly = spr "L%s" y in
                   let _ = addToSubst y ly in
-                  (Some y, TMaybeNull (tyRef (LocVar ly)))
+                  (Some y, TMaybeNullRef (LocVar ly, pTru))
               | yo, s ->
                   (yo, s)
             ) tup
@@ -367,8 +367,8 @@ typ :
 
  | u=typ_term                          { tyTypTerm u }
 
- | REFTYPE LPAREN l=loc BANG RPAREN    { TNonNull (tyTypTerm (URef(l))) }
- | REFTYPE LPAREN l=loc QMARK RPAREN   { TMaybeNull (tyTypTerm (URef(l))) }
+ | REFTYPE LPAREN l=loc BANG RPAREN    { TNonNullRef l }
+ | REFTYPE LPAREN l=loc QMARK RPAREN   { TMaybeNullRef (l, pTru) }
 
  | s=SUGAR  { if List.mem_assoc s LangUtils.simpleSugarToTyp
               then List.assoc s LangUtils.simpleSugarToTyp
@@ -591,9 +591,9 @@ heapenvbinding :
  | l=loc_mapsto v=value               { (l,HEStrong(v,None,None)) }
  | l=loc_mapsto v=value GT l2=loc     { (l,HEStrong(v,Some(l2),None)) }
 
-weakloc : LBRACK wl=weakloc_ RBRACK { wl }
+weakloc : LPAREN wl=weakloc_ RPAREN { wl }
 
-weakloc_ : m=loc_mapsto LPAREN t=typ COMMA l=loc RPAREN { (m,t,l) }
+weakloc_ : m=loc_mapsto t=typ GT l=loc { (m,t,l) }
 
 loc :
  | x=TVAR       { LocVar(x) }
@@ -720,13 +720,20 @@ jsPolyArgs : l=poly_actuals EOF { l }
 
 jsFail : FAIL s=STR EOF { s } 
 
-jsWhile : h1=dheap ARROW h2=rheap
-  { match h1, h2 with
-      | ([],cs1), ([],cs2) ->
-          let h = freshHVar () in
-          ([h], ([h],cs1), (tyAny,([h],cs2)))
-      | _ ->
-          printParseErr "bad jsWhile format" }
+jsWhile :
+ | h1=dheap ARROW h2=rheap
+     { match h1, h2 with
+         | ([],cs1), ([],cs2) ->
+             let h = freshHVar () in
+             ([h], ([h],cs1), (tyAny,([h],cs2)))
+         | _ ->
+             printParseErr "bad jsWhile format" }
+ | LBRACK h=TVAR RBRACK h1=dheap ARROW h2=rheap
+     { match h1, h2 with
+         | ([x],cs1), ([y],cs2) when x = h && y = h ->
+             ([h], ([h],cs1), (tyAny,([h],cs2)))
+         | _ ->
+             printParseErr "bad jsWhile format" }
 
 jsLoc : l=loc EOF { l }
 

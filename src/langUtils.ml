@@ -66,8 +66,8 @@ let mapTyp ?(fTyp  = fun x -> x)
     | TRefinement(x,p)   -> fTyp (TRefinement (x, fooForm p))
     | TQuick(x,qt,p)     -> fTyp (TQuick (x, fooQuickTyp qt, fooForm p))
     | TBaseUnion(l)      -> fTyp (TBaseUnion l)
-    | TNonNull(t)        -> fTyp (TNonNull (fooTyp t))
-    | TMaybeNull(t)      -> fTyp (TMaybeNull (fooTyp t))
+    | TMaybeNullRef(l,p) -> fTyp (TMaybeNullRef (fLoc l, fooForm p))
+    | TNonNullRef(l)     -> fTyp (TNonNullRef (fLoc l))
 
   and fooPrenexTyp = function
     | TExists _          -> failwith "mapTyp TExists"
@@ -171,8 +171,8 @@ let foldTyp ?(fForm = fun acc _ -> acc)
     | TRefinement(_,p)   -> fooForm acc p
     | TQuick(_,qt,p)     -> fooForm (fooQuickTyp acc qt) p
     | TBaseUnion _       -> acc
-    | TNonNull(t)        -> fooTyp acc t
-    | TMaybeNull(t)      -> fooTyp acc t
+    | TNonNullRef(l)     -> fTT acc (URef l) (* a bit hacky to rely on fTT *)
+    | TMaybeNullRef(l,p) -> fooForm (fTT acc (URef l)) p
 
   and fooPrenexTyp acc = function
     | TExists _          -> failwith "foldTyp TExists"
@@ -714,14 +714,10 @@ and strTyp = function
   | TRefinement(x,p)     -> spr "{%s|%s}" x (strForm p)
   | TQuick(x,qt,p)       -> strTQuick x qt p
   | TBaseUnion(l)        -> String.concat "Or" (List.map strBaseTyp l)
-  | TNonNull(TQuick("v",QBoxes[URef(l)],p)) when p = pTru ->
-      spr "Ref(%s!)" (strLoc l)
-  | TMaybeNull(TQuick("v",QBoxes[URef(l)],p)) when p = pTru ->
-      spr "Ref(%s?)" (strLoc l)
-  | TNonNull(t)   -> failwith (spr "strTyp TNonNull %s" (strTyp t))
-  | TMaybeNull(t) -> failwith (spr "strTyp TMaybeNull %s" (strTyp t))
-  (* | TNonNull(t)          -> spr "(%s)!" (strTyp t) *)
-  (* | TMaybeNull(t)        -> spr "(%s)?" (strTyp t) *)
+  | TNonNullRef(l)       -> spr "Ref(%s!)" (strLoc l)
+  | TMaybeNullRef(l,p)   -> if !Settings.printShortQuick && p = pTru
+                            then spr "Ref(%s?)" (strLoc l)
+                            else spr "{Ref(%s?)|%s}" (strLoc l) (strForm p)
 
 and strPrenexTyp = function
   | TExists(x,t,s) -> spr "exists (%s:%s). %s" x (strTyp t) (strPrenexTyp s)
@@ -991,14 +987,7 @@ end
 
 let depTupleBinders t =
   let rec foo acc = function
-(*
-    | TTuple(l) -> 
-        let (xs,ts) = List.split l in
-        let acc = List.fold_left (fun acc x -> x::acc) acc xs in
-        List.fold_left foo acc ts
-*)
     | TQuick(_,QTuple(l,_),_) -> bindersOfDepTuple l
-    | TNonNull(t) | TMaybeNull(t) -> foo acc t
     | _ -> acc
   in foo [] t
 
@@ -1034,13 +1023,15 @@ let rec freeVarsWal env = function
          freeVarsHeap env h; freeVarsLoc env l]
 
 and (* let rec *) freeVarsTyp env = function
-  | TRefinement(x,p) -> freeVarsForm (Quad.addV x env) p
-  | TBaseUnion _     -> Quad.empty
-  | TQuick(x,qt,p)   -> let v1 = freeVarsForm env p in
-                        let v2 = freeVarsQuickTyp env qt in
-                        Quad.combineList [v1;v2]
-  | TNonNull(t)      -> freeVarsTyp env t
-  | TMaybeNull(t)    -> freeVarsTyp env t
+  | TRefinement(x,p)   -> freeVarsForm (Quad.addV x env) p
+  | TBaseUnion _       -> Quad.empty
+  | TQuick(x,qt,p)     -> let v1 = freeVarsForm env p in
+                          let v2 = freeVarsQuickTyp env qt in
+                          Quad.combineList [v1;v2]
+  | TNonNullRef(l)     -> freeVarsLoc env l
+  | TMaybeNullRef(l,p) -> let v1 = freeVarsLoc env l in
+                          let v2 = freeVarsForm env p in
+                          Quad.combineList [v1;v2]
 
 and freeVarsPrenexTyp env = function
   | TExists _        -> failwith "freeVars TExists"
@@ -1227,9 +1218,9 @@ and substForm subst = function
   | PAll _ -> failwith "substForm: PAll shouldn't appear"
 
 and substTyp (subst:subst) = function
-  | TBaseUnion(l)   -> TBaseUnion l
-  | TNonNull(t)     -> TNonNull (substTyp subst t)
-  | TMaybeNull(t)   -> TMaybeNull (substTyp subst t)
+  | TBaseUnion(l) -> TBaseUnion l
+  | TNonNullRef(l) -> TNonNullRef (substLoc subst l)
+  | TMaybeNullRef(l,p) -> TMaybeNullRef (substLoc subst l, substForm subst p)
   (* TODO assuming that only one v::A predicate *)
   | TQuick(y,QBoxes([UVar(x)]),p) when p = pTru -> (* type variable inst *)
       let (_,sub,_,_) = subst in
@@ -1336,31 +1327,13 @@ and substLocOpt subst = function
 (* [[T]](w) *)
 and applyTyp t w =
   match t with
-    | TNonNull(t)      -> pAnd [applyTyp t w; pNot (PEq (w, wNull))]
-    | TMaybeNull(t)    -> pOr [applyTyp t w; PEq (w, wNull)]
-    | TBaseUnion(l)    -> pOr (List.map (fun bt -> applyBaseTyp bt w) l)
-    | TRefinement(y,f) -> substForm ([(y,w)],[],[],[]) f
-    | TQuick(y,qt,f)   -> let f0 = applyQuickTyp (wVar y) qt in
-                          substForm ([(y,w)],[],[],[]) (pAnd [f;f0])
-(*
-    | TTuple(l) ->
-        let (vars,typs) = List.split l in
-        let subst = Utils.map_i (fun x i -> (x, sel w (wProj i))) vars in
-        let subst = (subst,[],[],[]) in
-        let has =
-          PHas (w, List.map wProj (Utils.list0N (pred (List.length l)))) in
-        let sels =
-          Utils.map_i
-            (fun t i -> applyTyp (substTyp subst t) (sel w (wProj i)))
-            typs
-        in
-        pAnd (PEq (tag w, wStr "Dict") :: has :: sels)
-*)
-(*
-    | TExists(x,t,s)   -> err ["applyTyp TExists\n";
-                               spr "%s :: %s\n" x (strTyp t);
-                               strTyp s]
-*)
+    | TBaseUnion(l)      -> pOr (List.map (fun bt -> applyBaseTyp bt w) l)
+    | TRefinement(y,f)   -> substForm ([(y,w)],[],[],[]) f
+    | TQuick(y,qt,f)     -> let f0 = applyQuickTyp (wVar y) qt in
+                            substForm ([(y,w)],[],[],[]) (pAnd [f;f0])
+    | TNonNullRef(l)     -> pAnd [hastyp w (URef l); pNot (eq w wNull)]
+    | TMaybeNullRef(l,p) -> pAnd [pOr [hastyp w (URef l); eq w wNull];
+                                  substForm ([("v",w)],[],[],[]) p]
 
 and applyQuickTyp w = function
   | QBase(bt) -> applyBaseTyp bt w

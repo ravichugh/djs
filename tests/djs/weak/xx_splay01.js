@@ -2,18 +2,18 @@
 /*: #define tyNode
     {(and (= (tag v) "Dict")
           (or (dom v {"key","value"}) (dom v {"key","value","left","right"}))
-          ((sel v "key")   : Int)
-          ((sel v "value") : Str)
-          (implies (has v "left")  ((sel v "left")  : Ref(~lNode)))
-          (implies (has v "right") ((sel v "right") : Ref(~lNode))))}
+          (Int (sel v "key"))
+          (Str (sel v "value"))
+          (implies (has v "left")  ((sel v "left")  :: Ref(~lNode)))
+          (implies (has v "right") ((sel v "right") :: Ref(~lNode))))}
 */ "#define";
 
-/*: [~lNode |-> (tyNode, lNodeProto)] */ "#weak";
+/*: (~lNode |-> tyNode > lNodeProto) */ "#weak";
 
 function Node(key, value) /*: new [;Lnew]
-     [[this:Ref(Lnew), key:Int, value:Str]]
-   / [Lnew |-> (_:Empty, lNodeProto), ~lNode |-> frzn]
-  -> Ref(~lNode) / [~lNode |-> same] */
+     (this:Ref(Lnew), key:Int, value:Str)
+   / (Lnew |-> _:Empty > lNodeProto, ~lNode |-> frzn)
+  -> Ref(~lNode) / (~lNode |-> same) */
 {
   this.key = key;
   this.value = value;

@@ -26,10 +26,9 @@ let rec addPredicate p = function
   | TRefinement("v",q) -> TRefinement ("v", pAnd [p;q])
   | TQuick _           -> failwith "addPredicate TQuick"
   | TRefinement _      -> failwith "addPredicate TRefinement"
-  | TNonNull(t)        -> TNonNull (addPredicate p t)
-  | TMaybeNull(t)      -> TMaybeNull (addPredicate p t)
   | TBaseUnion(l)      -> ty (pAnd [p; applyTyp (TBaseUnion l) theV])
-  (* | TExists(x,t1,t2)   -> TExists (x, t1, addPredicate p t2) *)
+  | TMaybeNullRef(l,q) -> TMaybeNullRef (l, pAnd [p;q])
+  | TNonNullRef(l)     -> failwith "addPredicate TNonNullRef"
 
 
 (**** Selfify *****************************************************************)
@@ -52,8 +51,9 @@ let selfifyVar g x =
     | Some(t) -> begin
         let eqX = eq theV (wVar x) in
         match t with
-          | TQuick(y,qt,p) -> TQuick (y, qt, eqX)
-          | _              -> ty eqX
+          | TQuick(y,qt,_)     -> TQuick (y, qt, eqX)
+          | TMaybeNullRef(l,_) -> TMaybeNullRef (l, eqX)
+          | _                  -> ty eqX
       end
   
 let selfifyVal g = function
@@ -400,6 +400,10 @@ let getNextRef cap iterator =
     | Some _ -> err [cap; "getNextRef: not ref"]
     | None -> err [cap; "getNextRef: None"]
 
+let getNextMaybeRef cap g = function
+  | TMaybeNullRef(l,_) -> l
+  | t                  -> getNextRef cap (refIteratorOf g t)
+
 
 (**** Join for T-If ***********************************************************)
 
@@ -590,8 +594,6 @@ let depTupleSubst t w =
             | None     -> acc
             | Some(xi) -> let acc = foo wi acc ti in
                           (xi, wi) :: acc) acc l
-    | TNonNull(t)
-    | TMaybeNull(t) -> foo w acc t
     | _ -> acc
   in
   let subst = foo w [] t in
@@ -747,27 +749,31 @@ let isValueTuple v = match v.value with
        with fields "0" through "n" in order without any duplicates --- but
        no longer need to. see TcDref2.ml for details. *)
 
-(* TODO clean up findActualFromRefValue, findActualFromProtoLink, findArrayActual *)
+let inferredLoc lVar lAct =
+  let _ = fpr oc_local_inf "  %s |-> %s\n" lVar (strLoc lAct) in
+  Some lAct
 
 let findActualFromRefValue g lVar tTup vTup =
-  let rec foo i = function
-    (* 3/14 added the MaybeNull case since the objects.dref primitives
-       now take nullable strong references. 8/30/12: added NonNull case too *)
-    | (TQuick(_,QBoxes[URef(LocVar(lVar'))],_) :: ts)
-    | (TNonNull(TQuick(_,QBoxes[URef(LocVar(lVar'))],_)) :: ts)
-    | (TMaybeNull(TQuick(_,QBoxes[URef(LocVar(lVar'))],_)) :: ts) when lVar = lVar' ->
-        if i >= List.length vTup then None
-        else
-          let vi = List.nth vTup i in
+  let rec foo i ti =
+    if i >= List.length vTup then None else
+    let vi = List.nth vTup i in
+    begin match ti with
+      | (TQuick(_,QBoxes[URef(LocVar(l))],_) :: ts)
+      | (TNonNullRef(LocVar(l)) :: ts) when lVar = l ->
           let iterator = refIteratorOf g (selfifyVal g vi) in
-          begin match iterator () with
-            | Some(URef(lAct)) ->
-                let _ = fpr oc_local_inf "  %s |-> %s\n" lVar (strLoc lAct) in
-                Some lAct
-            | _ -> foo (i+1) ts
-          end
-    | _ :: ts -> foo (i+1) ts
-    | [] -> None
+          (match iterator () with
+            | Some(URef(lAct)) -> inferredLoc lVar lAct
+            | _ -> foo (i+1) ts)
+      | (TMaybeNullRef(LocVar(l),_) :: ts) when lVar = l ->
+          (match selfifyVal g vi with
+            | TMaybeNullRef(lAct,_) -> inferredLoc lVar lAct
+            | t -> let iterator = refIteratorOf g t in
+                   (match iterator () with
+                     | Some(URef(lAct)) -> inferredLoc lVar lAct
+                     | _ -> foo (i+1) ts))
+      | _ :: ts -> foo (i+1) ts
+      | [] -> None
+    end
   in
   foo 0 tTup
 
@@ -775,22 +781,19 @@ let findActualFromProtoLink locSubst lVar hForm hAct =
   let rec foo = function
     | (LocVar lVar', HStrong (_, _, Some (LocVar x))) :: cs when lVar = x ->
         if not (List.mem_assoc lVar' locSubst) then foo cs
-        else begin match List.assoc lVar' locSubst with
+        else (match List.assoc lVar' locSubst with
           | None -> None
           | Some(lAct') ->
               if not (List.mem_assoc lAct' (snd hAct)) then foo cs
-              else begin match List.assoc lAct' (snd hAct) with
-                | HEStrong(_,Some(lAct),_) ->
-                    let _ = fpr oc_local_inf "  %s |-> %s\n" lVar (strLoc lAct) in
-                    Some lAct
-                | _ -> None
-              end
-        end
+              else (match List.assoc lAct' (snd hAct) with
+                | HEStrong(_,Some(lAct),_) -> inferredLoc lVar lAct
+                | _ -> None))
     | _ :: cs -> foo cs
     | []      -> None
   in
   foo (snd hForm)
 
+(* TODO clean up findArrayActual *)
 let findArrayActual g tVar locSubst hForm hAct =
   let rec foo = function
     | (LocVar lVar,
@@ -896,13 +899,6 @@ and tcVal g h s e =
 and tcExp g h (w: world) e =
   if !Settings.doFalseChecks && checkInconsistent "tcExp" then ()
   else tcExp_ g h w e
-
-(*
-and tryTcVal g h s e =
-  Zzz.inNewScope (fun () ->
-    try (tcVal g h s e; true)
-    with Tc_error _ -> false)
-*)
 
 
 (***** Value type synthesis ***************************************************)
@@ -1169,7 +1165,7 @@ and tsExp_ g h = function
       end
 
   | EFreeze(m,ts,EVal(v)) ->
-      let cap = spr "ts EFreeze: [%s] [%s] [%s]"
+      let cap = spr "TS-Freeze: (%s, %s, %s)"
         (strLoc m) (strThawState ts) (strVal v) in
       let _ = if not (isWeakLoc m) then err [cap; "location isn't weak"] in
       let (tFrzn,l') = findWeakLoc g m in
@@ -1182,7 +1178,7 @@ and tsExp_ g h = function
                   let _ = Zzz.queryRoot := "TS-Freeze" in
                   let _ = tcVal g h tFrzn v' in
                   let h' = (fst h1, (m, HEWeak Frzn) :: snd h1) in
-                  (Typ (TNonNull (tyRef m)), h')
+                  (Typ (TNonNullRef m), h')
               | Some(HEStrong(_,Some(_),_), _) ->
                   err [cap; spr "[%s] wrong proto link" (strLoc l)]
               | Some _ -> err [cap; spr "[%s] isn't a strong obj" (strLoc l)]
@@ -1195,7 +1191,7 @@ and tsExp_ g h = function
       end
 
   | EThaw(l,EVal(v)) ->
-      let cap = spr "ts EThaw: [%s] [%s]" (strLoc l) (strVal v) in
+      let cap = spr "TS-Thaw: (%s, %s)" (strLoc l) (strVal v) in
       let _ = if not (isStrongLoc l) then err [cap; "location isn't strong"] in
       begin match findCell l h with
         | Some _ -> err [cap; "already bound"] (* TODO also check DEAD *)
@@ -1209,7 +1205,7 @@ and tsExp_ g h = function
                   let h' = (fst h0, (m, HEWeak (Thwd l))
                                        :: (l, HEStrong (vVar x, Some l', None))
                                        :: snd h0) in
-                  let t = TMaybeNull (tyRef l) in
+                  let t = TMaybeNullRef (l, pTru) in
                   (* this version could be used to more precisely track these
                      references.  but since i'm not interesting in checking for
                      non-nullness, i can use the less precise disjunction.
@@ -1512,7 +1508,7 @@ and tsAppQuick g h (poly,vFun,vArg) = match (poly,vFun,vArg) with
       let cap = spr "TS-App-GetPropObj: getPropObj (%s)" (strVal vArg) in
       let (v1,v2) = twoVals cap vs in
       let (t1,t2) = (tsVal g h v1, tsVal g h v2) in
-      let l1 = getNextRef cap (refIteratorOf g t1) in
+      let l1 = getNextMaybeRef cap g t1 in
       match findCell l1 h with
         | Some(HEStrong(d1,Some(l2),_)) ->
             (match matchQRecd (tsVal g h d1), matchQStrLit t2 with
@@ -1529,7 +1525,7 @@ and tsAppQuick g h (poly,vFun,vArg) = match (poly,vFun,vArg) with
       if List.length vs <> 3 then err [cap; "wrong number of arguments"];
       let (v1,v2,v3) = threeVals cap vs in
       let (t1,t2) = (tsVal g h v1, tsVal g h v2) in
-      let l1 = getNextRef cap (refIteratorOf g t1) in
+      let l1 = getNextMaybeRef cap g t1 in
       match findAndRemoveCell l1 h with
         | Some(HEStrong(d1,Some(l2),ci),h0) ->
             (match matchQRecd (tsVal g h d1), matchQStrLit t2 with
@@ -1549,7 +1545,7 @@ and tsAppQuick g h (poly,vFun,vArg) = match (poly,vFun,vArg) with
       let cap = spr "TS-App-GetPropArr: getPropArr (%s)" (strVal vArg) in
       let (v1,v2) = twoVals cap vs in
       let (t1,t2) = (tsVal g h v1, tsVal g h v2) in
-      let l1 = getNextRef cap (refIteratorOf g t1) in
+      let l1 = getNextMaybeRef cap g t1 in
       match findCell l1 h with
         | Some(HEStrong(a,Some(l2),_)) ->
             (match tsVal g h a, matchQStrLit t2 with

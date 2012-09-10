@@ -1,9 +1,9 @@
-/*: [~lObj |-> ({Dict|((sel v "n"):Int)}, lObjectProto)] */ "#weak";
+/*: (~lObj |-> {Dict|(Int (sel v "n"))} > lObjPro) */ "#weak";
 
 var sumFields = function(objs) /*:
-  [;Larr] [[objs:Ref(Larr)]]
-        / [~lObj |-> frzn,
-           Larr |-> (array:{(and (v::Arr(Ref(~lObj))) (packed v))}, lArrayProto)]
+  [;Larr] (objs:Ref(Larr))
+        / (~lObj |-> frzn,
+           Larr |-> array:{(and (v::Arr(Ref(~lObj))) (packed v))} > lArrPro)
        -> Int / same */
 {
   var i = 0, n = 0;
@@ -17,10 +17,10 @@ var sumFields = function(objs) /*:
   return n;
 };
 
-/*: #define loopAnn [
+/*: #define loopAnn (
       &i    |-> _:{Int|(>= v 0)},
       &n    |-> _:Int,
       &objs |-> _:Ref(Larr),
-      Larr  |-> (_:{(= v array)}, lArrayProto),
+      Larr  |-> _:{(= v array)} > lArrPro,
       ~lObj |-> frzn
-] */ "#define";
+) */ "#define";

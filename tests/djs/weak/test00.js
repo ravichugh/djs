@@ -1,4 +1,4 @@
-/*: [~lRow |-> (Arr(Str), lArrayProto)] */ "#weak";
+/*: (~lRow |-> Arr(Str) > lArrPro) */ "#weak";
 
 var row1 = /*: lRow1 Arr(Str) */ ["00","01"];
 var row2 = /*: lRow2 Arr(Str) */ ["10","11"];
@@ -19,7 +19,7 @@ row1 = mat[0];
 
 var s = row1[0];
 
-assert (/*: {(or (= v undefined) (v:Str))} */ s);
+assert (/*: {(or (= v undefined) (Str v))} */ s);
 
 s = (s == undefined ? "bleh" : s);
 

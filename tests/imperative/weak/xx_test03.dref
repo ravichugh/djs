@@ -1,4 +1,4 @@
-weak [~lWeak |-> ({Dict|(Int (sel v "f"))}, lROOT)]
+weak (~lWeak |-> {Dict|(Int (sel v "f"))} > lROOT)
 
 let strong_obj_1 = new ({"f" = 100}, lStrong1, objROOT, lROOT) in
 let _ :: {(= v 100)} = ([;lStrong1,lROOT;] getPropObj) (strong_obj_1, "f") in

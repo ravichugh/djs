@@ -1,10 +1,10 @@
-/*: [~lRow |-> (Arr(Str), lArrayProto)] */ "#weak";
+/*: (~lRow |-> Arr(Str) > lArrPro) */ "#weak";
 
 var row1 = /*: lRow1 Arr(Str) */ ["00","01"];
 var row2 = /*: lRow2 Arr(Str) */ ["10","11"];
 
-/*: Ref(lRow1) */ row1;
-/*: Ref(lRow2) */ row2;
+assert (/*: Ref(lRow1) */ row1);
+assert (/*: Ref(lRow2) */ row2);
 
 /*: row1 (~lRow,frzn) */ "#freeze";
 

@@ -138,9 +138,9 @@ and hastyp = walue * typterm
 and typ =
   | TRefinement of vvar * formula        (* {x|p} *)
   | TQuick of vvar * quicktyp * formula  (* {x:Q|p} *)
-  | TNonNull of typ                      (* T! *)
-  | TMaybeNull of typ                    (* T? *)
   | TBaseUnion of basetyp list           (* IntOrBool, NumOrStr, etc. *)
+  | TMaybeNullRef of loc * formula       (* {v:Ref(l?)|p} *)
+  | TNonNullRef of loc                   (* Ref(m!) *)
 
 and prenextyp =
   | TExists of vvar * typ * prenextyp    (* Exists x:T. S *)

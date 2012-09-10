@@ -42,9 +42,9 @@ let rec checkType errList g t =
   let errList = errList @ [spr "Wf.checkType: %s" (strTyp t)] in
   match t with
     | TBaseUnion _ -> ()
-    | TNonNull(t) | TMaybeNull(t) -> checkType errList g t
-    | TRefinement(x,p) ->
-        checkFormula errList (Var(x,tyAny)::g) p
+    | TNonNullRef(l) -> checkLoc errList g l
+    | TMaybeNullRef(l,p) -> (checkLoc errList g l; checkFormula errList g p)
+    | TRefinement(x,p) -> checkFormula errList (Var(x,tyAny)::g) p
     | TQuick(x,qt,p) ->
         let _ = checkQuickTyp errList (Var(x,tyAny)::g) qt in
         checkFormula errList (Var(x,tyAny)::g) p

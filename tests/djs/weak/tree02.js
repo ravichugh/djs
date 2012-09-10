@@ -1,17 +1,17 @@
 
-/*: [~lTreeNode |-> (tyTreeNode, lTreeNodeProto)] */ "#weak";
+/*: (~lTreeNode |-> tyTreeNode > lTreeNodeProto) */ "#weak";
 
 /*: #define tyTreeNode
     {Dict|(and (dom v {"item","left","right"})
-               ((sel v "item"):Int)
-               ((sel v "left"):Ref(~lTreeNode))
-               ((sel v "right"):Ref(~lTreeNode)))} */ "#define";
+               (Int (sel v "item"))
+               ((sel v "left")  :: Ref(~lTreeNode))
+               ((sel v "right") :: Ref(~lTreeNode)))} */ "#define";
 
 /*: #define ctorTreeNode
         [;Lthis]
-        [[this:Ref(Lthis), left:Ref(~lTreeNode), right:Ref(~lTreeNode), item:Int]]
-      / [Lthis |-> (d:Empty, lTreeNodeProto), ~lTreeNode |-> frzn]
-     -> Ref(~lTreeNode) / [~lTreeNode |-> same] */ "#define";
+        (this:Ref(Lthis), left:Ref(~lTreeNode), right:Ref(~lTreeNode), item:Int)
+      / (Lthis |-> d:Empty > lTreeNodeProto, ~lTreeNode |-> frzn)
+     -> Ref(~lTreeNode) / (~lTreeNode |-> same) */ "#define";
 
 function TreeNode(left,right,item) /*: new ctorTreeNode */ {
   this.left = left;
@@ -41,13 +41,13 @@ function TreeNode(left,right,item) /*: new ctorTreeNode */ {
 /////   }
 
 /*: #define tyBottomUpTree
-       [[item:Int, depth:Int]]
-     / [~lTreeNode |-> frzn,
+       (item:Int, depth:Int)
+     / (~lTreeNode |-> frzn,
         &TreeNode |-> _:Ref(lTreeNodeObj),
-        lTreeNodeObj |-> (_:{Dict|
-           (and ((sel v "code") : ctorTreeNode)
-                ((sel v "prototype") : Ref(lTreeNodeProto)))}, lFunctionProto),
-        lTreeNodeProto |-> (_:Dict, lObjectProto)]
+        lTreeNodeObj |-> _:{Dict|
+           (and ((sel v "code") :: ctorTreeNode)
+                ((sel v "prototype") :: Ref(lTreeNodeProto)))} > lFunPro,
+        lTreeNodeProto |-> _:Dict > lObjPro)
     -> Ref(~lTreeNode) / same */ "#define";
 
 var bottomUpTree = function foo(item,depth) /*: tyBottomUpTree */ {
@@ -66,7 +66,7 @@ var bottomUpTree = function foo(item,depth) /*: tyBottomUpTree */ {
 ////////////////////////////////////////////////////////////////////////////////
 
 /*: #define tyItemCheck
-    [[this:Ref(~lTreeNode)]] / [~lTreeNode |-> frzn] -> Int / same */ "#define";
+    (this:Ref(~lTreeNode)) / (~lTreeNode |-> frzn) -> Int / same */ "#define";
 
 // see tree01.js
 var itemCheck = /*: tyItemCheck */ "#extern";
