@@ -39,6 +39,7 @@ rule token = parse
   | "IntOrBool"  { SUGAR "IntOrBool" }
   | "IntOrStr"   { SUGAR "IntOrStr" }
   | "StrOrBool"  { SUGAR "StrOrBool" }
+  (* | "NonNegInt"  { SUGAR "NonNegInt" } *)
 
   | "type"         { TYPE }
   | "heap"         { HEAP }

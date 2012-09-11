@@ -579,6 +579,7 @@ let simpleSugarToTyp = [
   ("IntOrBool"   , tyIntOrBool    );
   ("IntOrStr"    , tyIntOrStr     );
   ("NumOrBool"   , tyNumOrBool    );
+  (* ("NonNegInt"   , ty (pAnd [pInt; ge theV (wInt 0)])); *)
 ]
 
 let simpleSugarOfTyp =

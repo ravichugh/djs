@@ -517,11 +517,12 @@ let fixupThisArg p (polyArgs,y,t1,h1,t2,h2) =
 
 (***** Collecting heap bindings from DJS desugaring ***************************)
 
-(* NOTE: the next two filter locations based on how DJS desugars local refs *)
+(* NOTE: the next two filtering functions look for reference cells
+         let __x = ref &x created by desugaring.
 
-let isNotLocalRef = function
-  | LocConst(x) -> not (Utils.strPrefix x "&")
-  | LocVar _ -> true
+  - isFreeLocalRef finds locations &x where __x is in the set of free vars
+  - isObjectRefFromFreeVar finds locations l where there is some __x in the
+    set of free vars and where &x stores some value y of type Ref(l) *)
 
 let isFreeLocalRef fvs = function
   | LocConst(x) when Utils.strPrefix x "&" ->
@@ -529,25 +530,38 @@ let isFreeLocalRef fvs = function
       VVars.mem (spr "__%s" y) fvs
   | _ -> false
 
-let includeLoc l fvs =
+let isObjectRefFromFreeVar g h fvs l =
+  List.exists (fun _x ->
+    if VVars.mem _x fvs &&
+       Str.string_match (Str.regexp "^__\\(.*\\)$") _x 0 then
+      let x = Str.matched_group 1 _x in
+      let lx = LocConst (spr "&%s" x) in
+      (match findCell lx h with
+        | Some(HEStrong({value=VVar(y)},_,_)) ->
+            (match findVarType g y with
+               | Some(TQuick(_,QBoxes[URef(l')],_)) when l = l' -> true
+               | _ -> false)
+        | _ -> false)
+    else false
+  ) (VVars.elements fvs)
+
+let includeLoc g h fvs l =
   List.mem l [lRoot; lObjPro; lArrPro; lFunPro]
   || isFreeLocalRef fvs l
-  (* || isNotLocalRef l *)
+  || isObjectRefFromFreeVar g h fvs l
 
-let collectClosureInvariants fvs (_,cs) =
+let collectClosureInvariants g h fvs =
   List.fold_left (fun (acc1,acc2) -> function
-    | (l,HEStrong(_,lo,Some(t))) when includeLoc l fvs ->
+    | (l,HEStrong(_,lo,Some(t))) when includeLoc g h fvs l ->
         let hc1 = HStrong (Some (freshVar "locinvar"), t, lo) in
         let hc2 = HStrong (Some (freshVar "locinvar"), t, lo) in
         ((l,hc1)::acc1, (l,hc2)::acc2)
-    | (l,HEStrong(v,lo,None)) when includeLoc l fvs ->
+    | (l,HEStrong(v,lo,None)) when includeLoc g h fvs l ->
         let hc = HStrong (None, valToSingleton v, lo) in
         ((l,hc)::acc1, (l,hc)::acc2)
-    | (l,HEStrong _) ->
-        (acc1, acc2)
-    | (l,HEWeak _) ->
-        (acc1, acc2)
-  ) ([],[]) cs
+    | (l,HEStrong _) -> (acc1, acc2)
+    | (l,HEWeak(thaw)) -> ((l,HWeak(thaw))::acc1, (l,HWeak(thaw))::acc2)
+  ) ([],[]) (snd h)
 
 let addAutoLocBindings (hs,cs0) cs1 =
   let cs =
@@ -607,14 +621,14 @@ let transitiveFreeVarsHack __x = function
   | _ ->
       ()
 
-let augmentFrameAndFix x h fr e =
+let augmentFrameAndFix g h x fr e =
   if not !Settings.augmentHeaps then (fr, e)
   else begin
     let fvs = transitiveFreeVarsOfExp x e in
     match isSimpleFrame fr with
       | None -> failwith "augmentFrame: shouldn't get here"
       | Some(t) ->
-          let cloInvariants = collectClosureInvariants fvs h in
+          let cloInvariants = collectClosureInvariants g h fvs in
           let fTT = function
             | UArrow(arr) -> UArrow (augmentHeaps arr cloInvariants)
             | u -> u in
@@ -1142,7 +1156,7 @@ and tsExp_ g h = function
         let ruleName = "TS-Let-Ann-Arrow" in
         let cap = spr "%s: let %s = ..." ruleName x in
         checkBinder cap g x;
-        let (frame,e1) = augmentFrameAndFix x h frame e1 in
+        let (frame,e1) = augmentFrameAndFix g h x frame e1 in
         let (s1,h1) = applyFrame h frame in
         Zzz.inNewScope (fun () -> tcExp g h (s1,h1) e1);
         let (bindings,h1) = heapEnvOfHeap ruleName h1 in

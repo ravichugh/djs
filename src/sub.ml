@@ -332,7 +332,7 @@ and checkHasTyp errList usedBoxes g (w,u) =
 and checkTypeTerms errList usedBoxes g u1 u2 =
   if u1 = u2 then true else
   let errList =
-    errList @ [spr "checkTypeTerms:\n   %s\n<: %s" (strTT u1) (strTT u2)] in
+    errList @ [spr "checkTypeTerms:\n\n   %s\n\n<: %s" (strTT u1) (strTT u2)] in
   match u1, u2 with
     | UVar(x), UVar(y) -> x = y
     | URef(x), URef(y) -> x = y

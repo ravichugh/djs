@@ -359,6 +359,9 @@ varDecl_noin
   : Id { VarDeclNoInit (($startpos, $endpos),$1) }
   | Id Assign assign_noin_expr { VarDecl (($startpos, $endpos),$1,$3) }
   | Id HINT { HintVarDecl (($startpos, $endpos), $2, $1) }
+  (* rkc: added to support for (var i /*: T */ = e; ...; ...) *)
+  | Id HINT Assign assign_expr
+      { HintVarDeclInit (($startpos, $endpos), $2, $1, $4) }
 
 case
   : Case expr Colon stmts 

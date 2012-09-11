@@ -10,15 +10,15 @@ var mammal = function(priv) /*: ty_init_mammal */ {
 /*: ty_priv {Dict|(Str (sel v "name"))} */ '#define';
 
 /*: ty_init_mammal [;Lnew,Lpriv]
-        (priv:Ref(Lpriv)) / (Lpriv |-> dPriv:ty_priv > lObjPro)
-     -> Ref(Lnew) / (Lpriv |-> same, &priv |-> blah1:Ref(Lpriv),
-                     Lnew  |-> dNew:ty_mam > lObjPro) */ '#define';
+        (priv:Ref(Lpriv)) / (Lpriv: dPriv:ty_priv > lObjPro)
+     -> Ref(Lnew) / (Lpriv: same, &priv: blah1:Ref(Lpriv),
+                     Lnew: dNew:ty_mam > lObjPro) */ '#define';
 
 /*: ty_mam {Dict|(and (dom v {"get_name"})
                       (ty_get_name (sel v "get_name")))} */ '#define';
 
 /*: ty_get_name
-        (this:Top) / (Lpriv |-> ePriv:ty_priv > lObjPro, &priv |-> blah:Ref(Lpriv))
+        (this:Top) / (Lpriv: ePriv:ty_priv > lObjPro, &priv: blah:Ref(Lpriv))
      -> {(= v (sel ePriv "name"))} / same */ '#define';
 
 //////////////////////////////////////////////////////////////////////////////
@@ -47,9 +47,9 @@ var cat = function(priv2) /*: ty_init_cat */ {
 };
 
 /*: ty_init_cat [;Lnew,Lpriv]
-        (priv2:Ref(Lpriv)) / (Lpriv |-> dPriv:ty_priv > lObjPro)
-     -> Ref(Lnew) / (Lpriv |-> same, &priv |-> blah1:Ref(Lpriv),
-                     Lnew  |-> dNew:ty_cat > lObjPro) */ '#define';
+        (priv2:Ref(Lpriv)) / (Lpriv: dPriv:ty_priv > lObjPro)
+     -> Ref(Lnew) / (Lpriv: same, &priv: blah1:Ref(Lpriv),
+                     Lnew: dNew:ty_cat > lObjPro) */ '#define';
 
 /*: ty_cat {Dict|(and (dom v {"get_name","purr"})
                       (ty_get_name (sel v "get_name"))
