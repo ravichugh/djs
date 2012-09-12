@@ -41,22 +41,8 @@ let argSpecs = [
                "     do all subtyping with logical queries");
   ("-djs", Arg.Set S.djsMode,
         "            Dependent JavaScript");
-(*
-  ("-varLifting", Arg.Bool (fun b -> S.doVarLifting := b),
-               "     <bool> (default is false)");
-  ("-implicitGlobal", Arg.Bool (fun b -> S.doImplicitGlobal := b),
-                   " <bool> (default is false)");
-  ("-argsArray", Arg.Set S.doArgsArray,
-              "      desugar lambdas/calls with arguments tuple");
-*)
   ("-augmentHeaps", Arg.Bool (fun b -> S.augmentHeaps := b),
                  "   <bool> tc will insert omitted locations (default true)");
-(*
-  ("-greedyThaws", Arg.Set S.greedyThaws,
-                "    desugaring inserts thaw/freeze greedily around weak locs");
-*)
-  ("-assistCtor", Arg.Set S.assistCtor,
-               "     desugaring wraps annotation around calls to ctor funcs");
 ]
 
 let anonArgFun s =

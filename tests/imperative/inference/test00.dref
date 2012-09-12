@@ -1,0 +1,11 @@
+weak (~lWeak |-> {Dict|(Int (sel v "f"))} > lObjPro)
+
+val weak_obj :: Ref(~lWeak)
+
+let thaw_obj_1 = thaw (lThaw1, weak_obj) in
+
+let _ :: Int = ([;lThaw1,lObjPro;] getPropObj) (thaw_obj_1, "f") in
+
+let _ :: Int = getPropObj (thaw_obj_1, "f") in
+
+0

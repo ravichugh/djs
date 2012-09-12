@@ -24,7 +24,9 @@ val maybeAddHeapPrefixVar : uarrow -> uarrow
 
 val typToFrame : typ -> frame
 
-val mkLetRec : vvar -> uarrow -> exp -> exp -> exp
+(* val mkLetRec : vvar -> uarrow -> exp -> exp -> exp *)
+
+val mkLetRec_ : vvar -> uarrow -> exp -> exp -> exp
 
 val doIntersectionHack : vvar -> formula
 

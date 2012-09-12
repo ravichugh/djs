@@ -54,6 +54,12 @@ let strPrefix s pre =
     (n >= m) && (String.sub s 0 m = pre)
 
 
+let strAfterPrefix s pre =
+  if strPrefix s pre
+  then let n = String.length pre in String.sub s n (String.length s - n)
+  else failwith (Printf.sprintf "strAfterPrefix [%s] [%s]" s pre)
+
+
 let iter_i f l =
   ignore (List.fold_left (fun i x -> f x i; succ i) 0 l)
 

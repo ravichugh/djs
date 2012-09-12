@@ -69,8 +69,8 @@ let mapTyp ?(fTyp  = fun x -> x)
     | TMaybeNullRef(l,p) -> fTyp (TMaybeNullRef (fLoc l, fooForm p))
     | TNonNullRef(l)     -> fTyp (TNonNullRef (fLoc l))
 
-  and fooPrenexTyp = function
-    | TExists _          -> failwith "mapTyp TExists"
+  (* and fooPrenexTyp = function *)
+  (*   | TExists _          -> failwith "mapTyp TExists" *)
 
   and fooQuickTyp = function
     | QBase(bt)   -> QBase bt
@@ -174,8 +174,8 @@ let foldTyp ?(fForm = fun acc _ -> acc)
     | TNonNullRef(l)     -> fTT acc (URef l) (* a bit hacky to rely on fTT *)
     | TMaybeNullRef(l,p) -> fooForm (fTT acc (URef l)) p
 
-  and fooPrenexTyp acc = function
-    | TExists _          -> failwith "foldTyp TExists"
+  (* and fooPrenexTyp acc = function *)
+  (*   | TExists _          -> failwith "foldTyp TExists" *)
 
   and fooQuickTyp acc = function
     | QBase _            -> acc
@@ -364,6 +364,7 @@ let vUndef        = {pos = pos0; value = VBase Undef}
 let vVar x        = {pos = pos0; value = VVar x}
 let vEmpty        = {pos = pos0; value = VEmpty}
 let vBase x       = {pos = pos0; value = VBase x}
+let vTup xs       = {pos = pos0; value = VTuple xs}
 (* let vNewObjRef i  = {pos = pos0; value = VNewObjRef i} *)
 let vFun (p,e)    = {pos = pos0; value = VFun (p, e)}
 let eFun (p,e)    = EVal (vFun (p,e))
@@ -382,6 +383,9 @@ let mkApp f args =
     | x::l  -> EApp (([],[],[]), foo l, x)
   in
   foo (List.rev args)
+
+let mkAppUn vFun vArgs =
+  EApp (([],[],[]), EVal vFun, EVal (wrapVal pos0 (VTuple vArgs)))
 
 let wBool x       = WVal (vBool x)
 let wStr x        = WVal (vStr x)
@@ -423,7 +427,8 @@ let pBool         = PEq (tag theV, wStr tagBool)
 let pStr          = PEq (tag theV, wStr tagStr)
 let pDict         = PEq (tag theV, wStr tagDict)
 let pGuard x b    = PEq (WVal x, WVal (vBool b))
-let pIsBang a u   = pAnd [pNot (PEq (a, wNull)); hastyp a u]
+let pNonNull w    = pNot (eq w wNull)
+let pIsBang w u   = pAnd [hastyp w u; pNonNull w]
 
 let ty p          = TRefinement ("v", p)
 let tyAny         = ty pTru (* TTop (* ty PTru *) *)
@@ -938,6 +943,10 @@ and strWorld (s,h) =
 let strFrame (l,h,w) =
   spr "[%s] %s -> %s" (String.concat "," l) (strHeap h) (strWorld w)
 
+let strCloInv = function
+  | Some(t) -> strTyp t
+  | None    -> "_"
+
 let strBinding (x,s) = spr "%s:%s" x (strTyp s)
 
 let strHeapEnvCell = function
@@ -1074,6 +1083,7 @@ and freeVarsTT env = function
   | UVar(x) -> if Quad.memT x env then Quad.empty else Quad.addT x Quad.empty
   | URef(l) -> freeVarsLoc env l
   | UArray(t) -> freeVarsTyp env t
+  | UMacro(x) -> failwith (spr "freeVarsTT macro [%s]: should be expanded" x)
   | UArrow((ts,ls,hs),x,t1,h1,t2,h2) ->
       let env = List.fold_left (fun env t -> Quad.addT t env) env ts in
       let env = List.fold_left (fun env l -> Quad.addL l env) env ls in

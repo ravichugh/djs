@@ -139,6 +139,7 @@ let rec anf = function
   | EThaw(loc,e) ->
       let (l,e) = anfAndTmp e in
       finish (l, EThaw (loc, e))
+  | ELoadSrc _ -> failwith "Anf.anf: ELoadSrc should've been expanded"
 
 and anfAndTmp e =
   let (l1,e) = anf e in
@@ -231,11 +232,6 @@ and strExp k exp = match exp with
                  (strLocs ls)
                  (String.concat "," (List.map strHeap hs)) in
       spr "%s(%s %s)(%s)" (tab k) s0 (clip s1) (clip s2)
-(*
-        if ls = [] then ""
-        else spr "<%s> " (strLocs ls) in
-      spr "%s%s %s(%s)" (tab k) (clip s1) sl (clip s2)
-*)
   | ELet(x,ao,e1,e2) ->
       let sep = if k = 0 then "\n\n" else "\n" in
       let sao =
@@ -321,11 +317,14 @@ and strExp k exp = match exp with
   | EThaw(l,EVal(v)) ->
       spr "%sthaw (%s, %s)" (tab k) (strLoc l) (clip (strVal (succ k) v))
   | EDict _        -> badAnf "EDict"
+  | ETuple  _      -> badAnf "ETuple"
+  | EArray _       -> badAnf "EArray"
   | EIf _          -> badAnf "EIf"
   | EApp _         -> badAnf "EApp"
   | ENewObj _      -> badAnf "ENewObj"
   | EFreeze _      -> badAnf "EFreeze"
   | EThaw _        -> badAnf "EThaw"
+  | ELoadSrc _     -> failwith "Anf.strExp: ELoadSrc should've been expanded"
   | ELoadedSrc(s,e) ->
       let s = Str.replace_first (Str.regexp Settings.djs_dir) "DJS_DIR/" s in
       let n = max 0 (70 - String.length s) in
@@ -373,7 +372,7 @@ and coerce = function
   | EHeapEnv(l,e) -> EHeapEnv (l, coerce e)
   | EMacro(x,m,e) -> EMacro (x, m, coerce e)
   | ETcFail(s,e) -> ETcFail (s, coerce e)
-  (* | EAs(e,a) -> EAs (coerce e, a) *)
+  | EAsW(e,w) -> EAsW (coerce e, w)
   | ENewref(cl,e,ci) -> ENewref (cl, coerce e, ci)
   | EDeref(e) -> EDeref (coerceEVal "deref" e)
   | ESetref(e1,e2) -> ESetref (coerceEVal "setref1" e1, coerceEVal "setref2" e2)

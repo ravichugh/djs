@@ -7,6 +7,8 @@ let oc_elim = open_out (Settings.out_dir ^ "elim.txt")
 let oc_local_inf = open_out (Settings.out_dir ^ "local-inf.txt")
 
 
+(**** Misc ********************************************************************)
+
 let checkBinder cap g x =
   if List.exists (function Var(y,_) -> x = y | _ -> false) g then
     err [cap; spr "[%s] already in scope, so please use a different name." x]
@@ -29,6 +31,9 @@ let rec addPredicate p = function
   | TBaseUnion(l)      -> ty (pAnd [p; applyTyp (TBaseUnion l) theV])
   | TMaybeNullRef(l,q) -> TMaybeNullRef (l, pAnd [p;q])
   | TNonNullRef(l)     -> failwith "addPredicate TNonNullRef"
+
+let tyThaw v l =
+  TMaybeNullRef (l, pImp (pNonNull (WVal v)) (pNonNull theV))
 
 
 (**** Selfify *****************************************************************)
@@ -424,7 +429,8 @@ let joinHeapEnvs v (hs1,cs1) (hs2,cs2) =
         | HEStrong(_,lo1,_), Some(HEStrong(_,lo2,_)) when lo1 <> lo2 ->
             failwith "joinHeapEnvs: proto links differ"
         | HEStrong(_,_,ci1), Some(HEStrong(_,_,ci2)) when ci1 <> ci2 ->
-            failwith "joinHeapEnvs: different clo invariants";
+            failwith (spr "joinHeapEnvs [%s]: different clo invariants\n%s\n%s"
+              (strVal v) (strCloInv ci1) (strCloInv ci2));
         | HEStrong(v1,lo1,ci1), Some(HEStrong(v2,_,_)) when v1 = v2 ->
             (acc1, (loc, HEStrong (v1, lo1, ci1)) :: acc2)
         | HEStrong(v1,lo1,ci1), Some(HEStrong(v2,_,_)) ->
@@ -545,17 +551,42 @@ let isObjectRefFromFreeVar g h fvs l =
     else false
   ) (VVars.elements fvs)
 
+(* isMarkedCtorPrototype looks for locations of the form lCtorProto
+   such that Ctor.prototype has been marked in #drefinfo by desugaring.
+   assuming all finished DJS protos are at the top level.
+   TODO: would be better to put a DjsInfo crumb directly in the type environment
+*)
+let finishedCtorProtos = ref []
+
+let readDrefInfo = function
+  | EVal({value=VBase(Str(s))}) ->
+      (match DjsDesugar2.readCtorProtoHint s with
+         | Some(ctor) -> finishedCtorProtos := ctor :: !finishedCtorProtos
+         | None -> ())
+  | _ -> ()
+
+let isMarkedCtorPrototype = function
+  | LocVar _ -> false
+  | LocConst(lx) ->
+      if Str.string_match (Str.regexp "^l\\(.*\\)Proto$") lx 0 then
+        let x = Str.matched_group 1 lx in
+        List.mem x !finishedCtorProtos
+      else false
+
 let includeLoc g h fvs l =
   List.mem l [lRoot; lObjPro; lArrPro; lFunPro]
   || isFreeLocalRef fvs l
   || isObjectRefFromFreeVar g h fvs l
+  (* || isMarkedCtorPrototype l *)
 
 let collectClosureInvariants g h fvs =
   List.fold_left (fun (acc1,acc2) -> function
-    | (l,HEStrong(_,lo,Some(t))) when includeLoc g h fvs l ->
+    (* insert heap cell for every locations with an explicit cloinv *)
+    | (l,HEStrong(_,lo,Some(t))) (* when includeLoc g h fvs l *) ->
         let hc1 = HStrong (Some (freshVar "locinvar"), t, lo) in
         let hc2 = HStrong (Some (freshVar "locinvar"), t, lo) in
         ((l,hc1)::acc1, (l,hc2)::acc2)
+    (* when cloinv is absent, conditionally include the loc *)
     | (l,HEStrong(v,lo,None)) when includeLoc g h fvs l ->
         let hc = HStrong (None, valToSingleton v, lo) in
         ((l,hc)::acc1, (l,hc)::acc2)
@@ -587,6 +618,14 @@ let augmentHeaps (polyArgs,y,t1,h1,t2,h2) (cs1,cs2) =
   let h2 = addAutoLocBindings h2 cs2 in
   (polyArgs, y, t1, h1, t2, h2)
 
+let augmentTT cloInvariants = function
+  | UArrow(arr) -> UArrow (augmentHeaps arr cloInvariants)
+  | u -> u
+
+let augmentType cloInvariants t =
+  mapTyp ~onlyTopForm:false (* recursing into _all_ arrow terms *)
+         ~fTT:(augmentTT cloInvariants) t
+
 let funcFreeVars = Hashtbl.create 17
 
 let rec transitiveFreeVars y =
@@ -612,6 +651,9 @@ let transitiveFreeVarsOfExp x e =
 
    add __x |-> djsFuncType_i to the free vars hash table, so that subsequently
    the transitive free vars of __x will include those in the function definition.
+
+   TODO: could change desugaring to explicitly insert a
+         "#drefinfo x djsFuncType_i" string to track this correspondence
 *)
 let transitiveFreeVarsHack __x = function
   | ELet(y,_,ELet(z,_,_,_), ENewref(_,EVal{value=VVar(y')},_))
@@ -621,25 +663,38 @@ let transitiveFreeVarsHack __x = function
   | _ ->
       ()
 
-let augmentFrameAndFix g h x fr e =
+let matchFixExp = function
+  | EApp(([t],[],[]), (EVal({value=VVar("fix")}) as eFix), eArg) ->
+      Some (t, eFix, eArg)
+  | _ -> None
+
+let augmentFixExp cloInvariants t eFix eArg =
+  EApp (([augmentType cloInvariants t],[],[]), eFix, eArg)
+
+let maybeAugmentFixExp g h x e =
+  if not !Settings.augmentHeaps then e
+  else begin
+    match matchFixExp e with
+      | Some(t,eFix,eArg) ->
+          let fvs = transitiveFreeVarsOfExp x e in
+          let cloInvariants = collectClosureInvariants g h fvs in
+          augmentFixExp cloInvariants t eFix eArg
+      | None -> e
+  end
+
+let maybeAugmentFrameAndFixExp g h x fr e =
   if not !Settings.augmentHeaps then (fr, e)
   else begin
-    let fvs = transitiveFreeVarsOfExp x e in
     match isSimpleFrame fr with
       | None -> failwith "augmentFrame: shouldn't get here"
       | Some(t) ->
+          let fvs = transitiveFreeVarsOfExp x e in
           let cloInvariants = collectClosureInvariants g h fvs in
-          let fTT = function
-            | UArrow(arr) -> UArrow (augmentHeaps arr cloInvariants)
-            | u -> u in
-          (* NOTE: recursing into _all_ arrow terms in the frame *)
-          let fr = ParseUtils.typToFrame (mapTyp ~onlyTopForm:false ~fTT t) in
-          let e = (* also need to augment the type parameter to fix *)
-            match e with
-              | EApp(([t],[],[]), (EVal({value=VVar("fix")}) as eFix) ,eArg) ->
-                  let t = mapTyp ~onlyTopForm:false ~fTT t in
-                  EApp (([t],[],[]), eFix, eArg)
-              | _ -> e in
+          let fr = ParseUtils.typToFrame (augmentType cloInvariants t) in
+          let e =
+            match matchFixExp e with
+              | Some(t,eFix,eArg) -> augmentFixExp cloInvariants t eFix eArg
+              | None -> e in
           (fr, e)
   end
 
@@ -1156,7 +1211,7 @@ and tsExp_ g h = function
         let ruleName = "TS-Let-Ann-Arrow" in
         let cap = spr "%s: let %s = ..." ruleName x in
         checkBinder cap g x;
-        let (frame,e1) = augmentFrameAndFix g h x frame e1 in
+        let (frame,e1) = maybeAugmentFrameAndFixExp g h x frame e1 in
         let (s1,h1) = applyFrame h frame in
         Zzz.inNewScope (fun () -> tcExp g h (s1,h1) e1);
         let (bindings,h1) = heapEnvOfHeap ruleName h1 in
@@ -1170,10 +1225,12 @@ and tsExp_ g h = function
 
   | ELet(x,None,e1,e2) -> begin
       transitiveFreeVarsHack x e1;
+      readDrefInfo e1;
       let gInit = g in
       let ruleName = "TS-Let-Bare" in
       let cap = spr "%s: let %s = ..." ruleName x in
       checkBinder cap g x;
+      let e1 = maybeAugmentFixExp g h x e1 in
       let (s1,h1) = Zzz.inNewScope (fun () -> tsExp g h e1) in
       (* let (s1,h1) = elimSingletonExistentials (s1,h1) in *)
       let (l1,s1) = stripExists s1 in
@@ -1205,6 +1262,7 @@ and tsExp_ g h = function
 
   | EWeak((m,t,l),e) -> begin
       if isStrongLoc m then err ["TS-EWeak: location should be weak"];
+      (* TODO expand macros in t *)
       let g = WeakLoc (m, t, l) :: g in
       Wf.typ "EWeak" g t;
       let h = (fst h, (m, HEWeak Frzn) :: snd h) in
@@ -1281,17 +1339,7 @@ and tsExp_ g h = function
                   let h' = (fst h0, (m, HEWeak (Thwd l))
                                        :: (l, HEStrong (vVar x, Some l', None))
                                        :: snd h0) in
-                  let t = TMaybeNullRef (l, pTru) in
-                  (* this version could be used to more precisely track these
-                     references.  but since i'm not interesting in checking for
-                     non-nullness, i can use the less precise disjunction.
-                     if i do end up going this route, might want a TNullIf sugar
-                     form that selfifyVar can look for.
-                  let t = ty (pIte (eq (WVal v) wNull)
-                                   (eq theV wNull)
-                                   (applyTyp (tyRef l) theV)) in
-                  *)
-                  (TExists (x, tFrzn, Typ t), h')
+                  (TExists (x, tFrzn, Typ (tyThaw v l)), h')
               | Some(HEWeak _, _) -> err [cap; "already thawed"]
               | Some _ -> err [cap; "isn't a weaktok constraint"]
               | None -> err [cap; spr "[%s] location not bound" (strLoc m)]
@@ -1592,7 +1640,16 @@ and tsAppQuick g h (poly,vFun,vArg) = match (poly,vFun,vArg) with
                       | Some(s) -> Some (Typ s, h)
                       | None    -> None)
                | _ -> None)
-        | _ -> err [cap; spr "%s not an object in heap" (strLoc l1)]
+        | Some(HEWeak(Frzn)) ->
+            Zzz.inNewScope (fun () ->
+              (* new scope because quickThaw pushes bindings *)
+              let (g1,h1,_,(x,tFrzn),(y,tStrongPtr)) = quickThaw g h v1 l1 in
+              let (s,_) = (* ignore heap since getPropObj has no effect *)
+                tsExp g1 h1 (mkAppUn (vVar "getPropObj") [vVar y; v2]) in
+              let (binders,s) = stripExists s in
+              Some (mkExists ((x,tFrzn)::(y,tStrongPtr)::binders) (Typ s), h))
+        | _ ->
+            err [cap; spr "%s not an object in heap" (strLoc l1)]
     end
 
   | ([],[],[]), {value=VVar("setPropObj")}, {value=VTuple(vs)} -> begin
@@ -1610,10 +1667,21 @@ and tsAppQuick g h (poly,vFun,vArg) = match (poly,vFun,vArg) with
                    let vUpd = wrapVal pos0 (VExtend(d1,v2,v3)) in
                    let s = updQRecd vUpd (recd,exactDom) f t3 in
                    let s = addPredicate (pNot (eq (WVal v1) wNull)) s in
-                   let h' = (fst h0, snd h0 @ [(l1, HEStrong (vVar d, Some l2, ci))]) in
+                   let h' = (fst h0,
+                             snd h0 @ [(l1, HEStrong (vVar d, Some l2, ci))]) in
                    Some (TExists (d, s, Typ (selfifyVal g v3)), h')
                | _ -> None)
-        | _ -> err [cap; spr "%s not an object in heap" (strLoc l1)]
+        | Some(HEWeak(Frzn),_) ->
+            Zzz.inNewScope (fun () ->
+              let (g1,h1,lx,(x,tFrzn),(y,tStrongPtr)) = quickThaw g h v1 l1 in
+              let (s,h2) =
+                tsExp g1 h1 (mkAppUn (vVar "setPropObj") [vVar y; v2; v3]) in
+              let (binders,s) = stripExists s in
+              let g2 = tcAddBindings g1 binders in
+              let _ = quickFreeze g2 h2 l1 lx in
+              Some (mkExists ((x,tFrzn)::(y,tStrongPtr)::binders) (Typ s), h))
+        | _ ->
+            err [cap; spr "%s not an object in heap" (strLoc l1)]
     end
 
   | ([],[],[]), {value=VVar("getPropArr")}, {value=VTuple(vs)} -> begin
@@ -1638,6 +1706,8 @@ and tsAppQuick g h (poly,vFun,vArg) = match (poly,vFun,vArg) with
                       | Some(s) -> Some (Typ s, h)
                       | None    -> None)
                | _ -> None)
+        | Some(HEWeak(Frzn)) ->
+            err [cap; "TODO implement quick thaw for this case"]
         | _ -> err [cap; spr "%s not an object in heap" (strLoc l1)]
     end
 
@@ -1668,6 +1738,35 @@ and getPropObj g h recd exactDom f lPro =
       | Some _ -> failwith "getPropObj: bad constraint"
       | None -> failwith "getPropObj: could return HeapSel here"
   end
+
+and quickThaw g h weakPtr m =
+  let (tFrzn,l') = findWeakLoc g m in
+  match findAndRemoveCell m h with
+    | Some(HEWeak(Frzn),h0) ->
+        let locName = Utils.strAfterPrefix (strLoc m) "~" in
+        let x = freshVar (spr "quickThawVal_%s" locName) in
+        let y = freshVar (spr "quickThawPtr_%s" locName) in
+        let l = LocConst (spr "l%s" x) in
+        let tStrongPtr = tyThaw weakPtr l in
+        let g1 = tcAddBinding g x tFrzn in
+        let g1 = tcAddBinding g1 y tStrongPtr in
+        let h1 = (fst h0, snd h0 @ [(m, HEWeak (Thwd l));
+                                    (l, HEStrong (vVar x, Some l', None))]) in
+        (g1, h1, l, (x,tFrzn), (y,tStrongPtr))
+    | Some(HEWeak _,_) ->
+        failwith (spr "quickThaw: [%s] already thawed" (strLoc m))
+    | _ ->
+        failwith (spr "quickThaw: [%s]" (strLoc m))
+
+and quickFreeze g2 h2 m lx =
+  let (tFrzn,l') = findWeakLoc g2 m in
+  match findCell m h2, findCell lx h2 with
+    | Some(HEWeak(Thwd(lx'))), Some(HEStrong(v,Some(l''),_))
+      when lx = lx' && l' = l'' ->
+        tcVal g2 h2 tFrzn v
+    | _ ->
+        failwith (spr "quickFreeze: didn't find expected cells for \
+          [%s] and [%s]" (strLoc m) (strLoc lx))
 
 and tsAppQuickTry g h fs vArg =
   match fs with

@@ -235,8 +235,17 @@ let mkLetRec f uarr e1 e2 =
   let (_,x,_,_,_,_) = uarr in
   let t = tyTypTerm (UArrow uarr) in
   ELet (f, Some (typToFrame t),
-        EApp (([t],[],[]), eVar "fix",
-          eFun (PLeaf f, eFun (PLeaf x, e1))),
+        EApp (([t],[],[]), eVar "fix", eFun (PLeaf f, eFun (PLeaf x, e1))),
+        e2)
+
+(* like the previous version, but without the extra annotation
+     let f = fix [U] (fun f x -> e) in e2
+*)
+let mkLetRec_ f uarr e1 e2 =
+  let (_,x,_,_,_,_) = uarr in
+  let t = tyTypTerm (UArrow uarr) in
+  ELet (f, None,
+        EApp (([t],[],[]), eVar "fix", eFun (PLeaf f, eFun (PLeaf x, e1))),
         e2)
 
 

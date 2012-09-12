@@ -1,0 +1,7 @@
+weak (~lBlah: {Dict|(Int (sel v "n"))} > lObjPro)
+val x :: Ref(~lBlah)
+let _ :: Int = getElem (x, "n") in
+let _ = setElem (x, "n", 10) in
+let _ = setElem (x, "n", getElem (x, "n")) in
+let _ = setElem (x, "f", "hi") in
+0

@@ -83,6 +83,7 @@ val vUndef : value
 val vVar : vvar -> value
 val vEmpty : value
 val vBase : basevalue -> value
+val vTup : value list -> value
 (* val vNewObjRef : int -> value *)
 val vFun : pat * exp -> value
 val eFun : pat * exp -> exp
@@ -97,7 +98,9 @@ val wProj : int -> walue
 
 val eVar : vvar -> exp
 val eStr : string -> exp
+
 val mkApp : exp -> exp list -> exp
+val mkAppUn : value -> value list -> exp
 
 val simplify : formula -> formula
 
@@ -116,6 +119,8 @@ val pNot : formula -> formula
 val pIte : formula -> formula -> formula -> formula
 val pTruthy : walue -> formula
 val pFalsy : walue -> formula
+val pNonNull : walue -> formula
+val pIsBang : walue -> typterm -> formula
 
 val ty : formula -> typ
 val tyAny : typ
@@ -136,7 +141,6 @@ val tyRef : loc -> typ
 val tyUndef : typ
 val tyNotUndef : typ
 val tyArrDefault : typ
-val pIsBang : walue -> typterm -> formula
 val tyArrayTuple : typ -> typ list -> bool -> typ
 val tyTypTerm : typterm -> typ
 val tyTupleNone : typ list -> typ
@@ -175,6 +179,7 @@ val strWeakLoc : weakloc -> string
 val strWorld : world -> string
 val strFrame : frame -> string
 val strBinding : vvar * typ -> string
+val strCloInv : closureinvariant -> string
 
 (***** Free variable computation **********************************************)
 

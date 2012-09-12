@@ -17,20 +17,8 @@ let printShortQuick = ref true
 let doFalseChecks = ref false
 let quickTypes = ref true
 let checkWfSynthesis = ref true
-
 let tryAllBoxesHack = ref false
 
 (* DJS options *)
 let djsMode = ref false
-(*
-let doVarLifting = ref false
-let doImplicitGlobal = ref false
-let doArgsArray = ref false
-*)
-
 let augmentHeaps = ref true
-(*
-let greedyThaws = ref false
-*)
-let assistCtor = ref false
-
