@@ -11,6 +11,7 @@ let djs_dir =
 let out_dir  = djs_dir ^ "src/out/"
 let prim_dir = djs_dir ^ "prims/"
 
+let parseOnly = ref false
 let strictWarn = ref true
 let printAllTypes = ref false
 let printShortQuick = ref true

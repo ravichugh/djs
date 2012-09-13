@@ -2,7 +2,40 @@
 open Lang
 open LangUtils
 
+module S = Settings
+
 let useTuplesAndPats = true
+
+
+(***** Command-line options ***************************************************)
+
+let argSpecs = [
+  ("-parseOnly", Arg.Set S.parseOnly, "");
+  ("-augmentHeaps", Arg.Bool (fun b -> S.augmentHeaps := b),
+                 "   <bool> infer some omitted heap bindings (default=true)");
+  ("-strictWarn", Arg.Bool (fun b -> S.strictWarn := b),
+               "     <bool> treat warnings as errors (default=true)");
+  ("-checkCNF", Arg.Set Cnf.checkConversion,
+             "       check CNF conversion");
+  ("-fast", Arg.Unit (fun () ->
+              Cnf.checkConversion := false;
+              Log.printToStdout := false;
+              Log.printToLog := false;
+              S.checkWfSynthesis := false;
+              ()),
+         "           suppress output; forgo CNF and other sanity checks");
+  ("-printAllTypes", Arg.Set S.printAllTypes,
+                  "  otherwise just print top-level definitions");
+  ("-printFullQuick", Arg.Clear S.printShortQuick,
+                   " don't abbreviate quick types");
+  ("-tryAllBoxes", Arg.Set S.tryAllBoxesHack,
+                "    try all boxes, in case typeTerms misses some");
+  ("-doFalseChecks", Arg.Set S.doFalseChecks,
+                  "  do false checks (de-optimization)");
+  ("-noQuickTypes", Arg.Clear S.quickTypes,
+                 "   do all subtyping with logical queries (de-optimization)");
+]
+
 
 (*
 

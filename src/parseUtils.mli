@@ -1,6 +1,8 @@
 
 open Lang
 
+val argSpecs : (Arg.key * Arg.spec * Arg.doc) list
+
 (* val mkTupleTyp : typ list -> typ *)
 
 (*

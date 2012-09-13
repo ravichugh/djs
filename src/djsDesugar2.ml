@@ -354,22 +354,29 @@ let readCtorProtoHint h =
   then Some (Str.matched_group 1 h)
   else None
 
-(* walk top level statements looking for consecutive writes to Ctor.prototype *)
-let rec insertProtoHints curCtor = function
+(* insert the expression /*: ctor.prototype */ "#drefinfo"
+   after the _last_ write to ctor.prototype
+*)
+let rec insertProtoHint ctor = function
   | E.LetExpr _ ->
-      Log.printParseErr "insertProtoHints: LetExpr ?"
-  | E.SeqExpr (p1, E.SeqExpr _, e2) ->
-      Log.printParseErr "insertProtoHints: inner SeqExpr ?"
-  | E.SeqExpr (p1, e1, e2) ->
-      (match curCtor, matchCtorProtoWrite e1 with
-         | None, fo ->
-             E.SeqExpr (p1, e1, insertProtoHints fo e2)
-         | Some(f), Some(f') when f = f' ->
-             E.SeqExpr (p1, e1, insertProtoHints (Some f) e2)
-         | Some(f), fo ->
-             E.SeqExpr (p1, makeCtorProtoHint p1 f,
-               E.SeqExpr (p1, e1, insertProtoHints fo e2)))
-  | e -> e
+      Log.printParseErr "insertProtoHint: LetExpr ?"
+  | E.SeqExpr (_, E.SeqExpr _, _) ->
+      Log.printParseErr "insertProtoHint: inner SeqExpr ?"
+  | E.SeqExpr (p, e1, e2) ->
+      let (finished,e2) = insertProtoHint ctor e2 in
+      if finished then (true, E.SeqExpr (p, e1, e2))
+      else begin
+        match matchCtorProtoWrite e1 with
+          | Some(f) when f = ctor ->
+              let eHint = makeCtorProtoHint p ctor in
+              (true, E.SeqExpr (p, e1, E.SeqExpr (p, eHint, e2)))
+          | _ ->
+              (false, E.SeqExpr (p, e1, e2))
+      end
+  | e ->
+      (false, e)
+
+let insertProtoHint ctor e = snd (insertProtoHint ctor e)
 
 
 (***** Desugaring types *******************************************************)
@@ -486,6 +493,19 @@ let rec ds (env:env) = function
       if Hashtbl.mem macroDefs s
       then eStr (spr "__ macro %s __" (Hashtbl.find macroDefs s))
       else failwith "ds define: should never happen"
+
+  (**  /*: [command-line options] */ "#options"  **)
+  | E.HintExpr (_, hint, E.ConstExpr (_, J.CString "#options")) -> begin
+      try
+        let l = Str.split (Str.regexp "[ ]+") hint in
+        let a = Array.of_list ("DJS SOURCE OPTIONS" :: l) in
+        Arg.parse_argv ~current:(ref 0) a ParseUtils.argSpecs
+          (fun s -> Log.printParseErr (spr "#options contains anon arg [%s]" s))
+          "";
+        eStr (spr "#options %s" hint)
+      with Arg.Bad(err) ->
+        Log.printParseErr err
+    end
 
   | E.ConstExpr (_, J.CString(s)) ->
       if Hashtbl.mem macroDefs s
@@ -737,6 +757,7 @@ let rec ds (env:env) = function
         ENewObj (EDict [(eStr "code", ctorFun); (eStr "prototype", protoObj)],
                  LocConst (spr "l%sObj" f),
                  eFunctionPro (), lFunPro, None) in
+      let e2 = insertProtoHint f e2 in
       let env = addFlag f true env in
       ELet (_f, None, ENewref (LocConst (spr "&%s" f), ctorObj, None),
             ds (addFlag f true env) e2)
@@ -1032,7 +1053,6 @@ let desugar e =
   checkVars e;
   let e = freshenLabels e in
   collectMacros e;
-  let e = insertProtoHints None e in
   ds emptyEnv e
 
 

@@ -8,42 +8,20 @@ let spr = Printf.sprintf
 
 (***** Command-line options ***************************************************)
 
-let parseOnly = ref false
 let doRaw     = ref false
 let srcFiles  = ref []
 
-let usage = "\n./system-d [options] [src_file]\n"
+let usage = "\nUsage: ./system-dref [options] [src_file]\n"
 
 let argSpecs = [
-  ("-parseOnly", Arg.Set parseOnly, "");
-  ("-strictWarn", Arg.Bool (fun b -> S.strictWarn := b),
-               "     <bool> treat warnings as errors (default is true)");
-  ("-raw", Arg.Set doRaw,
-        "            don't a-normalize or insert prelude");
-  ("-fast", Arg.Unit (fun () ->
-              Cnf.checkConversion := false;
-              Log.printToStdout := false;
-              Log.printToLog := false;
-              S.checkWfSynthesis := false;
-              ()),
-         "           don't check CNF conversion, ");
-  ("-checkCNF", Arg.Set Cnf.checkConversion,
-             "       check CNF conversion");
-  ("-printAllTypes", Arg.Set S.printAllTypes,
-                  "  default is just top-level definitions");
-  ("-printFullQuick", Arg.Clear S.printShortQuick,
-                   " don't abbreviate quick types");
-  ("-tryAllBoxes", Arg.Set S.tryAllBoxesHack,
-                "    try all boxes, in case typeTerms misses some");
-  ("-doFalseChecks", Arg.Set S.doFalseChecks,
-                  "  do false checks, which is a _de-optimization_");
-  ("-noQuickTypes", Arg.Clear S.quickTypes,
-               "     do all subtyping with logical queries");
   ("-djs", Arg.Set S.djsMode,
-        "            Dependent JavaScript");
-  ("-augmentHeaps", Arg.Bool (fun b -> S.augmentHeaps := b),
-                 "   <bool> tc will insert omitted locations (default true)");
+        "            process Dependent JavaScript file");
+  ("-raw", Arg.Set doRaw,
+        "            process A-normal System !D file directly with no prelude");
 ]
+
+let argSpecs = (* most options are defined in ParseUtils *)
+  argSpecs @ ParseUtils.argSpecs
 
 let anonArgFun s =
   srcFiles := !srcFiles @ [s]
@@ -173,7 +151,7 @@ let parseDJS () =
 let _ = 
   Arg.parse argSpecs anonArgFun usage;
   let e = if !S.djsMode then parseDJS () else parseSystemDref () in
-  if !parseOnly then begin
+  if !S.parseOnly then begin
     pr "\n%s\n" (Utils.greenString "PARSE SUCCEEDED");
     exit 0
   end;

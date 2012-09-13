@@ -572,12 +572,14 @@ let isMarkedCtorPrototype = function
         let x = Str.matched_group 1 lx in
         List.mem x !finishedCtorProtos
       else false
+      (* not also looking for lCtorObj here, since that's taken care of by
+         isObjectRefFromFreeVar ... *)
 
 let includeLoc g h fvs l =
   List.mem l [lRoot; lObjPro; lArrPro; lFunPro]
   || isFreeLocalRef fvs l
   || isObjectRefFromFreeVar g h fvs l
-  (* || isMarkedCtorPrototype l *)
+  || isMarkedCtorPrototype l
 
 let collectClosureInvariants g h fvs =
   List.fold_left (fun (acc1,acc2) -> function
