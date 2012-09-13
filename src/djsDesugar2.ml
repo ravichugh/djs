@@ -699,9 +699,9 @@ let rec ds (env:env) = function
       ds env (E.SeqExpr (p0, E.AssignExpr (p1, eLHS, eRHS), e2))
 
   (**  function f(...) { ... }; e2                                 **)
-  (**    insert the hint "new f" so that the type macro f is used  **)
+  (**    insert the hint "f" so that the type macro f is used  **)
   | E.SeqExpr (p0, (E.FuncStmtExpr (p1, f, _, _) as e1), e2) ->
-      let e1 = E.HintExpr (p1, spr "new %s" f, e1) in
+      let e1 = E.HintExpr (p1, spr "%s" f, e1) in
       ds env (E.SeqExpr (p0, e1, e2))
 
   (**  var x /*: T */ = e1; e2                                             **)
@@ -832,23 +832,45 @@ let rec ds (env:env) = function
       let _ = if hs <> [] then Log.printParseErr "why passing heap args" in
       mkCall ts ls (ds env f) None (List.map (ds env) args)
 
-  (**  new /*: l */ f(args)  **)
-  | E.NewExpr (_, E.HintExpr (_, s, constr), args) -> begin
+  (**  new                                 f(args)  **)
+  (**  new /*: lNew */                     f(args)  **)
+  (**  new /*: lNew > lProto */            f(args)  **)
+  (**  new /*: lNew [polyArgs] */          f(args)  **)
+  (**  new /*: lNew > lProto [polyArgs] */ f(args)  **)
+  | E.NewExpr (_, constr, args) -> begin
+      let (lNew,lProto,polyArgs,constr) =
+        match constr with
+          | E.HintExpr (_, s, constr) ->
+              let (lNew,lProtoOpt,polyArgsOpt) = parseNew s in
+              let lProto =
+                match lProtoOpt, constr with
+                  | Some(lProto), _        -> lProto
+                  | None, E.VarExpr (_, f) -> LocConst (spr "l%sProto" f)
+                  | _ ->
+                      Log.printParseErr "bad annotated NewExpr: no prototype \
+                        is given and the constructor is not a variable" in
+              let polyArgs =
+                match polyArgsOpt with
+                  | Some(polyArgs) -> polyArgs
+                  | None           -> ([],[],[]) in
+              (lNew, lProto, polyArgs, constr)
+          | E.VarExpr (_, f) ->
+              let lNew = LocConst (spr "l%s" (freshVarX f)) in
+              let lProto = LocConst (spr "l%sProto" f) in
+              (lNew, lProto, ([],[],[]), constr)
+          | _ ->
+              Log.printParseErr
+                "bad unannotated NewExpr: constructor is not a variable"
+      in
+      let (ts,ls,hs) = polyArgs in
+      if hs <> [] then Log.printParseErr "dsNewCall: heap args, impossible";
       (* providing at least the lFunPro loc param, the other will be inferred *)
       let funcObj = ds env constr in
       let ctor = objOp [] [lFunPro] "getPropObj" [funcObj; eStr "code"] in
       let proto = objOp [] [lFunPro] "getPropObj" [funcObj; eStr "prototype"] in
-      let ((ts,ls,hs),lProto) = parseNew s in
-      let lObj =
-        match ls with
-          | lObj::_ -> lObj
-          | _ -> Log.printParseErr "new annot: must have at least 1 loc arg"
-      in
-      let obj = ENewObj (EVal vEmpty, lObj, proto, lProto, None) in
+      let obj = ENewObj (EVal vEmpty, lNew, proto, lProto, None) in
       mkCall ts ls ctor (Some obj) (List.map (ds env) args)
     end
-
-  | E.NewExpr _ -> Log.printParseErr "new must have annotations"
 
   | E.HintExpr (_, s, E.LabelledExpr (_, bl, E.WhileExpr (_, test, e2)))
       when isBreakLabel bl ->

@@ -7,7 +7,7 @@
        (this:Ref) / (this: {Dict|(Str (objsel [v] "name" cur this.pro))} > this.pro)
     -> Str / same */ '#type';
 
-function Mammal(name) /*: new ty_mammal */ {
+function Mammal(name) /*: ty_mammal */ {
   this.name = name;
   return this;
 };
@@ -16,14 +16,14 @@ Mammal.prototype.get_name = function() /*: ty_get_name */ {
   return "Hi, I'm " + this.name;
 };
 
-function Cat(name) /*: new ty_mammal */ {
+function Cat(name) /*: ty_mammal */ {
   this.name = name;
   return this;
 };
 
-Cat.prototype = new /*: [;lCatPro,lMammalProto;] lMammalProto */ Mammal("__dummy__");
+Cat.prototype = new /*: lNewCatProto */ Mammal("__dummy__");
 
-var henrietta = new /*: [;lHenrietta,lCatPro;] lCatPro */ Cat("Henrietta");
+var henrietta = new /*: lHenrietta > lNewCatProto */ Cat("Henrietta");
 
 var s = henrietta.get_name();
 

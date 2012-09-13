@@ -16,7 +16,7 @@
 var beget = function (o) /*: ty_beget */ {
   function ctor() /*: new ty_ctor */ { return this; };
   ctor.prototype = o;
-  return new /*: [;LL1,LL2;] LL2 */ ctor();
+  return new /*: LL1 > LL2 */ ctor();
 };
 
 var parent = /*: lParent */ {"last": " Doe"};

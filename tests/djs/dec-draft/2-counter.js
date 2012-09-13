@@ -1,3 +1,5 @@
+/*: -augmentHeaps false */ "#options";
+
 /*: #define ty_toNum (x:Top) -> Num */ '#define';
 
 var toNum = function(x) /*: ty_toNum */ {

@@ -234,7 +234,7 @@ let expandHeapLocSugar (arr: uarrow) : uarrow =
 %type <Lang.loc * Lang.loc option> jsObjLocs
 %type <Lang.frame> jsWhile
 %type <Lang.typterm> jsCtor
-%type <(Lang.typs * Lang.locs * Lang.heaps) * Lang.loc> jsNew
+%type <Lang.loc * Lang.loc option * (Lang.typs * Lang.locs * Lang.heaps) option> jsNew
 %type <Lang.loc * Lang.typ> jsArrLit
 %type <Lang.heap> jsHeap
 %type <Lang.vvar * Lang.macro> jsMacroDef
@@ -743,10 +743,16 @@ jsObjLocs :
  (* | LPAREN l=loc COMMA l2=loc RPAREN EOF  { (l, Some l2) } *)
 
 jsCtor:
- | NEW arr=arrow_typ EOF  { UArrow(arr) }
- | NEW x=VAR EOF          { UMacro(x) }
+ | NEW arr=arrow_typ EOF
+ | arr=arrow_typ EOF      { UArrow(arr) }
+ | NEW x=VAR EOF
+ | x=VAR EOF              { UMacro(x) }
 
-jsNew : x=poly_actuals y=loc EOF  { (x,y) }
+jsNew :
+ | lNew=loc EOF                               { (lNew,None,None) }
+ | lNew=loc GT lProto=loc EOF                 { (lNew,Some(lProto),None) }
+ | lNew=loc GT lProto=loc l=poly_actuals EOF  { (lNew,Some(lProto),Some(l)) }
+ | lNew=loc l=poly_actuals EOF                { (lNew,None,Some(l)) }
 
 jsArrLit :
  | l=loc EOF                             { (l, tyArrDefault) }

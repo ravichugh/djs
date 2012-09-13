@@ -31,7 +31,7 @@ function Foo(name)
   return this;
 }
 
-var bob = new /*: [;lBob;] lFooProto */ Foo("bob");
+var bob = new /*: lBob > lFooProto */ Foo("bob");
 
 assert (bob.name == "bob");
 assert (bob.getName() == "bob");

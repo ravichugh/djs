@@ -1,3 +1,4 @@
+/*: -augmentHeaps false */ "#options";
 
 var mammal = function(priv) /*: ty_init_mammal */ {
   var x = /*: Lnew */ {};

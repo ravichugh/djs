@@ -13,7 +13,7 @@ assert (/*: Ref(lFProto) */ (F.prototype));
 
 F.prototype.g = "sweet";
 
-var x = new (/*: [;lx;] lFProto */ F)();
+var x = new (/*: lx > lFProto */ F)();
 
 assert (x.f == 1);
 assert (x.g == "sweet");
