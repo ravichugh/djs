@@ -1598,9 +1598,12 @@ and tcExp_ g h goal = function
       ignore (tsExp g h (EIf (EVal v, EAsW (e1, goal), EAsW (e2, goal))))
 
   | ELabel(x,e) ->
-      ignore (tsExp (Lbl(x,Some(goal))::g) h e)
+      let w = Zzz.inNewScope (fun () -> tsExp (Lbl(x,Some(goal))::g) h e) in
+      (* also need to check the fall-thru world! *)
+      ignore (Sub.worldSat (spr "TC-Label #%s" x) g w goal)
 
   | e ->
+      (* TODO need inNewScope like TC-Label case? *)
       let w = tsExp g h e in
       ignore (Sub.worldSat "TC-Exp" g w goal)
       

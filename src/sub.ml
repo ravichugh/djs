@@ -244,16 +244,17 @@ let tallyQuick s1 s2 =
 let tallySlow s1 s2 =
   fpr oc_quick "Discharged slow:\n  %s\n  %s\n\n" s1 s2; incr count_slow
 
-let rec bindExistentials = function
-  | TExists(x,s1,s2) -> (Zzz.addBinding x s1; bindExistentials s2)
-  | Typ(s)           -> s
+let rec bindExistentials g = function
+  | Typ(s) -> (g, s)
+  | TExists(x,s1,s2) ->
+      (Zzz.addBinding x s1; bindExistentials (Var(x,s1)::g) s2)
 
 let rec checkTypes errList usedBoxes g t1 t2 =
   let (s1,s2) = (strPrenexTyp t1, strTyp t2) in
   let errList =
     errList @ [spr "Sub.checkTypes:\n   t1 = %s\n   t2 = %s" s1 s2] in
   Zzz.inNewScope (fun () ->
-    let t1 = bindExistentials t1 in
+    let (g,t1) = bindExistentials g t1 in
     if !Settings.quickTypes && quickCheckTypes errList usedBoxes g (t1,t2)
     then tallyQuick s1 s2
     else let v = freshVar "v" in
@@ -534,7 +535,7 @@ let checkHeapSat errList usedBoxes g heapEnv heapTyp =
 
 let checkWorldSat errList usedBoxes g (t,heapEnv) (s,heapTyp) =
   Zzz.inNewScope (fun () ->
-    let t = bindExistentials t in
+    let (g,t) = bindExistentials g t in
     checkTypes errList usedBoxes g (Typ t) s;
     checkHeapSat errList usedBoxes g heapEnv heapTyp)
 
