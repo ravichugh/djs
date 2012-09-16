@@ -24,10 +24,12 @@ val getPropArr :: [A]
 
 val getIdx :: [A]
      (xx:Ref?, ii:Int) / (xx: aa:Arr(A) > xx.pro)
-  -> {(and (not (= xx null))
-      (ite (and (packed aa) (>= ii 0))
-           (ite (< ii (len aa)) (and (v::A) (= v (sel aa ii))) (= v undefined))
-           (or (v::A) (= v undefined))))} / same
+  -> {?(A)|(and (not (= xx null))
+           (ite (packed aa)
+                (ite (and (>= ii 0) (< ii (len aa)))
+                     (and (v::A) (= v (sel aa ii)))
+                     (= v undefined))
+                (or (v::A) (= v undefined))))} / same
 
 val getProp :: {(and (type getPropObj) (type getPropArr))}
 
@@ -45,19 +47,18 @@ val setPropObj ::
 val setPropArr :: [A]
      (xx:Ref?, kk:{(= v "length")}, nn:Int) / (xx: aa:Arr(A) > xx.pro)
   -> {(and (not (= xx null)) (= v nn))}
-   / (xx: {(and (v::Arr(A))
-                (implies (and (packed aa) (<= nn (len aa)))
-                         (and (packed v) (= (len v) nn))))} > xx.pro)
+   / (xx: {Arr(A)|(implies (and (packed aa) (>= nn 0) (<= nn (len aa)))
+                           (and (packed v) (= (len v) nn)))} > xx.pro)
 
 val setIdx :: [A]
      (xx:Ref?, ii:Int, yy:A) / (xx: aa:Arr(A) > xx.pro)
   -> {(and (not (= xx null)) (= v yy))}
-   / (xx: {(and (v::Arr(A))
-           (= (sel aa ii) yy)
-           (implies (and (packed aa) (>= ii 0) (< ii (len aa)))
-                    (and (packed v) (= (len v) (len aa))))
-           (implies (and (packed aa) (= ii (len aa)))
-                    (and (packed v) (= (len v) (+ 1 (len aa))))))} > xx.pro)
+   / (xx: {Arr(A)|(and 
+             (= (sel aa ii) yy)
+             (implies (and (packed aa) (>= ii 0) (< ii (len aa)))
+                      (and (packed v) (= (len v) (len aa))))
+             (implies (and (packed aa) (= ii (len aa)))
+                      (and (packed v) (= (len v) (+ 1 (len aa))))))} > xx.pro)
 
 val setProp :: {(and (type setPropObj) (type setPropArr))}
 
@@ -97,7 +98,7 @@ val delPropObj ::
 
 val delIdx :: [A]
      (xx:Ref?, _:Int) / (xx: Arr(A) > xx.pro)
-  -> {Bool|(and (not (= xx null)))} / (xx: a:Arr(A) > xx.pro)
+  -> {Bool|(and (not (= xx null)))} / (xx: Arr(A) > xx.pro)
 
 val delElem :: {(and (type delPropObj) (type delIdx))}
 

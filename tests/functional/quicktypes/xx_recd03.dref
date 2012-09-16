@@ -1,0 +1,5 @@
+val d0 :: {f:Int, g:Str}
+let _ :: Int   = get (d0, "f") in
+let _ :: Str   = get (d0, "g") in
+let _ :: Undef = get (d0, "h") in (* don't know whether domain is exact *)
+0

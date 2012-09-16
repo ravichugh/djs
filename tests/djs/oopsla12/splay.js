@@ -23,12 +23,9 @@ SplayTree.Node.prototype.right = null;
                             ((sel v "right") :: Ref(~lNode)))} */ "#define";
 
 Node.prototype.traverse_ = function traverse_()
-/*: (this:Ref(~lNode)) / (lNodeProto |-> leftAndRight > lObjPro) -> Top / same */ {
+/*: (this:Ref(~lNode)) / (lNodeProto: leftAndRight [sameExact] > lObjPro) -> Top / same */ {
   var current = this;
-  var b /*: Top */ = current;
-  // TODO get rid of b temporary
-  // TODO remove lNodeProto by incorporating cloinv in formal heapbinding
-  /*: (lNodeProto |-> leftAndRight > lObjPro) -> same */
+  var b /*: Top */ = current; // TODO get rid of b temporary
   while (b) {
     var left = current.left;
     if (left) traverse_.apply(left);

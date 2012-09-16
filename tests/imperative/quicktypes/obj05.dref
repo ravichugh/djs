@@ -1,0 +1,6 @@
+(* constraint lObjPro so that quick TS-App can resolve entire prototype chain *)
+let readF :: (x:Ref) / (x: {f:Int, _:Bot} > lObjPro, lObjPro: Empty > lROOT)
+          -> Undef / same =
+  fun (x) -> (getPropObj (x, "g"))
+in
+0

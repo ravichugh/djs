@@ -140,6 +140,7 @@ and typ =
   | TBaseUnion of basetyp list           (* IntOrBool, NumOrStr, etc. *)
   | TMaybeNullRef of loc * formula       (* {v:Ref(l?)|p} *)
   | TNonNullRef of loc                   (* Ref(m!) *)
+  | TMaybeUndef of typ * formula         (* {?(T)|p} *)
 
 and prenextyp =
   | TExists of vvar * typ * prenextyp    (* Exists x:T. S *)
@@ -167,7 +168,7 @@ and typterm =
 
 and heapcell = (* [m |-> 0] [l |-> x:S] [l |-> (x:S, l')] *)
   | HWeak   of thawstate
-  | HStrong of vvar option * typ * loc option (* TODO add closureinvariant *)
+  | HStrong of vvar option * typ * loc option * closureinvariant
 
 and heapbinding = loc * heapcell
 

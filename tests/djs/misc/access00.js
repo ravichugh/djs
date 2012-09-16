@@ -6,18 +6,18 @@ var DAYS_PER_YEAR = 365.24;
 
 /*: #define tyBody
     {Dict|(and (dom v {"x","y","z","vx","vy","vz","mass"})
-               ((sel v "x") : Num)
-               ((sel v "y") : Num)
-               ((sel v "z") : Num)
-               ((sel v "vx") : Num)
-               ((sel v "vy") : Num)
-               ((sel v "vz") : Num)
-               ((sel v "mass") : Num))} */ "#define";
+               (Num (sel v "x"))
+               (Num (sel v "y"))
+               (Num (sel v "z"))
+               (Num (sel v "vx"))
+               (Num (sel v "vy"))
+               (Num (sel v "vz"))
+               (Num (sel v "mass")))} */ "#define";
 
 /*: #define ctorBody
-    [;Lnew] [[this:Ref(Lnew),x:Num,y:Num,z:Num,vx:Num,vy:Num,vz:Num,mass:Num]]
-          / [Lnew |-> (_:Empty, lBodyProto)]
-         -> Ref(Lnew) / [Lnew |-> (_:tyBody, lBodyProto)] */ "#define";
+    [;Lnew] (this:Ref(Lnew),x:Num,y:Num,z:Num,vx:Num,vy:Num,vz:Num,mass:Num)
+          / (Lnew |-> Empty > lBodyProto)
+         -> Ref(Lnew) / (Lnew |-> tyBody > lBodyProto) */ "#define";
 
 function Body(x,y,z,vx,vy,vz,mass) /*: new ctorBody */ {
    this.x = x;
@@ -33,8 +33,8 @@ function Body(x,y,z,vx,vy,vz,mass) /*: new ctorBody */ {
 ////////////////////////////////////////////////////////////////////////////////
 
 /*: #define tyOffsetMomentum
-    [;L] [[this:Ref(L), px:Num, py:Num, pz:Num]]
-       / [L |-> (_:tyBody, lBodyProto), &SOLAR_MASS |-> _:Num]
+    [;L] (this:Ref(L), px:Num, py:Num, pz:Num)
+       / (L |-> _:tyBody > lBodyProto, &SOLAR_MASS |-> _:Num)
       -> Ref(L) / sameType */ "#define";
 
 Body.prototype.offsetMomentum = function(px,py,pz) /*: tyOffsetMomentum */ {

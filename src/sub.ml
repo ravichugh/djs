@@ -36,6 +36,11 @@ let typeTerms_ g =
 
 (***** Type extraction, or "unboxing" *****************************************)
 
+let oc_extract = open_out (Settings.out_dir ^ "extract.txt")
+let logExtract ?(nl=true) s =
+  fpr oc_extract "%s%s" s (if nl then "\n" else "");
+  flush oc_extract
+
 let mustFlowIterator_ usedBoxes ?(filter = fun _ -> true) g t =
   let boxes =
     Utils.subtractList (typeTerms_ g) usedBoxes
@@ -43,6 +48,8 @@ let mustFlowIterator_ usedBoxes ?(filter = fun _ -> true) g t =
     |> List.filter filter
     |> ref
   in
+  logExtract (spr "%s" (String.make 80 '-'));
+  logExtract (spr "Extract boxes from %s\n" (strTyp t));
   let rec next () =
     match !boxes with
       | [] -> None
@@ -53,7 +60,9 @@ let mustFlowIterator_ usedBoxes ?(filter = fun _ -> true) g t =
               let x = freshVarX "extract" in
               Zzz.addBinding x t;
               Zzz.doingExtract := true;
+              logExtract ~nl:false (spr "  %s ... " (strTT u));
               let b = Zzz.checkValid "mustFlow" (hastyp (wVar x) u) in
+              logExtract (spr "%s\n" (if b then "yes" else "no"));
               Zzz.doingExtract := false;
               if b then Some u else None)
           in
@@ -202,14 +211,14 @@ let filterObligations obligations = function
 let weakenArrowHeaps (cs11,cs12) (cs21,cs22) =
   let toAdd =
     List.fold_left (fun acc -> function
-      | (l,HStrong(None,t,lo)) ->
+      | (l,HStrong(None,t,lo,ci)) ->
           if not (List.mem_assoc l cs22) then acc
           else if List.mem_assoc l cs11  then acc
           else if List.mem_assoc l cs12  then acc
           else begin
             match List.assoc l cs22 with
-              | HStrong(None,t',lo') when t = t' && lo = lo' ->
-                  (l, HStrong (None, t, lo)) :: acc
+              | HStrong(None,t',lo',_) when t = t' && lo = lo' ->
+                  (l, HStrong (None, t, lo, ci)) :: acc
               | _ -> acc
           end
       | _ -> acc
@@ -495,11 +504,11 @@ let checkHeapSat errList usedBoxes g heapEnv heapTyp =
         | None -> die errList (spr "location not found: %s" (strLoc l))
         | Some(hc1) ->
             begin match hc1, hc2 with
-              | HEStrong(_,lo1,_),HStrong(_,_,lo2) when lo1 <> lo2 ->
+              | HEStrong(_,lo1,_),HStrong(_,_,lo2,_) when lo1 <> lo2 ->
                   die errList (spr "proto links differ: %s" (strLoc l))
-              | HEStrong(v,_,_),HStrong(Some(x),t,_) ->
+              | HEStrong(v,_,_),HStrong(Some(x),t,_,_) ->
                   ((x, WVal v) :: acc1, (l, x, t) :: acc2)
-              | HEStrong(v,_,_),HStrong(None,t,_) ->
+              | HEStrong(v,_,_),HStrong(None,t,_,_) ->
                   (match maybeValOfSingleton t with
                      | Some(v') when v = v' -> (acc1, acc2)
                      | _ -> let x = freshVar "heapSatTemp" in

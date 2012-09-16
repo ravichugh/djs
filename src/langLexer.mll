@@ -18,7 +18,7 @@ let hashk   = '#' (letter|digit)+
 let str =
   (letter
     | digit
-    | [' ' '+' '-' '*' '/' '=' '(' ')' '&' '|' '.' ',' '{' '}' ';'])*
+    | [' ' '+' '-' '*' '/' '=' '(' ')' '&' '|' '.' ',' '{' '}' ';' '#'])*
 
 
 rule token = parse
@@ -30,7 +30,7 @@ rule token = parse
   | "Str"        { SUGAR "Str" }
   | "Dict"       { SUGAR "Dict" }
   | "Top"        { SUGAR "Top" }
-  | "Bot"        { SUGAR "Bot" }
+  (* | "Bot"        { SUGAR "Bot" } *)
   | "Num"        { SUGAR "Num" }
   | "Empty"      { SUGAR "Empty" }
   | "Undef"      { SUGAR "Undef" }
@@ -41,6 +41,7 @@ rule token = parse
   | "StrOrBool"  { SUGAR "StrOrBool" }
   (* | "NonNegInt"  { SUGAR "NonNegInt" } *)
 
+  | "Bot"          { BOT }
   | "type"         { TYPE }
   | "heap"         { HEAP }
   | "weak"         { WEAK }

@@ -1,0 +1,5 @@
+(* can't prove Undef since don't know if domain is exact *)
+let readF :: (x:Ref) / (x: {f:Int} > lObjPro) -> Undef / same =
+  fun (x) -> (getPropObj (x, "g"))
+in
+0

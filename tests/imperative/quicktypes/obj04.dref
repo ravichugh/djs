@@ -1,0 +1,4 @@
+let readF :: (x:Ref) / (x: {f:Int} > lObjPro) -> Int / same =
+  fun (x) -> (getPropObj (x, "f"))
+in
+0

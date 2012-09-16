@@ -376,7 +376,11 @@ let rec insertProtoHint ctor = function
   | e ->
       (false, e)
 
-let insertProtoHint ctor e = snd (insertProtoHint ctor e)
+let insertProtoHint ctor e =
+  let (finished,e) = insertProtoHint ctor e in
+  if finished then e
+  else (* didn't find any writes to ctor.prototype, so insert hint at top *)
+    E.SeqExpr (pos0, makeCtorProtoHint pos0 ctor, e)
 
 
 (***** Desugaring types *******************************************************)

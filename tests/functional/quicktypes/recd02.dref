@@ -1,0 +1,6 @@
+val d0 :: {"f":Int, "g":Str}
+let d1 = (d0 with "h" = true) in
+let _ :: Int  = get (d1, "f") in
+let _ :: Str  = get (d1, "g") in
+let _ :: Bool = get (d1, "h") in
+0

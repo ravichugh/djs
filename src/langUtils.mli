@@ -141,7 +141,7 @@ val tyRef : loc -> typ
 val tyUndef : typ
 val tyNotUndef : typ
 val tyArrDefault : typ
-val tyArrayTuple : typ -> typ list -> bool -> typ
+val tyArrayTuple : typ * typ list * bool -> typ
 val tyTypTerm : typterm -> typ
 val tyTupleNone : typ list -> typ
 val tyTupleSome : (vvar option * typ) list -> typ

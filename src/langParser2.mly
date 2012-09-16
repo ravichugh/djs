@@ -50,6 +50,11 @@ let dummyBinder =
 
 let emp = ([],[])
 
+let mkSimpleSugarTyp s =
+  if List.mem_assoc s LangUtils.simpleSugarToTyp
+  then List.assoc s LangUtils.simpleSugarToTyp
+  else printParseErr (spr "unexpected Sugar: [%s]" s)
+
 let mkSugarTyp x s p =
   match s with (* NOTE: keep these in sync with LangUtils.simpleSugarToTyp *)
     | "Int"  -> TQuick(x,QBase(BInt),p)
@@ -79,10 +84,10 @@ let copyCell exact x s =
   if exact then valToSingleton (vVar x) else s
 
 let freshenCell exact l = function
-  | HStrong(None,s,_) -> printParseErr "freshenCell"
-  | HStrong(Some(x),s,lo) ->
+  | HStrong(None,s,_,_) -> printParseErr "freshenCell"
+  | HStrong(Some(x),s,lo,_) -> (* not carrying cloinv to output heap *)
       let xo = if exact then None else Some (freshVar x) in 
-      HStrong (xo, copyCell exact x s, lo)
+      HStrong (xo, copyCell exact x s, lo, None)
   | HWeak(tok) -> HWeak tok
 
 let sameHeap exact =
@@ -166,7 +171,7 @@ let expandHeapLocSugar (arr: uarrow) : uarrow =
         else
           LocConst y
     | LocConst(y) when Str.string_match (Str.regexp "^.*[.].*$") y 0 ->
-        Log.printParseErr (spr "location identifier [%s] contains a \".\" \
+        printParseErr (spr "location identifier [%s] contains a \".\" \
           that isn't part of a \".pro\" location" y)
     | LocConst(y) -> LocConst y
     | LocVar(y) -> LocVar y in
@@ -221,7 +226,7 @@ let expandHeapLocSugar (arr: uarrow) : uarrow =
   UNDERSCORE TCOLON ELLIPSIS
   HEAPHAS HEAPSEL OBJHAS OBJSEL
   WITH (* BEGIN END *)
-  LTUP RTUP
+  LTUP RTUP BOT
 
 %type <Lang.exp> prog
 %type <Lang.exp -> Lang.exp> prelude
@@ -364,20 +369,18 @@ typ :
  | REFTYPE LPAREN l=loc BANG RPAREN    { TNonNullRef l }
  | REFTYPE LPAREN l=loc QMARK RPAREN   { TMaybeNullRef (l, pTru) }
 
- | s=SUGAR  { if List.mem_assoc s LangUtils.simpleSugarToTyp
-              then List.assoc s LangUtils.simpleSugarToTyp
-              else printParseErr (spr "unexpected Sugar: [%s]" s) }
+ | s=SUGAR                                         { mkSimpleSugarTyp s }
+ | LBRACE s=SUGAR p=refinement                     { mkSugarTyp "v" s p }
+ | LBRACE x=VAR COLON s=SUGAR p=refinement         { mkSugarTyp x s p }
+ | qt=record_typ                                   { TQuick("v",qt,pTru) }
+ | LBRACE qt=record_typ p=refinement               { TQuick("v",qt,p) }
+ | LBRACE u=real_typ_term p=refinement             { TQuick("v",QBoxes[u],p) }
+ | LBRACE x=VAR COLON u=real_typ_term p=refinement { TQuick(x,QBoxes[u],p) }
 
- | LBRACE s=SUGAR             PIPE p=formula RBRACE { mkSugarTyp "v" s p }
- | LBRACE u=real_typ_term     PIPE p=formula RBRACE { TQuick("v",QBoxes[u],p) }
+ | LT a=array_tuple_typs GT                        { tyArrayTuple a }
 
- (* might want to add these back in without conflicts
-
- | LBRACE x=VAR COLON s=SUGAR PIPE p=formula RBRACE { mkSugarTyp x s p }
- | LBRACE u=typ_term          PIPE p=formula RBRACE { TQuick("v",QBoxes[u],p) }
- *)
-
- | LT x=array_tuple_typs GT { let (ts,tInv,b) = x in tyArrayTuple tInv ts b }
+ (* {?(T)|p} is designed to help optimize calls to getIdx *)
+ | LBRACE QMARK LPAREN t=typ RPAREN p=refinement   { TMaybeUndef(t,p) }
 
  (* [[x1:T1, x2:T2]] can be used in any type position... *)
  | LTUP RTUP                { TQuick("v",QTuple([],false),pTru) }
@@ -391,6 +394,18 @@ deptuple :
 deptuple_ :
  | xot=varopttyp                   { [xot] }
  | xot=varopttyp COMMA l=deptuple_ { xot :: l }
+
+refinement :
+ | PIPE p=formula RBRACE { p }
+
+record_typ :
+ | LBRACE RBRACE { QRecd ([], false) }
+ | LBRACE l=fieldtyps RBRACE
+     { match List.rev l with
+         | ("_",_)::rest -> QRecd (List.rev rest, true) 
+         | _ -> if not (List.mem_assoc "_" l) then QRecd (l, false)
+                else printParseErr "bad record type: _:Bot appears \
+                       somewhere besides the last position" }
 
 typ_term :
  | u=real_typ_term                       { u }
@@ -541,14 +556,6 @@ ann :
  | DCOLON t=typ    { ParseUtils.typToFrame t }
  | TCOLON f=frame  { f }
 
-fieldexp :
- | e1=exp EQ e2=exp    { (e1,e2) }
-
-(*
-fieldtyp :
- | STR COLON typ             { ($1,$3) }
-*)
-
 pat :
  | VAR                       { PLeaf $1 }
  | LPAREN pats_ RPAREN       { PNode $2 }
@@ -569,10 +576,24 @@ loc_mapsto :
 *)
 
 heapbinding :
- | l=loc_mapsto x=thawstate { (l,HWeak(x)) }
- | l=loc_mapsto xt=vartyp   { let (x,t) = xt in (l,HStrong(Some(x),t,None)) }
- | l=loc_mapsto xt=vartyp GT l2=loc
-     { let (x,t) = xt in (l,HStrong(Some(x),t,Some(l2))) }
+ | l=loc_mapsto x=thawstate            { (l,HWeak(x)) }
+ | l=loc_mapsto xt=vartyp lo=proto_opt { let (x,t) = xt in
+                                         (l,HStrong(Some(x),t,lo,None)) }
+
+ (* NOTE: these should only be used in input heaps *)
+ (* l: x:T [S] > l'         *)
+ (* l: x:T [sameType] > l'  *)
+ (* l: x:T [sameExact] > l' *)
+ | l=loc_mapsto xt=vartyp LBRACK s=typ RBRACK lo=proto_opt
+     { let (x,t) = xt in (l,HStrong(Some(x),t,lo,Some(s))) }
+ | l=loc_mapsto xt=vartyp LBRACK SAME_TYPE RBRACK lo=proto_opt
+     { let (x,t) = xt in (l,HStrong(Some(x),t,lo,Some(t))) }
+ | l=loc_mapsto xt=vartyp LBRACK SAME_EXACT RBRACK lo=proto_opt
+     { let (x,t) = xt in (l,HStrong(Some(x),t,lo,Some(valToSingleton (vVar x)))) }
+
+proto_opt :
+ |          { None   }
+ | GT l=loc { Some l }
 
 rheapbinding :
  | heapbinding              { $1 }
@@ -581,9 +602,9 @@ rheapbinding :
  | l=loc_mapsto SAME_TYPE   { (l, sameCell false l) }
 
 heapenvbinding :
- | l=loc_mapsto x=thawstate           { (l,HEWeak(x)) }
- | l=loc_mapsto v=value               { (l,HEStrong(v,None,None)) }
- | l=loc_mapsto v=value GT l2=loc     { (l,HEStrong(v,Some(l2),None)) }
+ | l=loc_mapsto x=thawstate                     { (l,HEWeak(x)) }
+ | l=loc_mapsto v=value lo=proto_opt            { (l,HEStrong(v,lo,None)) }
+ | l=loc_mapsto v=value lo=proto_opt ci=typ_opt { (l,HEStrong(v,lo,ci)) }
 
 weakloc : LPAREN wl=weakloc_ RPAREN { wl }
 
@@ -654,9 +675,24 @@ typs :
  | typ                 { [$1] }
  | typ COMMA typs      { $1 :: $3 }
 
+fieldexp :
+ | e1=exp EQ e2=exp          { (e1,e2) }
+
 fieldexps : (* weird: combining the field and fields leads to type error... *)
  | fieldexp                  { [$1] }
  | fieldexp SEMI fieldexps   { $1 :: $3 }
+ | fieldexp COMMA fieldexps  { $1 :: $3 }
+
+fieldtyp :
+ | f=STR COLON t=typ         { (f,t) }
+ | f=VAR COLON t=typ         { (f,t) }
+ (* as a quick fix to avoid conflicts, putting _:Bot here and then
+    checking for it in record_typ *)
+ | UNDERSCORE COLON BOT      { ("_",tyAny) }
+
+fieldtyps :
+ | fieldtyp                  { [$1] }
+ | fieldtyp COMMA fieldtyps  { $1 :: $3 }
 
 walues :
  | walue                 { [$1] }
@@ -665,24 +701,12 @@ walues :
 array_tuple_typs :
  | att=array_tuple_typs_  { let (ts,b) = att in
                             let tInvariant = tyNotUndef in
-                            (ts,tInvariant,b) }
+                            (tInvariant,ts,b) }
 
 array_tuple_typs_ :
  | t=typ                             { ([t],false) }
  | t=typ COMMA ELLIPSIS              { ([t],true) }
  | t=typ COMMA att=array_tuple_typs_ { let (ts,b) = att in (t::ts,b) }
-
-(*
-fieldtyps :
- | fieldtyp                  { [$1] }
- | fieldtyp SEMI fieldtyps   { $1 :: $3 }
-*)
-
-(*
-typs_mul :
- | typ                       { [$1] }
- | typ MUL typs_mul          { $1 :: $3 }
-*)
 
 heapbindings :
  | heapbinding                     { [$1] }
@@ -758,8 +782,7 @@ jsArrLit :
  | l=loc EOF                             { (l, tyArrDefault) }
  | l=loc ARRTYPE LPAREN t=typ RPAREN EOF { (l, t) }
  | ARRTYPE LPAREN t=typ RPAREN EOF       { (LocConst (freshVar "arrLit"), t) }
- | l=loc LT x=array_tuple_typs GT EOF
-     { let (ts,tInvariant,b) = x in (l, tyArrayTuple tInvariant ts b) }
+ | l=loc LT a=array_tuple_typs GT EOF    { (l, tyArrayTuple a) }
 
 jsHeap : h=heap EOF { h }
 

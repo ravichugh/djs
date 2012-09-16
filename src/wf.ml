@@ -18,8 +18,8 @@ let noDupeFormal errList s l =
 
 let heapBinders (_,cs) =
   List.fold_left (fun acc -> function
-    | (_,HStrong(None,t,_)) -> depTupleBindersEnv t @ acc
-    | (_,HStrong(Some(x),t,_)) -> Var(x,tyAny) :: depTupleBindersEnv t @ acc
+    | (_,HStrong(None,t,_,_)) -> depTupleBindersEnv t @ acc
+    | (_,HStrong(Some(x),t,_,_)) -> Var(x,tyAny) :: depTupleBindersEnv t @ acc
     | (_,HWeak _) -> acc
   ) [] cs
 
@@ -44,6 +44,7 @@ let rec checkType errList g t =
     | TBaseUnion _ -> ()
     | TNonNullRef(l) -> checkLoc errList g l
     | TMaybeNullRef(l,p) -> (checkLoc errList g l; checkFormula errList g p)
+    | TMaybeUndef(t,p) -> (checkType errList g t; checkFormula errList g p)
     | TRefinement(x,p) -> checkFormula errList (Var(x,tyAny)::g) p
     | TQuick(x,qt,p) ->
         let _ = checkQuickTyp errList (Var(x,tyAny)::g) qt in
@@ -151,7 +152,7 @@ and checkHeap errList g h =
 
 and checkConstraints errList g = function
   | [] -> ()
-  | (l,HStrong(x,s,lo))::rest -> begin
+  | (l,HStrong(x,s,lo,ci))::rest -> begin
       checkLoc errList g l;
       (if List.exists (function (l',_) -> l = l') rest
        then err (errList @ [spr "loc [%s] bound multiple times" (strLoc l);
@@ -159,6 +160,7 @@ and checkConstraints errList g = function
        else ());
       checkType errList g s;
       (match lo with Some(l') -> checkLoc errList g l' | None -> ());
+      (match ci with Some(t) -> checkType errList g t | None -> ());
       checkConstraints errList g rest
     end
   | (l,HWeak(tok))::rest -> begin

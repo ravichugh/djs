@@ -30,6 +30,7 @@ let rec addPredicate p = function
   | TRefinement _      -> failwith "addPredicate TRefinement"
   | TBaseUnion(l)      -> ty (pAnd [p; applyTyp (TBaseUnion l) theV])
   | TMaybeNullRef(l,q) -> TMaybeNullRef (l, pAnd [p;q])
+  | TMaybeUndef(t,q)   -> TMaybeUndef (t, pAnd [p;q])
   | TNonNullRef(l)     -> failwith "addPredicate TNonNullRef"
 
 let tyThaw v l =
@@ -58,6 +59,7 @@ let selfifyVar g x =
         match t with
           | TQuick(y,qt,_)     -> TQuick (y, qt, eqX)
           | TMaybeNullRef(l,_) -> TMaybeNullRef (l, eqX)
+          | TMaybeUndef(t,_)   -> TMaybeUndef (t, eqX)
           | _                  -> ty eqX
       end
   
@@ -236,8 +238,7 @@ let applyFrame (hAct: heapenv) (f: frame) : world =
           List.map (function
             | (l,HEWeak(x)) -> (l, HWeak x)
             | (l,HEStrong(v,lo,ci)) ->
-                (* TODO closureinvariant *)
-                (l, HStrong (None, valToSingleton v, lo))
+                (l, HStrong (None, valToSingleton v, lo, ci))
           ) cs in
         (t2, (hs, cs))
     | None ->
@@ -248,28 +249,29 @@ let heapEnvOfHeap cap (hs,cs) : ((vvar * typ) list * heapenv) =
   let (bindings,cs) =
     List.fold_left (fun (acc1,acc2) -> function
       | (m,HWeak(x)) -> (acc1, (m, HEWeak x) :: acc2)
-      | (l,HStrong(None,t,lo)) ->
+      | (l,HStrong(None,t,lo,ci)) ->
           let cap = spr "heapEnvOfHeap [%s]" cap in
-          (acc1, (l, HEStrong (valOfSingleton cap t, lo, None)) :: acc2)
-      | (l,HStrong(Some(x),t,lo)) ->
-          ((x,t) :: acc1, (l, HEStrong (vVar x, lo, None)) :: acc2) 
+          (acc1, (l, HEStrong (valOfSingleton cap t, lo, ci)) :: acc2)
+      | (l,HStrong(Some(x),t,lo,ci)) ->
+          ((x,t) :: acc1, (l, HEStrong (vVar x, lo, ci)) :: acc2) 
     ) ([],[]) cs
   in (bindings, (hs, cs))
 
 let freshenWorld (t,(hs,cs)) =
   let vSubst =
     List.rev (List.fold_left (fun acc -> function
-      | (_,HStrong(Some(x),_,_)) -> (x, freshVar x) :: acc
-      | (_,HStrong(None,_,_)) -> acc
+      | (_,HStrong(Some(x),_,_,_)) -> (x, freshVar x) :: acc
+      | (_,HStrong(None,_,_,_)) -> acc
       | (_,HWeak _) -> acc
     ) [] cs) in
   let subst = (List.map (fun (x,y) -> (x, wVar y)) vSubst, [], [], []) in
   let cs =
     List.fold_left (fun acc -> function
-      | (l,HStrong(Some(x),s,lo)) ->
+      | (l,HStrong(Some(x),s,lo,ci)) ->
           let x' = List.assoc x vSubst in
-          let s' = substTyp subst s in (l,HStrong(Some(x'),s',lo)) :: acc
-      | (l,HStrong(None,s,lo)) -> (l, HStrong (None, s, lo)) :: acc
+          let s' = substTyp subst s in
+          (l,HStrong (Some x', s', lo, ci)) :: acc
+      | (l,HStrong(None,s,lo,ci)) -> (l, HStrong (None, s, lo, ci)) :: acc
       | (l,HWeak(tok)) -> (l, HWeak tok) :: acc
     ) [] cs in
   let t = substTyp subst t in
@@ -381,6 +383,9 @@ let mkIterator boxes =
 let boxIteratorOf g t filter =
   match t with
     | TQuick(_,QBoxes(l),_) -> mkIterator (List.filter filter l)
+    | TMaybeUndef(TQuick(_,QBoxes(l),_),_) ->
+        let filter u = filter u && List.mem u l in
+        Sub.mustFlowIterator g t ~filter
     | _ -> Sub.mustFlowIterator g t ~filter
 
 let arrowIteratorOf g t =
@@ -429,8 +434,9 @@ let joinHeapEnvs v (hs1,cs1) (hs2,cs2) =
         | HEStrong(_,lo1,_), Some(HEStrong(_,lo2,_)) when lo1 <> lo2 ->
             failwith "joinHeapEnvs: proto links differ"
         | HEStrong(_,_,ci1), Some(HEStrong(_,_,ci2)) when ci1 <> ci2 ->
-            failwith (spr "joinHeapEnvs [%s]: different clo invariants\n%s\n%s"
-              (strVal v) (strCloInv ci1) (strCloInv ci2));
+            failwith (spr "joinHeapEnvs [%s]: different clo invariants \
+              for [%s]\n%s\n%s" (strVal v) (strLoc loc)
+                (strCloInv ci1) (strCloInv ci2));
         | HEStrong(v1,lo1,ci1), Some(HEStrong(v2,_,_)) when v1 = v2 ->
             (acc1, (loc, HEStrong (v1, lo1, ci1)) :: acc2)
         | HEStrong(v1,lo1,ci1), Some(HEStrong(v2,_,_)) ->
@@ -584,13 +590,22 @@ let includeLoc g h fvs l =
 let collectClosureInvariants g h fvs =
   List.fold_left (fun (acc1,acc2) -> function
     (* insert heap cell for every locations with an explicit cloinv *)
-    | (l,HEStrong(_,lo,Some(t))) (* when includeLoc g h fvs l *) ->
-        let hc1 = HStrong (Some (freshVar "locinvar"), t, lo) in
-        let hc2 = HStrong (Some (freshVar "locinvar"), t, lo) in
-        ((l,hc1)::acc1, (l,hc2)::acc2)
+    | (l,HEStrong(_,lo,Some(t))) ->
+        (match maybeValOfSingleton t with
+           (* for singleton types, avoid introducing an unnecessary binder.
+              in either case, notice that the closure invariant is _not_
+              reflected in the output heap type. *)
+           | Some(v) ->
+               let hc1 = HStrong (None, valToSingleton v, lo, Some t) in
+               let hc2 = HStrong (None, valToSingleton v, lo, None) in
+               ((l,hc1)::acc1, (l,hc2)::acc2)
+           | None ->
+               let hc1 = HStrong (Some (freshVar "locinvar"), t, lo, Some t) in
+               let hc2 = HStrong (Some (freshVar "locinvar"), t, lo, None) in
+               ((l,hc1)::acc1, (l,hc2)::acc2))
     (* when cloinv is absent, conditionally include the loc *)
     | (l,HEStrong(v,lo,None)) when includeLoc g h fvs l ->
-        let hc = HStrong (None, valToSingleton v, lo) in
+        let hc = HStrong (None, valToSingleton v, lo, None) in
         ((l,hc)::acc1, (l,hc)::acc2)
     | (l,HEStrong _) -> (acc1, acc2)
     | (l,HEWeak(thaw)) -> ((l,HWeak(thaw))::acc1, (l,HWeak(thaw))::acc2)
@@ -710,8 +725,6 @@ type app_rule_result =
 (* for each tuple component of the form xi:ti, add the mapping
      xi |-> wi           if w is a tuple
      xi |-> sel(w,"i")   ow
-
-   INTERESTING 8/29/12: segfault if switch (foo wi acc ti) to (foo wi acc t)
 *)
 let depTupleSubst t w =
   let rec foo w acc = function
@@ -791,6 +804,22 @@ let updQRecd v (recd,b) f t3 =
   let recd' = (f,t3) :: (List.remove_assoc f recd) in
   TQuick ("v", QRecd (recd', b), eq theV (WVal v))
 
+let fixupCloInvs beforeHeapEnv afterHeapEnv =
+  let cs =
+    List.map (function
+      | (l,HEWeak(tok)) -> (l, HEWeak tok)
+      | (l,HEStrong(v,lo,None)) ->
+          (match findCell l beforeHeapEnv with
+             | Some(HEStrong(_,_,ci)) -> (l, HEStrong (v, lo, ci))
+             | None -> (l, HEStrong (v, lo, None))
+             | _ -> failwith (spr "fixupCloInvs %s" (strLoc l)))
+      | (l,HEStrong(v,lo,Some(_))) ->
+          failwith (spr "fixupCloInvs: why does [%s] in output heap \
+            have a closure invariant?" (strLoc l))
+    ) (snd afterHeapEnv)
+  in
+  (fst afterHeapEnv, cs)
+
 
 (***** Heap parameter inference ***********************************************)
 
@@ -801,9 +830,13 @@ let inferHeapParam cap curHeapEnv = function
         List.fold_left (fun acc (l,x) ->
           if List.mem_assoc l cs1 then acc
           else match x with
-            (* TODO closureinvariant *)
-            | HEStrong(v,lo,_) -> (l, HStrong (None, valToSingleton v, lo)) :: acc
-            | HEWeak(x)        -> (l, HWeak x) :: acc
+            | HEWeak(x) -> (l, HWeak x) :: acc
+            | HEStrong(v,lo,_) ->
+                (l, HStrong (None, valToSingleton v, lo, None)) :: acc
+                (* discarding the cloinv, since function types are not
+                   parameterized by them anyway. instead, fixupCloInvs
+                   will be used after a function call to carry closure
+                   invariants from the input heapenv to the output one. *)
         ) [] cs
       in Some (hs, cs)
   | _ -> None
@@ -911,7 +944,7 @@ let findActualFromRefValue g lVar tTup vTup =
 
 let findActualFromProtoLink locSubst lVar hForm hAct =
   let rec foo = function
-    | (LocVar lVar', HStrong (_, _, Some (LocVar x))) :: cs when lVar = x ->
+    | (LocVar lVar', HStrong (_, _, Some (LocVar x), _)) :: cs when lVar = x ->
         if not (List.mem_assoc lVar' locSubst) then foo cs
         else (match List.assoc lVar' locSubst with
           | None -> None
@@ -929,7 +962,7 @@ let findActualFromProtoLink locSubst lVar hForm hAct =
 let findArrayActual g tVar locSubst hForm hAct =
   let rec foo = function
     | (LocVar lVar,
-       HStrong (_, TQuick (_, QBoxes [UArray (TQuick (_, QBoxes [UVar x], _))], _), _)) :: cs
+       HStrong (_, TQuick (_, QBoxes [UArray (TQuick (_, QBoxes [UVar x], _))], _), _, _)) :: cs
       when tVar = x ->
         if not (List.mem_assoc lVar locSubst) then foo cs
         else begin match List.assoc lVar locSubst with
@@ -1486,6 +1519,7 @@ and tsAppSlow g curHeap ((tActs,lActs,hActs), v1, v2) =
     let (heapBindings,h) = heapEnvOfHeap cap e12 in
     let (heapBindings,h) = avoidSingletonExistentials (heapBindings,h) in
     let t = mkExists heapBindings (Typ t12) in
+    let h = fixupCloInvs curHeap h in
     AppOk (t, h) in (* end tryOne *)
 
   let t1 = tsVal g curHeap v1 in
@@ -1550,6 +1584,7 @@ and tcVal_ g h goal = function
           let g = tcAddBindingPat g x t1 in
           let (bindings,h) = heapEnvOfHeap ruleName h1 in
           let g = tcAddBindings g bindings in
+          maybePrintHeapEnv h ([],[]);
           tcExp g h (t2,h2) e;
         )
       in
@@ -1642,7 +1677,9 @@ and tsAppQuick g h (poly,vFun,vArg) = match (poly,vFun,vArg) with
             (match matchQRecd (tsVal g h d1), matchQStrLit t2 with
                | Some(recd,exactDom), Some(f) ->
                    (match getPropObj g h recd exactDom f l2 with
-                      | Some(s) -> Some (Typ s, h)
+                      | Some(s) ->
+                          let s = addPredicate (pNot (eq (WVal v1) wNull)) s in
+                          Some (Typ s, h)
                       | None    -> None)
                | _ -> None)
         | Some(HEWeak(Frzn)) ->
@@ -1652,6 +1689,7 @@ and tsAppQuick g h (poly,vFun,vArg) = match (poly,vFun,vArg) with
               let (s,_) = (* ignore heap since getPropObj has no effect *)
                 tsExp g1 h1 (mkAppUn (vVar "getPropObj") [vVar y; v2]) in
               let (binders,s) = stripExists s in
+              let s = addPredicate (pNot (eq (WVal v1) wNull)) s in
               Some (mkExists ((x,tFrzn)::(y,tStrongPtr)::binders) (Typ s), h))
         | _ ->
             err [cap; spr "%s not an object in heap" (strLoc l1)]
@@ -1684,6 +1722,7 @@ and tsAppQuick g h (poly,vFun,vArg) = match (poly,vFun,vArg) with
               let (binders,s) = stripExists s in
               let g2 = tcAddBindings g1 binders in
               let _ = quickFreeze g2 h2 l1 lx in
+              let s = addPredicate (pNot (eq (WVal v1) wNull)) s in
               Some (mkExists ((x,tFrzn)::(y,tStrongPtr)::binders) (Typ s), h))
         | _ ->
             err [cap; spr "%s not an object in heap" (strLoc l1)]

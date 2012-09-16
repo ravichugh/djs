@@ -10,6 +10,10 @@ let fpr = Printf.fprintf
 
 let (|>) f x = x f
 
+let maybeApply f = function
+  | Some(x) -> Some (f x)
+  | None    -> None
+
 
 (* not storing these in expressions *)
 type pos = Lexing.position * Lexing.position
@@ -68,6 +72,7 @@ let mapTyp ?(fTyp  = fun x -> x)
     | TBaseUnion(l)      -> fTyp (TBaseUnion l)
     | TMaybeNullRef(l,p) -> fTyp (TMaybeNullRef (fLoc l, fooForm p))
     | TNonNullRef(l)     -> fTyp (TNonNullRef (fLoc l))
+    | TMaybeUndef(t,p)   -> fTyp (TMaybeUndef (fooTyp t, fooForm p))
 
   (* and fooPrenexTyp = function *)
   (*   | TExists _          -> failwith "mapTyp TExists" *)
@@ -126,9 +131,9 @@ let mapTyp ?(fTyp  = fun x -> x)
   and fooHeap (hs,cs) =
     let cs =
       List.map (function
-        | (l,HStrong(x,s,lo)) ->
-            let lo = match lo with Some(l') -> Some (fLoc l') | None -> None in
-            (fLoc l, HStrong (x, fooTyp s, lo))
+        | (l,HStrong(x,s,lo,ci)) ->
+            let ci = maybeApply fooTyp ci in
+            (fLoc l, HStrong (x, fooTyp s, maybeApply fLoc lo, ci))
         | (l,HWeak(tok)) ->
             (fLoc l, HWeak tok)
       ) cs
@@ -173,6 +178,7 @@ let foldTyp ?(fForm = fun acc _ -> acc)
     | TBaseUnion _       -> acc
     | TNonNullRef(l)     -> fTT acc (URef l) (* a bit hacky to rely on fTT *)
     | TMaybeNullRef(l,p) -> fooForm (fTT acc (URef l)) p
+    | TMaybeUndef(t,p)   -> fooForm (fooTyp acc t) p
 
   (* and fooPrenexTyp acc = function *)
   (*   | TExists _          -> failwith "foldTyp TExists" *)
@@ -234,7 +240,7 @@ let foldTyp ?(fForm = fun acc _ -> acc)
 
   and fooHeap acc (_,cs) =
     List.fold_left (fun acc -> function
-      | (_,HStrong(_,s,_)) -> fooTyp acc s
+      | (_,HStrong(_,s,_,_)) -> fooTyp acc s
       | (_,HWeak(_)) -> acc
     ) acc cs
 
@@ -555,12 +561,12 @@ let newObjId =
 
 (***** DJS native prototypes **************************************************)
 
-let frozenNatives = [
-  (lRoot, HStrong (None, valToSingleton vNull, Some lRoot));
-  (lObjPro, HStrong (None, valToSingleton (vVar "theObjPro"), Some lRoot));
-  (lArrPro, HStrong (None, valToSingleton (vVar "theArrPro"), Some lObjPro));
-  (lFunPro, HStrong (None, valToSingleton (vVar "theFunPro"), Some lObjPro));
-]
+let frozenNatives =
+  let foo l v l' = (l, HStrong (None, valToSingleton v, Some l', None)) in
+  [ foo lRoot vNull lRoot
+  ; foo lObjPro (vVar "theObjPro") lRoot
+  ; foo lArrPro (vVar "theArrPro") lObjPro
+  ; foo lFunPro (vVar "theFunPro") lObjPro ]
 
 let filterNatives cs =
   List.filter (fun (l,hc) -> not (List.mem (l,hc) frozenNatives)) cs
@@ -572,7 +578,7 @@ let pretty = ref true
 
 let simpleSugarToTyp = [
   ("Top"         , tyAny          );
-  ("Bot"         , tyFls          );
+  (* ("Bot"         , tyFls          ); *)
   ("Dict"        , tyDict         );
   ("Num"         , tyNum          );
   ("Int"         , tyInt          );
@@ -673,6 +679,10 @@ let strLocBinds l =
   (* spr "%s |->" (strLoc l) *)
   spr "%s:" (strLoc l)
 
+let strProtoLocOpt = function
+  | Some(l) -> spr " > %s" (strLoc l)
+  | None    -> ""
+
 let rec strWal = function
   | WVal(v) -> strVal v
   | WApp(s,ws) ->
@@ -720,6 +730,7 @@ and strTyp = function
   | TMaybeNullRef(l,p)   -> if !Settings.printShortQuick && p = pTru
                             then spr "Ref(%s?)" (strLoc l)
                             else spr "{Ref(%s?)|%s}" (strLoc l) (strForm p)
+  | TMaybeUndef(t,p)     -> spr "{?(%s)|%s}" (strTyp t) (strForm p)
 
 and strPrenexTyp = function
   | TExists(x,t,s) -> spr "exists (%s:%s). %s" x (strTyp t) (strPrenexTyp s)
@@ -742,14 +753,16 @@ and strTQuick x qt p =
 
 and strQuickTyp = function
   | QBase(bt) -> strBaseTyp bt
-  | QBoxes(us) -> String.concat " /\ " (List.map strTT us)
   | QRecd(l,b) ->
-      spr "[%s%s]"
-        (String.concat "; "
-          (List.map (fun (f,t) -> spr "\"%s\":%s" f (strTyp t)) l))
-        (if b then "; exact" else "")
-  | QTuple(l,b) ->
-      spr "[%s%s]" (strDepTuple l) (if b then "; exact" else "")
+      spr "{%s%s}"
+        (String.concat ", "
+          (List.map (fun (f,t) -> spr "%s:%s" f (strTyp t)) l))
+        (if b then ", _:Bot" else "")
+  (* TODO: parser currently doesn't accept QBoxes for more than one box
+     or QTuple. if and when i need to add these to the parser, update these
+     to match. *)
+  | QBoxes(us) -> String.concat " +++++ " (List.map strTT us)
+  | QTuple(l,b) -> spr "[%s%s]" (strDepTuple l) (if b then "; exact" else "")
 
 and strDepTuple l =
   String.concat ", "
@@ -901,13 +914,13 @@ and registerHeap h =
 and strTTFlat u = Str.global_replace (Str.regexp "\n") " " (strTT u)
 
 and strHeapCell = function
-  | HStrong(None,s,None)       -> spr "%s" (strTyp s)
-  | HStrong(Some(x),s,None)    -> spr "%s:%s" x (strTyp s)
-  | HStrong(None,s,Some(l))    -> spr "%s > %s" (strTyp s) (strLoc l)
-  | HStrong(Some(x),s,Some(l)) -> spr "%s:%s > %s" x (strTyp s) (strLoc l)
-  (* | HStrong(None,s,Some(l))    -> spr "(%s, %s)" (strTyp s) (strLoc l) *)
-  (* | HStrong(Some(x),s,Some(l)) -> spr "(%s:%s, %s)" x (strTyp s) (strLoc l) *)
-  | HWeak(ts)                  -> strThawState ts
+  | HWeak(ts) -> strThawState ts
+  | HStrong(xo,s,lo,ci) ->
+      spr "%s%s%s%s"
+        (match xo with Some(x) -> spr "%s:" x | None -> "")
+        (strTyp s)
+        (match ci with Some(t) -> spr " [%s]" (strTyp t) | None -> "")
+        (strProtoLocOpt lo)
 
 and strHeapBinding (l,hc) = spr "%s %s" (strLocBinds l) (strHeapCell hc)
 
@@ -944,15 +957,15 @@ let strFrame (l,h,w) =
   spr "[%s] %s -> %s" (String.concat "," l) (strHeap h) (strWorld w)
 
 let strCloInv = function
-  | Some(t) -> strTyp t
-  | None    -> "_"
+  | Some(t) -> spr " %s" (strTyp t)
+  | None    -> ""
 
 let strBinding (x,s) = spr "%s:%s" x (strTyp s)
 
 let strHeapEnvCell = function
-  | HEWeak(ts)            -> strThawState ts
-  | HEStrong(v,None,_)    -> strVal v
-  | HEStrong(v,Some(l),_) -> spr "%s > %s" (strVal v) (strLoc l)
+  | HEWeak(ts) -> strThawState ts
+  | HEStrong(v,lo,ci) ->
+      spr "%s%s%s" (strVal v) (strProtoLocOpt lo) (strCloInv ci)
 
 let strHeapEnvBinding (l,hc) = spr "%s %s" (strLocBinds l) (strHeapEnvCell hc)
 
@@ -1012,8 +1025,8 @@ let heapBinders (_,cs) =
   List.fold_left
     (fun acc (l,hc) ->
        match hc with HWeak _ -> acc
-                   | HStrong(None,_,_) -> acc
-                   | HStrong(Some(x),_,_) -> x::acc) [] cs
+                   | HStrong(None,_,_,_) -> acc
+                   | HStrong(Some(x),_,_,_) -> x::acc) [] cs
 
 (* all the freeVarsX functions are of the form env:Quad.t -> x:X -> Quad.t *)
 
@@ -1049,6 +1062,8 @@ and (* let rec *) freeVarsTyp env = function
   | TMaybeNullRef(l,p) -> let v1 = freeVarsLoc env l in
                           let v2 = freeVarsForm env p in
                           Quad.combineList [v1;v2]
+  | TMaybeUndef(t,p) ->
+      Quad.combineList [freeVarsTyp env t; freeVarsForm env p]
 
 and freeVarsPrenexTyp env = function
   | TExists _        -> failwith "freeVars TExists"
@@ -1106,7 +1121,7 @@ and freeVarsHeap env (hs,cs) =
   let xs = heapBinders (hs,cs) in
   let env = List.fold_left (fun env x -> Quad.addV x env) env xs in
   List.fold_left (fun acc -> function
-    | (l,HStrong(_,t,_)) ->
+    | (l,HStrong(_,t,_,_)) ->
          Quad.combineList [freeVarsLoc env l; freeVarsTyp env t; acc]
     | (l,HWeak(_)) ->
          freeVarsLoc env l
@@ -1276,6 +1291,7 @@ and substTyp (subst:subst) = function
   | TBaseUnion(l) -> TBaseUnion l
   | TNonNullRef(l) -> TNonNullRef (substLoc subst l)
   | TMaybeNullRef(l,p) -> TMaybeNullRef (substLoc subst l, substForm subst p)
+  | TMaybeUndef(t,p) -> TMaybeUndef (substTyp subst t, substForm subst p)
   (* TODO assuming that only one v::A predicate *)
   | TQuick(y,QBoxes([UVar(x)]),p) when p = pTru -> (* type variable inst *)
       let (_,sub,_,_) = subst in
@@ -1355,12 +1371,15 @@ and substHeap subst (hs,cs) =
   let cs =
     (* binders should've already been refreshed by arrow case to avoid capture *)
     List.map (function
-      | (l,HStrong(xo,s,lo)) ->
+      | (l,HStrong(xo,s,lo,ci)) ->
+          let ci = maybeApply (substTyp subst) ci in
+          (* ci can refer to x, so do the substitution before removing x *)
           let subst =
             match xo with
               | None -> subst
               | Some(x) -> MasterSubst.removeVVars [x] subst in
-          (substLoc subst l, HStrong(xo, substTyp subst s, substLocOpt subst lo))
+          let hc = HStrong (xo, substTyp subst s, substLocOpt subst lo, ci) in
+          (substLoc subst l, hc)
       | (l,HWeak(Frzn)) ->
           (substLoc subst l, HWeak Frzn)
       | (l,HWeak(Thwd(l'))) ->
@@ -1388,6 +1407,8 @@ and applyTyp t w =
                             substForm ([(y,w)],[],[],[]) (pAnd [f;f0])
     | TNonNullRef(l)     -> pAnd [hastyp w (URef l); pNot (eq w wNull)]
     | TMaybeNullRef(l,p) -> pAnd [pOr [hastyp w (URef l); eq w wNull];
+                                  substForm ([("v",w)],[],[],[]) p]
+    | TMaybeUndef(t,p)   -> pAnd [pOr [applyTyp t w; eq w wUndef];
                                   substForm ([("v",w)],[],[],[]) p]
 
 and applyQuickTyp w = function
@@ -1466,11 +1487,11 @@ and freshenDepTuple free l =
 and freshenHeap free (hs,cs) =
   let binderSubst =
     List.fold_left (fun acc -> function
-      | (_,HStrong(None,t,_)) ->
+      | (_,HStrong(None,t,_,_)) ->
           (match maybeValOfSingleton t with
              | None -> failwith "freshenHeap 1"
              | Some(v) -> acc)
-      | (_,HStrong(Some(x),_,_)) ->
+      | (_,HStrong(Some(x),_,_,_)) ->
           if Quad.memV x free then (x, freshVar x)::acc else acc
       | (_,HWeak _) ->
           acc
@@ -1480,16 +1501,17 @@ and freshenHeap free (hs,cs) =
   let subst = (binderSubstW,[],[],[]) in
   let cs =
     List.map (function
-      | (l,HStrong(None,t,lo)) ->
+      | (l,HStrong(None,t,lo,ci)) ->
           (match maybeValOfSingleton t with
              | None -> failwith "freshenHeap 2"
-             | Some(v) -> (l, HStrong (None, valToSingleton v, lo)))
-      | (l,HStrong(Some(x),s,lo)) ->
+             | Some(v) -> (l, HStrong (None, valToSingleton v, lo, ci)))
+      | (l,HStrong(Some(x),s,lo,ci)) ->
           let x =
             if List.mem_assoc x binderSubst
             then List.assoc x binderSubst
             else x in
-          (l, HStrong (Some x, substTyp subst s, lo))
+          let ci = maybeApply (substTyp subst) ci in
+          (l, HStrong (Some x, substTyp subst s, lo, ci))
       | (l,HWeak(tok)) ->
           (l, HWeak tok)
     ) cs
@@ -1562,10 +1584,10 @@ let rec expandHH (hs,cs) l k =
     else if not (List.mem_assoc l cs) then PHeapHas ((hs,[]), l, k)
     else begin
       match List.assoc l cs with
-        | HStrong(None,t,Some(l')) ->
+        | HStrong(None,t,Some(l'),_) ->
             pOr [has (WVal (valOfSingleton "expandHH" t)) k;
                  expandHH (hs,cs) l' k]
-        | HStrong(Some(d),_,Some(l')) -> 
+        | HStrong(Some(d),_,Some(l'),_) -> 
             pOr [has (wVar d) k; expandHH (hs,cs) l' k]
         | _ -> failwith (spr "expandHH: %s" (strLoc l))
     end
@@ -1582,9 +1604,9 @@ let expandOH ds k (hs,cs) l =
     else if not (List.mem_assoc l cs) then PObjHas (ds, k, (hs,[]), l)
     else begin
       match List.assoc l cs with
-        | HStrong(None,t,Some(l')) ->
+        | HStrong(None,t,Some(l'),_) ->
             foo (ds @ [WVal (valOfSingleton "expandOH" t)]) l'
-        | HStrong(Some(d),_,Some(l')) -> foo (ds @ [wVar d]) l'
+        | HStrong(Some(d),_,Some(l'),_) -> foo (ds @ [wVar d]) l'
         | _ -> failwith "expandOH: not conc constraint"
     end
   in
@@ -1603,9 +1625,9 @@ let expandHS (hs,cs) l k =
     else if not (List.mem_assoc l cs) then WObjSel (ds, k, (hs,[]), l)
     else begin
       match List.assoc l cs with
-        | HStrong(None,t,Some(l')) ->
+        | HStrong(None,t,Some(l'),_) ->
             foo (ds @ [WVal (valOfSingleton "expandHS" t)]) l'
-        | HStrong(Some(d),_,Some(l')) -> foo (ds @ [wVar d]) l'
+        | HStrong(Some(d),_,Some(l'),_) -> foo (ds @ [wVar d]) l'
         | _ -> failwith "expandHS: not conc constraint"
     end
   in
@@ -1622,9 +1644,9 @@ let expandOS ds k (hs,cs) l =
     else if not (List.mem_assoc l cs) then WObjSel (ds, k, (hs,[]), l)
     else begin
       match List.assoc l cs with
-        | HStrong(None,t,Some(l')) ->
+        | HStrong(None,t,Some(l'),_) ->
             foo (ds @ [WVal (valOfSingleton "expandOS" t)]) l'
-        | HStrong(Some(d),_,Some(l')) -> foo (ds @ [wVar d]) l'
+        | HStrong(Some(d),_,Some(l'),_) -> foo (ds @ [wVar d]) l'
         | _ -> failwith "expandOS: not conc constraint"
     end
   in
@@ -1675,8 +1697,9 @@ let rec expandPreTyp t =
 let expandPreHeap (hs,cs) =
   let cs =
     List.map (fun (l,hc) -> match hc with
-      | HStrong(x,s,lo) -> (l, HStrong (x, expandPreTyp s, lo))
-      | HWeak(tok)      -> (l, HWeak tok)
+      (* assuming no heap predicates in ci *)
+      | HStrong(x,s,lo,ci) -> (l, HStrong (x, expandPreTyp s, lo, ci))
+      | HWeak(tok)         -> (l, HWeak tok)
     ) cs
   in
   (hs, cs)
@@ -1822,7 +1845,7 @@ let embedForm p = p |> embedForm1 |> embedObjSelsInsideOut |> formToSMT
 
 (***** More stuff *************************************************************)
 
-let tyArrayTuple tInv ts extensible = 
+let tyArrayTuple (tInv,ts,extensible) = 
   let p = if extensible then ge else eq in
   let ps = (* could add pDict if needed ? *)
     packed theV :: p (arrlen theV) (wInt (List.length ts))
