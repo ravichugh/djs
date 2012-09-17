@@ -19,8 +19,7 @@ SplayTree.Node.prototype.left = null;
 
 SplayTree.Node.prototype.right = null;
 
-/*: leftAndRight {Dict|(and ((sel v "left") :: Ref(~lNode))
-                            ((sel v "right") :: Ref(~lNode)))} */ "#define";
+/*: leftAndRight {left: Ref(~lNode), right:Ref(~lNode)} */ "#define";
 
 Node.prototype.traverse_ = function traverse_()
 /*: (this:Ref(~lNode)) / (lNodeProto: leftAndRight [sameExact] > lObjPro) -> Top / same */ {

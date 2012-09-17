@@ -1,7 +1,5 @@
-/*: (~lTreeNode:
-       {Dict|(and (dom v {"item","left","right"}) (Int (sel v "item"))
-                  ((sel v "left") :: Ref(~lTreeNode))
-                  ((sel v "right") :: Ref(~lTreeNode)))} > lTreeNodeProto) */ "#weak";
+/*: (~lTreeNode: {item: Int, left: Ref(~lTreeNode), right:Ref(~lTreeNode), _:Bot}
+               > lTreeNodeProto) */ "#weak";
 
 function TreeNode(left,right,item)
 /*:   (this:Ref, left:Ref(~lTreeNode), right:Ref(~lTreeNode), item:Int)

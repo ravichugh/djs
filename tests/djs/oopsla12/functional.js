@@ -14,8 +14,7 @@ var mammal = function(priv) /*: ty_init_mammal */ {
      -> Ref(Lnew) / (Lpriv: same, &priv: blah1:Ref(Lpriv),
                      Lnew: dNew:ty_mam > lObjPro) */ '#define';
 
-/*: ty_mam {Dict|(and (dom v {"get_name"})
-                      (ty_get_name (sel v "get_name")))} */ '#define';
+/*: ty_mam {get_name: ty_get_name, _:Bot} */ '#define';
 
 /*: ty_get_name
         (this:Top) / (Lpriv: ePriv:ty_priv > lObjPro, &priv: blah:Ref(Lpriv))
@@ -51,9 +50,7 @@ var cat = function(priv2) /*: ty_init_cat */ {
      -> Ref(Lnew) / (Lpriv: same, &priv: blah1:Ref(Lpriv),
                      Lnew: dNew:ty_cat > lObjPro) */ '#define';
 
-/*: ty_cat {Dict|(and (dom v {"get_name","purr"})
-                      (ty_get_name (sel v "get_name"))
-                      (ty_sound (sel v "purr")))} */ '#define';
+/*: ty_cat {purr: ty_sound, get_name: ty_get_name, _:Bot} */ '#define';
 
 /*: ty_sound (this:Top) -> Str */ '#define';
 

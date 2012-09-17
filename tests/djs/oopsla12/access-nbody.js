@@ -95,8 +95,6 @@ var Sun = function() /*: tyPlanet */ {
    -> Ref(Lnew)
     / (Lnew: tyNBodySystem > lNBodySystemProto, Lbodies: same, &SOLAR_MASS: sameType) */ "#define";
 
-// TODO unfortunate that need SOLAR_MASS 
-
 function NBodySystem(bodies) /*: new ctorNBodySystem */ {
    this.bodies = bodies;
    var px /*: Num */ = 0.0;

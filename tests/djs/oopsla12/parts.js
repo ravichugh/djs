@@ -1,6 +1,4 @@
 
-// TODO switch ty_sound to a #type, fix expansion issue
-
 /*: #define ty_sound (this:Top) -> Str */ '#define';
 
 /*: ty_make_dog :: (x:Ref) / (x: dThis:Dict > x.pro)
