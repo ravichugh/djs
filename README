@@ -80,15 +80,26 @@ Running DJS
   already contains the standard prelude from the previous run, use the -raw
   flag so that the file is processed directly.
 
-  # ./system-d -raw out/anfExp.dref
+  # ./system-dref -raw out/anfExp.dref
   ...
   OK! 24 queries.
 
-  All of the queries dispatched to Z3 are saved in out/queries.lisp in
-  (a precursor to) the SMT-LIB2 format, and can be run directly through z3.
+  All of the queries dispatched to Z3 are saved in out/queries.smt2 in the
+  SMT-LIB2 format, and can be run directly through z3.
 
   # z3 MBQI=false out/queries.smt2 | cat -n 
 
   The line numbers help match up queries with the query numbers (in comments)
   in queries.lisp.
+
+  Examples written directly in !D can be found in the tests/functional/ and
+  tests/imperative/ directories.
+
+  # ./system-dref ../tests/imperative/objects/test00.dref
+  ...
+  OK! 5 queries.
+
+  The following script runs all of the examples in a given directory:
+
+  # ../scripts/run-tests.py imperative/objects
 
