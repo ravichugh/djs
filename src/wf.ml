@@ -87,7 +87,7 @@ and checkFormula errList g p =
     | PObjHas(ds,k,h',l)  -> (List.iter (checkWalue errList g) (k::ds);
                               checkHeap errList g h';
                               checkLoc errList g l)
-    | PAll _              -> failwith "wfForm: PAll shouldn't appear"
+    | PAll(x,p)           -> checkFormula errList (Var(x,tyAny)::g) p
 
 and checkWalue errList g w =
   match w with

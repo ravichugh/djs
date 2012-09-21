@@ -41,6 +41,21 @@ rule token = parse
   | "StrOrBool"  { SUGAR "StrOrBool" }
   (* | "NonNegInt"  { SUGAR "NonNegInt" } *)
 
+  (* the SECPRED token is a quick fix for now *)
+  | "docDomain"          { SECPRED "docDomain" }
+  | "eltDoc"             { SECPRED "eltDoc" }
+  | "eltParentChild"     { SECPRED "eltParentChild" }
+  | "eltTagName"         { SECPRED "eltTagName" }
+  | "eltAttr"            { SECPRED "eltAttr" }
+  | "eltTextValue"       { SECPRED "eltTextValue" }
+  | "flowsFrom"          { SECPRED "flowsFrom" }
+  | "canAppend"          { SECPRED "canAppend" }
+  | "canEdit"            { SECPRED "canEdit" }
+  | "canReadAttr"        { SECPRED "canReadAttr" }
+  | "canWriteAttr"       { SECPRED "canWriteAttr" }
+  | "canFlowTo"          { SECPRED "canFlowTo" }
+  | "canReadSelection"   { SECPRED "canReadSelection" }
+
   | "Bot"          { BOT }
   | "type"         { TYPE }
   | "heap"         { HEAP }
@@ -110,6 +125,7 @@ rule token = parse
   (* | "ctor"         { CTOR } *)
   (* | "All"          { ALL } *)
   (* | "all"          { LOCALL } *)
+  | "forall"       { FORALL }
   | "new"          { NEW }
   (* | "nil"          { NIL } *)
   | "null"         { NULL }
@@ -143,7 +159,7 @@ rule token = parse
   | "]"            { RBRACK }
   | "{"            { LBRACE }
   | "}"            { RBRACE }
-  (* | "."            { DOT } *)
+  (* | "."            { DOT } *) (* NOTE: won't work with dots in idents *)
   | ","            { COMMA }
   | ";"            { SEMI }
   | ":"            { COLON }

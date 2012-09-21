@@ -64,6 +64,11 @@ let mkSugarTyp x s p =
     | "Dict" -> TRefinement(x,pAnd[pDict;p])
     | _      -> printParseErr (spr "bad sugar {%s:%s|%s}" x s (strForm p))
 
+let rec mkForAll xs p =
+  match xs with
+    | x::xs -> PAll (x, mkForAll xs p)
+    | []    -> p
+
 
 (***** Syntactic sugar: "same" ************************************************)
 
@@ -210,6 +215,7 @@ let expandHeapLocSugar (arr: uarrow) : uarrow =
 %token <string> TVAR (* using this for tvar, lvar, and hvar *)
 %token <Lang.lbl> LBL
 %token <string> SUGAR
+%token <string> SECPRED (* quick fix for now *)
 %token
   EOF TAG LET (* REC *) EQ IN FUN ARROW IF THEN ELSE
   LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK (* ALL *) (* DOT *) COMMA
@@ -227,6 +233,7 @@ let expandHeapLocSugar (arr: uarrow) : uarrow =
   HEAPHAS HEAPSEL OBJHAS OBJSEL
   WITH (* BEGIN END *)
   LTUP RTUP BOT
+  FORALL
 
 %type <Lang.exp> prog
 %type <Lang.exp -> Lang.exp> prelude
@@ -260,6 +267,9 @@ prelude :
  | LET x=VAR EQ e0=exp p=prelude       { fun e -> ELet(x,None,e0,p(e)) }
  | HEAP LPAREN l=heapenvbindings RPAREN p=prelude
      { fun e -> EHeapEnv(l,p(e)) }
+ | TYPE x=VAR DCOLON tt=typ_term p=prelude  { fun e -> EMacro(x,MacroTT(tt),p(e)) }
+ | TYPE x=VAR EQ t=typ p=prelude            { fun e -> EMacro(x,MacroT(t),p(e)) }
+ | WEAK w=weakloc p=prelude                 { fun e -> EWeak(w,p(e)) }
 
 baseval :
  | b=VBOOL         { Bool b }
@@ -456,19 +466,17 @@ poly_actuals :
 
 formula :
 
- (***** simple predicates *****)
+ (***** atomic predicates *****)
  | LPAREN EQ x=walue y=walue RPAREN                { PEq(x,y) }
  | LPAREN LT x=walue y=walue RPAREN                { lt x y }
  | LPAREN LE x=walue y=walue RPAREN                { le x y }
  | LPAREN GE x=walue y=walue RPAREN                { ge x y }
  | LPAREN GT x=walue y=walue RPAREN                { gt x y }
-
- (***** uninterpreted predicates *****)
  | LPAREN w=walue DCOLON u=typ_term RPAREN         { PHasTyp(w,u) }
- (* | LPAREN w=walue DCOLON u=typ_term BANG RPAREN    { pIsBang w u }  *)
  | LPAREN HEAPHAS h=hvar_ l=loc k=walue RPAREN     { PHeapHas(h,l,k) }
  | LPAREN PACKED w=walue RPAREN                    { packed w }
  | LPAREN INTEGER w=walue RPAREN                   { integer w }
+ | LPAREN p=SECPRED ws=walues_juxt RPAREN          { PApp(p,ws) }
 
  (***** logical connectives *****)
  | b=BOOL                                          { if b then pTru else pFls }
@@ -498,6 +506,9 @@ formula :
          | WHeapSel(h,l,k)   -> pAnd [PHeapHas(h,l,k); applyTyp t w]
          | WObjSel(ds,k,h,l) -> pAnd [PObjHas(ds,k,h,l); applyTyp t w]
          | _                 -> applyTyp t w }
+
+ (***** axioms *****)
+ | LPAREN FORALL LPAREN xs=vars RPAREN p=formula RPAREN  { mkForAll xs p }
 
 formulas :
  | formula                               { [$1] }
@@ -686,6 +697,7 @@ fieldexps : (* weird: combining the field and fields leads to type error... *)
 fieldtyp :
  | f=STR COLON t=typ         { (f,t) }
  | f=VAR COLON t=typ         { (f,t) }
+ | f=TVAR COLON t=typ        { (f,t) }
  (* as a quick fix to avoid conflicts, putting _:Bot here and then
     checking for it in record_typ *)
  | UNDERSCORE COLON BOT      { ("_",tyAny) }
@@ -697,6 +709,10 @@ fieldtyps :
 walues :
  | walue                 { [$1] }
  | walue COMMA walues    { $1 :: $3 }
+
+walues_juxt :
+ | w=walue               { [w] }
+ | w=walue l=walues_juxt { w :: l }
 
 array_tuple_typs :
  | att=array_tuple_typs_  { let (ts,b) = att in
@@ -757,7 +773,9 @@ jsLoc : l=loc EOF { l }
 
 jsWeakLoc : w=weakloc EOF { w }
 
-jsFreeze : x=VAR LPAREN l=loc COMMA ts=thawstate RPAREN { (x, l, ts) }
+jsFreeze :
+ | x=VAR LPAREN l=loc COMMA ts=thawstate RPAREN { (x, l, ts) }
+ | x=VAR l=loc                                  { (x, l, Frzn) }
 
 jsThaw : x=VAR l=loc { (x, l) }
 

@@ -210,7 +210,7 @@ let foldTyp ?(fForm = fun acc _ -> acc)
                             fForm acc (PEqMod (w1, w2, ws))
     | PObjHas(ds,k,h,l)  -> let acc = List.fold_left fooWal acc (k::ds) in
                             fooHeap acc h
-    | PAll _             -> failwith "foldForm: PAll shouldn't appear"
+    | PAll(_,p)          -> fooForm acc p
 
   and fooTT acc = function
     | UVar(x)       -> fTT acc (UVar x)
@@ -807,7 +807,8 @@ and strForm = function
   | PApp(s,ws)      -> spr "(%s %s)" (strPredSym s)
                          (String.concat " " (List.map strWal ws))
   | PConn(s,l)      -> strFormExpanded s l
-  | PAll(x,p)       -> spr "(forall ((%s DVal)) %s)" x (strForm p)
+  | PAll(x,p)       -> if !pretty then spr "(forall (%s) %s)" x (strForm p)
+                       else spr "(forall ((%s DVal)) %s)" x (strForm p)
   (* TODO 8/30/12 once registerBox keeps boxes in sync with logical context,
      can assert these axioms once per box rather than here *)
   | PHasTyp(w,(URef(l) as u)) when isStrongLoc l ->
@@ -1285,7 +1286,9 @@ and substForm subst = function
   | PObjHas(ds,k,h,l) ->
       PObjHas (List.map (substWal subst) ds, substWal subst k,
                substHeap subst h, substLoc subst l)
-  | PAll _ -> failwith "substForm: PAll shouldn't appear"
+  (* TODO ignoring capture right now *)
+  | PAll(x,p) ->
+      PAll (x, substForm subst p)
 
 and substTyp (subst:subst) = function
   | TBaseUnion(l) -> TBaseUnion l

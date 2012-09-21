@@ -684,6 +684,11 @@ let rec ds (env:env) = function
        normal let-binding instead of doing var lifting or implicit
        updates to global *)
 
+  (**  /*: p */ "#assume"; e  **)
+  | E.SeqExpr (_, E.HintExpr (_, s, E.ConstExpr (_, J.CString "#assume")), e) ->
+      let t = desugarTypHint (spr "{%s}" s) env in
+      EExtern (freshVar "djsAssume", t, ds env e)
+
   (**  var f = function (...) { ... }; e2                      **)
   (**    insert the hint "f" so that the type macro f is used  **)
   | E.SeqExpr (p0,
