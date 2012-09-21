@@ -102,4 +102,7 @@ Running DJS
   The following script runs all of the examples in a given directory:
 
   # ../scripts/run-tests.py imperative/objects
+  ...
 
+  # ../scripts/run-tests.py djs/oopsla12
+  ...
