@@ -19,7 +19,9 @@ let predefinedVars = ["undefined"; "Infinity"; "NaN"; "isArray"]
   @ if not !Settings.bxMode then [] else
       [
         "readFile"; "mkUrl"; "sendRequest";
-        "historyOnSite"; "eltOfEvt";
+        "historyOnSite"; "urlOfString"; "stringOfUrl";
+        "urlHost"; "urlAppendQuery";
+        "eltOfEvt"; 
         (* "setFontSize"; "getFontSize"; *)
         "matchRegexp"; "replaceRegexp";
       ]

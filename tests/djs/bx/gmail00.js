@@ -29,6 +29,6 @@ var redirMailTo = function (elts) {
 
 /*: start :: (Ref(~doc)) -> Top */ "#type";
 var start = function (doc) {
-  var elts = /*: [;lElts] */ (doc.getEltsByTagName)("a");
+  var elts = /*: [{FLS};lElts] */ (doc.getEltsByTagName)("a");
   redirMailTo(elts);
 };

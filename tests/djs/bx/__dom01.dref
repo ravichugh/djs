@@ -87,14 +87,16 @@ val theDocPro :: {
       (this:{Ref(~doc)|(canReadSelection v)})
    -> {Str|(selection v)}
 
+(* some callers want the eltDoc predicate, but some don't.
+   since array subtyping is bivariant, can't just include it.
+   no matter, nested refinements trick to the rescue!
+*)
 , getEltsByTagName : 
-      [;L] (this:Ref(~doc), t:Str) / ()
+      [A;L] (this:Ref(~doc), t:Str) / ()
    -> Ref(L)
-    / (L: {Arr({Ref(~elt)|(eltTagName v t)})|(packed v)} > lArrPro)
-    (* TODO hmm, for gmail00.js, need to _not_ have the (eltDoc v this) predicate.
-         because array subtyping needs to be invariant...
-    / (L: {Arr({Ref(~elt)|(and (eltTagName v t) (eltDoc v this))})|(packed v)} > lArrPro)
-    *)
+    / (L: {Arr({Ref(~elt)|(and (eltTagName v t)
+                               (implies (0 :: A) (eltDoc v this)))}
+              )|(packed v)} > lArrPro)
 
 , _ : Bot
 

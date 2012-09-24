@@ -352,15 +352,15 @@ and checkTypeTerms errList usedBoxes g u1 u2 =
     | URef(x), URef(y) -> x = y
     | UNull, URef(y)   -> isWeakLoc y
     | UArrow(arr1), UArrow(arr2) -> checkArrows errList usedBoxes g arr1 arr2
-    | UArray(t1), UArray(t2) -> t1 = t2 (* add bivariance back in if needed *)
-(*
-       (try (* ideally want a version that returns bool instead of failing *)
-         let _ = checkTypes errList usedBoxes g (Typ t1) t2 in
-         let _ = checkTypes errList usedBoxes g (Typ t2) t1 in
-         true
-       with Tc_error _ ->
-         false)
-*)
+    | UArray(t1), UArray(t2) -> begin
+        (* t1 = t2 (* add bivariance back in if needed *) *)
+        try (* ideally want a version that returns bool instead of failing *)
+          let _ = checkTypes errList usedBoxes g (Typ t1) t2 in
+          let _ = checkTypes errList usedBoxes g (Typ t2) t1 in
+          true
+        with Tc_error _ ->
+          false
+      end
     | _ -> die errList "Syntactic types don't match up."
 
 
