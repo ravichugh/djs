@@ -18,11 +18,7 @@ val theEltPro :: {
   (* NOTE: for now, not supporting the syntax {Ref(~elt)!|p} *)
 , parentNode :
       (this:Ref(~elt))
-   -> {Ref(~elt)|(and (not (v null)) (eltParentChild v this))}
-
-, getEltById :
-      (this:Ref(~doc), s:Str)
-   -> {Ref(~elt)|(and (eltDoc v this) (eltAttr v "id" s))}
+   -> {Ref(~elt)|(and (not (= v null)) (eltParentChild v this))}
 
 , tagName :
       (this:Ref(~elt))
@@ -65,6 +61,10 @@ val theEltPro :: {
       (this:Ref(~elt))
    -> Bool
 
+, numChildren :
+      (this:Ref(~elt))
+   -> Int
+
 , _ : Bot
 
 }
@@ -87,6 +87,10 @@ val theDocPro :: {
       (this:{Ref(~doc)|(canReadSelection v)})
    -> {Str|(selection v)}
 
+, getEltById :
+      (this:Ref(~doc), s:Str)
+   -> {Ref(~elt)|(and (eltDoc v this) (eltAttr v "id" s))}
+
 (* some callers want the eltDoc predicate, but some don't.
    since array subtyping is bivariant, can't just include it.
    no matter, nested refinements trick to the rescue!
@@ -95,6 +99,13 @@ val theDocPro :: {
       [A;L] (this:Ref(~doc), t:Str) / ()
    -> Ref(L)
     / (L: {Arr({Ref(~elt)|(and (eltTagName v t)
+                               (implies (0 :: A) (eltDoc v this)))}
+              )|(packed v)} > lArrPro)
+
+, getEltsByClassName : 
+      [A;L] (this:Ref(~doc), x:Str) / ()
+   -> Ref(L)
+    / (L: {Arr({Ref(~elt)|(and (eltAttr v "className" x)
                                (implies (0 :: A) (eltDoc v this)))}
               )|(packed v)} > lArrPro)
 

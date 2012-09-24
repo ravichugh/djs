@@ -18,10 +18,10 @@ let predefinedVars = ["undefined"; "Infinity"; "NaN"; "isArray"]
   (* TODO read these in directly from primitive files*)
   @ if not !Settings.bxMode then [] else
       [
-        "readFile"; "mkUrl"; "sendRequest";
+        "log"; "readFile"; "mkUrlSimple"; "mkUrl"; "sendRequest"; "request";
         "historyOnSite"; "urlOfString"; "stringOfUrl";
-        "urlHost"; "urlAppendQuery";
-        "eltOfEvt"; 
+        "urlHost"; "urlPath"; "urlAppendQuery";
+        "eltOfEvt";
         (* "setFontSize"; "getFontSize"; *)
         "matchRegexp"; "replaceRegexp";
       ]

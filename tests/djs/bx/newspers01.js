@@ -20,7 +20,7 @@ var parseResponse =
       [;L] () / () -> Ref(L) / (L: {Arr(Url)|(packed v)} > lArrPro) */ "#type";
 var getPopularStories = function () {
   var p = readFile(prefs);
-  var url = mkUrl("http", "digg.com");
+  var url = mkUrlSimple("http", "digg.com");
   var resp = sendRequest(url, p);
   return /*: [;L] */ parseResponse(resp);
 };

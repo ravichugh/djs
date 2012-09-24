@@ -1,7 +1,20 @@
 
+val __log :: (this:Top, Str) -> Top
+
 val __readFile :: (this:Top, f:{Str|(canReadFile v)}) -> {Str|(flowsFromTo f v)}
 
-val __mkUrl :: (this:Top, Str, h:Str) -> {Str|(urlHost v h)}
+val __mkUrlSimple :: (this:Top, Str, h:Str) -> {Str|(urlHost v h)}
+
+val __mkUrl :: (this:Top, scheme:Str, host:Str, path:Str)
+            -> {Url|(and (urlScheme v scheme)
+                         (urlHost v host)
+                         (urlPath v path))}
+                         (* DOM.f9 also includes (UrlQuery r Nil) *)
+
+(* rather than pairs of strings as in DOM.f9, using a flat array of strings *)
+(* using dummy duplicate arg to canRequest, since paper example used two args *)
+(* TODO switch Top to (evt -> unit) and output to evtHandler *)
+val __request :: (this:Top, s:{Str|(canRequest v v)}, strs:Ref, Top) -> Top
 
 val __sendRequest :: (this:Top, u:Str, s:{Str|(canRequest u v)}) -> Str
 
@@ -13,6 +26,8 @@ val __urlOfString :: (this:Top, s:Str) -> {Url|(parseUrl v s)}
 val __stringOfUrl :: (this:Top, u:Url) -> {Str|(parseUrl u v)}
 
 val __urlHost :: (this:Top, u:Url) -> {Str|(urlHost u v)}
+
+val __urlPath :: (this:Top, u:Url) -> {Str|(urlPath u v)}
 
 val __urlAppendQuery ::
     (this:Top, u:Url, k:Str, y:Str)
