@@ -3,9 +3,15 @@ val __eltOfEvt :: (this:Top, Evt) -> Ref(~elt)
 
 val __jsonOfEvt :: (this:Top, Evt) -> Json
 
+val __jsonResponse :: (this:Top, Evt, Json) -> Json
+
+val __jsonRequest :: (this:Top, Json) -> Top
+
 val __recvMessages :: (this:Top, (this:Top, Evt) -> Top) -> EvtHandler
 
 val __query :: (this:Top, Str, Json) -> Json
+
+val __jsonFromDjs :: (this:Top, x:Ref) / (x: Dict > x.pro) -> Json / same
 
 val __stringsOfJson :: [;L] (this:Top, Json) / ()
                     -> Ref(L) / (L: {Arr(Str)|(packed v)} > lArrPro)
@@ -13,6 +19,8 @@ val __stringsOfJson :: [;L] (this:Top, Json) / ()
 val __attachEvent :: (this:Top, Ref(~elt), Str)
                   -> ((this:Top, Evt) -> Top)
                   -> EvtHandler
+
+(* TODO update the world encoding *)
 
 val __makeWorld :: [A] (this:Top, A) -> {World|(v :: A)}
 
@@ -24,4 +32,6 @@ val __reactPar :: [A] ( this:Top
                       , Top (* TODO (world 'a -> evt -> option 'a) *)
                       )
                    -> EvtHandler
+
+val __contentScript :: (this:Top, Str) -> Top
 
