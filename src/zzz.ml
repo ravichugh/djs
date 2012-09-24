@@ -21,7 +21,10 @@ let emitPreamble () =
   let rec f ic =
     try z3write (input_line ic ^ "\n"); f ic
     with End_of_file -> () in
-  f (open_in (Settings.prim_dir ^ "theory.smt2"))
+  f (open_in (Settings.prim_dir ^ "theory.smt2"));
+  if !Settings.bxMode
+  then f (open_in (Settings.djs_dir ^ "tests/djs/bx/__bxpreds.smt2"))
+  else ()
 
 let dump ?nl:(nl=true) ?tab:(tab=true) s =
   let pre = if tab then indent () else "" in

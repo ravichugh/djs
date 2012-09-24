@@ -727,7 +727,7 @@ and strTyp = function
   | TQuick(x,qt,p)       -> strTQuick x qt p
   | TBaseUnion(l)        -> String.concat "Or" (List.map strBaseTyp l)
   | TNonNullRef(l)       -> spr "Ref(%s!)" (strLoc l)
-  | TMaybeNullRef(l,p)   -> if !Settings.printShortQuick && p = pTru
+  | TMaybeNullRef(l,p)   -> if (* !Settings.printShortQuick && *) p = pTru
                             then spr "Ref(%s?)" (strLoc l)
                             else spr "{Ref(%s?)|%s}" (strLoc l) (strForm p)
   | TMaybeUndef(t,p)     -> spr "{?(%s)|%s}" (strTyp t) (strForm p)
@@ -736,6 +736,7 @@ and strPrenexTyp = function
   | TExists(x,t,s) -> spr "exists (%s:%s). %s" x (strTyp t) (strPrenexTyp s)
   | Typ(t)         -> strTyp t
 
+(*
 and strTQuick x qt p =
   match (!Settings.printShortQuick, x, qt, p) with
     | _,    _, QBoxes([]), _     -> failwith "strTyp: weird type with QBoxes []"
@@ -750,6 +751,16 @@ and strTQuick x qt p =
     | _,    _, QTuple(_), p when p = pTru -> strQuickTyp qt
     | _,  "v", _, _ -> spr "{%s|%s}" (strQuickTyp qt) (strForm p)
     | _             -> spr "{%s:%s|%s}" x (strQuickTyp qt) (strForm p)
+*)
+
+and strTQuick x qt p =
+  match qt with
+    | QBoxes([]) -> failwith "strTyp: weird type with QBoxes []"
+    | QBoxes([u]) when p = pTru -> strTT u
+    | QBase(_) | QRecd(_) | QTuple(_) when p = pTru -> strQuickTyp qt
+    | _ -> if x = "v"
+           then spr "{%s|%s}" (strQuickTyp qt) (strForm p)
+           else spr "{%s:%s|%s}" x (strQuickTyp qt) (strForm p)
 
 and strQuickTyp = function
   | QBase(bt) -> strBaseTyp bt

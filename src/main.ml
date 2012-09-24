@@ -43,11 +43,11 @@ let makeAbsolute f =
   if f.[0] = '/' then f else Unix.getcwd () ^ "/" ^ f
 
 
-(***** Parse System !D ********************************************************)
+(***** Parsing System !D ******************************************************)
 
 let string_of_position (p, e) = 
-  Format.sprintf "%s:%d:%d-%d" p.pos_fname p.pos_lnum (p.pos_cnum - p.pos_bol)
-    (e.pos_cnum - e.pos_bol)
+  Format.sprintf "%s:%d:%d-%d" p.pos_fname p.pos_lnum
+    (p.pos_cnum - p.pos_bol) (e.pos_cnum - e.pos_bol)
 
 (* rkc: handling position info similar to Lambdajs.parse_lambdajs and
    Lambdajs_env.parse_env *)
@@ -77,6 +77,20 @@ let parsePrelude f =
     let prelude = doParse LangParser2.prelude f in
     Lang.ELoadedSrc (f, prelude e)
 
+let parseProg f =
+  let e = doParse LangParser2.prog f in
+  Lang.ELoadedSrc (f, e)
+
+let expandExp e = 
+  let fE = function
+    | Lang.ELoadSrc(f,e) ->
+        let f = Settings.djs_dir ^ f in
+        let p = parsePrelude f in
+        p e
+    | e -> e
+  in
+  LangUtils.mapExp fE e
+
 let anfAndAddPrelude e =
   if !doRaw then
     Anf.coerce e
@@ -94,19 +108,12 @@ let anfAndAddPrelude e =
     let _ = Anf.printAnfExp e in
     e
 
-let rec expandProg originalF = function
-  | Lang.ELoadSrc(f',e) ->
-      let prelude = parsePrelude (S.djs_dir ^ f') in
-      prelude (expandProg originalF e)
-  | e ->
-      Lang.ELoadedSrc (originalF, e)
-
 let parseSystemDref () =
   let e =
     match !srcFiles with
       | []  -> Lang.EVal (LangUtils.vStr "no source file")
       | [f] -> let f = makeAbsolute f in
-               (checkSuffix f; expandProg f (doParse LangParser2.prog f))
+               (checkSuffix f; expandExp (parseProg f))
       | _   -> (pr "%s" usage; Log.terminate ())
   in
   anfAndAddPrelude e
@@ -118,29 +125,21 @@ let parseJStoEJS f =
   Exprjs_syntax.from_javascript
     (JavaScript.parse_javascript_from_channel (open_in f) f)
 
-let dummyEJS =
-  Exprjs_syntax.ConstExpr
-    (LangUtils.pos0, JavaScript_syntax.CString "no source file")
-
-let doParseDJS fo =
-  try
-    let prog = match fo with Some(f) -> parseJStoEJS f | None -> dummyEJS in
-(*
-    let f_pre = S.prim_dir ^ "prelude.js" in
-    let ejs_pre = parseJStoEJS f_pre in
-    DjsDesugar2.desugar (DjsDesugar2.makeFlatSeq ejs_pre prog)
-*)
-    DjsDesugar2.desugar prog
-  with Failure(s) ->
-    if Utils.strPrefix s "parse error" || Utils.strPrefix s "lexical error"
-    then Log.printParseErr s
-    else failwith s
+let doParseDJS = function
+  | None -> Lang.EVal (LangUtils.vStr "no source file")
+  | Some(f) -> begin
+      try Lang.ELoadedSrc (f, DjsDesugar2.desugar (parseJStoEJS f))
+      with Failure(s) ->
+        if Utils.strPrefix s "parse error" || Utils.strPrefix s "lexical error"
+        then Log.printParseErr s
+        else failwith s
+    end
 
 let parseDJS () =
   let e =
     match !srcFiles with
       | []  -> doParseDJS None
-      | [f] -> (checkSuffix f; doParseDJS (Some f))
+      | [f] -> (checkSuffix f; expandExp (doParseDJS (Some f)))
       | _   -> (pr "%s" usage; Log.terminate ())
   in
   anfAndAddPrelude e

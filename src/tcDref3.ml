@@ -586,6 +586,9 @@ let includeLoc g h fvs l =
   || isFreeLocalRef fvs l
   || isObjectRefFromFreeVar g h fvs l
   || isMarkedCtorPrototype l
+  || if !Settings.bxMode
+     then List.mem l [LocConst "lEltPro"; LocConst "lDocPro"; LocConst "lStyPro"]
+     else false
 
 let collectClosureInvariants g h fvs =
   List.fold_left (fun (acc1,acc2) -> function
@@ -1692,6 +1695,7 @@ and tsAppQuick g h (poly,vFun,vArg) = match (poly,vFun,vArg) with
               let s = addPredicate (pNot (eq (WVal v1) wNull)) s in
               Some (mkExists ((x,tFrzn)::(y,tStrongPtr)::binders) (Typ s), h))
         | _ ->
+            (* TODO look into successive quick thaws with Ref(l!) *)
             err [cap; spr "%s not an object in heap" (strLoc l1)]
     end
 
@@ -1780,7 +1784,8 @@ and getPropObj g h recd exactDom f lPro =
              | Some(recd2,exactDom2) -> getPropObj g h recd2 exactDom2 f lProPro
              | None -> None)
       | Some _ -> failwith "getPropObj: bad constraint"
-      | None -> failwith "getPropObj: could return HeapSel here"
+      | None -> failwith (spr "getPropObj: could return (heapsel %s %s %s) here"
+                  "..." (strLoc lPro) f)
   end
 
 and quickThaw g h weakPtr m =
@@ -1831,6 +1836,7 @@ let assertIntegerness e =
   Utils.IntSet.iter (fun i -> Zzz.assertFormula (integer (wInt i))) ints;
   ()
 
+(* TODO might cat the skolems to the beginning of anfExpr.dref *)
 let addSkolems g =
   let n = Utils.IdTable.size idSkolems in
   let rec foo acc i =
@@ -1844,6 +1850,9 @@ let initialEnvs () =
   let h_init = "H_ROOT" (* "H_emp" *) in
   let g = [HVar h_init] in
   let g = tcAddBinding g "v" tyAny in
+  let g = if !Settings.bxMode (* TODO decide whether to use these *)
+          then [TVar "Url"; TVar "Evt"; TVar "Sty"] @ g
+          else g in
   let g = addSkolems g in
   let h = ([h_init], [lRoot, HEStrong (vNull, Some lRoot, None)]) in
   let _ = maybePrintHeapEnv h ([],[]) in

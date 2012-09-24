@@ -50,7 +50,7 @@ val js_eek :: (* == *)
                                      (iff (= v true) (= xx yy)))}
 
 val js_threek :: (* === *)
-  (xx:Top, yy:{(= (tag v) (tag xx))}) -> {Bool|(iff (= v true) (= xx yy))}
+  (xx:Top, yy:Top) -> {Bool|(iff (= v true) (= xx yy))}
 
 val js_lt :: (xx:Num, yy:Num)
           -> {Bool|(implies (and (integer xx) (integer yy))

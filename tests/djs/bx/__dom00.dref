@@ -1,0 +1,68 @@
+
+type tyOwnElt = {text: Str}
+
+(* logicfun (eltParentChild Top Top Bool) *)
+(* fun eltParentChild :: (Top,Top) -> Bool *)
+
+weak (~lMyElt: tyOwnElt > lMyEltPro)
+
+val theEltPro :: {
+
+(* Metadata queries *)
+
+  getChild :
+      [;Lchild] (parent:Ref, Int)
+    / (~lMyElt: thwd parent, parent: d:tyOwnElt > lMyEltPro)
+   -> Ref(Lchild?)
+    / (~lMyElt: thwd Lchild, Lchild: {(and (tyOwnElt v)
+                                           (eltParentChild d v))} > lMyEltPro)
+
+, parentNode :
+      [;Lparent] (child:Ref)
+    / (~lMyElt: thwd child, child: d:tyOwnElt > lMyEltPro)
+   -> Ref(Lparent)
+    / (~lMyElt: thwd Lparent, Lparent: {(and (tyOwnElt v)
+                                             (eltParentChild v d))} > lMyEltPro)
+
+, getEltById :
+      [;L] (Ref(lMyDoc), s:Str)
+    / (~lMyElt: frzn, lMyDoc: d:Dict > lROOT)
+   -> Ref(L)
+    / (~lMyElt: thwd L, lMyDoc: same,
+       L: {(and (tyOwnElt v) (eltDoc v d) (eltAttr v "id" s))} > lMyEltPro)
+
+, tagName :
+      (elt:Ref) / (~lMyElt: thwd elt, elt: d:tyOwnElt > lMyEltPro)
+   -> {Str|(eltTagName d v)} / same
+
+(* Protected access to data *)
+
+, getAttr :
+      (elt:Ref, k:Str)
+    / (~lMyElt: thwd elt, elt: d:{(and (tyOwnElt v) (canReadAttr v k))} > lMyEltPro)
+   -> {Str|(and (eltAttr d k v) (flowsFrom v d))} / same
+
+, setAttr :
+      (elt:Ref, k:Str, y:Str)
+    / (~lMyElt: thwd elt, elt: d:{(and (tyOwnElt v) (canWriteAttr v k y))} > lMyEltPro)
+   -> Top
+    / (~lMyElt: thwd elt, elt: {(and (tyOwnElt v) (eltAttr v k y))} > lMyEltPro) 
+
+, getValue :
+      Top
+
+, createElt :
+      Top
+
+, appendChild :
+      Top
+
+, _ : Bot
+
+}
+
+heap (
+  lMyEltPro : theEltPro > lROOT
+)
+
+(* "the end" *)

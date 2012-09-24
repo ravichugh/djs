@@ -215,7 +215,7 @@ let expandHeapLocSugar (arr: uarrow) : uarrow =
 %token <string> TVAR (* using this for tvar, lvar, and hvar *)
 %token <Lang.lbl> LBL
 %token <string> SUGAR
-%token <string> SECPRED (* quick fix for now *)
+(* %token <string> SECPRED (* quick fix for now *) *)
 %token
   EOF TAG LET (* REC *) EQ IN FUN ARROW IF THEN ELSE
   LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK (* ALL *) (* DOT *) COMMA
@@ -302,23 +302,18 @@ exp :
  | TYPE x=VAR DCOLON tt=typ_term e=exp        { EMacro(x,MacroTT(tt),e) }
  | TYPE x=VAR EQ t=typ e=exp                  { EMacro(x,MacroT(t),e) }
 
- | x=LBL LBRACE e=exp RBRACE             { ELabel(x,e) }
- | BREAK LBL exp                         { EBreak($2,$3) }
+ | x=LBL e=braced_exp                         { ELabel(x,e) }
+ | BREAK x=LBL e=exp                          { EBreak(x,e) }
 
- | THROW exp                             { EThrow($2) }
- | TRY LBRACE exp RBRACE
-   CATCH LPAREN VAR RPAREN
-   LBRACE exp RBRACE                     { ETryCatch($3,$7,$10) }
- | TRY LBRACE exp RBRACE
-   FINALLY LBRACE exp RBRACE             { ETryFinally($3,$7) }
+ | THROW e=exp                                { EThrow(e) }
+ | TRY e1=braced_exp FINALLY e2=braced_exp    { ETryFinally(e1,e2) }
+ | TRY e1=braced_exp CATCH LPAREN x=VAR RPAREN e2=braced_exp { ETryCatch(e1,x,e2) }
 
- (* TODO these should only be allowed at the top-level and at the
-    beginning, but not checking that right now.
-    Main.parseProgAndExpand makes these assumptions. so, better
-    to make prog production return (directives, exp) *)
- | x=LBL s=STR e=exp                     { if x = "use" then ELoadSrc(s,e)
-                                           else printParseErr
-                                             (spr "unknown directive [%s]" x) }
+ | x=LBL s=STR e=exp  { if x = "use" then ELoadSrc(s,e)
+                        else printParseErr (spr "unknown directive [%s]" x) }
+
+braced_exp :
+ | LBRACE e=exp RBRACE  { e }
 
 exp1 :
  | exp2                          { $1 }
@@ -370,11 +365,13 @@ lambda : (* requiring parens around body to avoid conflicts *)
         conflicting with pat, which can match a single variable *)
 
 typ :
+ | t=typ_no_typ_term                   { t }
+ | u=typ_term                          { tyTypTerm u }
+
+typ_no_typ_term :
 
  | LBRACE x=VAR PIPE p=formula RBRACE  { TRefinement(x,p) }
  | LBRACE p=formula RBRACE             { TRefinement("v",p) }
-
- | u=typ_term                          { tyTypTerm u }
 
  | REFTYPE LPAREN l=loc BANG RPAREN    { TNonNullRef l }
  | REFTYPE LPAREN l=loc QMARK RPAREN   { TMaybeNullRef (l, pTru) }
@@ -386,6 +383,10 @@ typ :
  | LBRACE qt=record_typ p=refinement               { TQuick("v",qt,p) }
  | LBRACE u=real_typ_term p=refinement             { TQuick("v",QBoxes[u],p) }
  | LBRACE x=VAR COLON u=real_typ_term p=refinement { TQuick(x,QBoxes[u],p) }
+
+ (* TODO add this, and change NonNullRef to take a refinement pred
+ | LBRACE REFTYPE LPAREN l=loc BANG RPAREN p=refinement { TNonNullRef l }
+ *)
 
  | LT a=array_tuple_typs GT                        { tyArrayTuple a }
 
@@ -476,7 +477,8 @@ formula :
  | LPAREN HEAPHAS h=hvar_ l=loc k=walue RPAREN     { PHeapHas(h,l,k) }
  | LPAREN PACKED w=walue RPAREN                    { packed w }
  | LPAREN INTEGER w=walue RPAREN                   { integer w }
- | LPAREN p=SECPRED ws=walues_juxt RPAREN          { PApp(p,ws) }
+ | LPAREN p=VAR ws=walues_juxt RPAREN              { PApp(p,ws) }
+ (* | LPAREN p=SECPRED ws=walues_juxt RPAREN          { PApp(p,ws) } *)
 
  (***** logical connectives *****)
  | b=BOOL                                          { if b then pTru else pFls }
@@ -500,7 +502,8 @@ formula :
  | LPAREN TRUTHY x=walue RPAREN          { pTruthy x }
  | LPAREN FALSY x=walue RPAREN           { pFalsy x }
  | LPAREN TYPE x=VAR RPAREN              { ParseUtils.doIntersectionHack x }
- | LPAREN t=typ w=walue RPAREN
+ (* | LPAREN t=typ w=walue RPAREN *)
+ | LPAREN t=typ_no_typ_term w=walue RPAREN
      { match w with
          | WApp("sel",[k])   -> pAnd [has w k; applyTyp t w]
          | WHeapSel(h,l,k)   -> pAnd [PHeapHas(h,l,k); applyTyp t w]

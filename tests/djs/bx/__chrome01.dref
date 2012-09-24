@@ -1,0 +1,5 @@
+
+val __matchRegexp :: (this:Top, Str, Str) -> Bool
+
+val __replaceRegexp :: (this:Top, Str, Str, Str) -> Str
+

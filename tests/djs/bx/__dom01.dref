@@ -1,0 +1,108 @@
+
+weak (~elt: Empty > lEltPro)
+
+weak (~doc: Empty > lDocPro)
+
+val theEltPro :: {
+
+(* Metadata queries *)
+
+  getChild :
+      (this:Ref(~elt), Int)
+   -> {Ref(~elt)|(eltParentChild this v)}
+
+, children :
+      [;L] (this:Ref(~elt)) / ()
+   -> Ref(L) / (L: {Arr(Ref(~elt))|(packed v)} > lArrPro)
+
+  (* NOTE: for now, not supporting the syntax {Ref(~elt)!|p} *)
+, parentNode :
+      (this:Ref(~elt))
+   -> {Ref(~elt)|(and (not (v null)) (eltParentChild v this))}
+
+, getEltById :
+      (this:Ref(~doc), s:Str)
+   -> {Ref(~elt)|(and (eltDoc v this) (eltAttr v "id" s))}
+
+, tagName :
+      (this:Ref(~elt))
+   -> {Str|(eltTagName this v)}
+
+(* Protected access to data *)
+
+, getAttr :
+      (this:Ref(~elt), k:{Str|(canReadAttr this k)})
+   -> {Str|(and (eltAttr this k v) (flowsFromTo this v))}
+
+, setAttr :
+      (this:Ref(~elt), k:Str, y:{Str|(canWriteAttr this k v)})
+   -> {(eltAttr this k y)}
+
+, getValue :
+      (this:{Ref(~elt)|(canReadValue v)})
+   -> {Str|(eltTextValue this v)}
+
+, createElt :
+      (this:Ref(~doc), t:Str)
+   -> {Ref(~elt)|(and (eltDoc v this) (eltTagName v t) (canEdit v))}
+
+  (* NOTE: DOM.f9 uses canAppend par, but the paper uses canAppend par ch *)
+, appendChild :
+      (* (this:Ref(~elt), child:{Ref(~elt)|(canAppend this)}) *)
+      (this:Ref(~elt), child:{Ref(~elt)|(canAppend this v)})
+   -> {(eltParentChild this child)}
+
+(*
+, getStyle : 
+      (this:Ref(~elt))
+   -> {Sty|(eltStyle this v)}
+*)
+, getStyle : 
+      (this:Ref(~elt))
+   -> {Ref(~sty)|(eltStyle this v)}
+
+, isTextNode :
+      (this:Ref(~elt))
+   -> Bool
+
+, _ : Bot
+
+}
+
+val theDocPro :: {
+
+  body :
+      (this:Ref(~doc))
+   -> {Ref(~elt)|(and (eltDoc v this) (eltTagName v "body"))}
+
+, domain : 
+      (this:Ref(~doc))
+   -> {Str|(docDomain this v)}
+
+, createTextNode : 
+      (this:Ref(~doc), s:Str)
+   -> {Ref(~elt)|(and (eltDoc v this) (eltTextValue v s))}
+
+, getSelectedText :
+      (this:{Ref(~doc)|(canReadSelection v)})
+   -> {Str|(selection v)}
+
+, getEltsByTagName : 
+      [;L] (this:Ref(~doc), t:Str) / ()
+   -> Ref(L)
+    / (L: {Arr({Ref(~elt)|(eltTagName v t)})|(packed v)} > lArrPro)
+    (* TODO hmm, for gmail00.js, need to _not_ have the (eltDoc v this) predicate.
+         because array subtyping needs to be invariant...
+    / (L: {Arr({Ref(~elt)|(and (eltTagName v t) (eltDoc v this))})|(packed v)} > lArrPro)
+    *)
+
+, _ : Bot
+
+}
+
+heap (
+  lEltPro : theEltPro > lROOT
+, lDocPro : theDocPro > lROOT
+)
+
+(* "the end" *)

@@ -14,7 +14,6 @@ let prim_dir = djs_dir ^ "prims/"
 let parseOnly = ref false
 let strictWarn = ref true
 let printAllTypes = ref false
-let printShortQuick = ref true
 let doFalseChecks = ref false
 let quickTypes = ref true
 let checkWfSynthesis = ref true
@@ -23,3 +22,4 @@ let tryAllBoxesHack = ref false
 (* DJS options *)
 let djsMode = ref false
 let augmentHeaps = ref true
+let bxMode = ref true (* TODO eventually, set this to false by default *)

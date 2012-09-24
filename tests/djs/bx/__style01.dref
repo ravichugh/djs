@@ -1,0 +1,24 @@
+
+(*
+(* using the methods of Ref(~sty) instead of the following two direct functions *)
+
+val __setFontSize :: (this:Top, {Sty|(canStyle v)}, Str) -> {Sty|(canStyle v)}
+
+val __getFontSize :: (this:Top, {Sty|(canStyle v)}) -> Str
+*)
+
+weak (~sty: Empty > lStyPro)
+
+val theStyPro :: {
+
+  getFontSize : (this:{Ref(~sty)|(canStyle v)}) -> Str
+
+, setFontSize : (this:{Ref(~sty)|(canStyle v)}, Str) -> {Ref(~sty)|(canStyle v)}
+
+, _ : Bot
+
+}
+
+heap (
+  lStyPro : theStyPro > lROOT
+)

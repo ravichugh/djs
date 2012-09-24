@@ -15,6 +15,14 @@ module StrSet = Utils.StrSet
 
 (* these should match the ones in js_natives.dref *)
 let predefinedVars = ["undefined"; "Infinity"; "NaN"; "isArray"]
+  (* TODO read these in directly from primitive files*)
+  @ if not !Settings.bxMode then [] else
+      [
+        "readFile"; "mkUrl"; "sendRequest";
+        "historyOnSite"; "eltOfEvt";
+        (* "setFontSize"; "getFontSize"; *)
+        "matchRegexp"; "replaceRegexp";
+      ]
 
 
 (***** Check variable scopes **************************************************)
@@ -684,6 +692,12 @@ let rec ds (env:env) = function
        normal let-binding instead of doing var lifting or implicit
        updates to global *)
 
+  (**  /*: "<file>" */ "#use"; e  **)
+  | E.SeqExpr (_, E.HintExpr (_, s, E.ConstExpr (_, J.CString "#use")), e) ->
+      if Str.string_match (Str.regexp "^[ ]*\"\\(.*\\)\"[ ]*$") s 0
+      then let s = Str.matched_group 1 s in ELoadSrc (s, ds env e)
+      else Log.printParseErr (spr "bad #use: [%s]" s)
+
   (**  /*: p */ "#assume"; e  **)
   | E.SeqExpr (_, E.HintExpr (_, s, E.ConstExpr (_, J.CString "#assume")), e) ->
       let t = desugarTypHint (spr "{%s}" s) env in
@@ -790,10 +804,15 @@ let rec ds (env:env) = function
       (* NOTE: the type checker looks for the "djsFuncType" string *)
       annotateExp ~lbl:"djsFuncType" e (ParseUtils.typToFrame t)
 
+  | E.FuncStmtExpr (p, f, args, body) ->
+      ds env (E.HintExpr (p, f, E.FuncStmtExpr (p, f, args, body)))
+(*
   | E.FuncStmtExpr (_, f, _, _) ->
       Log.printParseErr (spr "function statement [%s] not annotated" f)
+*)
 
   | E.FuncExpr (_, args, _) ->
+      let _ = failwith "shouldn't get here: unannotated FuncExr" in
       Log.printParseErr (spr
         "function expression with formals [%s] not annotated"
            (String.concat ", " args))
@@ -959,12 +978,10 @@ and dsMethCall env ts ls obj prop args =
   let func =
     match prop with
       | E.ConstExpr (_, J.CString s) ->
-          objOp ts ls "getProp" [obj; EVal (vStr s)]
+          objOp [] [] "getProp" [obj; EVal (vStr s)]
       | _ ->
-          objOp ts ls "getElem" [obj; ds env prop]
+          objOp [] [] "getElem" [obj; ds env prop]
   in
- (* TODO for now, just passing the same poly args, but this probably
-    will not work in general *)
   mkCall ts ls func (Some obj) (List.map (ds env) args)
 
 (* this version does not use an "arguments" array *)

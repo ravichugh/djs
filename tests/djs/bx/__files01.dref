@@ -1,0 +1,9 @@
+
+val __readFile :: (this:Top, f:{Str|(canReadFile v)}) -> {Str|(flowsFromTo f v)}
+
+val __mkUrl :: (this:Top, Str, h:Str) -> {Str|(urlHost v h)}
+
+val __sendRequest :: (this:Top, u:Str, s:{Str|(canRequest u v)}) -> Str
+
+val __historyOnSite :: [;L] (this:Top, {Str|(canReadHistory v)}) / ()
+                    -> Ref(L) / (L: {Arr(Url)|(packed v)} > lArrPro)

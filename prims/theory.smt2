@@ -166,18 +166,3 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;;; TODO for now, hard-coding these along with SECPRED
-(declare-fun docDomain (DVal DVal) Bool)
-(declare-fun eltDoc (DVal DVal) Bool)
-(declare-fun eltParentChild (DVal DVal) Bool)
-(declare-fun eltTagName (DVal DVal) Bool)
-(declare-fun eltAttr (DVal DVal DVal) Bool)
-(declare-fun eltTextValue (DVal DVal) Bool)
-(declare-fun flowsFrom (DVal DVal) Bool)
-(declare-fun canAppend (DVal) Bool)
-(declare-fun canEdit (DVal) Bool)
-(declare-fun canReadAttr (DVal DVal) Bool)
-(declare-fun canWriteAttr (DVal DVal DVal) Bool)
-(declare-fun canFlowTo (DVal DVal) Bool)
-(declare-fun canReadSelection (DVal) Bool)
-

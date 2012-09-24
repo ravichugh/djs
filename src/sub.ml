@@ -207,21 +207,25 @@ let filterObligations obligations = function
    locations l that are not needed by the arrow:
 
      S1 / E1 -> S2 / E2   <:   S1 / E1 + (l |-> T) -> S2 / E2 + (l |-> T)
+
+     S1 / E1 -> S2 / E2   <:   S1 / E1 + (m |-> frzn) -> S2 / E2 + (m |-> frzn)
 *)
 let weakenArrowHeaps (cs11,cs12) (cs21,cs22) =
   let toAdd =
-    List.fold_left (fun acc -> function
-      | (l,HStrong(None,t,lo,ci)) ->
-          if not (List.mem_assoc l cs22) then acc
-          else if List.mem_assoc l cs11  then acc
-          else if List.mem_assoc l cs12  then acc
-          else begin
-            match List.assoc l cs22 with
+    List.fold_left (fun acc (l,hc) ->
+      if not (List.mem_assoc l cs22) then acc
+      else if List.mem_assoc l cs11  then acc
+      else if List.mem_assoc l cs12  then acc
+      else begin match hc with
+        | HStrong(None,t,lo,ci) ->
+            begin match List.assoc l cs22 with
               | HStrong(None,t',lo',_) when t = t' && lo = lo' ->
                   (l, HStrong (None, t, lo, ci)) :: acc
               | _ -> acc
-          end
-      | _ -> acc
+            end
+        | HWeak(Frzn) -> (l, HWeak Frzn) :: acc
+        | _ -> acc
+      end
     ) [] cs21
   in
   (cs11 @ toAdd, cs12 @ toAdd)
