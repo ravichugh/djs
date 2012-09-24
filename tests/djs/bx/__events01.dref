@@ -1,6 +1,7 @@
 
 val __eltOfEvt :: (this:Top, Evt) -> Ref(~elt)
 
+(* this is called jsonValue in IBEX *)
 val __jsonOfEvt :: (this:Top, Evt) -> Json
 
 val __jsonResponse :: (this:Top, Evt, Json) -> Json

@@ -38,6 +38,10 @@ val theEltPro :: {
       (this:{Ref(~elt)|(canReadValue v)})
    -> {Str|(eltTextValue this v)}
 
+, setValue :
+      (this:{Ref(~elt)|(canWriteValue v)}, s:Str)
+   -> {Ref(~elt)|(eltTextValue this s)}
+
 , createElt :
       (this:Ref(~doc), t:Str)
    -> {Ref(~elt)|(and (eltDoc v this) (eltTagName v t) (canEdit v))}
@@ -108,6 +112,10 @@ val theDocPro :: {
     / (L: {Arr({Ref(~elt)|(and (eltAttr v "className" x)
                                (implies (0 :: A) (eltDoc v this)))}
               )|(packed v)} > lArrPro)
+
+, activeElt : 
+      (this:Ref(~doc))
+   -> {Ref(~elt)|(eltDoc v this)}
 
 , _ : Bot
 

@@ -21,6 +21,7 @@
 (declare-fun canReadAttr (DVal DVal) Bool)
 (declare-fun canWriteAttr (DVal DVal DVal) Bool)
 (declare-fun canReadValue (DVal) Bool)
+(declare-fun canWriteValue (DVal) Bool)
 (declare-fun canFlowTo (DVal DVal) Bool)
 (declare-fun canReadSelection (DVal) Bool)
 (declare-fun canStyle (DVal) Bool)
