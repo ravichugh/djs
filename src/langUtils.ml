@@ -571,6 +571,18 @@ let frozenNatives =
 let filterNatives cs =
   List.filter (fun (l,hc) -> not (List.mem (l,hc) frozenNatives)) cs
 
+let frozenBxNatives =
+  let foo l v l' = (l, HStrong (None, valToSingleton v, Some l', None)) in
+  [ foo (LocConst "lEltPro") (vVar "theEltPro") lRoot
+  ; foo (LocConst "lDocPro") (vVar "theDocPro") lRoot
+  ; foo (LocConst "lStyPro") (vVar "theStyPro") lRoot
+  ; (LocConst "~elt", HWeak Frzn)
+  ; (LocConst "~doc", HWeak Frzn) ]
+
+let bxAbstractTypes =
+  [TVar "Url"; TVar "Evt"; TVar "Sty"; TVar "Json";
+  TVar "EvtHandler"; TVar "World"]
+
 
 (***** Printing to SMT-LIB-2 format and stdout ********************************)
 
@@ -830,6 +842,15 @@ and strForm = function
       else
         let i = registerBox u in
         spr "(and (hastyp %s %d) (not (hastyp %s %d)))" (strWal w) i sNull i
+  (* 9/24/12: similar to above case, asserting that weak refs are not undef *)
+  | PHasTyp(w,(URef(m) as u)) when isWeakLoc m ->
+      let sUndef = strVal vUndef in
+      if !pretty then
+        let sU = strTT u in
+        spr "(and (%s :: %s) (not (%s :: %s)))" (strWal w) sU sUndef sU
+      else
+        let i = registerBox u in
+        spr "(and (hastyp %s %d) (not (hastyp %s %d)))" (strWal w) i sUndef i
   (* TODO make the call to registerBox somewhere more appropriate. *)
   | PHasTyp(w,u) ->
       if !pretty

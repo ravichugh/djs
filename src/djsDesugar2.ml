@@ -21,7 +21,8 @@ let predefinedVars = ["undefined"; "Infinity"; "NaN"; "isArray"]
         "log"; "readFile"; "mkUrlSimple"; "mkUrl"; "sendRequest"; "request";
         "historyOnSite"; "urlOfString"; "stringOfUrl";
         "urlHost"; "urlPath"; "urlAppendQuery";
-        "eltOfEvt";
+        "eltOfEvt"; "jsonOfEvt"; "recvMessages"; "query"; "stringsOfJson";
+        "attachEvent"; "makeWorld"; "getWorld"; "reactPar";
         (* "setFontSize"; "getFontSize"; *)
         "matchRegexp"; "replaceRegexp";
       ]

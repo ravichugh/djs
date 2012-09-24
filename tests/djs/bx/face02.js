@@ -68,7 +68,7 @@ var getWebsite = function (elt) {
 var findWebsite = function (doc) {
   var elts = /*: [{TRU};l] */ (doc.getEltsByClassName)("label");
   var ret /*: {(or (= v null) (Str v))} */ = null;
-  for (var i /*: {Int|(>= v 0)} */ = 0; i < elts.length && !ret; i++) {
+  for (var i /*: {Int|(>= v 0)} */ = 0; i < elts.length; i++) {
     if (ret == null && getWebsite(elts[i]) != null) {
       ret = getWebsite(elts[i]);
     }

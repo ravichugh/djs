@@ -138,6 +138,8 @@ rule token = parse
   | ">"            { GT } (* ordering issue with >>? *)
   | "[["           { LTUP }
   | "]]"           { RTUP }
+  | "[|"           { LARR }
+  | "|]"           { RARR }
   | "("            { LPAREN }
   | ")"            { RPAREN }
   | "["            { LBRACK }

@@ -587,7 +587,7 @@ let includeLoc g h fvs l =
   || isObjectRefFromFreeVar g h fvs l
   || isMarkedCtorPrototype l
   || if !Settings.bxMode
-     then List.mem l [LocConst "lEltPro"; LocConst "lDocPro"; LocConst "lStyPro"]
+     then List.mem_assoc l frozenBxNatives
      else false
 
 let collectClosureInvariants g h fvs =
@@ -1850,10 +1850,8 @@ let initialEnvs () =
   let h_init = "H_ROOT" (* "H_emp" *) in
   let g = [HVar h_init] in
   let g = tcAddBinding g "v" tyAny in
-  let g = if !Settings.bxMode (* TODO decide whether to use these *)
-          then [TVar "Url"; TVar "Evt"; TVar "Sty"] @ g
-          else g in
   let g = addSkolems g in
+  let g = if !Settings.bxMode then bxAbstractTypes @ g else g in
   let h = ([h_init], [lRoot, HEStrong (vNull, Some lRoot, None)]) in
   let _ = maybePrintHeapEnv h ([],[]) in
   (g, h)

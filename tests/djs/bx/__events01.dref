@@ -1,2 +1,27 @@
 
 val __eltOfEvt :: (this:Top, Evt) -> Ref(~elt)
+
+val __jsonOfEvt :: (this:Top, Evt) -> Json
+
+val __recvMessages :: (this:Top, (this:Top, Evt) -> Top) -> EvtHandler
+
+val __query :: (this:Top, Str, Json) -> Json
+
+val __stringsOfJson :: [;L] (this:Top, Json) / ()
+                    -> Ref(L) / (L: {Arr(Str)|(packed v)} > lArrPro)
+
+val __attachEvent :: (this:Top, Ref(~elt), Str)
+                  -> ((this:Top, Evt) -> Top)
+                  -> EvtHandler
+
+val __makeWorld :: [A] (this:Top, A) -> {World|(v :: A)}
+
+val __getWorld :: [A] (this:Top, {World|(v :: A)}) -> A
+
+val __reactPar :: [A] ( this:Top
+                      , {World|(v :: A)}
+                      , ((this:Top, Evt) -> Top) -> EvtHandler
+                      , Top (* TODO (world 'a -> evt -> option 'a) *)
+                      )
+                   -> EvtHandler
+

@@ -232,3 +232,7 @@ val valToSingleton : value -> typ
 val valOfSingleton : string -> typ -> value
 val maybeValOfSingleton : typ -> value option
 
+val frozenNatives : heapbinding list
+val frozenBxNatives : heapbinding list
+val bxAbstractTypes : envbinding list
+

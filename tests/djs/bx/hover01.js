@@ -24,7 +24,6 @@ var magnify = function (worldOpt, evt) {
 
 /*: start :: (Ref(~doc)) -> Top */ "#type";
 var start = function (doc) {
-  // TODO
   //  let w = makeWorld None in
   //  let _ = reactPar w (attachEvent (body doc) "onmousemove") magnify in
 };

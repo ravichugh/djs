@@ -230,6 +230,35 @@ let weakenArrowHeaps (cs11,cs12) (cs21,cs22) =
   in
   (cs11 @ toAdd, cs12 @ toAdd)
 
+(* allowing natives to be dropped from the arrows on the _left_,
+   since natives should never be tampered with.
+   TODO should check that the function does not modify them. *)
+let dropNatives cs =
+  List.rev (List.fold_left (fun acc (l,hc) ->
+    if List.mem_assoc l frozenNatives then acc
+    else if !Settings.bxMode && List.mem_assoc l frozenBxNatives then acc
+    else (l,hc) :: acc
+  ) [] cs)
+
+(* TODO until existential locations and cleaning locals is added, allowing
+   &x |-> T to be dropped from the _left_ arrow if it is unmodified and
+   does not appear at all in the right arrow. *)
+let tempDropExistentialLocs (cs11,cs12) (cs21,cs22) =
+  let (cs11,cs12) =
+    List.fold_left (fun (cs11AddThings,cs12RemoveThings) (l,hc) ->
+      match l with
+        | LocConst(x) when Utils.strPrefix x "&" ->
+            if List.mem_assoc l cs12
+               && hc = List.assoc l cs12
+               && not (List.mem_assoc l cs21)
+               && not (List.mem_assoc l cs22)
+            then (cs11AddThings, List.remove_assoc l cs12RemoveThings)
+            else ((l,hc) :: cs11AddThings, cs12RemoveThings)
+        | _ -> ((l,hc) :: cs11AddThings, cs12RemoveThings)
+    ) ([], cs12) cs11
+  in
+  (List.rev cs11, List.rev cs12)
+
 let isDummyBinder x = (* to match LangParser *)
   Utils.strPrefix x "_underscore"
 
@@ -237,7 +266,12 @@ let simpleCheckArrows
       ((ts1,ls1,hs1),x1,t11,(hs11,cs11),t12,(hs12,cs12))
       ((ts2,ls2,hs2),x2,t21,(hs21,cs21),t22,(hs22,cs22)) =
 
+  let (cs11,cs12) = (dropNatives cs11, dropNatives cs12) in
+  let (cs21,cs22) = (dropNatives cs21, dropNatives cs22) in
+
   let (cs11,cs12) = weakenArrowHeaps (cs11,cs12) (cs21,cs22) in
+
+  let (cs11,cs12) = tempDropExistentialLocs (cs11,cs12) (cs21,cs22) in
 
   (x1 = x2 || (isDummyBinder x1 && isDummyBinder x2))
   && (ts1,ls1,hs1,t11,t12) = (ts2,ls2,hs2,t21,t22)

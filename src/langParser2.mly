@@ -234,6 +234,7 @@ let expandHeapLocSugar (arr: uarrow) : uarrow =
   WITH (* BEGIN END *)
   LTUP RTUP BOT
   FORALL
+  LARR RARR
 
 %type <Lang.exp> prog
 %type <Lang.exp -> Lang.exp> prelude
@@ -388,6 +389,7 @@ typ_no_typ_term :
  | LBRACE REFTYPE LPAREN l=loc BANG RPAREN p=refinement { TNonNullRef l }
  *)
 
+ | LARR a=array_tuple_typs RARR                    { tyArrayTuple a }
  | LT a=array_tuple_typs GT                        { tyArrayTuple a }
 
  (* {?(T)|p} is designed to help optimize calls to getIdx *)
