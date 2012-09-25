@@ -15,9 +15,27 @@ val theStyPro :: {
 
 , setFontSize : (this:{Ref(~sty)|(canStyle v)}, Str) -> {Ref(~sty)|(canStyle v)}
 
+, setPixelLeft : (this:{Ref(~sty)|(canStyle v)}, Int) -> {Ref(~sty)|(canStyle v)}
+
+, setPixelTop : (this:{Ref(~sty)|(canStyle v)}, Int) -> {Ref(~sty)|(canStyle v)}
+
+, setPosition : (this:{Ref(~sty)|(canStyle v)}, Str) -> {Ref(~sty)|(canStyle v)}
+
+, setBackgroundColor : (this:{Ref(~sty)|(canStyle v)}, Str) -> {Ref(~sty)|(canStyle v)}
+
+, setBorderStyle : (this:{Ref(~sty)|(canStyle v)}, Str) -> {Ref(~sty)|(canStyle v)}
+
+, setBorderWidth : (this:{Ref(~sty)|(canStyle v)}, Str) -> {Ref(~sty)|(canStyle v)}
+
+, setBorderColor : (this:{Ref(~sty)|(canStyle v)}, Str) -> {Ref(~sty)|(canStyle v)}
+
 , _ : Bot
 
 }
+
+val axCanStyle ::
+  {(forall (l s) (implies (and (canEdit l) (styleOf s l))
+                          (canStyle s)))}
 
 heap (
   lStyPro : theStyPro > lROOT

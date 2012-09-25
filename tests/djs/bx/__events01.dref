@@ -1,6 +1,8 @@
 
 val __eltOfEvt :: (this:Top, Evt) -> Ref(~elt)
 
+val __textOfEvt :: (this:Top, Evt) -> Str
+
 (* this is called jsonValue in IBEX *)
 val __jsonOfEvt :: (this:Top, Evt) -> Json
 
@@ -8,18 +10,23 @@ val __jsonResponse :: (this:Top, Evt, Json) -> Json
 
 val __jsonRequest :: (this:Top, Json) -> Top
 
+val __jsonOfString :: (this:Top, Str) -> Json
+
 val __recvMessages :: (this:Top, (this:Top, Evt) -> Top) -> EvtHandler
 
 val __query :: (this:Top, Str, Json) -> Json
 
 val __jsonFromDjs :: (this:Top, x:Ref) / (x: Dict > x.pro) -> Json / same
 
-val __stringsOfJson :: [;L] (this:Top, Json) / ()
-                    -> Ref(L) / (L: {Arr(Str)|(packed v)} > lArrPro)
+val __stringsOfJson :: [;L]
+        (this:Top, Json) / ()
+     -> Ref(L) / (L: {Arr(Str)|(and (packed v) (>= (len v) 0))} > lArrPro)
 
 val __attachEvent :: (this:Top, Ref(~elt), Str)
                   -> ((this:Top, Evt) -> Top)
                   -> EvtHandler
+
+val __detach :: (this:Top, EvtHandler) -> Int
 
 (* TODO update the world encoding *)
 

@@ -29,7 +29,7 @@
 (declare-fun canReadFile (DVal) Bool)
 (declare-fun canRequest (DVal DVal) Bool)
 (declare-fun canReadHistory (DVal) Bool)
-(declare-fun eltStyle (DVal DVal) Bool)
+(declare-fun styleOf (DVal DVal) Bool)
 (declare-fun urlHost (DVal DVal) Bool)
 (declare-fun urlScheme (DVal DVal) Bool)
 (declare-fun urlPath (DVal DVal) Bool)

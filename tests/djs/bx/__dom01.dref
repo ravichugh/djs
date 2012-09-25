@@ -42,24 +42,27 @@ val theEltPro :: {
       (this:{Ref(~elt)|(canWriteValue v)}, s:Str)
    -> {Ref(~elt)|(eltTextValue this s)}
 
-, createElt :
-      (this:Ref(~doc), t:Str)
-   -> {Ref(~elt)|(and (eltDoc v this) (eltTagName v t) (canEdit v))}
-
   (* NOTE: DOM.f9 uses canAppend par, but the paper uses canAppend par ch *)
 , appendChild :
       (* (this:Ref(~elt), child:{Ref(~elt)|(canAppend this)}) *)
       (this:Ref(~elt), child:{Ref(~elt)|(canAppend this v)})
    -> {(eltParentChild this child)}
 
+, removeChild : 
+      (this:Ref(~elt), {Ref(~elt)|(canEdit v)})
+   -> Ref(~elt)
+
 (*
 , getStyle : 
       (this:Ref(~elt))
    -> {Sty|(eltStyle this v)}
-*)
 , getStyle : 
       (this:Ref(~elt))
    -> {Ref(~sty)|(eltStyle this v)}
+*)
+, getStyle : 
+      (this:Ref(~elt))
+   -> {Ref(~sty)|(styleOf v this)}
 
 , isTextNode :
       (this:Ref(~elt))
@@ -82,6 +85,10 @@ val theDocPro :: {
 , domain : 
       (this:Ref(~doc))
    -> {Str|(docDomain this v)}
+
+, createElt :
+      (this:Ref(~doc), t:Str)
+   -> {Ref(~elt)|(and (eltDoc v this) (eltTagName v t) (canEdit v))}
 
 , createTextNode : 
       (this:Ref(~doc), s:Str)
@@ -120,6 +127,9 @@ val theDocPro :: {
 , _ : Bot
 
 }
+
+val axEdit :: (* rkc: adding second dummy elt *)
+  {(forall (e e2) (implies (canEdit e) (canAppend e e2)))}
 
 heap (
   lEltPro : theEltPro > lROOT

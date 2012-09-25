@@ -22,8 +22,9 @@ let predefinedVars = ["undefined"; "Infinity"; "NaN"; "isArray"]
         "historyOnSite"; "urlOfString"; "stringOfUrl";
         "urlHost"; "urlPath"; "urlAppendQuery";
         "eltOfEvt"; "jsonOfEvt"; "recvMessages"; "query"; "stringsOfJson";
-        "jsonRequest"; "jsonFromDjs"; "jsonResponse";
-        "attachEvent"; "makeWorld"; "getWorld"; "reactPar";
+        "textOfEvt";
+        "jsonRequest"; "jsonFromDjs"; "jsonResponse"; "jsonOfString";
+        "attachEvent"; "detach"; "makeWorld"; "getWorld"; "reactPar";
         (* "setFontSize"; "getFontSize"; *)
         "matchRegexp"; "replaceRegexp";
         "contentScript";
