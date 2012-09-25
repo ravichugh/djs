@@ -6,6 +6,10 @@ val __textOfEvt :: (this:Top, Evt) -> Str
 (* this is called jsonValue in IBEX *)
 val __jsonOfEvt :: (this:Top, Evt) -> Json
 
+val __clientX :: (this:Top, Evt) -> Int
+
+val __clientY :: (this:Top, Evt) -> Int
+
 val __jsonResponse :: (this:Top, Evt, Json) -> Json
 
 val __jsonRequest :: (this:Top, Json) -> Top
