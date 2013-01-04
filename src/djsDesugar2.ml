@@ -1008,7 +1008,8 @@ and dsFunc env args body =
 and dsWhile env breakL continueL test body frame =
   let (hs,e1,(t2,e2)) = frame in
   let f = freshVar "while" in
-  let loop () = mkApp f [EVal vUndef] in
+  (* let loop () = mkApp f [EVal vUndef] in *)
+  let loop s = mkApp f [eStr s] in
   let u = (([],[],hs), freshVar "dummy", tyAny, e1, t2, e2) in
   let body =
     if StrSet.mem continueL !jumpedTo
@@ -1017,8 +1018,8 @@ and dsWhile env breakL continueL test body frame =
     else ds env body in
   let fixloop =
     ParseUtils.mkLetRec_ f u
-      (EIf (ds env test, eSeq [body; loop ()], EVal vUndef))
-      (loop ()) in
+      (EIf (ds env test, eSeq [body; loop "recursiveCall"], EVal vUndef))
+      (loop "initialCall") in
   if StrSet.mem breakL !jumpedTo
   (*
   then ELabel (breakL, Some frame, fixloop)
@@ -1030,7 +1031,7 @@ and dsWhile env breakL continueL test body frame =
 and dsDoWhile env breakL continueL test body frame =
   let (hs,e1,(t2,e2)) = frame in
   let f = freshVar "dowhile" in
-  let loop () = mkApp f [EVal vUndef] in
+  let loop s = mkApp f [eStr s] in
   let u = (([],[],hs), freshVar "dummy", tyAny, e1, t2, e2) in
   let body =
     if StrSet.mem continueL !jumpedTo
@@ -1039,8 +1040,8 @@ and dsDoWhile env breakL continueL test body frame =
     else ds env body in
   let fixloop =
     ParseUtils.mkLetRec_ f u
-      (eSeq [body; EIf (ds env test, loop (), EVal vUndef)])
-      (loop ()) in
+      (eSeq [body; EIf (ds env test, loop "recursiveCall", EVal vUndef)])
+      (loop "initialCall") in
   if StrSet.mem breakL !jumpedTo
   (*
   then ELabel (breakL, Some frame, fixloop)
@@ -1055,7 +1056,7 @@ and dsDoWhile env breakL continueL test body frame =
 and dsFor env breakL continueL test body incr frame =
   let (hs,e1,(t2,e2)) = frame in
   let f = freshVar "forwhile" in
-  let loop () = mkApp f [EVal vUndef] in
+  let loop s = mkApp f [eStr s] in
   let u = (([],[],hs), freshVar "dummy", tyAny, e1, t2, e2) in
   let body =
     if StrSet.mem continueL !jumpedTo
@@ -1065,9 +1066,9 @@ and dsFor env breakL continueL test body incr frame =
   let fixloop =
     ParseUtils.mkLetRec_ f u
       (EIf (ds env test,
-            eSeq [body; ds env incr; loop ()],
+            eSeq [body; ds env incr; loop "recursiveCall"],
             EVal vUndef))
-      (loop ()) in
+      (loop "initialCall") in
   if StrSet.mem breakL !jumpedTo
   (*
   then ELabel (breakL, Some frame, fixloop)

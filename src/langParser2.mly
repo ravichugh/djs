@@ -490,6 +490,7 @@ formula :
  | LPAREN IFF p=formula q=formula RPAREN           { pIff p q }
  | LPAREN NOT p=formula RPAREN                     { pNot p }
  | LPAREN ITE p=formula q=formula r=formula RPAREN { pIte p q r }
+ | LPAREN IF p=formula THEN q=formula ELSE r=formula RPAREN { pIte p q r }
 
  (***** delayed macros *****)
  | LPAREN HAS x=walue ys=walueset RPAREN           { PHas(x,ys) }

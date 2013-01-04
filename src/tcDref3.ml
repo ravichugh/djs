@@ -1744,6 +1744,8 @@ and tsAppQuick g h (poly,vFun,vArg) = match (poly,vFun,vArg) with
                | TQuick(_,QBoxes[UArray(_)],_), Some("length") ->
                    let p =
                      pAnd [pNot (eq (WVal v1) wNull);
+                           ge theV (wInt 0);
+                           ge (WVal a) (wInt 0); 
                            pImp (packed (WVal a))
                                 (eq theV (arrlen (WVal a)))]
                    in

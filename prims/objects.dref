@@ -17,7 +17,8 @@ val getPropArr :: [A]
      (xx:Ref?, kk:Str) / (xx: aa:Arr(A) > xx.pro)
   -> {(and (not (= xx null))
       (ite (= kk "length")
-           (and (Int v) (implies (packed aa) (= v (len aa))))
+           (and (Int v) (>= v 0) (>= (len aa) 0)
+                (implies (packed aa) (= v (len aa))))
            (ite (heaphas cur xx.pro kk)
                 (= v (heapsel cur xx.pro kk))
                 (= v undefined))))} / same
