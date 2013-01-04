@@ -526,6 +526,7 @@ walue :
  | LPAREN SEL x=walue y=walue RPAREN          { sel x y }
  | LPAREN PLUS x=walue y=walue RPAREN         { plus x y }
  | LPAREN MINUS x=walue y=walue RPAREN        { minus x y }
+ | LPAREN MINUS x=walue RPAREN                { minus (wInt 0) x }
  | LPAREN UPD x=walue y=walue z=walue RPAREN  { upd x y z }
  | LPAREN LEN x=walue RPAREN                  { arrlen x }
  | LPAREN HEAPSEL h=hvar_ l=loc k=walue RPAREN             { WHeapSel(h,l,k) }
