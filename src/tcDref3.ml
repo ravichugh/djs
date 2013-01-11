@@ -36,6 +36,13 @@ let rec addPredicate p = function
 let tyThaw v l =
   TMaybeNullRef (l, pImp (pNonNull (WVal v)) (pNonNull theV))
 
+let tySimpleArrow inTyps outTyp =
+  let u = (([],[],[]), freshVar "simpleArrow",
+             tyTupleNone inTyps, ([],[]),
+             outTyp, ([],[])) in
+  let u = ParseUtils.maybeAddHeapPrefixVar u in
+  TQuick ("v", QBoxes [UArrow u], pTru)
+
 
 (**** Selfify *****************************************************************)
 
@@ -62,7 +69,7 @@ let selfifyVar g x =
           | TMaybeUndef(t,_)   -> TMaybeUndef (t, eqX)
           | _                  -> ty eqX
       end
-  
+
 let selfifyVal g = function
   | {value=VVar(x)} -> selfifyVar g x
   | v               -> valToSingleton v (* ty (PEq (theV, WVal v)) *)
@@ -1146,7 +1153,8 @@ and tsExp_ g h = function
       let t1 = tsVal g h v in
       let l = getNextRef cap (refIteratorOf g t1) in
       begin match findCell l h with
-        | Some(HEStrong(v',None,_)) -> (Typ (selfifyVal g v'), h)
+        (* | Some(HEStrong(v',None,_)) -> (Typ (selfifyVal g v'), h) *)
+        | Some(HEStrong(v',None,_)) -> (Typ (tsVal g h v'), h)
         | Some(HEStrong _) -> err [cap; "can't deref object location"]
         | Some(HEWeak _) -> err [cap; "can't deref weak location"]
         | None -> err [cap; spr "unbound loc [%s]" (strLoc l)]
@@ -1160,7 +1168,8 @@ and tsExp_ g h = function
       begin match findAndRemoveCell l h with
         | Some(HEStrong(v,None,ci), h0) ->
             let h' = (fst h0, snd h0 @ [(l, HEStrong (v2, None, ci))]) in
-            (Typ (selfifyVal g v2), h')
+            (* (Typ (selfifyVal g v2), h') *)
+            (Typ (tsVal g h v2), h')
         | Some(HEStrong _, _) -> err ([cap; "can't setref object location"])
         | Some(HEWeak _, _) -> err ([cap; "can't setref weak location"])
         | None -> err ([cap; spr "unbound loc [%s]" (strLoc l)])
@@ -1761,8 +1770,14 @@ and tsAppQuick g h (poly,vFun,vArg) = match (poly,vFun,vArg) with
         | _ -> err [cap; spr "%s not an object in heap" (strLoc l1)]
     end
 
-  | ([],[],[]), {value=VVar("getProp")}, {value=VTuple(vs)} ->
-      tsAppQuickTry g h ["getPropObj"; "getPropArr"] vArg
+  | ([],[],[]), {value=VVar("getProp")}, {value=VTuple(vs)} -> begin
+      let cap = "TS-App-GetProp" in
+      let (v1,v2) = twoVals cap vs in
+      match tsVal g h v1 with
+        | TQuick(_,QBase(qb),_) -> quickWrapperBaseOps g h qb v2
+        | _ -> tsAppQuickTry g h ["getPropObj"; "getPropArr"; "getPropStr"] vArg
+    end
+    (* tsAppQuickTry g h ["getPropObj"; "getPropArr"; "getPropStr"] vArg *)
 
   | ([],[],[]), {value=VVar("getElem")}, {value=VTuple(vs)} ->
       tsAppQuickTry g h ["getPropObj"; "getIdx"; "getPropArr"] vArg
@@ -1818,6 +1833,18 @@ and quickFreeze g2 h2 m lx =
     | _ ->
         failwith (spr "quickFreeze: didn't find expected cells for \
           [%s] and [%s]" (strLoc m) (strLoc lx))
+
+and quickWrapperBaseOps g h qb v2 =
+  let t =
+    match qb, v2.value with
+      | BStr, VBase(Str "length") -> TQuick ("v", QBase BInt, ge theV (wInt 0))
+      | BStr, VBase(Str "charAt") -> tySimpleArrow [tyAny; tyInt] tyStr
+      | BInt, VBase(Str "toString")
+      | BNum, VBase(Str "toString") -> tySimpleArrow [tyAny] tyStr
+      | _ -> failwith (spr "quickWrapperBaseOps: [%s] [%s]"
+                         (strBaseTyp qb) (strVal v2))
+  in
+  Some (Typ t, h)
 
 and tsAppQuickTry g h fs vArg =
   match fs with

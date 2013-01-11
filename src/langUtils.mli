@@ -160,6 +160,7 @@ val strLocBinds : loc -> string
 val strLocs : locs -> string
 val strPat : pat -> string
 val strThawState : thawstate -> string
+val strBaseTyp : basetyp -> string
 val strBaseValue : basevalue -> string
 val strVal : value -> string
 val strWal : walue -> string

@@ -12,7 +12,7 @@ var getLastElt = function(a)
                then (Undef v)
                else (NotUndef v))})
    -> (&i: Int, &ret: goalType) */
-  for (var i = 0; i < a.length; i++) {
+  for (var i = 0; i < n; i++) {
     ret = a[i];
   }
   return ret;

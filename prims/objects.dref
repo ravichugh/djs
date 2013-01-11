@@ -1,4 +1,20 @@
 
+(***** Wrappers for Base Types ************************************************)
+
+val getPropStr ::
+     (xx:Str, kk:{Str|(= v {"length","charAt"})})
+  -> {(ite (= kk "length") (and (Int v) (>= v 0))
+      (ite (= kk "charAt") (v :: (this:Str, Int) -> Str)
+      TRU))}
+
+val getPropNum ::
+     (xx:Num, kk:{Str|(= v {"toString"})})
+  -> {(ite (= kk "toString") (v :: (this:Num) -> Str)
+      TRU)}
+
+(* developer.mozilla.org/en-US/docs/JavaScript/Reference/Global_Objects/ *)
+
+
 (***** Objects / Arrays *******************************************************)
 
 (**    [[ x.f    ]] = getProp ([[x]],  "f" )                                 **)
@@ -32,7 +48,8 @@ val getIdx :: [A]
                      (= v undefined))
                 (or (v::A) (= v undefined))))} / same
 
-val getProp :: {(and (type getPropObj) (type getPropArr))}
+val getProp :: {(and (type getPropObj) (type getPropArr)
+                     (type getPropStr) (type getPropNum))}
 
 val getElem :: {(and (type getPropObj) (type getPropArr) (type getIdx))}
 
