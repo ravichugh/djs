@@ -52,20 +52,20 @@ val js_eek :: (* == *)
 val js_threek :: (* === *)
   (xx:Top, yy:Top) -> {Bool|(iff (= v true) (= xx yy))}
 
-val js_lt :: (xx:Num, yy:Num)
-          -> {Bool|(implies (and (integer xx) (integer yy))
+val js_lt :: (xx:NumOrStr, yy:{(= (tag v) (tag xx))})
+          -> {Bool|(implies (and (Num xx) (integer xx) (integer yy))
                             (iff (= v true) (< xx yy)))}
 
-val js_le :: (xx:Num, yy:Num)
-          -> {Bool|(implies (and (integer xx) (integer yy))
+val js_le :: (xx:NumOrStr, yy:{(= (tag v) (tag xx))})
+          -> {Bool|(implies (and (Num xx) (integer xx) (integer yy))
                             (iff (= v true) (<= xx yy)))}
 
-val js_gt :: (xx:Num, yy:Num)
-          -> {Bool|(implies (and (integer xx) (integer yy))
+val js_gt :: (xx:NumOrStr, yy:{(= (tag v) (tag xx))})
+          -> {Bool|(implies (and (Num xx) (integer xx) (integer yy))
                             (iff (= v true) (> xx yy)))}
 
-val js_ge :: (xx:Num, yy:Num)
-          -> {Bool|(implies (and (integer xx) (integer yy))
+val js_ge :: (xx:NumOrStr, yy:{(= (tag v) (tag xx))})
+          -> {Bool|(implies (and (Num xx) (integer xx) (integer yy))
                             (iff (= v true) (>= xx yy)))}
 
 

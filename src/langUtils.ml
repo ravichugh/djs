@@ -450,6 +450,7 @@ let tyNumOrBool   = TBaseUnion [BNum; BBool] (* tagNum; tagBool] *)
 let tyStrOrBool   = TBaseUnion [BStr; BBool] (* [tagStr; tagBool] *)
 let tyIntOrBool   = TBaseUnion [BInt; BBool] (* ty (pOr [pInt; pBool]) *)
 let tyIntOrStr    = TBaseUnion [BInt; BStr] (* ty (pOr [pInt; pStr]) *)
+let tyNumOrStr    = TBaseUnion [BNum; BStr]
 
 let tyNull        = TQuick ("v", QBoxes [UNull], eq theV wNull)
 let tyRef l       = TQuick ("v", QBoxes [URef l], pTru)
@@ -602,6 +603,7 @@ let simpleSugarToTyp = [
   ("IntOrBool"   , tyIntOrBool    );
   ("IntOrStr"    , tyIntOrStr     );
   ("NumOrBool"   , tyNumOrBool    );
+  ("NumOrStr"    , tyNumOrStr     );
   (* ("NonNegInt"   , ty (pAnd [pInt; ge theV (wInt 0)])); *)
 ]
 

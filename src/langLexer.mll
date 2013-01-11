@@ -30,12 +30,14 @@ rule token = parse
   | "Str"        { SUGAR "Str" }
   | "Dict"       { SUGAR "Dict" }
   | "Top"        { SUGAR "Top" }
+  | "Any"        { SUGAR "Top" }
   (* | "Bot"        { SUGAR "Bot" } *)
   | "Num"        { SUGAR "Num" }
   | "Empty"      { SUGAR "Empty" }
   | "Undef"      { SUGAR "Undef" }
   | "NotUndef"   { SUGAR "NotUndef" }
   | "NumOrBool"  { SUGAR "NumOrBool" }
+  | "NumOrStr"   { SUGAR "NumOrStr" }
   | "IntOrBool"  { SUGAR "IntOrBool" }
   | "IntOrStr"   { SUGAR "IntOrStr" }
   | "StrOrBool"  { SUGAR "StrOrBool" }
