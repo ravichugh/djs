@@ -1,0 +1,40 @@
+let __Math =
+  let __000103 =
+    let djsFuncType_000002 :: [;;H_] (this:Top, i:Num) / H_ -> Int / (H_) =
+      fun (this01,i) -> (
+        let __this01 = ref (&this01, this01, _) in
+        let __i = ref (&i, i, _) in
+        #return_3 {
+          let seq_000001 = break #return_3 0 in
+          undefined
+        }
+      ) in
+    djsFuncType_000002 in
+  let __000107 =
+    let djsFuncType_000004 :: [;;H_] (this:Top, i:Int, j:Int) / H_ -> Int / (H_) =
+      fun (this02,i,j) -> (
+        let __this02 = ref (&this02, this02, _) in
+        let __i = ref (&i, i, _) in
+        let __j = ref (&j, j, _) in
+        #return_4 {
+          let seq_000003 = break #return_4 0 in
+          undefined
+        }
+      ) in
+    djsFuncType_000004 in
+  let __000108 = new (((empty with "floor" = __000103) with "pow" = __000107), lMath, ____ObjPro, lObjPro, _) in
+  ref (&Math, __000108, _) 
+
+let __Number =
+  let __000099 =
+    let djsFuncType_000006 :: [;;H_] (this:Top, o:Top) / H_ -> Num / (H_) =
+      fun (this03,o) -> (
+        let __this03 = ref (&this03, this03, _) in
+        let __o = ref (&o, o, _) in
+        #return_2 {
+          let seq_000005 = break #return_2 0 in
+          undefined
+        }
+      ) in
+    djsFuncType_000006 in
+  ref (&Number, __000099, _)
