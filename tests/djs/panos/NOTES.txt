@@ -1,0 +1,130 @@
+
+---------------
+Error Messages:
+---------------
+- Fatal error: exception Failure("freeVarsTT macro [foo]: should be expanded"): 
+  When defining a function without a type.
+
+---------------
+Questions:
+---------------
+
+- Functions with optional arguments?
+
+---------------
+Comments:
+---------------
+
+[Fri Jan  4 15:04:09 PST 2013]
+
+- The notation "l|->" is legacy for "l:".
+- lObjPro: is a keyword - the default prototype object location 
+
+- The notation "&variable" is used to reference variables from an outer scope. 
+
+- Integer vs Number: 
+  5 is a number but not an integer
+
+- [v] vs v: the former means a sequence of objects that are associated with
+  protoype relation.
+
+- var i /*: {(= v 2)} */ = 0 
+  This will not fail. It will remember this annotation for when i is used in a
+  loop.
+
+
+[Mon Jan  7 15:04:09 PST 2013]
+
+- Empty === {v=empty}
+            {v:Dict | dom(v) = {}}        //Very restrictive: means that it does
+                                          //not have any fields
+- {} === {v:Dict|true}                    //This means that this dictionary
+                                          //could contain any field
+
+- {f1:T1, ...}  === {v: Dict | has{v, {"f1", ...} /\ (T1 (sel(v, f1))) /\ ...}
+
+
+[Tue Jan  8 11:04:09 PST 2013]
+
+- Array annotation discussion, I realized something that would have been useful
+  to emphasize. Say the current heap is H0 when a function is defined. The
+  function type has an input heap H1 and output heap H2, but the H1 and H2 do
+  not necessarily have _anything_ to do with H0. So in fact, even though the
+  function might type check, it might not be able to be called in the current
+  heap H0.
+
+  var i = 0;
+  var foo = function () /*: () / (&i: Str) -> Top / same */ {
+    "hello " + i;
+  };
+  foo(); // fail to type check, since &i points to an int
+  i = "world";
+  foo(); // now it will succeed
+
+  So a function type must explicitly state all the invariants about the input
+  heap that it wants to use when reasoning. That's why in the loop example from
+  yesterday [panos/simple/list00.js], the type of a0 was completely unrelated to
+  arr0 without saying something explicitly.
+
+  This notion can be seen in the rule for type checking lambdas (T-Fun on p13 of
+  the OOPSLA paper). Notice that the current heap Sigma is unused by any of the
+  premises. Sigma_1 and Sigma_2 can be unrelated to the current heap Sigma.
+
+
+[Tue Jan  8 18:48:28 PST 2013]
+
+- Q: Is there a way/plan to make DJS accept a function that calls anotherfunction
+  defined later in the program?
+
+  A: The following example should work:
+
+    var foo = function (n) /*: (n:Int) -> {Int|(= v (+ n 2))} */ { return n + 2; };
+
+    var bar = function (n) /*: (n:Int) -> {Int|(= v (+ n 3))} */ { 
+      return 1 + foo(n); };
+
+    assert (foo(2) === 4); assert (bar(2) === 5);
+
+  Notice that the type of bar doesn't mention foo, even though foo is a pointer
+  to location &foo, which stores the previous function. In this case, DJS has
+  automatically modified the type of bar so that the input and output heap both
+  contain a binding (&foo: {v=lambda_foo}), where lambda_foo is some name for
+  the actual lambda stored at the location. And to be sure {v=lambda_foo} is a
+  subtype of T_foo, where T_foo is the type we declared for foo.
+
+  In general, for each function, if there's a free variable x and the location
+  &x is not in the heap annotation, DJS will try to insert the binding (&x:
+  {v=current_value_of_x}). I don't think DJS, right now, will automatically
+  insert transitive dependencies. So if foo calls some other function that isn't
+  mentioned free in bar, it might not get auto-inserted... [Overall, this whole
+  process is pretty brittle right now.]
+
+
+  - Q:  Is there a way to type-check mutually recursive functions?
+
+  A: The only way right now is to use a weak location to define an object
+  type that has two mutually recursive functions. There are some
+  technical issues when trying to define mutually recursive strong
+  references.
+
+  For example, say you have isEven/isOdd functions that are defined in
+  terms of each other. You can get them to type check with the types
+
+    isEven :: Int / (&isOdd  |-> Int -> Bool) -> Bool / same
+    isOdd  :: Int / (&isEven |-> Int -> Bool) -> Bool / same
+
+  but then when trying to call isEven, need to prove the following
+
+    Int / (&isEven |-> Int -> Int) -> Bool / same <: Int -> Bool
+
+  which is not true, since the actual function imposes a restriction on the
+  input heap, but the expected function needs to work in all heaps.
+
+
+[Wed Jan  9 13:41:35 PST 2013]
+
+- To remove old comments in vim:
+  :%s/\/\*\:.*\*\///g
+- function foo (...)     ==>  var foo = function(...)
+  :%s/function\s*\(\w*\)/var \1 = function/g
+
