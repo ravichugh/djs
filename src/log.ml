@@ -4,39 +4,44 @@ let fpr = Printf.fprintf
 
 let printToStdout = ref true
 let printToLog = ref true
+let eagerFlush = ref false
 
 (*******************************************************************************)
 
 let oc_log = open_out (Settings.out_dir ^ "log.txt")
 
+let flushLog () = if !eagerFlush then flush oc_log
+
+let flushStdout () = if !eagerFlush then flush stdout
+
 let log0 s =
-  if !printToLog then fpr oc_log s;
-  if !printToStdout then fpr stdout s;
+  if !printToLog then (fpr oc_log s; flushLog ());
+  if !printToStdout then (fpr stdout s; flushStdout ());
   ()
 
 let log1 fmt s1 =
-  if !printToLog then fpr oc_log fmt s1;
-  if !printToStdout then fpr stdout fmt s1;
+  if !printToLog then (fpr oc_log fmt s1; flushLog ());
+  if !printToStdout then (fpr stdout fmt s1; flushStdout ());
   ()
 
 let log2 fmt s1 s2 =
-  if !printToLog then fpr oc_log fmt s1 s2;
-  if !printToStdout then fpr stdout fmt s1 s2;
+  if !printToLog then (fpr oc_log fmt s1 s2; flushLog ());
+  if !printToStdout then (fpr stdout fmt s1 s2; flushStdout ());
   ()
 
 let log3 fmt s1 s2 s3 =
-  if !printToLog then fpr oc_log fmt s1 s2 s3;
-  if !printToStdout then fpr stdout fmt s1 s2 s3;
+  if !printToLog then (fpr oc_log fmt s1 s2 s3; flushLog ());
+  if !printToStdout then (fpr stdout fmt s1 s2 s3; flushStdout ());
   ()
 
 let log4 fmt s1 s2 s3 s4 =
-  if !printToLog then fpr oc_log fmt s1 s2 s3 s4;
-  if !printToStdout then fpr stdout fmt s1 s2 s3 s4;
+  if !printToLog then (fpr oc_log fmt s1 s2 s3 s4; flushLog ());
+  if !printToStdout then (fpr stdout fmt s1 s2 s3 s4; flushStdout ());
   ()
 
 let log5 fmt s1 s2 s3 s4 s5 =
-  if !printToLog then fpr oc_log fmt s1 s2 s3 s4 s5;
-  if !printToStdout then fpr stdout fmt s1 s2 s3 s4 s5;
+  if !printToLog then (fpr oc_log fmt s1 s2 s3 s4 s5; flushLog ());
+  if !printToStdout then (fpr stdout fmt s1 s2 s3 s4 s5; flushStdout ());
   ()
 
 let bigTitle s =

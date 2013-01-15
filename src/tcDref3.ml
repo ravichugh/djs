@@ -430,13 +430,10 @@ let getNextMaybeRef cap g = function
 
 (**** Join for T-If ***********************************************************)
 
-let joinVal v v1 v2 =
-  let x = freshVar "join" in
-  let t = ty (pIte (pGuard v true) (eq theV (WVal v1)) (eq theV (WVal v2))) in
-  (x, t)
-
 (* TODO once i add existential locations, don't allow any locations to be
    dropped *)
+(* TODO when joining values, would be nice to try to keep quick types
+   at top level *)
 let joinHeapEnvs v (hs1,cs1) (hs2,cs2) =
   if hs1 <> hs2 then failwith "joinHeapEnvs: different heap variables";
   let (l,cs) =
@@ -453,7 +450,10 @@ let joinHeapEnvs v (hs1,cs1) (hs2,cs2) =
         | HEStrong(v1,lo1,ci1), Some(HEStrong(v2,_,_)) when v1 = v2 ->
             (acc1, (loc, HEStrong (v1, lo1, ci1)) :: acc2)
         | HEStrong(v1,lo1,ci1), Some(HEStrong(v2,_,_)) ->
-            let (x,t) = joinVal v v1 v2 in
+            let x = freshVar "join" in
+            let t = ty (pIte (pTruthy (WVal v))
+                             (eq theV (WVal v1))
+                             (eq theV (WVal v2))) in
             ((x,t) :: acc1, (loc, HEStrong (vVar x, lo1, ci1)) :: acc2)
         | _ ->
             (acc1, acc2)
@@ -464,8 +464,13 @@ let joinHeapEnvs v (hs1,cs1) (hs2,cs2) =
 let joinTypes v t1 t2 =
   let (l1,s1) = stripExists t1 in
   let (l2,s2) = stripExists t2 in
+  let l1 =
+    Utils.mapSnd (fun t -> ty (pImp (pTruthy (WVal v)) (applyTyp t theV))) l1 in
+  let l2 =
+    Utils.mapSnd (fun t -> ty (pImp (pFalsy (WVal v)) (applyTyp t theV))) l2 in
   let x = freshVar "_ret_if" in
-  let p = pIte (pGuard v true) (applyTyp s1 (wVar x)) (applyTyp s2 (wVar x)) in
+  let p =
+    pIte (pTruthy (WVal v)) (applyTyp s1 (wVar x)) (applyTyp s2 (wVar x)) in
   (l1 @ l2, TRefinement(x,p))
 
 let joinWorlds v (t1,heap1) (t2,heap2) : prenextyp * heapenv =

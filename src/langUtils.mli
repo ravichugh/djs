@@ -112,7 +112,7 @@ val pNum : formula
 val pBool : formula
 val pStr : formula
 val pDict : formula
-val pGuard : value -> bool -> formula
+(* val pGuard : value -> bool -> formula *)
 val pTru : formula
 val pFls : formula
 val pAnd : formula list -> formula

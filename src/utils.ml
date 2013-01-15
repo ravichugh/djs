@@ -101,6 +101,10 @@ let list0N n =
 let list1N n = List.map succ (list0N (pred n))
 
 
+let mapFst f l = List.map (fun (x, y) -> (f x, y)) l
+let mapSnd f l = List.map (fun (x, y) -> (x, f y)) l
+
+
 let take k l =
   let rec foo k acc l =
     if k = 0 then List.rev acc

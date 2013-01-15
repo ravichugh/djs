@@ -26,6 +26,8 @@ let argSpecs = [
          "           suppress output; forgo CNF and other sanity checks");
   ("-printAllTypes", Arg.Set S.printAllTypes,
                   "  otherwise just print top-level definitions");
+  ("-eagerFlush", Arg.Set Log.eagerFlush,
+               "     eagerly flush to out/log.txt and stdout, helpful for debugging");
   ("-tryAllBoxes", Arg.Set S.tryAllBoxesHack,
                 "    try all boxes, in case typeTerms misses some");
   ("-doFalseChecks", Arg.Set S.doFalseChecks,
