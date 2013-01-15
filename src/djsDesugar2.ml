@@ -1033,7 +1033,7 @@ and dsWhile env breakL continueL test body frame =
   let f = freshVar "while" in
   (* let loop () = mkApp f [EVal vUndef] in *)
   let loop s = mkApp f [eStr s] in
-  let u = (([],[],hs), freshVar "dummy", tyAny, e1, t2, e2) in
+  let u = (([],[],hs), freshVar "whileArg", tyAny, e1, t2, e2) in
   let body =
     if StrSet.mem continueL !jumpedTo
     then Log.printParseErr "dsWhile continue"
@@ -1055,7 +1055,7 @@ and dsDoWhile env breakL continueL test body frame =
   let (hs,e1,(t2,e2)) = frame in
   let f = freshVar "dowhile" in
   let loop s = mkApp f [eStr s] in
-  let u = (([],[],hs), freshVar "dummy", tyAny, e1, t2, e2) in
+  let u = (([],[],hs), freshVar "dowhileArg", tyAny, e1, t2, e2) in
   let body =
     if StrSet.mem continueL !jumpedTo
     then Log.printParseErr "dsDoWhile continue"
@@ -1080,7 +1080,7 @@ and dsFor env breakL continueL test body incr frame =
   let (hs,e1,(t2,e2)) = frame in
   let f = freshVar "forwhile" in
   let loop s = mkApp f [eStr s] in
-  let u = (([],[],hs), freshVar "dummy", tyAny, e1, t2, e2) in
+  let u = (([],[],hs), freshVar "forwhileArg", tyAny, e1, t2, e2) in
   let body =
     if StrSet.mem continueL !jumpedTo
     then failwith "dsFor continue"
@@ -1105,7 +1105,7 @@ and dsForIn env breakL k obj body frame =
   let ek = eVar (dsVar k) in
   let writeStr () = ESetref (ek, mkApp "randStr" [eStr "unitval"]) in
   let loop () = mkApp f [eStr "unitval"] in
-  let u = (([],[],hs), freshVar "dummy", tyAny, e1, t2, e2) in
+  let u = (([],[],hs), freshVar "forinArg", tyAny, e1, t2, e2) in
   let body = ds env body in
   let fixloop =
     ParseUtils.mkLetRec_ f u

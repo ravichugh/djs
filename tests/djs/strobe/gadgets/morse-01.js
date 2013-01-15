@@ -240,7 +240,7 @@ var code2Text = function code2Text() /*: () -> Top */
                     }
                     alert("This is not a valid Morse Code. It should contain only .-+ and the character \"space\"");
                     code2Text();
-                    //return;            //rkc: TODO break/return out of loop
+                    return;
                 }
                 if (input.charAt(i) != ' ') {
                     if (input.charAt(i) != '.' || input.charAt(i) != '-' || input.charAt(i) != '+') if (input.charAt(i) == '+') output.value += " ";

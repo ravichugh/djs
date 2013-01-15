@@ -1594,7 +1594,19 @@ and tcVal_ g h goal = function
 
   | {value=VFun(x,e)} -> begin
       let ruleName = "TC-Fun" in
-      let g = removeLabels g in
+      (* let g = removeLabels g in *)
+      let g =
+        match x with
+          | PLeaf(s) ->
+              (* TODO more generally handle returning from loops *)
+              if Str.string_match (Str.regexp "^while") s 0
+                 || Str.string_match (Str.regexp "^dowhile") s 0
+                 || Str.string_match (Str.regexp "^forwhile") s 0
+                 || Str.string_match (Str.regexp "^forin") s 0
+              then g
+              else removeLabels g
+          | _ ->
+              removeLabels g in
       let checkOne arr =
         checkBinderPat (spr "%s: formal pattern" ruleName) g x;
         let arr = fixupThisArg x arr in
