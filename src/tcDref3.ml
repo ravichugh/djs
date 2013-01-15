@@ -427,6 +427,16 @@ let getNextMaybeRef cap g = function
   | TMaybeNullRef(l,_) -> l
   | t                  -> getNextRef cap (refIteratorOf g t)
 
+let maybeGetNextRef iterator =
+  match iterator () with
+    | Some(URef(l)) -> Some l
+    | Some _ -> None
+    | None -> None
+
+let maybeGetNextMaybeRef g = function
+  | TMaybeNullRef(l,_) -> Some l
+  | t                  -> maybeGetNextRef (refIteratorOf g t)
+
 
 (**** Join for T-If ***********************************************************)
 
@@ -1786,9 +1796,13 @@ and tsAppQuick g h (poly,vFun,vArg) = match (poly,vFun,vArg) with
       let (v1,v2) = twoVals cap vs in
       match tsVal g h v1 with
         | TQuick(_,QBase(qb),_) -> quickWrapperBaseOps g h qb v2
-        | _ -> tsAppQuickTry g h ["getPropObj"; "getPropArr"; "getPropStr"] vArg
+        | t1 -> begin
+            match maybeGetNextMaybeRef g t1 with
+              (* TODO pass l to avoid re-computing *)
+              | Some(l) -> tsAppQuickTry g h ["getPropObj"; "getPropArr"] vArg
+              | None -> None
+          end
     end
-    (* tsAppQuickTry g h ["getPropObj"; "getPropArr"; "getPropStr"] vArg *)
 
   | ([],[],[]), {value=VVar("getElem")}, {value=VTuple(vs)} ->
       tsAppQuickTry g h ["getPropObj"; "getIdx"; "getPropArr"] vArg
