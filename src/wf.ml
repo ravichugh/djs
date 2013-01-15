@@ -193,24 +193,19 @@ and checkFrame errList g (hs,e,w) =
   let g = g @ heapBinders e in
   checkWorld errList g w
 
-let checkType = BNstats.time "Wf.checkType" checkType
-let checkFormula = BNstats.time "Wf.checkFormula" checkFormula
-let checkHeap = BNstats.time "Wf.checkHeap" checkHeap
-let checkConstraints = BNstats.time "Wf.checkConstraints" checkConstraints
-let checkWorld = BNstats.time "Wf.checkWorld" checkWorld
-let checkTypeTerm = BNstats.time "Wf.checkTypeTerm" checkTypeTerm
-let checkFrame = BNstats.time "Wf.checkFrame" checkFrame
-
 
 (***** Entry point ************************************************************)
 
-let typ cap      = checkType      [spr "Wf.typ: %s" cap]
-let prenexTyp cap= checkPrenexTyp [spr "Wf.prenexTyp: %s" cap]
+let typ cap g t =
+  Stats.time "Wf.typ" (fun () ->
+    checkType [spr "Wf.typ: %s" cap] g t)
+
+let prenexTyp cap g t =
+  Stats.time "Wf.prenexTyp" (fun () ->
+    checkPrenexTyp [spr "Wf.prenexTyp: %s" cap] g t)
+
 let heap cap     = checkHeap      [spr "Wf.heap: %s" cap]
 let world cap    = checkWorld     [spr "Wf.world: %s" cap]
 let typeTerm cap = checkTypeTerm  [spr "Wf.typeTerm: %s" cap]
 let frame cap    = checkFrame     [spr "Wf.frame: %s" cap]
-
-let typ = BNstats.time "Wf.typ" typ
-let prenexTyp = BNstats.time "Wf.prenexTyp" prenexTyp
 

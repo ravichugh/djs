@@ -10,6 +10,10 @@ val fpr : out_channel -> ('a, out_channel, unit) format -> 'a
 
 val (|>) : 'a -> ('a -> 'b) -> 'b
 
+module Stats : sig
+  val time : string -> (unit -> 'a) -> 'a
+end
+
 val pos0 : Lexing.position * Lexing.position
 
 val freshVar : vvar -> vvar

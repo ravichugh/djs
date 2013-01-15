@@ -14,6 +14,12 @@ let maybeApply f = function
   | Some(x) -> Some (f x)
   | None    -> None
 
+module Stats = struct
+  (* layer around BNstats.time to require that function be a thunk,
+     as a reminder _not_ to wrap partially-applied functions *)
+  let time cap f = BNstats.time cap f ()
+end
+
 
 (* not storing these in expressions *)
 type pos = Lexing.position * Lexing.position
@@ -1563,7 +1569,7 @@ and freshenDomain free x t =
     | _               -> failwith "freshenDomain: impossible"
 
 let substTyp subst t =
-  BNstats.time "LangUtils.substTyp" (substTyp subst) t
+  Stats.time "LangUtils.substTyp" (fun () -> substTyp subst t)
 
 
 (***** Expression Substitution ************************************************)

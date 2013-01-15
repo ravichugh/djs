@@ -58,6 +58,9 @@ let findVarType g x =
   end with Not_found ->
     None
 
+let findVarType g x =
+  Stats.time "Tc.findVarType" (fun () -> findVarType g x)
+
 let selfifyVar g x =
   match findVarType g x with
     | None -> err [spr "selfifyVar [%s]: not found" x]
@@ -329,7 +332,8 @@ let finishLet cap g y l ((s,h): (prenextyp*heapenv)) : prenextyp * heapenv =
   *)
   w
 
-let finishLet = BNstats.time "Tc.finishLet" finishLet
+let finishLet cap g y l w =
+  Stats.time "Tc.finishLet" (fun () -> finishLet cap g y l w)
 
 let avoidSingletonExistentials (l,h) =
   List.fold_left (fun (l,h) (x,t) ->
@@ -1904,5 +1908,5 @@ let typecheck e =
     Log.printTcErr s
 
 let typecheck e =
-  BNstats.time "Tc.typecheck" typecheck e
+  Stats.time "Tc.typecheck" (fun () -> typecheck e)
 

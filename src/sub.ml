@@ -31,7 +31,7 @@ let typeTerms_ g =
     | _                            -> acc) boxes g
 
 let typeTerms_ g =
-  BNstats.time "Sub.typeTerms_" typeTerms_ g
+  Stats.time "Sub.typeTerms_" (fun () -> typeTerms_ g)
 
 
 (***** Type extraction, or "unboxing" *****************************************)
@@ -589,9 +589,17 @@ let checkWorldSat errList usedBoxes g (t,heapEnv) (s,heapTyp) =
 
 (***** Entry point ************************************************************)
 
-let types cap = checkTypes [spr "Sub.types: %s" cap] []
-let heapSat cap = checkHeapSat [spr "Sub.heapSat: %s" cap] []
-let worldSat cap = checkWorldSat [spr "Sub.worldSat: %s" cap] []
+let types cap g t s =
+  Stats.time "Sub.types" (fun () ->
+    checkTypes [spr "Sub.types: %s" cap] [] g t s)
+
+let heapSat cap g h0 h =
+  Stats.time "Sub.heapSat" (fun () ->
+    checkHeapSat [spr "Sub.heapSat: %s" cap] [] g h0 h)
+
+let worldSat cap g w0 w =
+  Stats.time "Sub.worldSat" (fun () ->
+    checkWorldSat [spr "Sub.worldSat: %s" cap] [] g w0 w)
 
 (* let mustFlow   = mustFlow_ TypeTerms.empty
    let canFlow    = canFlow_ TypeTerms.empty
