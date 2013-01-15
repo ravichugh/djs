@@ -321,10 +321,12 @@ let finishLet cap g y l ((s,h): (prenextyp*heapenv)) : prenextyp * heapenv =
   end;
   let w = (mkExists l s, h) in
   (* TODO 8/27/12: figure out why this slows things down so much *)
+  (* 01/14/13: ditto. always skipping this check now.
   if !Settings.checkWfSynthesis && !checkWfHeap then begin
     Wf.prenexTyp (spr "finishLet: %s" cap) g (fst w)
     (* TODO 8/14/12: should also check that the heapenv is well formed *)
   end;
+  *)
   w
 
 let finishLet = BNstats.time "Tc.finishLet" finishLet
