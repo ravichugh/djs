@@ -146,6 +146,7 @@ val tyTypTerm : typterm -> typ
 val tyTupleNone : typ list -> typ
 val tyTupleSome : (vvar option * typ) list -> typ
 val tyTupleAll : (vvar * typ) list -> typ
+val tyArray : typ -> formula -> typ
 
 (***** Boxes ******************************************************************)
 

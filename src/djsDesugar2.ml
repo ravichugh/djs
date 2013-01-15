@@ -331,7 +331,9 @@ let parseFreeze s  = parseWith LangParser2.jsFreeze "freeze annot" s
 let parseThaw s    = parseWith LangParser2.jsThaw "thaw annot" s
 let parseCtorTyp s = parseWith LangParser2.jsCtor "ctor annot" s
 let parseNew s     = parseWith LangParser2.jsNew "new annot" s
+let parseObjLit s  = parseWith LangParser2.jsObjLit "object literal annot" s
 let parseArrLit s  = parseWith LangParser2.jsArrLit "array literal annot" s
+let parseVarArr s  = parseWith LangParser2.jsVarArrLit "var array literal annot" s
 let parseMacro s   = parseWith LangParser2.jsMacroDef "macro def" s
 let parseObjLocs s =
   match parseWith LangParser2.jsObjLocs "obj loc annot" s with
@@ -344,6 +346,11 @@ let maybeParseWith production s =
   with Lang.Parse_error _ | LangParser2.Error -> None
 
 let maybeParseTcFail s  = maybeParseWith LangParser2.jsFail s
+
+let stripRefLexeme s =
+  if Str.string_match (Str.regexp "^[ ]*Ref \\(.*\\)$") s 0
+  then Str.matched_group 1 s
+  else Log.printParseErr (spr "stripRefLexeme: [%s]\n" s)
 
 
 (***** Looking for writes to Ctor.prototype ***********************************)
@@ -532,26 +539,17 @@ let rec ds (env:env) = function
 
   | E.ConstExpr (_, c) -> convertConst c
 
-  | E.HintExpr (_, h, E.ObjectExpr (p, fields)) ->
-      let (l,ci) =
-        match maybeParseWith LangParser2.jsLoc h with
-          | Some(l) -> (l, None)
-          | None    -> (LocConst (freshVar "objLit"), Some (parseTyp h))
-      in
-      ENewObj (mkEDict env fields, l, eObjectPro (), lObjPro, ci)
+  | E.HintExpr (_, h, E.ObjectExpr (p, fes)) ->
+      dsObjLit (parseObjLit h) env fes
 
-  | E.ObjectExpr (p, fields) ->
-      ENewObj (mkEDict env fields, LocConst (freshVar "objLit"),
-               eObjectPro (), lObjPro, None)
+  | E.ObjectExpr (_, fes) ->
+      dsObjLit (None, None) env fes
 
   | E.HintExpr (_, h, E.ArrayExpr (_, es)) ->
-      (* TODO handle array annotations like objects above *)
-      let (l,t) = parseArrLit h in
-      ENewObj (mkEArray (Some t) env es, l, eArrayPro (), lArrPro, None)
+      dsArrLit (parseArrLit h) env es
 
   | E.ArrayExpr (_, es) ->
-      ENewObj (mkEArray None env es, LocConst (freshVar "arrLit"),
-               eArrayPro (), lArrPro, None)
+      dsArrLit (None, None, None) env es
 
   | E.ThisExpr p ->
       (* eVar "this" *)                                     (* original LamJS *)
@@ -732,6 +730,22 @@ let rec ds (env:env) = function
   | E.SeqExpr (p0, (E.FuncStmtExpr (p1, f, _, _) as e1), e2) ->
       let e1 = E.HintExpr (p1, spr "%s" f, e1) in
       ds env (E.SeqExpr (p0, e1, e2))
+
+  (**  var x /*: Ref T */ = { ... }; e2  **)
+  | E.SeqExpr (_,
+        E.HintExpr (_, s, E.VarDeclExpr (_, x, E.ObjectExpr (_, fes))),
+        e2) ->
+      let t = parseTyp (stripRefLexeme s) in
+      let lx = LocConst (spr "l%s" x) in
+      dsVarDecl_ env x (dsObjLit (Some lx, Some t) env fes) e2
+
+  (**  var x /*: Ref T */ = [ ... ]; e2  **)
+  | E.SeqExpr (_,
+        E.HintExpr (_, s, E.VarDeclExpr (_, x, E.ArrayExpr (_, es))),
+        e2) ->
+      let (topt,ci) = parseVarArr (stripRefLexeme s) in
+      let lx = LocConst (spr "l%s" x) in
+      dsVarDecl_ env x (dsArrLit (Some lx, topt, ci) env es) e2
 
   (**  var x /*: T */ = e1; e2                                             **)
   (**    i added this case to the JS LangParser2 and JS-to-EJS conversion  **)
@@ -975,9 +989,18 @@ and mkEDict env fields =
              | E.FuncExpr _ -> (eStr f, ds env (E.HintExpr (p, f, e)))
              | _            -> (eStr f, ds env e)) fields)
 
+and dsObjLit (lopt,ci) env fields =
+  let l = match lopt with Some(l) -> l | None -> LocConst (freshVar "objLit") in
+  ENewObj (mkEDict env fields, l, eObjectPro (), lObjPro, ci)
+
 and mkEArray topt env es =
   let t = match topt with Some(t) -> t | None -> tyArrDefault in
   EArray (t, List.map (ds env) es)
+
+and dsArrLit (lopt,topt,ci) env es =
+  let l = match lopt with Some(l) -> l | None -> LocConst (freshVar "arrLit") in
+  let t = match topt with Some(t) -> t | None -> tyArrDefault in
+  ENewObj (mkEArray (Some t) env es, l, eArrayPro (), lArrPro, ci)
 
 and dsMethCall env ts ls obj prop args =
   let obj = ds env obj in
@@ -1099,8 +1122,11 @@ and dsForIn env breakL k obj body frame =
 
 (* rkc: creates a traditional lexically-scoped let-binding to a reference *)
 and dsVarDecl ?(lxo=None) ?(locInvariant=None) env x e e2 =
-  let _x = dsVar x in
   let e = ds env e in
+  dsVarDecl_ ~lxo ~locInvariant env x e e2
+
+and dsVarDecl_ ?(lxo=None) ?(locInvariant=None) env x e e2 =
+  let _x = dsVar x in
   let lx = match lxo with Some(l) -> l | None -> LocConst (spr "&%s" x) in
   ELet (_x, None, ENewref (lx, e, locInvariant), ds (addFlag x true env) e2)
 

@@ -471,6 +471,8 @@ let tyTupleSome l = (* some components have binders *)
 let tyTupleAll l = (* all components have binders *)
   TQuick ("v", QTuple (List.map (fun (x,t) -> (Some x, t)) l, false), pTru)
 
+let tyArray t p =
+  TQuick ("v", QBoxes [UArray t], p)
 
 (* setting the default for array tuple invariants to be v != undefined,
    not Top, so that packed array accesses can at least prove that the

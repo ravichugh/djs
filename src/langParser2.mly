@@ -248,14 +248,17 @@ let expandHeapLocSugar (arr: uarrow) : uarrow =
 %type <Lang.frame> jsWhile
 %type <Lang.typterm> jsCtor
 %type <Lang.loc * Lang.loc option * (Lang.typs * Lang.locs * Lang.heaps) option> jsNew
-%type <Lang.loc * Lang.typ> jsArrLit
+%type <Lang.loc option * Lang.closureinvariant> jsObjLit
+%type <Lang.loc option * Lang.typ option * Lang.closureinvariant> jsArrLit
+%type <Lang.typ option * Lang.closureinvariant> jsVarArrLit
 %type <Lang.heap> jsHeap
 %type <Lang.vvar * Lang.macro> jsMacroDef
 %type <string> jsFail
 
 %start prog prelude
-%start jsTyp jsPolyArgs jsLoc jsObjLocs jsWhile jsFail jsCtor jsNew jsArrLit
+%start jsTyp jsPolyArgs jsLoc jsObjLocs jsWhile jsFail jsCtor jsNew
        jsHeap jsFreeze jsThaw jsWeakLoc jsMacroDef
+       jsArrLit jsObjLit jsVarArrLit
 
 %%
 
@@ -804,10 +807,20 @@ jsNew :
  | lNew=loc l=poly_actuals EOF                { (lNew,None,Some(l)) }
 
 jsArrLit :
- | l=loc EOF                             { (l, tyArrDefault) }
- | l=loc ARRTYPE LPAREN t=typ RPAREN EOF { (l, t) }
- | ARRTYPE LPAREN t=typ RPAREN EOF       { (LocConst (freshVar "arrLit"), t) }
- | l=loc LT a=array_tuple_typs GT EOF    { (l, tyArrayTuple a) }
+ | l=loc EOF                              { (Some l, None, None) }
+ | l=loc LARR a=array_tuple_typs RARR EOF { (Some l, None, Some (tyArrayTuple a)) }
+ | l=loc blah=jsVarArrLit                 { (Some l, fst blah, snd blah) }
+ | blah=jsVarArrLit                       { (None, fst blah, snd blah) }
+
+jsVarArrLit :
+ | ARRTYPE LPAREN t=typ RPAREN EOF { (Some t, Some (tyArray t pTru)) }
+ | LBRACE ARRTYPE LPAREN t=typ RPAREN PIPE p=formula RBRACE EOF
+     { (Some t, Some (tyArray t p)) }
+
+jsObjLit :
+ | l=loc EOF                   { (Some l, None) }
+ | t=typ_no_typ_term EOF       { (None, Some t) }
+ | l=loc t=typ_no_typ_term EOF { (Some l, Some t) }
 
 jsHeap : h=heap EOF { h }
 
