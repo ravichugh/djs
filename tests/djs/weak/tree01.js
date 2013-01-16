@@ -60,7 +60,7 @@ TreeNode.prototype.itemCheck = function itemCheck() /*: tyItemCheck */ {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-var tree1 = new (/*: [;lTree1;] lTreeNodeProto */ TreeNode)(null, null, 10);
+var tree1 = new (/*: lTree1 > lTreeNodeProto */ TreeNode)(null, null, 10);
 
 /*: tree1 lThwd1 */ "#thaw";
 var ic = tree1.itemCheck;
