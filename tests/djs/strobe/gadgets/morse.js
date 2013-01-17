@@ -61,26 +61,31 @@ var radio2_onclick = function()  /*: tyEdit */ {
 };
 
 
-
+ /*: writeText:: (s: Str) / (lEdit2: tyDValueS ) -> Top / sameType */ "#type"; 
 //PV: rearranged
-var writeText = function(s) /*: (s: Str) / (lEdit2: tyDValueS ) -> Top / sameType */ 
+var writeText = function(s)
 {
     var output = edit2;
     
     //PV: Adding this just to type check
     if (s === '.-') {
       output.value += "a";
-    };
+    }
+    else if (s === '-...') {
+      output.value += "b";
+    }
 
+
+    //TODO: this switch statement still not working
     //switch (s) {
     //case '.-':
-    //    output.value += "a";
+    //    output.value = output.value + "a";
     //    break;
     //case '-...':
-    //    output.value += "b";
+    //    output.value = output.value + "b";
     //    break;
     //case '-.-.':
-    //    output.value += "c";
+    //    output.value = output.value + "c";
     //    break;
     //case '-..':
     //    output.value += "d";
@@ -261,7 +266,7 @@ var code2Text = function code2Text_rec()
                     //alert("This is not a valid Morse Code. It should contain only .-+ and the character \"space\"");
                     //PV: Had to change this to rec 
                     code2Text_rec();
-    //                return;            //TODO: TC bug?
+                    return;
                 }
                 if (input.charAt(i) != ' ') {
                     if (input.charAt(i) != '.' || input.charAt(i) != '-' || input.charAt(i) != '+') if (input.charAt(i) == '+') output.value += " ";
@@ -476,16 +481,21 @@ var edit1_onclick = function() /*: () / (lEdit1: tyDValueS, lEdit2: tyDValueS) -
 };
 
 
-
-
 //PV: start of added definitions
 var play_d = /*: lPlay */ {
-  play: function() /*: () -> Top */ {return; }
+  play: function() 
+  /*: () / (&framework: Ref(lFramework)) -> Top / (&framework: sameType)*/ 
+  {return; }
 };
 
 
-var framework = /*: lFramework */ { 
-  audio: /*: lAudio */ { open: function(s) /*: (s: Str) -> Ref(lPlay) */ {return play_d;} }
+var framework = /*: lFramework  */ { 
+  audio: /*: lAudio */ { 
+    open: function(s) 
+      /*: (s: Str) / (&framework: Ref(lFramework))-> 
+        Ref(lPlay) / (&framework: sameExact) */ {
+        return play_d;} 
+    }
 };
 
 var storage = /*: lStorage */ { 
@@ -498,43 +508,48 @@ var setTimeout = function(f, i) /*:  [A,B] (f: {(v::(x:A) -> B)}, i: A) / () -> 
 //PV: end of added definitions
 
 
-//TODO: why does in not work if I specify the type of storage in the function's
-//annotation? (e.g.: lStorage: {"extract": {(v::(x:Str) -> Str)}} > lObjPro)
-//Same with type for edit2.value
-
 //TODO: If you add "lEdit2: tyDValueS" to the input heap then it fails
 
 var playAudio = function() /*: () / (lAudio:   {"open"    : {(v:: (s:Str) -> Ref(lPlay))}} > lObjPro,
-                                     lPlay:    {"play"    : {(v:: (     ) -> Top       )}} > lObjPro
+                                     lPlay:    {"play"    : {(v:: (     ) -> Top       )}} > lObjPro,
+                                     &framework: fw0: Ref(lFramework)
                                     )
-                             -> Top / sameType */  {
+                             -> Top / (lAudio: sameType, lPlay: sameType, &framework: Ref(lFramework) ) */  {
 
     assert(/*: Str */ (edit2.value));
                                
     var source = edit2.value,
         i /*: NonNeg */ = 0;
 
-    var audio_dit = framework.audio.open(storage.extract("dit.wav"));
-    var audio_dah = framework.audio.open(storage.extract("dah.wav"));
-    var audio_pause = framework.audio.open(storage.extract("pause.wav"));
-    if (source.length != 0) {      
-    
-            /*: (   ) -> () */ 
-            for (i = 0; i < source.length; i++) {
-              //PV: changing switch to if...
-                if (source.charAt(i) == '.') {
-                //case '.':
+    var audio_dit = framework.audio.open("a");
+//    var audio_dit = framework.audio.open(storage.extract("dit.wav"));
+//    var audio_dah = framework.audio.open(storage.extract("dah.wav"));
+//    var audio_pause = framework.audio.open(storage.extract("pause.wav"));
                   
-                  //TODO: PV: changed explicit function parameter, because I was
-                  //getting: Fatal error: exception Failure("shouldn't get 
-                  //here: unannotated FuncExr")
+    assert(/*: () -> Top */ (audio_dit.play()));
+
+
+    //if (source.length != 0) {      
+    
+    //        [> ( &storage: Ref(lStorage), lStorage: {"extract": (s:Str) -> Str} > lObjPro, 
+    //            &edit2: Ref(lEdit2), lEdit2: tyDValueS, &framework: fw1: Ref(lFramework), lFramework: {"audio": Ref(lAudio)} > lObjPro )
+    //         -> (&storage: sameType, lStorage: sameType, &edit2: sameType, lEdit2: sameType, &framework: sameType, lFramework: sameType) */ 
+
+    //        for (i = 0; i < source.length; i++) {
+    //          //PV: changing switch to if...
+    //            if (source.charAt(i) == '.') {
+    //            //case '.':
+                  
+    //              //TODO: PV: changed explicit function parameter, because I was
+    //              //getting: Fatal error: exception Failure("shouldn't get 
+    //              //here: unannotated FuncExr")
 
     //              assert(/*: () -> Top */ (audio_dit.play()));
 
     //              //  var tmp = function() [>: () -> Top <] { audio_dit.play(); };
     //              //token = setTimeout(tmp, i * 500);
     //              //break;
-                }
+    //            }
     ////        //    else if (source.charAt(i) == '-') {
     //        //    //case '-':
     //        //        var tmp = function() { audio_dah.play(); };
@@ -547,10 +562,10 @@ var playAudio = function() /*: () / (lAudio:   {"open"    : {(v:: (s:Str) -> Ref
     //        //        token = setTimeout(tmp, i * 500);
     //        //        //break;
     //        //    }
-            }
+    //        }
 //            var tmp = function() { bplay.caption = "Play"; };
 //            token = setTimeout(tmp, source.length * 500);
-     }
+     //}
 };
 
 //var bplay_onclick = function() [>: () / (lEdit2: tyDValueS, lBplay: {"caption": Str} > lObjPro) -> Top / sameType <] {

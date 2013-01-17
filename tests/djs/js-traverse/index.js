@@ -3,45 +3,63 @@
 //
 
 
-/*: tyTraverse {value: Top} > lTraverseProto */ "#define";
+/*: tyTraverse {value: Ref} /  */ "#define";
 
 function Traverse (obj)
-/*: new (this: Ref, obj: Top) / (this: Empty > lTraverseProto ) -> Ref(this) / (this: tyTraverse) */ {
+/*: new (this: Ref, obj: Ref) / (this: Empty > lTraverseProto, obj: Dict > lObjPro) 
+      -> Ref(this) / (this: {value: Ref(obj)} > lTraverseProto, obj: sameType) */ {
     this.value = obj;
     return this;
 };
 
 //PV: commenting module.exports
-var traverse = /* module.exports = */ function (obj)
-/*: [;L;] (obj: Top) / () -> Ref(L) / (L: {value: Top} > lTraverseProto) */
-{    
-    return new /*: L  */ Traverse(obj);
-};
-
+//TODO: ...
+//var traverse = /* module.exports = */ function (obj)
+///*: [;L] (obj: Top) / () -> Ref(L) / (L : tyTraverse > lTraverseProto) */
+//{ return new /*: L  */ Traverse(obj); };
 
 /*: NonNeg {Int | (>= v 0)} */ "#define";
 
-
-
 var hasOwnProperty = {
-  call: function(node, key) {
-      return node.hasOwnProperty(key);
+  call: function(node, key) 
+  //XXX: The type for hasOwnProperty should be inferred from prims
+  /*: (node: Ref, key: Str) / (node: dnode: 
+                  {"hasOwnProperty": {(v:: (this:Ref, kk: Str) / (this: dd : Dict > lObjPro) -> 
+                    {Bool | (iff (= v true) (has dd kk))} / same )}  } > lObjPro 
+              ) -> {Bool | (iff (= v true) (has dnode key))} / same */ {
+      return (/*: [;Lnode, lObjPro; ] */ (node.hasOwnProperty)(key));
   }
-}
+};
 
 
 
 Traverse.prototype.get = function (ps) 
-/*: (this: Ref, ps: Ref(lArr)) / (this: tyTraverse, lArr: Arr(Top)) -> (Top) / sameType */
+/*: [;LArr;] (this: Ref, ps: Ref(LArr)) / 
+    ( this: {value: Ref(obj)} >  lTraverseProto, 
+      LArr: a0: { Arr(Str) | (packed v)} > lArrPro,
+      obj: Dict > lObjPro
+    ) -> 
+      Top / sameType */
+  //TODO: write precise type
 {
-    var node = this.value;
-    for (var i /*: NonNeg */= 0; i < ps.length; i ++) {
+  var node = this.value;
+
+
+  assert(/*: Ref(obj)  */ (node));
+//  assert(/*: Bool */ (hasOwnProperty.call(node, "key")));
+
+  /*:  (&i: {Int | (and (>= v 0))}, LArr: { Arr(Str) | (packed v)}  > lArrPro) 
+        -> (&i: sameType, LArr: sameExact) */
+  for (var i = 0; i < ps.length; i ++) {
         var key = ps[i];
-        if (!hasOwnProperty.call(node, key)) {
-            node = undefined;
-            break;
-        }
-        node = node[key];
+
+//        assert(/*: Str */ (key) );  //PV: Added this
+
+//        if (!hasOwnProperty.call(node, key)) {i
+//            node = undefined;
+//            break;
+//        }
+        //node = node[key];
     }
     return node;
 };

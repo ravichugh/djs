@@ -2,8 +2,11 @@
 ---------------
 Error Messages:
 ---------------
-- Fatal error: exception Failure("freeVarsTT macro [foo]: should be expanded"): 
-  When defining a function without a type.
+
+- proto links differ: <location> => COMMON FIX: "... > lObjPro"
+
+
+
 
 ---------------
 Questions:

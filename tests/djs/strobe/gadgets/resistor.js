@@ -97,8 +97,7 @@ var doCalculateResistance = function()
     if (resistance < 0) {
         ohms.value = "Undef";
     } else {
-        //ohms.value = addCommas(resistance.toString());      //TODO: PV: changed toStr() to //toString() which is valid JS
-        ohms.value = addCommas("a");
+        ohms.value = addCommas(resistance.toString());
     }
 
     return;
@@ -209,6 +208,8 @@ var drawNewColorBand = function(color) /*: (color: {Int | (and (>= v 0) (< v 16)
       firstBand.image = "stock_images\\Button" + buttonStrs[color] + "Normal.PNG";
       firstBand.overImage = "stock_images\\Button" + buttonStrs[color] + "Over.PNG";
     }
+//XXX: PV: commenting the following out to speed it up a bit 
+/*
     else if (currentBandIndex == 1) {
       secondBand.downImage = "stock_images\\Button" + buttonStrs[color] + "Down.PNG";
       secondBand.image = "stock_images\\Button" + buttonStrs[color] + "Normal.PNG";
@@ -224,6 +225,8 @@ var drawNewColorBand = function(color) /*: (color: {Int | (and (>= v 0) (< v 16)
       fourthBand.image = "stock_images\\Button" + buttonStrs[color] + "Normal.PNG";
       fourthBand.overImage = "stock_images\\Button" + buttonStrs[color] + "Over.PNG";
     }
+*/
+//XXX: PV: End of slow down comments
 
     return;
 };
@@ -628,6 +631,8 @@ var doGenerateBandColors = function()
         return;
     }
 
+//XXX: PV: commenting the following out to speed it up a bit 
+/*
     if (numberOfColorBands == 4) { // Do the first three bands of color bars.
         if (resistance < 10) { // Force the first band color to black.
             firstBand.downImage = "stock_images\\Button0blackDown.PNG";
@@ -739,21 +744,19 @@ var doGenerateBandColors = function()
             bandNumberValues[3] = digit;
         }
     }
+*/
+//XXX: PV: End of slow down comments
 
     return;
 };
 
-//TODO: PV: added this - remove it later
+//PV: added this - remove it later
 var stringToNum = function(s) /*: (s:Str) / () -> Num / sameType */ { return 0; };
 
 
 var doOhmsCheck = function() 
 /*: () / (
-            lOhms: { Dict | (and 
-                  (has v "value") (Str (sel v "value"))
-                  (has v "color") (Str (sel v "color"))
-                  (has v "strikeout") (Bool (sel v "strikeout"))
-                  )} > lObjPro,
+            lOhms: { "value": Str , "color": Str , "strikeout": Bool } > lObjPro,
             lFirstBand: tyDict,
             lSecondBand: tyDict,
             lThirdBand:  tyDict,
