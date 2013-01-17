@@ -60,21 +60,19 @@ var writeText = function(s) /*: (Str) -> Top */
 {
     var output = edit2;
     
-    //PV: Adding this just to type check
-    if (s === '.-') {
-      output.value += "a";
-    };
-
-    //switch (s) {
-    //case '.-':
-    //    output.value += "a";
-    //    break;
-    //case '-...':
-    //    output.value += "b";
-    //    break;
-    //case '-.-.':
-    //    output.value += "c";
-    //    break;
+    switch (s) {
+    case '.-':
+        edit2; //rkc: adding a syntactic occurrence of edit2 so that DJS
+               // infers the heap annotations for &edit2 and ledit2
+        output.value += "a";
+        break;
+    case '-...':
+        output.value += "b";
+        break;
+    case '-.-.':
+        output.value += "c";
+        break;
+    //rkc: TODO too many cases kills us right now...
     //case '-..':
     //    output.value += "d";
     //    break;
@@ -213,9 +211,9 @@ var writeText = function(s) /*: (Str) -> Top */
     //case '..--.-':
     //    output.value += "_";
     //    break;
-    //default:
-    //    break;
-    //}
+    default:
+        break;
+    }
 };
 
 
@@ -260,15 +258,12 @@ var code2Text = function code2Text() /*: () -> Top */
 var writeCode = function(c)  /*: (Str) -> Top */ {
     var output = edit2;
   
-    if (c == 'a') {
-      output.value += ".-";
-    };
-
-//TODO: switch statement kept commented for the time being 
-//    switch (c) {
-//    case 'a':
-//        output.value += ".- ";
-//        break;
+    switch (c) {
+    case 'a':
+        edit2; //rkc: to help heap annotation inference, as above
+        output.value += ".- ";
+        break;
+    //rkc: too many cases, as above
 //    case 'b':
 //        output.value += "-... ";
 //        break;
@@ -418,7 +413,7 @@ var writeCode = function(c)  /*: (Str) -> Top */ {
 //        break;
 //    default:
 //        break;
-//    }
+    }
 };
 
 

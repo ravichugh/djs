@@ -70,6 +70,11 @@ let varSwitch i = sprintf "switch_v_%d" i
 let varFalse i  = sprintf "switch_false_%d" i
 let varCase i j = sprintf "case_t_%d_%d" i j
 
+(* rkc *)
+let freshLhs =
+  let n = ref 0 in
+  fun () -> incr n; sprintf "lhs_%d" !n
+
 let rec expr (e : S.expr) = match e with
   | S.ConstExpr (p, c) -> ConstExpr (p, c)
   | S.ArrayExpr (a,es) -> ArrayExpr (a,map expr es)
@@ -347,19 +352,22 @@ and prop pr =  match pr with
 (** Generates an expression that evaluates and binds lv, then produces the
     the value of body_fn.  body_fn is applied with references to lv as an
     lvalue and lv as an expression. *)
+(* rkc: switched "%lhs" to a fresh variable each time *)
 and eval_lvalue (lv :  S.lvalue) (body_fn : lvalue * expr -> expr) =
   match lv with
     | S.VarLValue (p, x) -> body_fn (VarLValue (p, x), VarExpr (p, x))
   | S.DotLValue (a, e, x) -> 
-      LetExpr (a,"%lhs",expr e,
+      let lhs = freshLhs () in
+      LetExpr (a,lhs,expr e,
         body_fn
-          (PropLValue (a, IdExpr (a,"%lhs"), ConstExpr (a, S.CString x)),
-           BracketExpr (a, IdExpr (a,"%lhs"), ConstExpr (a, S.CString x))))
+          (PropLValue (a, IdExpr (a,lhs), ConstExpr (a, S.CString x)),
+           BracketExpr (a, IdExpr (a,lhs), ConstExpr (a, S.CString x))))
   | S.BracketLValue (a,e1,e2) -> 
-      LetExpr (a,"%lhs",expr e1,
+      let lhs = freshLhs () in
+      LetExpr (a,lhs,expr e1,
       LetExpr (a,"%field",expr e2,
-      body_fn (PropLValue (a, IdExpr (a,"%lhs"), IdExpr (a,"%field")),
-               BracketExpr (a, IdExpr (a,"%lhs"), IdExpr (a,"%field")))))
+      body_fn (PropLValue (a, IdExpr (a,lhs), IdExpr (a,"%field")),
+               BracketExpr (a, IdExpr (a,lhs), IdExpr (a,"%field")))))
 
 let from_javascript (S.Prog (p, stmts)) = 
   let f s e = seq p (stmt s) e
