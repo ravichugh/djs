@@ -221,6 +221,9 @@ and fooLv = function
 
 let freshenLabels e = foo e
 
+(* "switch_v" variables are created in JS to EJS translation *)
+let isSwitchVar s = Str.string_match (Str.regexp "^switch_v") s 0
+
 
 (***** Desugaring variables ***************************************************)
 
@@ -968,6 +971,24 @@ let rec ds (env:env) = function
       else eSeq [ds env init_e; dsForIn env bl k obj body (parseWhile s)]
 
   | E.ForInExpr (p, x, obj, body) -> failwith "forin"
+
+  | E.HintExpr (_, s,
+      E.LabelledExpr (_, bl,
+        (E.SeqExpr (_, E.LetExpr (_, x, _, _),
+                       E.ConstExpr (_, J.CUndefined)) as eseq)))
+        when isBreakLabel bl && isSwitchVar x ->
+      let h =
+        match parseHeap s with
+          | ([], cs) -> (["H_"], cs) (* eventually want All H. H + (...) *)
+          | _ -> Log.printParseErr "hint for switch shouldn't have heap vars"
+      in
+      EAsW (ELabel (trimLabel bl, ds env eseq), (tyAny, h))
+
+  | E.LabelledExpr (_, bl,
+      (E.SeqExpr (_, E.LetExpr (_, x, _, _),
+                     E.ConstExpr (_, J.CUndefined)) as eseq))
+        when isBreakLabel bl && isSwitchVar x ->
+      EAsW (ELabel (trimLabel bl, ds env eseq), (tyAny, (["H_"], [])))
 
   | E.BreakExpr (_, l, e) -> EBreak (trimLabel l, ds env e)
 
