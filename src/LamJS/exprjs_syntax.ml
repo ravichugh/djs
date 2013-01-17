@@ -62,13 +62,13 @@ let rec seq a e1 e2 = match e1 with
   | SeqExpr (a', e11, e12) -> SeqExpr (a, e11, seq a' e12 e2)
   | _ -> SeqExpr (a, e1, e2)
 
-(* rkc: DJS likes to distinguish between dot/bracket getprop operations.
-   instead of adding DotExpr to EJS and separating PropLValue into
-   DotLValue and BracketLValue, munging the strings for dot operations. *)
-(* 3/31: removed this
-let djsMungeDot s = sprintf "__dot__%s" s
-*)
-let djsMungeDot s = s
+(* rkc: LamJS desugars switch statements using the identifiers %v and %t.
+   instead, i'm using a fresh switch_v_i variable per switch and fresh
+   case_t_i_j per case statement. *)
+let switchId    = ref 0
+let varSwitch i = sprintf "switch_v_%d" i
+let varFalse i  = sprintf "switch_false_%d" i
+let varCase i j = sprintf "case_t_%d_%d" i j
 
 let rec expr (e : S.expr) = match e with
   | S.ConstExpr (p, c) -> ConstExpr (p, c)
@@ -76,7 +76,7 @@ let rec expr (e : S.expr) = match e with
   | S.ObjectExpr (a,ps) -> ObjectExpr (a,map prop ps)
   | S.ThisExpr a -> ThisExpr a
   | S.VarExpr (a,x) -> VarExpr (a,x)
-  | S.DotExpr (a,e,x) -> BracketExpr (a, expr e, ConstExpr (a, S.CString (djsMungeDot x)))
+  | S.DotExpr (a,e,x) -> BracketExpr (a, expr e, ConstExpr (a, S.CString x))
   | S.BracketExpr (a,e1,e2) -> BracketExpr (a,expr e1,expr e2)
   | S.NewExpr (a,e,es) -> NewExpr (a,expr e,map expr es)
   | S.PrefixExpr (a,op,e) -> 
@@ -143,7 +143,7 @@ let rec expr (e : S.expr) = match e with
                         
 and lvalue (lv : S.lvalue) = match lv with
     S.VarLValue (a,x) -> VarLValue (a,x)
-  | S.DotLValue (a,e,x) -> PropLValue (a, expr e, ConstExpr (a, S.CString (djsMungeDot x)))
+  | S.DotLValue (a,e,x) -> PropLValue (a, expr e, ConstExpr (a, S.CString x))
   | S.BracketLValue (a,e1,e2) -> PropLValue (a,expr e1,expr e2)
 
 and stmt (s : S.stmt) = match s with 
@@ -153,6 +153,27 @@ and stmt (s : S.stmt) = match s with
   | S.IfStmt (a,e,s1,s2) -> IfExpr (a,expr e,stmt s1,stmt s2)
   | S.IfSingleStmt (a,e,s) -> 
       IfExpr (a,expr e,stmt s, ConstExpr (a, S.CUndefined))
+  (* rkc: replacing %v and %t vars *)
+  | S.SwitchStmt (p,e,clauses) ->
+      let _ = incr switchId in
+      let initCaseVar = varFalse !switchId in
+      let innerE =
+        (* rkc: rewrite the initial (top-level) conditional *)
+        match snd (caseClauses 0 p clauses) with
+          | LetExpr(p0,x,IfExpr(p1,IdExpr(p2,_),e11,e12),e2) ->
+              LetExpr(p0,x,IfExpr(p1,IdExpr(p2,initCaseVar),e11,e12),e2)
+          | _ ->
+              failwith "rkc: JS to EJS desugar switch; should never get here"
+      in
+      LabelledExpr
+        (p, "%break",
+         SeqExpr (p,
+                  LetExpr (p, varSwitch !switchId, expr e,
+                           LetExpr (p, initCaseVar,
+                                    ConstExpr (p, S.CBool false),
+                                    innerE)),
+                  ConstExpr (p, S.CUndefined)))
+  (*
   | S.SwitchStmt (p,e,clauses) ->
       LabelledExpr
         (p, "%break",
@@ -162,6 +183,7 @@ and stmt (s : S.stmt) = match s with
                                     ConstExpr (p, S.CBool false),
                                     caseClauses p clauses)),
                   ConstExpr (p, S.CUndefined)))
+  *)
   | S.LabelledStmt (p1, lbl ,S.WhileStmt (p2, test, body)) -> LabelledExpr 
         (p1, "%break", LabelledExpr
            (p1,lbl,WhileExpr
@@ -260,14 +282,44 @@ and varDecl p (decl : S.varDecl) = match decl with
   | S.HintVarDeclInit (a, s, x, e) -> 
       HintExpr (a, s, VarDeclExpr (a, x, expr e))
 
-and collectClauseExprs exprs clauses = match clauses with
-  | S.CaseClause (p, e, s) :: rest -> begin match stmt s with
-      | ConstExpr (_, S.CUndefined) ->
-        collectClauseExprs (expr e :: exprs) rest
-      | s' -> (p, expr e :: exprs, s', rest)
-  end
+and collectClauseExprs exprs = function
+  | S.CaseClause (p, e, s) :: rest -> begin
+      match stmt s with
+        | ConstExpr (_, S.CUndefined) -> collectClauseExprs (expr e :: exprs) rest
+        | s' -> (p, expr e :: exprs, s', rest)
+    end
   | _ -> failwith "collectClauseExprs expected non-empty list"
 
+(* rkc: threading a counter through to help generate unique "case_t_i_j" vars
+   instead of "%t" for case statements. also replacing "%v" with "switch_i"
+*)
+and caseClauses n p (clauses : S.caseClause list) = match clauses with
+    [] ->
+      (n, ConstExpr (p, S.CUndefined))
+  | (S.CaseDefault (a,s)::clauses) ->
+      let (m,ret) = caseClauses n p clauses in
+      (m, seq a (stmt s) ret)
+  | clauses ->
+      let (p, es, body, rest) = collectClauseExprs [] clauses in
+      let i = !switchId in
+      (* rkc: the way fresh case id's are generated is a hack.
+         not sure why the j+1/j+2 invariants work... *)
+      let f e acc =
+        let (j,ret) = acc in
+        (j+1, LetExpr (p, varCase i (j+1),
+                       IfExpr (p,
+                         IdExpr (p, varCase i (j+2)),
+                         ConstExpr (p, S.CBool true),
+                         InfixExpr (p, "===", IdExpr (p, varSwitch !switchId), e)),
+                       ret)) in
+      let (m,innerE) = caseClauses n p rest in
+      fold_right f (List.rev es)
+        (m, (SeqExpr (p, IfExpr (p, IdExpr (p, varCase i (m+1)),
+                                 body,
+                                 ConstExpr (p, S.CUndefined)),
+                         innerE)))
+
+(*
 and caseClauses p (clauses : S.caseClause list) = match clauses with
     [] -> ConstExpr (p, S.CUndefined)
   | (S.CaseDefault (a,s)::clauses) -> seq a (stmt s) (caseClauses p clauses)
@@ -285,6 +337,7 @@ and caseClauses p (clauses : S.caseClause list) = match clauses with
                     body,
                     ConstExpr (p, S.CUndefined)),
             caseClauses p rest))
+*)
 
 and prop pr =  match pr with
     (p, S.PropId x,e) -> (p, x, expr e)
@@ -298,7 +351,6 @@ and eval_lvalue (lv :  S.lvalue) (body_fn : lvalue * expr -> expr) =
   match lv with
     | S.VarLValue (p, x) -> body_fn (VarLValue (p, x), VarExpr (p, x))
   | S.DotLValue (a, e, x) -> 
-      let x = djsMungeDot x in
       LetExpr (a,"%lhs",expr e,
         body_fn
           (PropLValue (a, IdExpr (a,"%lhs"), ConstExpr (a, S.CString x)),

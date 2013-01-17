@@ -350,7 +350,7 @@ exp2 :
  | LPAREN exp COMMA RPAREN                   { ParseUtils.mkTupleExp ($2::[]) }
  | LPAREN exp COMMA exps RPAREN              { ParseUtils.mkTupleExp ($2::$4) }
  | LPAREN FAIL STR exp RPAREN                { ETcFail($3,$4) }
- (* | LPAREN e=exp RPAREN AS f=frame            { EAs(e,f) } *)
+ | LPAREN e=exp RPAREN AS t=typ DIV h=heap   { EAsW(e,(t,h)) }
  | LBRACE RBRACE                             { EDict([]) }
  | LBRACE fieldexps RBRACE                   { EDict($2) }
  | LT GT                                     { EArray(tyArrDefault,[]) }

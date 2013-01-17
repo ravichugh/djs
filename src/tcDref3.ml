@@ -746,6 +746,13 @@ let maybeAugmentFrameAndFixExp g h x fr e =
           (fr, e)
   end
 
+let maybeAugmentWorld g h e w =
+  if not !Settings.augmentHeaps then w
+  else
+    let fvs = transitiveFreeVarsOfExp "some label/switch stmt" e in
+    let cloInvariants = collectClosureInvariants g h fvs in
+    (fst w, addAutoLocBindings (snd w) (snd cloInvariants))
+
 
 (***** TS application helpers *************************************************)
 
@@ -1339,6 +1346,12 @@ and tsExp_ g h = function
 
   | EAsW(e,w) -> begin
       let ruleName = "TS-EAsW" in
+      let w =
+        match e with
+          (* EAsW(ELabel _) should result from desugaring switch ... *)
+          | ELabel(x,innerE) when Utils.strPrefix x "break" ->
+              maybeAugmentWorld g h innerE w
+          | _ -> w in
       Wf.world ruleName g w;
       let (tGoal,hGoal) = freshenWorld w in
       tcExp g h (tGoal,hGoal) e;
@@ -1348,7 +1361,7 @@ and tsExp_ g h = function
       (mkExists binders (Typ tGoal), h)
     end
 
-  | ELabel(x,e) -> failwith "TS-Label: need a goal"
+  | ELabel(x,e) -> failwith (spr "TS-Label [%s]: need a goal" x)
 
   (* TODO 9/25 revisit *)
   | EBreak(x,EVal(v)) ->

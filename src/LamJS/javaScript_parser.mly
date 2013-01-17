@@ -434,6 +434,11 @@ stmt :
       { HintStmt (($startpos, $endpos), $1,
                   ForInStmt (($startpos, $endpos),$4,$6,$8)) }
 
+  (* rkc 01/15/13 *)
+  | HINT Switch paren_expr LBrace cases RBrace 
+      { HintStmt (($startpos, $endpos), $1,
+                  SwitchStmt (($startpos, $endpos),$3,$5)) }
+
   | Break  Semi
       { BreakStmt (($startpos, $endpos)) }
   | BreakId Semi
