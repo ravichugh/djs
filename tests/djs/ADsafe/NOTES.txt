@@ -1,0 +1,21 @@
+- Probably going to need an assume instructions. ADSafety recognizes runtime
+  checks of the form: reject_global(this).
+
+- ADsafety:
+  1 widgets cannot load new code at runtime
+  2 widgets cannot affect the DOM (outside their designated subtree)
+  3 widgets cannot obtain direct references to the DOM
+  4 widgets on the same page cannot communicate
+
+- Blacklist field names:
+  * "__proto__"
+  * "__nodes__", "__star__": private fields
+
+- Proto: there are several safe prototypes
+
+
+====================================================
+From trying to typecheck the code:
+
+- Need to represent the document (DOM).
+

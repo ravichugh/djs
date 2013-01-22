@@ -1,0 +1,61 @@
+<html>
+<head>
+<title>ADsafe Widget Template</title>
+</head>
+<body>
+<p>This is the page that will contain the widget.</p>
+
+    Load a minifed copy of adsafe.js from your domain. You can combine
+    it with other js files to minimize HTTP transactions.
+
+<script src="http://www.yourTrustedDomain.../adsafe.js"></script>
+
+    The widget is given a name that is all uppercase with a trailing
+    underbar. That name is used with ADSAFE.id and ADSAFE.go. It is
+    also used a prefix on the IDs of HTML elements in the widget.
+
+    The widget starts with a div with the widget ID. All of the widget's
+    material must be inside of the div.
+
+<div id="TEMPLATE_">
+
+    HTML markup required by the widget goes here.
+
+    ADSAFE.id is used to inform ADsafe about the widget. Use of ADSAFE.id
+    is required only if the widget will load library modules.
+
+<script>
+ADSAFE.id("TEMPLATE_");
+</script>
+
+    If library modules are required for the widget, load them here.
+
+<script src="template.js"></script>
+
+    ADSAFE.go is passed a function that starts the execution of the widget.
+    This is required for all widgets.
+
+<script>
+ADSAFE.go("TEMPLATE_", function (dom, lib) {
+    'use strict';
+
+// This is where the code for the widget is placed. It can access
+// the document through the dom parameter, allowing it indirect
+// access to html elements, allowing it to change content, styling,
+// and behavior.
+
+// Each library file can give itself a NAME. This program can access
+// the library file as lib.NAME. See template.js.
+
+});
+</script>
+
+    This the end of the widget.
+
+</div>
+
+    Material that is outside of the div cannot be accessed by the widget.
+    A page could contain many ADsafe widgets.
+
+</body>
+</html>
