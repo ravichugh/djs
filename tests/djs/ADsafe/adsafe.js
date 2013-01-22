@@ -58,11 +58,9 @@
     valueOf, var, visibility, watch, window, writeln, x, y
 */
 
-var ADSAFE = (function ()
-    
-/*: () / () -> Top / same */ 
-    
-    {
+//PV: Change adsage to all capital.
+/*: adsafe = () -> Top */ "#type";
+var adsafe = (function () {
     "use strict";
 
     var adsafe_id,      // The id of the current widget
@@ -71,7 +69,7 @@ var ADSAFE = (function ()
 // These member names are banned from guest scripts. The ADSAFE.get and
 // ADSAFE.put methods will not allow access to these properties.
 
-        banned = {
+        banned = /*: lBanned */ {
             'arguments'     : true,
             callee          : true,
             caller          : true,
@@ -91,136 +89,162 @@ var ADSAFE = (function ()
         flipflop,       // Used in :even/:odd processing
         has_focus,
         hunter,         // Set of hunter patterns
-        interceptors = []; //,
+        interceptors = [],
 
-//        makeableTagName = {
-//
-//// This is the whitelist of elements that may be created with the .tag(tagName)
-//// method.
-//
-//            a         : true,
-//            abbr      : true,
-//            acronym   : true,
-//            address   : true,
-//            area      : true,
-//            b         : true,
-//            bdo       : true,
-//            big       : true,
-//            blockquote: true,
-//            br        : true,
-//            button    : true,
-//            canvas    : true,
-//            caption   : true,
-//            center    : true,
-//            cite      : true,
-//            code      : true,
-//            col       : true,
-//            colgroup  : true,
-//            dd        : true,
-//            del       : true,
-//            dfn       : true,
-//            dir       : true,
-//            div       : true,
-//            dl        : true,
-//            dt        : true,
-//            em        : true,
-//            fieldset  : true,
-//            font      : true,
-//            form      : true,
-//            h1        : true,
-//            h2        : true,
-//            h3        : true,
-//            h4        : true,
-//            h5        : true,
-//            h6        : true,
-//            hr        : true,
-//            i         : true,
-//            img       : true,
-//            input     : true,
-//            ins       : true,
-//            kbd       : true,
-//            label     : true,
-//            legend    : true,
-//            li        : true,
-//            map       : true,
-//            menu      : true,
-//            object    : true,
-//            ol        : true,
-//            optgroup  : true,
-//            option    : true,
-//            p         : true,
-//            pre       : true,
-//            q         : true,
-//            samp      : true,
-//            select    : true,
-//            small     : true,
-//            span      : true,
-//            strong    : true,
-//            sub       : true,
-//            sup       : true,
-//            table     : true,
-//            tbody     : true,
-//            td        : true,
-//            textarea  : true,
-//            tfoot     : true,
-//            th        : true,
-//            thead     : true,
-//            tr        : true,
-//            tt        : true,
-//            u         : true,
-//            ul        : true,
-//            'var'     : true
-//        },
-//        name,
-//        pecker,     // set of pecker patterns
-//        result,
-//        star,
-//        the_range,
-//        value;
-//
-//
-////  The error function is called if there is a violation or confusion.
-////  It throws an exception.
-//
-//    function error(message) {
-//        ADSAFE.log("ADsafe error: " + (message || "ADsafe violation."));
-//        throw {
-//            name: "ADsafe",
-//            message: message || "ADsafe violation."
-//        };
-//    }
-//
-//
-////    Some of JavaScript's implicit string conversions can grant extraordinary
-////    powers to untrusted code. So we use the string_check function to prevent
-////    such abuses.
-//
-//    function string_check(string) {
-//        if (typeof string !== 'string') {
-//            error("ADsafe string violation.");
-//        }
-//        return string;
-//    }
-//
-//
-////    The object.hasOwnProperty method has a number of hazards. So we wrap it in
-////    the owns function.
-//
-//    function owns(object, string) {
+        makeableTagName = {
+
+// This is the whitelist of elements that may be created with the .tag(tagName)
+// method.
+
+            a         : true,
+            abbr      : true,
+            acronym   : true,
+            address   : true,
+            area      : true,
+            b         : true,
+            bdo       : true,
+            big       : true,
+            blockquote: true,
+            br        : true,
+            button    : true,
+            canvas    : true,
+            caption   : true,
+            center    : true,
+            cite      : true,
+            code      : true,
+            col       : true,
+            colgroup  : true,
+            dd        : true,
+            del       : true,
+            dfn       : true,
+            dir       : true,
+            div       : true,
+            dl        : true,
+            dt        : true,
+            em        : true,
+            fieldset  : true,
+            font      : true,
+            form      : true,
+            h1        : true,
+            h2        : true,
+            h3        : true,
+            h4        : true,
+            h5        : true,
+            h6        : true,
+            hr        : true,
+            i         : true,
+            img       : true,
+            input     : true,
+            ins       : true,
+            kbd       : true,
+            label     : true,
+            legend    : true,
+            li        : true,
+            map       : true,
+            menu      : true,
+            object    : true,
+            ol        : true,
+            optgroup  : true,
+            option    : true,
+            p         : true,
+            pre       : true,
+            q         : true,
+            samp      : true,
+            select    : true,
+            small     : true,
+            span      : true,
+            strong    : true,
+            sub       : true,
+            sup       : true,
+            table     : true,
+            tbody     : true,
+            td        : true,
+            textarea  : true,
+            tfoot     : true,
+            th        : true,
+            thead     : true,
+            tr        : true,
+            tt        : true,
+            u         : true,
+            ul        : true,
+            'var'     : true
+        },
+        name,
+        pecker,     // set of pecker patterns
+        result,
+        star,
+        the_range,
+        value;
+
+
+//  The error function is called if there is a violation or confusion.
+//  It throws an exception.
+
+    var error = function (message) 
+    /*: (message: Str)  / () -> Top / sameType */
+    {  
+        //ADSAFE.log("ADsafe error: " + (message || "ADsafe violation."));
+    //    throw {
+    //        name: "ADsafe",
+    //        message: message || "ADsafe violation."
+    //    };
+    };
+
+
+//    Some of JavaScript's implicit string conversions can grant extraordinary
+//    powers to untrusted code. So we use the string_check function to prevent
+//    such abuses.
+
+    var string_check = function (string) 
+    /*: (string: Str) -> Str */
+    {
+        if (typeof string !== 'string') {
+            error("ADsafe string violation.");
+        }
+        return string;
+    };
+
+
+//    The object.hasOwnProperty method has a number of hazards. So we wrap it in
+//    the owns function.
+
+//    var owns = function(object, string) 
+//    
+//    {
 //        return object && typeof object === 'object' &&
 //            Object.prototype.hasOwnProperty.call(object, string_check(string));
-//    }
+//    };
 //
-////  The reject functions enforce the restriction on property names.
-////  reject_property allows access only to objects and arrays. It does not allow
-////  use of the banned names, or names that are not strings and not numbers,
-////  or strings that start or end with _.
-//
-//    function reject_name(name) {
-//        return typeof name !== 'number' && (typeof name !== 'string' ||
-//            banned[name] || name.charAt(0) === '_' || name.slice(-1) === '_');
-//    }
-//
+//  The reject functions enforce the restriction on property names.
+//  reject_property allows access only to objects and arrays. It does not allow
+//  use of the banned names, or names that are not strings and not numbers,
+//  or strings that start or end with _.
+
+    var reject_name = function (name1) 
+    /*: (name1: Str) / (lBanned: {
+            arguments     : Bool,
+            callee          : Bool,
+            caller          : Bool,
+            constructor     : Bool,
+            eval          : Bool,
+            prototype       : Bool,
+            stack           : Bool,
+            unwatch         : Bool,
+            valueOf         : Bool,
+            watch           : Bool,
+            _ : Bot
+      } > lObjPro) -> Bool / sameExact */ 
+    {  
+        return 
+          typeof name1 !== 'number' 
+          && (
+              typeof name1 !== 'string' 
+      //        || banned[name1]  //TODO
+              || name1.charAt(0) === '_' 
+              || name1.slice(-1) === '_'
+              );
+    };
+
 //
 //    function reject_property(object, name) {
 //        return typeof object !== 'object' || reject_name(name);

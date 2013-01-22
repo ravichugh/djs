@@ -1,6 +1,4 @@
-- Probably going to need an assume instructions. ADSafety recognizes runtime
-  checks of the form: reject_global(this).
-
+====================================================
 - ADsafety:
   1 widgets cannot load new code at runtime
   2 widgets cannot affect the DOM (outside their designated subtree)
@@ -18,4 +16,23 @@
 From trying to typecheck the code:
 
 - Need to represent the document (DOM).
+  document.defaultView
+
+- Ban guest scripts from accessing specific member names, denoted as "banned".
+
+- Higher-order functions: Function "go" takes function as parameter and applies
+  DOM to it.
+
+- Exception throwing/handling
+
+- Variable names all capital (e.g. ADSAFE)
+
+- Object.prototype.hasOwnProperty.call(object, "aaa");
+
+- Global name same as function parameter gives Error:
+  TS-Let-Bare: let __name = ...
+  [__name] already in scope, so please use a different name.
+
+- Probably going to need an "assume" statement. ADSafety recognizes runtime
+  checks of the form: reject_global(this).
 
