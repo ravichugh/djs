@@ -20,8 +20,8 @@ From trying to typecheck the code:
 
 - Ban guest scripts from accessing specific member names, denoted as "banned".
 
-- Higher-order functions: Function "go" takes function as parameter and applies
-  DOM to it.
+- Higher-order functions:  
+  need to restore Sub.checkArrows
 
 - Exception throwing/handling
 
@@ -29,9 +29,10 @@ From trying to typecheck the code:
 
 - Object.prototype.hasOwnProperty.call(object, "aaa");
 
-- Global name same as function parameter gives Error:
+- Scoping issue makes user have to rename variables:
   TS-Let-Bare: let __name = ...
   [__name] already in scope, so please use a different name.
+
 
 - Probably going to need an "assume" statement. ADSafety recognizes runtime
   checks of the form: reject_global(this).
@@ -42,3 +43,9 @@ From trying to typecheck the code:
 NOTES
 
 - x["f"] when used as a "boolean" condition should be typed as truthy or falsy. 
+
+
+====================================================
+QUESTIONS
+
+- When can a weak location be updated?

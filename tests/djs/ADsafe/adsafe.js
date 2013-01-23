@@ -76,6 +76,26 @@
               } > lObjPro 
 */ "#define";
 
+
+
+// EVENTS
+/*: (~lEvent          : { "type": Str } > lObjPro) */ "#weak";
+
+/*: (~lUIEvent        : {  } > ~lEvent) */ "#weak";
+
+
+/*: (~lKEyboardEvent  : 
+      {
+        altKey            : Bool,
+        ctrlKey           : Bool
+
+      } > ~lUIEvent) */ "#weak";
+//TODO: fill these up
+
+
+
+
+
 /*: (~lCCSStyle: Dict > lObjPro) */ "#weak";
 
 /*: (~lNode:
@@ -83,7 +103,11 @@
         getComputedStyle  : (this: Ref(~lNode), node: Ref(~lNode), str: Str) / () -> Ref(~lCCSStyle) / sameExact,
         currentStyle      : Ref(~lCCSStyle),
         firstChild        : Ref(~lNode),
-        nextSibling       : Ref(~lNode)
+        nextSibling       : Ref(~lNode),
+        change            : Ref(~lEvent),
+        "___ on ___"      : Ref(~lEvent),
+        tagName           : Str
+
       } > lObjPro) */ "#weak";
 
 var document = /*: lDocument */ {};
@@ -338,50 +362,54 @@ var adsafe = (function () {
 
             cache_style_node = node;
             cache_style_object =
-                node.currentStyle || defaultView.getComputedStyle(node, '');    //TODO: not really sure what this means
+                node.currentStyle || defaultView.getComputedStyle(node, '');    //TODO: not really sure what the "or" means
             return cache_style_object;
         };
     
     
         var walkTheDOM = function walkTheDOM_rec(node, func, skip) 
         /*: ( node: Ref(~lNode),
-              func: (x: Ref(~lNode)) -> Top,
+              func: (x: Ref(~lNode)) / (~lNode: frzn) -> Top / (~lNode: sameType),
               skip: Bool) / (~lNode: frzn)
           -> Top / (~lNode: sameType) */
         {
     
     // Recursively traverse the DOM tree, starting with the node, in document
     // source order, calling the func on each node visisted.
-    
             if (!skip) {
                 func(node);
             }
-            
-            //[>: node lNode <] "#thaw";
-            //node = node.firstChild;
-            //[>: node (~lNode, thwd lNode) <] "#freeze";
-
-            //while (node) {
-            //    walkTheDOM_rec(node, func, true);   //TODO: optional argument was missing in original version
-            //    node = node.nextSibling;
-            //}
+            node = node.firstChild;
+            /*: (&node: Ref(~lNode)) -> (&node: sameType) */
+            while (node) {
+                walkTheDOM_rec(node, func, true);   //XXX: PV added third argument to match definition
+                node = node.nextSibling;
+            }
         };
     
     
-    //    function purge_event_handlers(node) {
-    //
-    //// We attach all event handlers to an '___ on ___' property. The property name
-    //// contains spaces to insure that there is no collision with HTML attribues.
-    //// Keeping the handlers in a single property makes it easy to remove them
-    //// all at once. Removal is required to avoid memory leakage on IE6 and IE7.
-    //
-    //        walkTheDOM(node, function (node) {
-    //            if (node.tagName) {
-    //                node['___ on ___'] = node.change = null;
-    //            }
-    //        });
-    //    }
-    //
+        var purge_event_handlers = function(node) 
+        /*: (node: Ref(~lNode)) / () -> Top / sameType */
+        {
+    
+    // We attach all event handlers to an '___ on ___' property. The property name
+    // contains spaces to insure that there is no collision with HTML attribues.
+    // Keeping the handlers in a single property makes it easy to remove them
+    // all at once. Removal is required to avoid memory leakage on IE6 and IE7.
+    
+          //TODO: PV had to rename the argument name
+            walkTheDOM(node, function (node1)
+                /*: (node1: Ref(~lNode)) / (~lNode: frzn) -> Top / (~lNode: sameType) */
+                {
+                    if (node1.tagName) {
+                        node1['___ on ___'] = node1.change = null;
+                    }
+                },
+                //XXX: PV added third argument to match definition
+                true
+                );
+        };
+    
     //
     //    function parse_query(text, id) {
     //
