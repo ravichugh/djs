@@ -36,3 +36,9 @@ From trying to typecheck the code:
 - Probably going to need an "assume" statement. ADSafety recognizes runtime
   checks of the form: reject_global(this).
 
+
+
+====================================================
+NOTES
+
+- x["f"] when used as a "boolean" condition should be typed as truthy or falsy. 
