@@ -14,7 +14,7 @@ while(t) {
   /*: a (~lA, thwd lA) */ "#freeze";
 
   /*: match lMatch */ "#thaw";
-  match = ["a", "b", "c"];    //PV: temporarily using this 
+  match = /*: Arr(Str)*/ ["a", "b", "c"];    //PV: temporarily using this 
   /*: match (~lMatch, thwd lMatch) */ "#freeze";
   
   t = t.slice(1);
