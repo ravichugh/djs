@@ -2,11 +2,13 @@
 (***** Wrappers for Base Types ************************************************)
 
 val getPropStr ::
-     (xx:Str, kk:{Str|(= v {"length","charAt","slice","toLowerCase"})})
+     (xx:Str, kk:{Str|(= v {"length","charAt","slice","toLowerCase",
+     "toUpperCase"})})
   -> {(ite (= kk "length") (and (Int v) (>= v 0))
       (ite (= kk "charAt") (v :: (this:Str, Int) -> Str)
       (ite (= kk "slice") (v :: (this:Str, Int) -> Str)
-      (ite (= kk "toLowerCase") (v :: (this:Str) -> Str) TRU))))}
+      (ite (= kk "toLowerCase") (v :: (this:Str) -> Str) 
+      (ite (= kk "toUpperCase") (v :: (this:Str) -> Str) TRU)))))}
 
 val getPropNum ::
      (xx:Num, kk:{Str|(= v {"toString"})})
