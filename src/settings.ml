@@ -23,3 +23,4 @@ let tryAllBoxesHack = ref false
 let djsMode = ref false
 let augmentHeaps = ref true
 let bxMode = ref true (* TODO eventually, set this to false by default *)
+let booleanGuards = ref false

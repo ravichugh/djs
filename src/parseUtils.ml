@@ -34,6 +34,8 @@ let argSpecs = [
                   "  do false checks (de-optimization)");
   ("-noQuickTypes", Arg.Clear S.quickTypes,
                  "   do all subtyping with logical queries (de-optimization)");
+  ("-booleanGuards", Arg.Set S.booleanGuards,
+                  "  require boolean guards to conditionals");
 ]
 
 

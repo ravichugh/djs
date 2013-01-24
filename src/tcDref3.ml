@@ -440,6 +440,12 @@ let maybeGetNextMaybeRef g = function
 
 (**** Join for T-If ***********************************************************)
 
+let pThen v =
+  if !Settings.booleanGuards then pGuard v true else pTruthy (WVal v)
+
+let pElse v =
+  if !Settings.booleanGuards then pGuard v false else pFalsy (WVal v)
+
 (* TODO once i add existential locations, don't allow any locations to be
    dropped *)
 (* TODO when joining values, would be nice to try to keep quick types
@@ -461,7 +467,7 @@ let joinHeapEnvs v (hs1,cs1) (hs2,cs2) =
             (acc1, (loc, HEStrong (v1, lo1, ci1)) :: acc2)
         | HEStrong(v1,lo1,ci1), Some(HEStrong(v2,_,_)) ->
             let x = freshVar "join" in
-            let t = ty (pIte (pTruthy (WVal v))
+            let t = ty (pIte (pThen v)
                              (eq theV (WVal v1))
                              (eq theV (WVal v2))) in
             ((x,t) :: acc1, (loc, HEStrong (vVar x, lo1, ci1)) :: acc2)
@@ -474,13 +480,10 @@ let joinHeapEnvs v (hs1,cs1) (hs2,cs2) =
 let joinTypes v t1 t2 =
   let (l1,s1) = stripExists t1 in
   let (l2,s2) = stripExists t2 in
-  let l1 =
-    Utils.mapSnd (fun t -> ty (pImp (pTruthy (WVal v)) (applyTyp t theV))) l1 in
-  let l2 =
-    Utils.mapSnd (fun t -> ty (pImp (pFalsy (WVal v)) (applyTyp t theV))) l2 in
+  let l1 = Utils.mapSnd (fun t -> ty (pImp (pThen v) (applyTyp t theV))) l1 in
+  let l2 = Utils.mapSnd (fun t -> ty (pImp (pElse v) (applyTyp t theV))) l2 in
   let x = freshVar "_ret_if" in
-  let p =
-    pIte (pTruthy (WVal v)) (applyTyp s1 (wVar x)) (applyTyp s2 (wVar x)) in
+  let p = pIte (pThen v) (applyTyp s1 (wVar x)) (applyTyp s2 (wVar x)) in
   (l1 @ l2, TRefinement(x,p))
 
 let joinWorlds v (t1,heap1) (t2,heap2) : prenextyp * heapenv =
@@ -1318,11 +1321,12 @@ and tsExp_ g h = function
 
   | EIf(EVal(v),e1,e2) -> begin 
       (* TODO check if false is provable? *)
-      tcVal g h tyAny v;
-      let (s1,h1) = Zzz.inNewScope (fun () ->
-        Zzz.assertFormula (pTruthy (WVal v)); tsExp g h e1) in
-      let (s2,h2) = Zzz.inNewScope (fun () ->
-        Zzz.assertFormula (pFalsy (WVal v)); tsExp g h e2) in
+      let tGuard = if !Settings.booleanGuards then tyBool else tyAny in
+      tcVal g h tGuard v;
+      let (s1,h1) =
+        Zzz.inNewScope (fun () -> Zzz.assertFormula (pThen v); tsExp g h e1) in
+      let (s2,h2) =
+        Zzz.inNewScope (fun () -> Zzz.assertFormula (pElse v); tsExp g h e2) in
       joinWorlds v (s1,h1) (s2,h2)
     end
 
