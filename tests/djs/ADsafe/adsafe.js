@@ -369,7 +369,7 @@ var adsafe = (function () {
     
         var walkTheDOM = function walkTheDOM_rec(node, func, skip) 
         /*: ( node: Ref(~lNode),
-              func: (x: Ref(~lNode)) / (~lNode: frzn) -> Top / (~lNode: sameType),
+              func: (Ref(~lNode)) / (~lNode: frzn) -> Top / (~lNode: sameType),
               skip: Bool) / (~lNode: frzn)
           -> Top / (~lNode: sameType) */
         {
@@ -398,16 +398,16 @@ var adsafe = (function () {
     // all at once. Removal is required to avoid memory leakage on IE6 and IE7.
     
           //TODO: PV had to rename the argument name
-//            walkTheDOM(node, function (node1)
-//                /*: (node1: Ref(~lNode)) / (~lNode: frzn) -> Top / (~lNode: sameType) */
-//                {
-//                    if (node1.tagName) {
-//                        node1['___ on ___'] = node1.change = null;
-//                    }
-//                },
-//                //XXX: PV added third argument to match definition
-//                true
-//                );
+            walkTheDOM(node, function (node1)
+                /*: (Ref(~lNode)) / (~lNode: frzn) -> Top / (~lNode: sameType) */
+                {
+                    if (node1.tagName) {
+                        node1['___ on ___'] = node1.change = null;
+                    }
+                },
+                //XXX: PV added third argument to match definition
+                true
+                );
         };
 
         /*: (~lSelector : Dict     > lObjPro) */ "#weak"; 
@@ -460,7 +460,7 @@ var adsafe = (function () {
                 //match = qx.exec(string_check(text));
 
                 /*: match lMatch */ "#thaw";
-                match = ["a", "b", "c"];    //PV: temporarily using this 
+                match = /*: Arr(Str) */ ["a", "b", "c"];    //PV: temporarily using this 
                 //if (!match) {
                 //    error("ADsafe: Bad query:" + text);
                 //}
