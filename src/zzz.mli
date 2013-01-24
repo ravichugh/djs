@@ -5,6 +5,8 @@ val emitPreamble : unit -> unit
 
 val queryCount : int ref
 
+val wallTime : float ref
+
 val queryRoot : string ref
 
 val writeQueryStats : unit -> unit

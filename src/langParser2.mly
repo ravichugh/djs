@@ -61,7 +61,8 @@ let mkSugarTyp x s p =
     | "Num"  -> TQuick(x,QBase(BNum),p)
     | "Bool" -> TQuick(x,QBase(BBool),p)
     | "Str"  -> TQuick(x,QBase(BStr),p)
-    | "Dict" -> TRefinement(x,pAnd[pDict;p])
+    | "Dict" -> TQuick(x,QRecd([],false),p)
+    (* | "Dict" -> TRefinement(x,pAnd[pDict;p]) *)
     | _      -> printParseErr (spr "bad sugar {%s:%s|%s}" x s (strForm p))
 
 let rec mkForAll xs p =

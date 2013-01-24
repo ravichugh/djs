@@ -88,6 +88,8 @@ let writeQueryStats () =
 
 let queryCount = ref 0
 
+let wallTime = ref 0.0
+
 let checkSat cap =
   let rec readSat () =
     match z3read () with
@@ -97,11 +99,15 @@ let checkSat cap =
       | "success" -> readSat ()
       | s         -> z3err (spr "Zzz.checkSat: read weird string [%s]" s)
   in
-  (* always print \n after (check-sat), to make sure z3 reads from pipe *)
-  dump ~tab:(not !doingExtract) ~nl:true "(check-sat)";
-  incr queryCount;
-  incrQueryRootCount ();
-  let (s,b) = readSat () in
+  let (time,(s,b)) = Utils.timeThunk (fun () ->
+    (* always print \n after (check-sat), to make sure z3 reads from pipe *)
+    dump ~tab:(not !doingExtract) ~nl:true "(check-sat)";
+    incr queryCount;
+    incrQueryRootCount ();
+    readSat ()
+  ) in
+  wallTime := !wallTime +. time;
+  (* Log.log3 "query time %d : %.2f (%s)\n" !queryCount time cap; *)
   dump (spr "; [%s] query %d (%s)" s !queryCount cap);
   b
 

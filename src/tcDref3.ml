@@ -83,11 +83,21 @@ let selfifyVal g = function
 let removeLabels g =
   List.filter (function Lbl _ -> false | _ -> true) g
 
-let printBinding ?(extraBreak=true) ?(isExistential=false) x s =
+let printBinding
+      ?(extraBreak=true) ?(isExistential=false) ?(elapsedTime=None) x s =
   if !Settings.printAllTypes || !depth = 0 then begin
     Log.log5 "%s%s%s%s :: %s\n"
       (if extraBreak then "\n" else "") (bigindent ())
       (if isExistential then "Exists " else "") x (strTyp s);
+(*
+    begin match elapsedTime with
+      | Some(time) ->
+          Log.log5 "%s%s%s%s in %.2f sec.\n"
+            (if extraBreak then "\n" else "") (bigindent ())
+            (if isExistential then "Exists " else "") x time
+      | None -> ()
+    end;
+*)
     flush stdout;
   end
 
@@ -118,7 +128,7 @@ let maybePrintHeapEnv (hNew:heapenv) (hOld:heapenv) =
 let bindingsAreLeftToRight l =
   false
 
-let rec tcAddBinding ?(addToEnv=true) g x s =
+let rec tcAddBinding ?(addToEnv=true) ?(elapsedTime=None) g x s =
   let g =
     match s with
       | TQuick(_,QTuple(l,_),_) -> (* filtering out those w/o binder *)
@@ -129,10 +139,12 @@ let rec tcAddBinding ?(addToEnv=true) g x s =
       | _ -> g in
   let _ = Zzz.addBinding x s in
   if addToEnv
-  then tcAddToEnv g (x,s)
+  then tcAddToEnv ~elapsedTime g (x,s)
   else g
 
-and tcAddToEnv g (x,s) = printBinding x s; Var(x,s) :: g
+and tcAddToEnv ?(elapsedTime=None) g (x,s) =
+  printBinding ~elapsedTime x s;
+  Var(x,s) :: g
 
 and tcAddDummyBinding g (x,_) = tcAddBinding ~addToEnv:false g x tyAny
 
@@ -1269,13 +1281,15 @@ and tsExp_ g h = function
         let ruleName = "TS-Let-Ann-Not-Arrow" in
         let cap = spr "%s: let %s = ..." ruleName x in
         checkBinder cap g x;
-        let (s1,h1) = Zzz.inNewScope (fun () -> tsExp g h e1) in
+        let (time,(s1,h1)) =
+          Utils.timeThunk
+            (fun () -> Zzz.inNewScope (fun () -> tsExp g h e1)) in
         (* let (s1,h1) = elimSingletonExistentials (s1,h1) in *)
         let tGoal = destructNonArrowTypeFrame frame in
         Sub.types cap g s1 tGoal;
         let (l1,s1) = stripExists s1 in
         let g = tcAddBindings g l1 in
-        let g = tcAddBinding g x s1 in
+        let g = tcAddBinding ~elapsedTime:(Some time) g x s1 in
         (* synthesizing x:s1, _not_ the goal tGoal, since need to bring all the
            binders in scope, since they may refered to in h1. so the tGoal
            annotation is simply a check rather than an abstraction. *)
@@ -1291,10 +1305,12 @@ and tsExp_ g h = function
         checkBinder cap g x;
         let (frame,e1) = maybeAugmentFrameAndFixExp g h x frame e1 in
         let (s1,h1) = applyFrame h frame in
-        Zzz.inNewScope (fun () -> tcExp g h (s1,h1) e1);
+        let (time,_) =
+          Utils.timeThunk
+            (fun () -> Zzz.inNewScope (fun () -> tcExp g h (s1,h1) e1)) in
         let (bindings,h1) = heapEnvOfHeap ruleName h1 in
         let g = tcAddBindings g bindings in
-        let g = tcAddBinding g x s1 in
+        let g = tcAddBinding ~elapsedTime:(Some time) g x s1 in
         maybePrintHeapEnv h1 h;
         let (s2,h2) = tsExp g h1 e2 in
         finishLet cap gInit x [(x,s1)] (s2,h2)
@@ -1309,11 +1325,13 @@ and tsExp_ g h = function
       let cap = spr "%s: let %s = ..." ruleName x in
       checkBinder cap g x;
       let e1 = maybeAugmentFixExp g h x e1 in
-      let (s1,h1) = Zzz.inNewScope (fun () -> tsExp g h e1) in
+      let (time,(s1,h1)) =
+        Utils.timeThunk
+          (fun () -> Zzz.inNewScope (fun () -> tsExp g h e1)) in
       (* let (s1,h1) = elimSingletonExistentials (s1,h1) in *)
       let (l1,s1) = stripExists s1 in
       let g = tcAddBindings g l1 in
-      let g = tcAddBinding g x s1 in
+      let g = tcAddBinding ~elapsedTime:(Some time) g x s1 in
       maybePrintHeapEnv h1 h;
       let (s2,h2) = tsExp g h1 e2 in
       finishLet cap gInit x (l1 @ [(x,s1)]) (s2,h2)
