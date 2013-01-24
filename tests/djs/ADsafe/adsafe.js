@@ -76,6 +76,7 @@
               } > lObjPro 
 */ "#define";
 
+/*: tyQuery { Arr(NotUndef) | (and (packed v) (>= (len v) 0)) }  > lArrPro */ "#define";
 
 
 // EVENTS
@@ -412,9 +413,11 @@ var adsafe = (function () {
 
         /*: (~lSelector : Dict     > lObjPro) */ "#weak"; 
         /*: (~lMatch    : Arr(Str) > lArrPro) */ "#weak"; 
+
+
     
         var parse_query = function (text, id)
-        /*: [;L;] (text: Str, id: Str) / () -> Ref(L) / (L : Arr(NotUndef)) */ 
+        /*: [;L;] (text: Str, id: Str) / () -> Ref(L) / (L : tyQuery) */ 
         {
     
     // Convert a query string into an array of op/name/value selectors.
@@ -439,7 +442,7 @@ var adsafe = (function () {
     
     // Loop over all of the selectors in the text.
     
-            /*: ( &text: Str, &query: Ref(L), L: Arr(NotUndef)) -> ( &text: sameType, &query: sameType, L: sameType) */ 
+            /*: ( &text: Str, &query: Ref(L), L: tyQuery) -> ( &text: sameType, &query: sameType, L: sameType) */ 
 
             do {
     
@@ -456,19 +459,17 @@ var adsafe = (function () {
     //          match[7]  . & _ > +
     //          match[8]      name
     
-                //TODO: Fix with regex support
-                //match = qx.exec(string_check(text));
-
                 /*: match lMatch */ "#thaw";
+                //match = qx.exec(string_check(text));      //TODO: Fix with regex support
                 match = /*: Arr(Str) */ ["a", "b", "c"];    //PV: temporarily using this 
-                //if (!match) {
-                //    error("ADsafe: Bad query:" + text);
-                //}
-                /*: match (~lMatch, thwd lMatch) */ "#freeze";
+
+                if (!match) {
+                    error("ADsafe: Bad query:" + text);
+                }
     
     // Make a selector object and stuff it in the query.
     
-//                if (match[1]) {
+                if (match[1]) {
     
     // The selector is * or /
     
@@ -477,7 +478,7 @@ var adsafe = (function () {
                         op: "a"// match[1]
                     };
                     /*: selector (~lSelector, thwd lSelector) */ "#freeze";
-//                } 
+                } 
                 
     //TODO: resuse after "if-then-else" type optimization
     //            else if (match[2]) {
@@ -492,7 +493,9 @@ var adsafe = (function () {
     //                    op: '[',
     //                    name: match[2]
     //                };
-    //            } else if (match[5]) {
+    //            } 
+    
+    //            else if (match[5]) {
     
     //// The selector is an id.
     
@@ -523,11 +526,14 @@ var adsafe = (function () {
     
     // Add the selector to the query.
     
-                //query.push(selector);
+                query.push(selector);
     
     // Remove the selector from the text. If there is more text, have another go.
     
-                //text = text.slice(match[0].length);
+                text = text.slice(match[0].length);
+                
+                /*: match (~lMatch, thwd lMatch) */ "#freeze";
+
             } while (text);
             return query;
         };
