@@ -93,12 +93,15 @@
 
 /*: (~lCCSStyle: Dict > lObjPro)                    */ "#weak";
 
+/*: (~lNList: { Arr(Ref(~lNode)) | (and (packed v)) } > lArrPro)            */ "#weak";
+
 /*: (~lNode:
       {
         getComputedStyle      : (this: Ref(~lNode), node: Ref(~lNode), str: Str) / () -> Ref(~lCCSStyle) / sameExact,
         currentStyle          : Ref(~lCCSStyle),
         firstChild            : Ref(~lNode),
         nextSibling           : Ref(~lNode),
+        childNodes            : Ref(~lNList),
         change                : Ref(~lEvent),
         "___ on ___"          : Ref(~lEvent),
         tagName               : Str,
@@ -106,18 +109,21 @@
 
       } > lObjPro)                                  */ "#weak";
 
-//TODO: getElementsByTagName should accept "*" as "get all elementes"
+      //TODO: getElementsByTagName should accept "*" as "get all elementes"
 
-var document = /*: lDocument */ {};
+
+/*: (~lDocument        : { defaultView: Ref(~lNode), getElementById: (s: Str) -> Ref(~lNode) } > lObjPro)  */ "#weak";
+var document;
+
 
 //PV: End of definitions
 
 
 
 //TODO: Change adsage to all capital.
-/*: adsafe = () / (lDocument: { defaultView: Ref(~lNode) }  > lObjPro )
-      -> Top / sameType */ "#type";
+/*: adsafe = () / (&document: Ref(~lDocument)) -> Top / sameType */ "#type";
 var adsafe = (function () {
+  
     "use strict";
 
     var adsafe_id,      // The id of the current widget
@@ -240,7 +246,8 @@ var adsafe = (function () {
     var error = function (message) 
     /*: (message: Str)  / () -> Top / sameType */
     {  
-        //ADSAFE.log("ADsafe error: " + (message || "ADsafe violation."));
+    //TODO: log is defined later + exceptions
+    //    ADSAFE.log("ADsafe error: " + (message || "ADsafe violation."));
     //    throw {
     //        name: "ADsafe",
     //        message: message || "ADsafe violation."
@@ -594,26 +601,50 @@ var adsafe = (function () {
                     node = node.nextSibling;
                 }
             }
-            //,
-            //'#': function () 
-            //{
-            //    var n = document.getElementById(name);
-            //    if (n.tagName) {
-            //        result.push(n);
-            //    }
-            //},
-            //'/': function (node) {
-            //    var nodes = node.childNodes, i, length = nodes.length;
-            //    for (i = 0; i < length; i += 1) {
-            //        result.push(nodes[i]);
-            //    }
-            //},
-            //'*': function (node) {
-            //    star = true;
-            //    walkTheDOM(node, function (node) {
-            //        result.push(node);
-            //    }, true);
-            //}
+            ,
+            '#': function () 
+            /*: [;L;] () / (&name: Str, &result: Ref(L), L: tyResultLoc) -> Top / sameType */
+            {
+                var n = document.getElementById(name);
+                if (n.tagName) {
+                    result.push(n);
+                }
+            }
+//            ,
+//            '/': function (node) 
+//            /*: [;L;] (node: Ref(~lNode)) / (&result: Ref(L), L: tyResultLoc) -> Top / sameType */
+//            {
+//                var nodes = node.childNodes;
+//                var i;
+//                /*:  nodes lNList */ "#thaw";
+//                var length = nodes.length;
+//                /*: nodes (~lNList, thwd lNList) */ "#freeze";
+//
+//                /*: ( &i: i0: {Int | (>= v 0) },
+//                      &result: Ref(L), L: tyResultLoc,
+//                      &nodes: Ref(lNList)
+//                      ) -> sameType */
+//                for (i = 0; i < length; i += 1) {
+//
+//                      /*:  nodes lNList */ "#thaw";
+//                      assert(/*: {(or (= v undefined) (v::Ref(~lNode))) }*/ (nodes[i])); 
+//                      /*: nodes (~lNList, thwd lNList) */ "#freeze";
+////                    result.push(nodes[i]);
+//                }
+//            }
+//            ,
+//            '*': function (node)
+//            /*: [;L;] (node: Ref(~lNode)) / (&result: Ref(L), L: tyResultLoc) -> Top / sameType */
+//            {
+//                star = true;
+//                walkTheDOM(
+//                    node, 
+//                    function (node) 
+//                    /*: [;L;] (node: Ref(~lNode)) / (&result: Ref(L), L: tyResultLoc) -> Top / sameType */                    
+//                    {
+//                      result.push(node);
+//                    }, true);
+//            }
         };
     
     //    pecker = {
