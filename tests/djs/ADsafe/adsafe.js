@@ -385,7 +385,7 @@ var adsafe = (function () {
     
     // Recursively traverse the DOM tree, starting with the node, in document
     // source order, calling the func on each node visisted.
-            result;           //PV: Hack to include in TCing
+    
             if (!skip) {
                 func(node);
             }
@@ -576,78 +576,88 @@ var adsafe = (function () {
                 /*: node (~lNode, thwd lNode) */ "#freeze";
             }
             ,
-//            '+': function (node) 
-//            /*: [;L;] (node: Ref(~lNode)) / (&name: Str, &result: Ref(L), L: tyResultLoc) -> Top / sameType */
-//            {              
-//                node = node.nextSibling;
-//                name = name.toUpperCase();
-//                /*: (&node: Ref(~lNode)) -> (&node: sameType) */
-//                while (node && !node.tagName) {
-//                    node = node.nextSibling;
-//                }
-//                if (node && node.tagName === name) {
-//                    result.push(node);
-//                }
-//            }
-//            ,
-//            '>': function (node) 
-//            /*: [;L;] (node: Ref(~lNode)) / (&name: Str, &result: Ref(L), L: tyResultLoc) -> Top / sameType */
-//            {
-//                node = node.firstChild;
-//                name = name.toUpperCase();
-//                /*: (&node: Ref(~lNode), L: tyResultLoc) -> sameType  */
-//                while (node) {
-//                    if (node.tagName === name) {
-//                        result.push(node);
-//                    }
-//                    node = node.nextSibling;
-//                }
-//            }
-//            ,
-//            '#': function () 
-//            /*: [;L;] () / (&name: Str, &result: Ref(L), L: tyResultLoc) -> Top / sameType */
-//            {
-//                var n = document.getElementById(name);
-//                if (n.tagName) {
-//                    result.push(n);
-//                }
-//            }
-//            ,
-//            '/': function (node) 
-//            /*: [;L;] (node: Ref(~lNode)) / (&result: Ref(L), L: tyResultLoc) -> Top / sameType */
-//            {
-//                var nodes = node.childNodes;
-//                var i /*: {Int | (>= v 0)} */ = 0 ;
-//
-//                /*:  nodes  lNList0 */ "#thaw";
-//                var length = nodes.length;
-//                var b = i < length; 
-//                /*: nodes (~lNList, thwd lNList0) */ "#freeze";
-//
-//                /*: (&nodes: Ref(~lNList), &b : Bool, &length: Int, &result: Ref(L), L: tyResultLoc) -> sameType */ 
-//                for (i = 0; b; i += 1) {
-//                    /*: nodes lNList1 */ "#thaw";
-//                    length = nodes.length;
-//                    b = i < length;
-//                    if (b) result.push(nodes[i]);
-//                    /*: nodes (~lNList, thwd lNList1) */ "#freeze";
-//                }
-//            }
-//            ,
+            '+': function (node) 
+            /*: (node: Ref(~lNode)) / (&name: Str, &result: Ref(~lResult)) -> Top / sameType */
+            {              
+                node = node.nextSibling;
+                name = name.toUpperCase();
+                /*: (&node: Ref(~lNode)) -> (&node: sameType) */
+                while (node && !node.tagName) {
+                    node = node.nextSibling;
+                }
+                if (node && node.tagName === name) {
+                    /*: result lResult */ "#thaw";
+                    result.push(node);
+                    /*: result (~lResult, thwd lResult) */ "#freeze";
+                }
+            }
+            ,
+            '>': function (node) 
+            /*: (node: Ref(~lNode)) / (&name: Str, &result: Ref(~lResult)) -> Top / sameType */
+            {
+                node = node.firstChild;
+                name = name.toUpperCase();
+                /*: (&node: Ref(~lNode), &result: Ref(~lResult)) -> sameType  */
+                while (node) {
+                    if (node.tagName === name) {
+                        /*: result lResult */ "#thaw";
+                        result.push(node);
+                        /*: result (~lResult, thwd lResult) */ "#freeze";
+                    }
+                    node = node.nextSibling;
+                }
+            }
+            ,
+            '#': function () 
+            /*: () / (&name: Str, &result: Ref(~lResult)) -> Top / sameType */
+            {
+                var n = document.getElementById(name);
+                if (n.tagName) {
+                    /*: result lResult */ "#thaw";
+                    result.push(n);
+                    /*: result (~lResult, thwd lResult) */ "#freeze";
+                }
+            }
+            ,
+            '/': function (node) 
+            /*: (node: Ref(~lNode)) / (&result: Ref(~lResult)) -> Top / sameType */
+            {
+                var nodes = node.childNodes;
+                var i /*: {Int | (>= v 0)} */ = 0 ;
+
+                /*:  nodes  lNList0 */ "#thaw";
+                var length = nodes.length;
+                var b = i < length; 
+                /*: nodes (~lNList, thwd lNList0) */ "#freeze";
+
+                /*: (&nodes: Ref(~lNList), &b : Bool, &length: Int, &result: Ref(~lResult)) -> sameType */ 
+                for (i = 0; b; i += 1) {
+                    /*: nodes lNList1 */ "#thaw";
+                    length = nodes.length;
+                    b = i < length;
+                    if (b) {
+                      /*: result lResult */ "#thaw";
+                      result.push(nodes[i]);
+                      /*: result (~lResult, thwd lResult) */ "#freeze";
+                    }
+                    /*: nodes (~lNList, thwd lNList1) */ "#freeze";
+                }
+            }
+            ,
             '*': function (node)
             /*: (node: Ref(~lNode)) / (&result: Ref(~lResult), &star: Bool, ~lNode: frzn) -> Top / sameType */
             {
                 star = true;
-                walkTheDOM(
-                    node, 
-                    function (node1) 
-                    /*: (Ref(~lNode)) / (~lNode: frzn, &result: Ref(~lResult)) -> Top / sameType */                    
-                    {
-
-                      /*: result lResult */ "#thaw";
-                      result.push(node1);
-                      /*: result (~lResult, thwd lResult) */ "#freeze";
-                    }, true);
+//                walkTheDOM(
+//                    node, 
+//                    function (node1) 
+//                    /*: (Ref(~lNode)) / (~lNode: frzn, &result: Ref(~lResult)) -> Top / sameType */                    
+//                    {
+//
+//                      /*: result lResult */ "#thaw";
+//                      result.push(node1);
+//                      /*: result (~lResult, thwd lResult) */ "#freeze";
+//                    }, true);
             }
         };
     
