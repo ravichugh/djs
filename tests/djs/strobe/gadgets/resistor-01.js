@@ -25,14 +25,14 @@ var buttonStrs = ["0black", "1brown", "2red", "3orange", "4yellow", "5green", "6
 
 
 //PV : added these
-var firstBand  /*: Ref Dict */ = {};
-var secondBand /*: Ref Dict */ = {};
-var thirdBand  /*: Ref Dict */ = {};
-var fourthBand /*: Ref Dict */ = {};
-var fifthBand  /*: Ref Dict */ = {};
+var firstBand  /*: Ref {image:Str, downImage:Str, overImage:Str} */ = {};
+var secondBand /*: Ref {image:Str, downImage:Str, overImage:Str} */ = {};
+var thirdBand  /*: Ref {image:Str, downImage:Str, overImage:Str} */ = {};
+var fourthBand /*: Ref {image:Str, downImage:Str, overImage:Str} */ = {};
+var fifthBand  /*: Ref {image:Str, downImage:Str, overImage:Str} */ = {};
 
-var firstToleranceButton  /*: Ref Dict */ = {};
-var secondToleranceButton /*: Ref Dict */ = {};
+var firstToleranceButton /*: Ref {image:Str, downImage:Str, overImage:Str, tooltip:Str} */ = {};
+var secondToleranceButton /*: Ref {image:Str, downImage:Str, overImage:Str} */ = {};
 
 
 //PV : rearranging
@@ -89,7 +89,8 @@ var doCalculateResistance = function() /*: () -> Top */
     if (resistance < 0) {
         ohms.value = "Undef";
     } else {
-        //ohms.value = addCommas(resistance.toString());      //TODO: PV: changed toStr() to //toString() which is valid JS
+        //rkc: TODO slow because resistance :: BNum not preserved by previous branch...
+        //ohms.value = addCommas(resistance.toString());  //PV: changed toStr() to toString()
         ohms.value = addCommas("a");
     }
 
@@ -104,11 +105,11 @@ var view_onOpen = function() /*: () -> Top */ {
     firstBand.image = "stock_images\\Button" + buttonStrs[bandNumberValues[0]] + "Normal.PNG";
     firstBand.overImage = "stock_images\\Button" + buttonStrs[bandNumberValues[0]] + "Over.PNG";
  
-/*
     secondBand.downImage = "stock_images\\Button" + buttonStrs[bandNumberValues[1]] + "Down.PNG";
     secondBand.image = "stock_images\\Button" + buttonStrs[bandNumberValues[1]] + "Normal.PNG";
     secondBand.overImage = "stock_images\\Button" + buttonStrs[bandNumberValues[1]] + "Over.PNG";
 
+/*
     thirdBand.downImage = "stock_images\\Button" + buttonStrs[bandNumberValues[2]] + "Down.PNG";
     thirdBand.image = "stock_images\\Button" + buttonStrs[bandNumberValues[2]] + "Normal.PNG";
     thirdBand.overImage = "stock_images\\Button" + buttonStrs[bandNumberValues[2]] + "Over.PNG";
@@ -336,7 +337,7 @@ var doNoneButton = function() /*: () -> Top */ {
 };
 
 //PV: adding def
-var currentColorBandArrow /*: Ref Dict */ = {};
+var currentColorBandArrow /*: Ref {y:Num} */ = {};
 
 var doFirstBand = function() /*: () -> Top */ {
     // Move the arrow pointer.
@@ -470,10 +471,9 @@ var toggleNumberOfBandsButton = function() /*: () -> Top */ {
 var containsNonDigit = function(inputStr) /*: (Str) -> Bool */ {
     var stringLength = inputStr.length;
     for (var i /*: { Int | (>= v 0)} */ = 0; i < stringLength; i++) {
-    //TODO: removing temporarily, probably due to if-then-else bug.
-    //    if ((inputStr.charAt(i) < "0") || (inputStr.charAt(i) > "9")) {
-    //        return (true);
-    //    }        
+        if ((inputStr.charAt(i) < "0") || (inputStr.charAt(i) > "9")) {
+            return (true);
+        }        
     }
 
     return (false);
@@ -491,16 +491,14 @@ var containsErroneousNonZeroDigits = function(inputStr, zerosStartAtPosition)
 /*: (Str, {Int | (>= v 0)}) -> Bool */ {
     var length = inputStr.length;
 
-    //TODO: removing temporarily, probably due to if-then-else bug.
-    //if (length <= zerosStartAtPosition) {
-    //    return (false);
-    //}
+    if (length <= zerosStartAtPosition) {
+        return (false);
+    }
 
     for (var i /*: {Int|(>= v 0)} */ = zerosStartAtPosition; i < length; i++) {
-    //TODO: removing temporarily, probably due to if-then-else bug.
-        //if (inputStr.charAt(i) != "0") {
-        //    return (true);
-        //}
+        if (inputStr.charAt(i) != "0") {
+            return (true);
+        }
     }
 
     return (false);
@@ -521,145 +519,143 @@ var removeCommas = function(inputStr) /*: (Str) -> Str */ {
 
 
 //PV: added this
-//XXX: maybe the type is too strict
-var parseNum = function(s) 
-/*: (s:Str) / () -> { Int | (and (>= v 0) (<= v 9))} / sameExact */ {
-  return 0;  
-};
+//rkc TODO change to weaker type and then add assumes upon use
+// var parseNum = /*: (Str) -> Num */ "#extern";
+var parseNum = /*: (Str) -> {Int|(and (>= v 0) (<= v 9))} */ "#extern";
 
 
 //PV: rearranged this
 var doGenerateBandColors = function() /*: () -> Top */ {
-    var digitStr = resistance.toString();     //PV: changed toStr to toString
-    var length = digitStr.length;
-    var digit /*: Int */ = 0;
-
-    if (resistance < 0) { // Do NOT update the Color Bands if resistance is UNDEFINED.
-        return;
-    }
-
-    if (numberOfColorBands == 4) { // Do the first three bands of color bars.
-        if (resistance < 10) { // Force the first band color to black.
-            firstBand.downImage = "stock_images\\Button0blackDown.PNG";
-            firstBand.image = "stock_images\\Button0blackNormal.PNG";
-            firstBand.overImage = "stock_images\\Button0blackOver.PNG";
-            bandNumberValues[0] = 0;
-        } else { // if(resistance >= 10)
-            // Process the first digit.
-            digit = parseNum(digitStr.charAt(0));
-            firstBand.downImage = "stock_images\\Button" + buttonStrs[digit] + "Down.PNG";
-            firstBand.image = "stock_images\\Button" + buttonStrs[digit] + "Normal.PNG";
-            firstBand.overImage = "stock_images\\Button" + buttonStrs[digit] + "Over.PNG";
-            bandNumberValues[0] = digit;
-        }
-
-        if (resistance < 10) { // Process the first digit.
-            if (length == 0) {
-                digit = 0;
-            } else {
-                digit = parseNum(digitStr.charAt(0));
-            }
-            secondBand.downImage = "stock_images\\Button" + buttonStrs[digit] + "Down.PNG";
-            secondBand.image = "stock_images\\Button" + buttonStrs[digit] + "Normal.PNG";
-            secondBand.overImage = "stock_images\\Button" + buttonStrs[digit] + "Over.PNG";
-            bandNumberValues[1] = digit;
-        } else { // Process the second digit.
-            digit = parseNum(digitStr.charAt(1));
-            secondBand.downImage = "stock_images\\Button" + buttonStrs[digit] + "Down.PNG";
-            secondBand.image = "stock_images\\Button" + buttonStrs[digit] + "Normal.PNG";
-            secondBand.overImage = "stock_images\\Button" + buttonStrs[digit] + "Over.PNG";
-            bandNumberValues[1] = digit;
-        }
-
-        // Process the multiplier.
-        if (resistance < 100) {
-            thirdBand.downImage = "stock_images\\Button0blackDown.PNG";
-            thirdBand.image = "stock_images\\Button0blackNormal.PNG";
-            thirdBand.overImage = "stock_images\\Button0blackOver.PNG";
-            bandNumberValues[2] = 0;
-        } else {
-            digit = (digitStr.length - 2);
-            thirdBand.downImage = "stock_images\\Button" + buttonStrs[digit] + "Down.PNG";
-            thirdBand.image = "stock_images\\Button" + buttonStrs[digit] + "Normal.PNG";
-            thirdBand.overImage = "stock_images\\Button" + buttonStrs[digit] + "Over.PNG";
-            bandNumberValues[2] = digit;
-        }
-    } else { // if(numberOfColorBands == 5) { // Do the first four bands of color bars.
-        if (resistance < 100) { // Force the first band color to black.
-            firstBand.downImage = "stock_images\\Button0blackDown.PNG";
-            firstBand.image = "stock_images\\Button0blackNormal.PNG";
-            firstBand.overImage = "stock_images\\Button0blackOver.PNG";
-            bandNumberValues[0] = 0;
-            if (resistance < 10) {
-                secondBand.downImage = "stock_images\\Button0blackDown.PNG";
-                secondBand.image = "stock_images\\Button0blackNormal.PNG";
-                secondBand.overImage = "stock_images\\Button0blackOver.PNG";
-                bandNumberValues[1] = 0;
-                digit = parseNum(digitStr.charAt(0));
-                thirdBand.downImage = "stock_images\\Button" + buttonStrs[digit] + "Down.PNG";
-                thirdBand.image = "stock_images\\Button" + buttonStrs[digit] + "Normal.PNG";
-                thirdBand.overImage = "stock_images\\Button" + buttonStrs[digit] + "Over.PNG";
-                bandNumberValues[2] = digit;
-            } else { // Resistance is between 10 and 99.
-                // Process the first digit.
-                digit = parseNum(digitStr.charAt(0));
-                secondBand.downImage = "stock_images\\Button" + buttonStrs[digit] + "Down.PNG";
-                secondBand.image = "stock_images\\Button" + buttonStrs[digit] + "Normal.PNG";
-                secondBand.overImage = "stock_images\\Button" + buttonStrs[digit] + "Over.PNG";
-                bandNumberValues[1] = digit;
-                // Process the second digit.
-                digit = parseNum(digitStr.charAt(1));
-                thirdBand.downImage = "stock_images\\Button" + buttonStrs[digit] + "Down.PNG";
-                thirdBand.image = "stock_images\\Button" + buttonStrs[digit] + "Normal.PNG";
-                thirdBand.overImage = "stock_images\\Button" + buttonStrs[digit] + "Over.PNG";
-                bandNumberValues[2] = digit;
-            }
-        } else { // if(resistance >= 100)
-            // Process the first digit.
-            digit = parseNum(digitStr.charAt(0));
-            firstBand.downImage = "stock_images\\Button" + buttonStrs[digit] + "Down.PNG";
-            firstBand.image = "stock_images\\Button" + buttonStrs[digit] + "Normal.PNG";
-            firstBand.overImage = "stock_images\\Button" + buttonStrs[digit] + "Over.PNG";
-            bandNumberValues[0] = digit;
-            // Process the second digit.
-            digit = parseNum(digitStr.charAt(1));
-            secondBand.downImage = "stock_images\\Button" + buttonStrs[digit] + "Down.PNG";
-            secondBand.image = "stock_images\\Button" + buttonStrs[digit] + "Normal.PNG";
-            secondBand.overImage = "stock_images\\Button" + buttonStrs[digit] + "Over.PNG";
-            bandNumberValues[1] = digit;
-            // Process the third digit.
-            digit = parseNum(digitStr.charAt(2));
-            thirdBand.downImage = "stock_images\\Button" + buttonStrs[digit] + "Down.PNG";
-            thirdBand.image = "stock_images\\Button" + buttonStrs[digit] + "Normal.PNG";
-            thirdBand.overImage = "stock_images\\Button" + buttonStrs[digit] + "Over.PNG";
-            bandNumberValues[2] = digit;
-        }
-
-        // Process the multiplier.
-        if (resistance < 1000) {
-            fourthBand.downImage = "stock_images\\Button0blackDown.PNG";
-            fourthBand.image = "stock_images\\Button0blackNormal.PNG";
-            fourthBand.overImage = "stock_images\\Button0blackOver.PNG";
-            bandNumberValues[3] = 0;
-        } else {
-            digit = (digitStr.length - 3);
-            fourthBand.downImage = "stock_images\\Button" + buttonStrs[digit] + "Down.PNG";
-            fourthBand.image = "stock_images\\Button" + buttonStrs[digit] + "Normal.PNG";
-            fourthBand.overImage = "stock_images\\Button" + buttonStrs[digit] + "Over.PNG";
-            bandNumberValues[3] = digit;
-        }
-    }
-
-    return;
+// rkc: TODO make nested conditionals faster
+//    var digitStr = resistance.toString();     //PV: changed toStr to toString
+//    var length = digitStr.length;
+//    var digit /*: Int */ = 0;
+//
+//    if (resistance < 0) { // Do NOT update the Color Bands if resistance is UNDEFINED.
+//        return;
+//    }
+//
+//    if (numberOfColorBands == 4) { // Do the first three bands of color bars.
+//        if (resistance < 10) { // Force the first band color to black.
+//            firstBand.downImage = "stock_images\\Button0blackDown.PNG";
+//            firstBand.image = "stock_images\\Button0blackNormal.PNG";
+//            firstBand.overImage = "stock_images\\Button0blackOver.PNG";
+//            bandNumberValues[0] = 0;
+//        } else { // if(resistance >= 10)
+//            // Process the first digit.
+//            digit = parseNum(digitStr.charAt(0));
+//            firstBand.downImage = "stock_images\\Button" + buttonStrs[digit] + "Down.PNG";
+//            firstBand.image = "stock_images\\Button" + buttonStrs[digit] + "Normal.PNG";
+//            firstBand.overImage = "stock_images\\Button" + buttonStrs[digit] + "Over.PNG";
+//            bandNumberValues[0] = digit;
+//        }
+//
+//        if (resistance < 10) { // Process the first digit.
+//            if (length == 0) {
+//                digit = 0;
+//            } else {
+//                digit = parseNum(digitStr.charAt(0));
+//            }
+//            secondBand.downImage = "stock_images\\Button" + buttonStrs[digit] + "Down.PNG";
+//            secondBand.image = "stock_images\\Button" + buttonStrs[digit] + "Normal.PNG";
+//            secondBand.overImage = "stock_images\\Button" + buttonStrs[digit] + "Over.PNG";
+//            bandNumberValues[1] = digit;
+//        } else { // Process the second digit.
+//            digit = parseNum(digitStr.charAt(1));
+//            secondBand.downImage = "stock_images\\Button" + buttonStrs[digit] + "Down.PNG";
+//            secondBand.image = "stock_images\\Button" + buttonStrs[digit] + "Normal.PNG";
+//            secondBand.overImage = "stock_images\\Button" + buttonStrs[digit] + "Over.PNG";
+//            bandNumberValues[1] = digit;
+//        }
+//
+//        // Process the multiplier.
+//        if (resistance < 100) {
+//            thirdBand.downImage = "stock_images\\Button0blackDown.PNG";
+//            thirdBand.image = "stock_images\\Button0blackNormal.PNG";
+//            thirdBand.overImage = "stock_images\\Button0blackOver.PNG";
+//            bandNumberValues[2] = 0;
+//        } else {
+//            digit = (digitStr.length - 2);
+//            thirdBand.downImage = "stock_images\\Button" + buttonStrs[digit] + "Down.PNG";
+//            thirdBand.image = "stock_images\\Button" + buttonStrs[digit] + "Normal.PNG";
+//            thirdBand.overImage = "stock_images\\Button" + buttonStrs[digit] + "Over.PNG";
+//            bandNumberValues[2] = digit;
+//        }
+//    } else { // if(numberOfColorBands == 5) { // Do the first four bands of color bars.
+//        if (resistance < 100) { // Force the first band color to black.
+//            firstBand.downImage = "stock_images\\Button0blackDown.PNG";
+//            firstBand.image = "stock_images\\Button0blackNormal.PNG";
+//            firstBand.overImage = "stock_images\\Button0blackOver.PNG";
+//            bandNumberValues[0] = 0;
+//            if (resistance < 10) {
+//                secondBand.downImage = "stock_images\\Button0blackDown.PNG";
+//                secondBand.image = "stock_images\\Button0blackNormal.PNG";
+//                secondBand.overImage = "stock_images\\Button0blackOver.PNG";
+//                bandNumberValues[1] = 0;
+//                digit = parseNum(digitStr.charAt(0));
+//                thirdBand.downImage = "stock_images\\Button" + buttonStrs[digit] + "Down.PNG";
+//                thirdBand.image = "stock_images\\Button" + buttonStrs[digit] + "Normal.PNG";
+//                thirdBand.overImage = "stock_images\\Button" + buttonStrs[digit] + "Over.PNG";
+//                bandNumberValues[2] = digit;
+//            } else { // Resistance is between 10 and 99.
+//                // Process the first digit.
+//                digit = parseNum(digitStr.charAt(0));
+//                secondBand.downImage = "stock_images\\Button" + buttonStrs[digit] + "Down.PNG";
+//                secondBand.image = "stock_images\\Button" + buttonStrs[digit] + "Normal.PNG";
+//                secondBand.overImage = "stock_images\\Button" + buttonStrs[digit] + "Over.PNG";
+//                bandNumberValues[1] = digit;
+//                // Process the second digit.
+//                digit = parseNum(digitStr.charAt(1));
+//                thirdBand.downImage = "stock_images\\Button" + buttonStrs[digit] + "Down.PNG";
+//                thirdBand.image = "stock_images\\Button" + buttonStrs[digit] + "Normal.PNG";
+//                thirdBand.overImage = "stock_images\\Button" + buttonStrs[digit] + "Over.PNG";
+//                bandNumberValues[2] = digit;
+//            }
+//        } else { // if(resistance >= 100)
+//            // Process the first digit.
+//            digit = parseNum(digitStr.charAt(0));
+//            firstBand.downImage = "stock_images\\Button" + buttonStrs[digit] + "Down.PNG";
+//            firstBand.image = "stock_images\\Button" + buttonStrs[digit] + "Normal.PNG";
+//            firstBand.overImage = "stock_images\\Button" + buttonStrs[digit] + "Over.PNG";
+//            bandNumberValues[0] = digit;
+//            // Process the second digit.
+//            digit = parseNum(digitStr.charAt(1));
+//            secondBand.downImage = "stock_images\\Button" + buttonStrs[digit] + "Down.PNG";
+//            secondBand.image = "stock_images\\Button" + buttonStrs[digit] + "Normal.PNG";
+//            secondBand.overImage = "stock_images\\Button" + buttonStrs[digit] + "Over.PNG";
+//            bandNumberValues[1] = digit;
+//            // Process the third digit.
+//            digit = parseNum(digitStr.charAt(2));
+//            thirdBand.downImage = "stock_images\\Button" + buttonStrs[digit] + "Down.PNG";
+//            thirdBand.image = "stock_images\\Button" + buttonStrs[digit] + "Normal.PNG";
+//            thirdBand.overImage = "stock_images\\Button" + buttonStrs[digit] + "Over.PNG";
+//            bandNumberValues[2] = digit;
+//        }
+//
+//        // Process the multiplier.
+//        if (resistance < 1000) {
+//            fourthBand.downImage = "stock_images\\Button0blackDown.PNG";
+//            fourthBand.image = "stock_images\\Button0blackNormal.PNG";
+//            fourthBand.overImage = "stock_images\\Button0blackOver.PNG";
+//            bandNumberValues[3] = 0;
+//        } else {
+//            digit = (digitStr.length - 3);
+//            fourthBand.downImage = "stock_images\\Button" + buttonStrs[digit] + "Down.PNG";
+//            fourthBand.image = "stock_images\\Button" + buttonStrs[digit] + "Normal.PNG";
+//            fourthBand.overImage = "stock_images\\Button" + buttonStrs[digit] + "Over.PNG";
+//            bandNumberValues[3] = digit;
+//        }
+//    }
+//
+//    return;
 };
 
-//TODO: PV: added this - remove it later
-var stringToNum = function(s) /*: (s:Str) / () -> Num / sameType */ { return 0; };
+//PV: added this - remove it later
+var stringToNum = /*: (Str) -> Num */ "#extern";
 
 
 var doOhmsCheck = function() /*: () -> Top */ {
     var cleanedOhms = removeCommas(ohms.value);    
-    assert(/*: Str */ (cleanedOhms));
     var minimumOhmsValue = 0, maximumOhmsValue = 0.0;
     if (numberOfColorBands == 4) {
         minimumOhmsValue = 0;
@@ -669,15 +665,19 @@ var doOhmsCheck = function() /*: () -> Top */ {
         maximumOhmsValue = 999000000000.0;
     }
 
-    //TODO
-    //if ((cleanedOhms < minimumOhmsValue) || (cleanedOhms > maximumOhmsValue) || (containsNonDigit(cleanedOhms)) || (containsLeadingZero(cleanedOhms)) || (containsErroneousNonZeroDigits(cleanedOhms, numberOfColorBands - 2))) {
-    //    ohms.color = "#FF0000"; // Red.
-    //    ohms.strikeout = true;
-    //} else {
-    //    ohms.color = "#000000"; // Black.
-    //    ohms.strikeout = false;
-    //    resistance = parseNum(cleanedOhms);
-    //}
+    //rkc: added explicit stringToNum casts
+    if ((stringToNum(cleanedOhms) < minimumOhmsValue)
+          || (stringToNum(cleanedOhms) > maximumOhmsValue)
+          || (containsNonDigit(cleanedOhms))
+          || (containsLeadingZero(cleanedOhms))
+          || (containsErroneousNonZeroDigits(cleanedOhms, numberOfColorBands - 2))) {
+        ohms.color = "#FF0000"; // Red.
+        ohms.strikeout = true;
+    } else {
+        ohms.color = "#000000"; // Black.
+        ohms.strikeout = false;
+        resistance = parseNum(cleanedOhms);
+    }
 
     doGenerateBandColors();
 

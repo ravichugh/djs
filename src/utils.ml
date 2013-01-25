@@ -229,6 +229,13 @@ let copyFile fFrom fTo =
   in foo()
 
 
+let timeThunk f =
+  let timeBefore = Unix.gettimeofday () in
+  let ret = f () in
+  let timeDiff = Unix.gettimeofday () -. timeBefore in
+  (timeDiff, ret)
+
+
 (* TODO generalize *)
 let redString s = Printf.sprintf "\027[31m%s\027[0m" s
 let greenString s = Printf.sprintf "\027[32m%s\027[0m" s

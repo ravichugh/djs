@@ -156,6 +156,9 @@ let _ =
   end;
   Zzz.emitPreamble ();
   TcDref3.typecheck e;
-  BNstats.print (open_out (S.out_dir ^ "stats.txt")) "";
+  let oc = open_out (S.out_dir ^ "stats.txt") in
+  BNstats.print oc "";
+  Printf.fprintf oc "Zzz.wallTime %23.3f s\n" !Zzz.wallTime;
+  close_out oc;
   ()
   
