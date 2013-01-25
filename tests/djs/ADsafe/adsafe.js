@@ -371,13 +371,16 @@ var adsafe = (function () {
             return cache_style_object;
         };
     
+        /*: (~lSelector : Dict     > lObjPro) */ "#weak"; 
+        /*: (~lMatch    : Arr(Str) > lArrPro) */ "#weak"; 
+
     
         var walkTheDOM = function walkTheDOM_rec(node, func, skip) 
         /*: ( node: Ref(~lNode),
-              func:(Ref(~lNode)) / (~lNode: frzn, &result: Ref(~lResult)) -> Top / (~lNode: frzn, &result: sameType),
+              func:(Ref(~lNode)) / (~lNode: frzn, &result: Ref(~lResult)) -> Top / sameType,
               skip: Bool) 
               / (~lNode: frzn, &result: Ref(~lResult))
-          -> Top / (~lNode: sameType, &result: sameType) */
+          -> Top / sameType */
         {
     
     // Recursively traverse the DOM tree, starting with the node, in document
@@ -416,9 +419,6 @@ var adsafe = (function () {
 //                true
 //                );
         };
-
-        /*: (~lSelector : Dict     > lObjPro) */ "#weak"; 
-        /*: (~lMatch    : Arr(Str) > lArrPro) */ "#weak"; 
 
 
     
@@ -638,13 +638,16 @@ var adsafe = (function () {
             /*: (node: Ref(~lNode)) / (&result: Ref(~lResult), &star: Bool, ~lNode: frzn) -> Top / sameType */
             {
                 star = true;
-//                walkTheDOM(
-//                    node, 
-//                    function (node1) 
-//                    /*: (Ref(~lNode)) / (~lNode: frzn, &result: Ref(~lResult)) -> Top / sameType */                    
-//                    {
-//                      result.push(node1);
-//                    }, true);
+                walkTheDOM(
+                    node, 
+                    function (node1) 
+                    /*: (Ref(~lNode)) / (~lNode: frzn, &result: Ref(~lResult)) -> Top / sameType */                    
+                    {
+
+                      /*: result lResult */ "#thaw";
+                      result.push(node1);
+                      /*: result (~lResult, thwd lResult) */ "#freeze";
+                    }, true);
             }
         };
     
