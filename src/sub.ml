@@ -279,6 +279,38 @@ let simpleCheckArrows
   && ((cs11 = cs21) || (List.sort compare cs11 = List.sort compare cs21))
   && ((cs12 = cs22) || (List.sort compare cs12 = List.sort compare cs22))
 
+(* idea for the hack*Binders functions is to optimistically replace the binders
+   of the RHS arrow with those from the LHS arrow. if the binders of the RHS
+   appear in refinements, then z3 should complain that there are undefined
+   symbols. TODO need to redo this, of course. *)
+
+let hackTypeBinders t1 t2 =
+  match t1, t2 with
+    | TRefinement(x,_), TRefinement(_,p) -> TRefinement (x, p)
+    | TQuick(x,_,_), TQuick(_,qt,p) -> TQuick (x, qt, p)
+    | _ -> t2 (* failwith (spr "hackType\n%s\n%s\n" (strTyp t1) (strTyp t2)) *)
+
+let hackHeapBinders cs1 cs2 =
+  List.map (fun (l,hc2) ->
+    if not (List.mem_assoc l cs1) then (l, hc2)
+    else
+      match List.assoc l cs1, hc2 with
+        | HStrong(Some(x),_,_,_), HStrong(Some(_),t,lo,ci) ->
+            (l, HStrong (Some x, t, lo, ci)) 
+        | _ ->
+            (l, hc2)
+  ) cs2
+
+let hackBinders arr1 arr2 =
+  let (_,x1,t11,(_,cs11),t12,(_,cs12)) = arr1 in
+  let (l2,_,t21,(hs21,cs21),t22,(hs22,cs22)) = arr2 in
+  let arr =
+    (l2, x1,
+     hackTypeBinders t11 t21, (hs21, hackHeapBinders cs11 cs21),
+     hackTypeBinders t12 t22, (hs22, hackHeapBinders cs12 cs22))
+  in
+  arr
+
 
 (***** Subtyping **************************************************************)
 
@@ -404,9 +436,9 @@ and checkArrows errList usedBoxes g
 
   (* TODO keep stats about checkArrow *)
 
-  if simpleCheckArrows arr1 arr2 then true else
-
-  die errList "need to restore Sub.checkArrows"
+  if simpleCheckArrows arr1 arr2 then true
+  else if simpleCheckArrows arr1 (hackBinders arr1 arr2) then true
+  else die errList "need to restore Sub.checkArrows"
 
 (*
 (* TODO 3/10

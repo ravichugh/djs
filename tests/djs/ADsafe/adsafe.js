@@ -399,7 +399,7 @@ var adsafe = (function () {
     
     
         var purge_event_handlers = function(node) 
-        /*: (node: Ref(~lNode)) / () -> Top / sameType */
+        /*: (node: Ref(~lNode)) / (&result: Ref(~lResult)) -> Top / sameType */
         {
     
     // We attach all event handlers to an '___ on ___' property. The property name
@@ -408,16 +408,16 @@ var adsafe = (function () {
     // all at once. Removal is required to avoid memory leakage on IE6 and IE7.
     
           //TODO: PV had to rename the argument name
-//            walkTheDOM(node, function (node1)
-//                /*: (Ref(~lNode)) / (~lNode: frzn, &result: Ref(~lResult)) -> Top / sameType */
-//                {
-//                    if (node1.tagName) {
-//                        node1['___ on ___'] = node1.change = null;
-//                    }
-//                },
-//                //XXX: PV added third argument to match definition
-//                true
-//                );
+            walkTheDOM(node, function (node1)
+                /*: (Ref(~lNode)) / (~lNode: frzn, &result: Ref(~lResult)) -> Top / sameType */
+                {
+                    if (node1.tagName) {
+                        node1['___ on ___'] = node1.change = null;
+                    }
+                },
+                //XXX: PV added third argument to match definition
+                true
+                );
         };
 
 
@@ -648,16 +648,15 @@ var adsafe = (function () {
             /*: (node: Ref(~lNode)) / (&result: Ref(~lResult), &star: Bool, ~lNode: frzn) -> Top / sameType */
             {
                 star = true;
-//                walkTheDOM(
-//                    node, 
-//                    function (node1) 
-//                    /*: (Ref(~lNode)) / (~lNode: frzn, &result: Ref(~lResult)) -> Top / sameType */                    
-//                    {
-//
-//                      /*: result lResult */ "#thaw";
-//                      result.push(node1);
-//                      /*: result (~lResult, thwd lResult) */ "#freeze";
-//                    }, true);
+                walkTheDOM(
+                    node, 
+                    function (node1) 
+                    /*: (Ref(~lNode)) / (~lNode: frzn, &result: Ref(~lResult)) -> Top / sameType */
+                    {
+                      /*: result lResult */ "#thaw";
+                      result.push(node1);
+                      /*: result (~lResult, thwd lResult) */ "#freeze";
+                    }, true);
             }
         };
     
