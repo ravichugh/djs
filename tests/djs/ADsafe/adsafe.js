@@ -77,7 +77,7 @@
 */ "#define";
 
 /*: tyQueryLoc  { Arr(NotUndef)     | (and (packed v) (>= (len v) 0)) } > lArrPro */ "#define";
-/*: tyResultLoc { Arr(Ref(~lNode))  | (and (packed v) (>= (len v) 0)) } > lArrPro */ "#define";
+/*: (~lResult         : { Arr(Ref(~lNode)) | (and (packed v) (>= (len v) 0))} > lArrPro) */ "#weak";
 
 // EVENTS
 /*: (~lEvent          : { "type": Str } > lObjPro)  */ "#weak";
@@ -93,7 +93,7 @@
 
 /*: (~lCCSStyle: Dict > lObjPro)                    */ "#weak";
 
-/*: (~lNList: { Arr(Ref(~lNode)) | (and (packed v)) } > lArrPro)            */ "#weak";
+/*: (~lNList: { Arr(Ref(~lNode)) | (and (packed v) (>= (len v) 1)) } > lArrPro)            */ "#weak";
 
 /*: (~lNode:
       {
@@ -374,18 +374,20 @@ var adsafe = (function () {
     
         var walkTheDOM = function walkTheDOM_rec(node, func, skip) 
         /*: ( node: Ref(~lNode),
-              func: (Ref(~lNode)) / (~lNode: frzn) -> Top / (~lNode: sameType),
-              skip: Bool) / (~lNode: frzn)
-          -> Top / (~lNode: sameType) */
+              func:(Ref(~lNode)) / (~lNode: frzn, &result: Ref(~lResult)) -> Top / (~lNode: frzn, &result: sameType),
+              skip: Bool) 
+              / (~lNode: frzn, &result: Ref(~lResult))
+          -> Top / (~lNode: sameType, &result: sameType) */
         {
     
     // Recursively traverse the DOM tree, starting with the node, in document
     // source order, calling the func on each node visisted.
+            result;           //PV: Hack to include in TCing
             if (!skip) {
                 func(node);
             }
             node = node.firstChild;
-            /*: (&node: Ref(~lNode)) -> (&node: sameType) */
+            /*: (&node: Ref(~lNode), &result: Ref(~lResult)) -> (&node: sameType, &result: sameType) */
             while (node) {
                 walkTheDOM_rec(node, func, true);   //XXX: PV added third argument to match definition
                 node = node.nextSibling;
@@ -403,16 +405,16 @@ var adsafe = (function () {
     // all at once. Removal is required to avoid memory leakage on IE6 and IE7.
     
           //TODO: PV had to rename the argument name
-            walkTheDOM(node, function (node1)
-                /*: (Ref(~lNode)) / (~lNode: frzn) -> Top / (~lNode: sameType) */
-                {
-                    if (node1.tagName) {
-                        node1['___ on ___'] = node1.change = null;
-                    }
-                },
-                //XXX: PV added third argument to match definition
-                true
-                );
+//            walkTheDOM(node, function (node1)
+//                /*: (Ref(~lNode)) / (~lNode: frzn, &result: Ref(~lResult)) -> Top / sameType */
+//                {
+//                    if (node1.tagName) {
+//                        node1['___ on ___'] = node1.change = null;
+//                    }
+//                },
+//                //XXX: PV added third argument to match definition
+//                true
+//                );
         };
 
         /*: (~lSelector : Dict     > lObjPro) */ "#weak"; 
@@ -574,77 +576,76 @@ var adsafe = (function () {
                 /*: node (~lNode, thwd lNode) */ "#freeze";
             }
             ,
-            '+': function (node) 
-            /*: [;L;] (node: Ref(~lNode)) / (&name: Str, &result: Ref(L), L: tyResultLoc) -> Top / sameType */
-            {              
-                node = node.nextSibling;
-                name = name.toUpperCase();
-                /*: (&node: Ref(~lNode)) -> (&node: sameType) */
-                while (node && !node.tagName) {
-                    node = node.nextSibling;
-                }
-                if (node && node.tagName === name) {
-                    result.push(node);
-                }
-            }
-            ,
-            '>': function (node) 
-            /*: [;L;] (node: Ref(~lNode)) / (&name: Str, &result: Ref(L), L: tyResultLoc) -> Top / sameType */
-            {
-                node = node.firstChild;
-                name = name.toUpperCase();
-                /*: (&node: Ref(~lNode), L: tyResultLoc) -> sameType  */
-                while (node) {
-                    if (node.tagName === name) {
-                        result.push(node);
-                    }
-                    node = node.nextSibling;
-                }
-            }
-            ,
-            '#': function () 
-            /*: [;L;] () / (&name: Str, &result: Ref(L), L: tyResultLoc) -> Top / sameType */
-            {
-                var n = document.getElementById(name);
-                if (n.tagName) {
-                    result.push(n);
-                }
-            }
+//            '+': function (node) 
+//            /*: [;L;] (node: Ref(~lNode)) / (&name: Str, &result: Ref(L), L: tyResultLoc) -> Top / sameType */
+//            {              
+//                node = node.nextSibling;
+//                name = name.toUpperCase();
+//                /*: (&node: Ref(~lNode)) -> (&node: sameType) */
+//                while (node && !node.tagName) {
+//                    node = node.nextSibling;
+//                }
+//                if (node && node.tagName === name) {
+//                    result.push(node);
+//                }
+//            }
+//            ,
+//            '>': function (node) 
+//            /*: [;L;] (node: Ref(~lNode)) / (&name: Str, &result: Ref(L), L: tyResultLoc) -> Top / sameType */
+//            {
+//                node = node.firstChild;
+//                name = name.toUpperCase();
+//                /*: (&node: Ref(~lNode), L: tyResultLoc) -> sameType  */
+//                while (node) {
+//                    if (node.tagName === name) {
+//                        result.push(node);
+//                    }
+//                    node = node.nextSibling;
+//                }
+//            }
+//            ,
+//            '#': function () 
+//            /*: [;L;] () / (&name: Str, &result: Ref(L), L: tyResultLoc) -> Top / sameType */
+//            {
+//                var n = document.getElementById(name);
+//                if (n.tagName) {
+//                    result.push(n);
+//                }
+//            }
 //            ,
 //            '/': function (node) 
 //            /*: [;L;] (node: Ref(~lNode)) / (&result: Ref(L), L: tyResultLoc) -> Top / sameType */
 //            {
 //                var nodes = node.childNodes;
-//                var i;
-//                /*:  nodes lNList */ "#thaw";
+//                var i /*: {Int | (>= v 0)} */ = 0 ;
+//
+//                /*:  nodes  lNList0 */ "#thaw";
 //                var length = nodes.length;
-//                /*: nodes (~lNList, thwd lNList) */ "#freeze";
+//                var b = i < length; 
+//                /*: nodes (~lNList, thwd lNList0) */ "#freeze";
 //
-//                /*: ( &i: i0: {Int | (>= v 0) },
-//                      &result: Ref(L), L: tyResultLoc,
-//                      &nodes: Ref(lNList)
-//                      ) -> sameType */
-//                for (i = 0; i < length; i += 1) {
-//
-//                      /*:  nodes lNList */ "#thaw";
-//                      assert(/*: {(or (= v undefined) (v::Ref(~lNode))) }*/ (nodes[i])); 
-//                      /*: nodes (~lNList, thwd lNList) */ "#freeze";
-////                    result.push(nodes[i]);
+//                /*: (&nodes: Ref(~lNList), &b : Bool, &length: Int, &result: Ref(L), L: tyResultLoc) -> sameType */ 
+//                for (i = 0; b; i += 1) {
+//                    /*: nodes lNList1 */ "#thaw";
+//                    length = nodes.length;
+//                    b = i < length;
+//                    if (b) result.push(nodes[i]);
+//                    /*: nodes (~lNList, thwd lNList1) */ "#freeze";
 //                }
 //            }
 //            ,
-//            '*': function (node)
-//            /*: [;L;] (node: Ref(~lNode)) / (&result: Ref(L), L: tyResultLoc) -> Top / sameType */
-//            {
-//                star = true;
+            '*': function (node)
+            /*: (node: Ref(~lNode)) / (&result: Ref(~lResult), &star: Bool, ~lNode: frzn) -> Top / sameType */
+            {
+                star = true;
 //                walkTheDOM(
 //                    node, 
-//                    function (node) 
-//                    /*: [;L;] (node: Ref(~lNode)) / (&result: Ref(L), L: tyResultLoc) -> Top / sameType */                    
+//                    function (node1) 
+//                    /*: (Ref(~lNode)) / (~lNode: frzn, &result: Ref(~lResult)) -> Top / sameType */                    
 //                    {
-//                      result.push(node);
+//                      result.push(node1);
 //                    }, true);
-//            }
+            }
         };
     
     //    pecker = {

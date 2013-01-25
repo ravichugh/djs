@@ -1,24 +1,30 @@
 /*: (~lNList: { Arr(Ref(~lNode)) | (packed v) }  > lArrPro) */ "#weak";
-/*: (~lNode: { childNodes : Ref(~lNList) } > lObjPro) */ "#weak";
+/*: (~lNode: { list : Ref(~lNList), n : Int } > lObjPro) */ "#weak";
 
-var foo = function (list) /*: (list: Ref(~lNList)) -> Top  */
+var foo = function (node) /*: (node: Ref(~lNode)) -> Ref(~lNode)  */
 {
-//  var nodes = node.childNode
+  var l = node.list;
+  var s = node;
   
-  var i /*: {Int | (>= v 0)} */ = 0 ;
-  /*:  list  lNList0 */ "#thaw";
-  var len = list.length;
+  var i = 0 ;
+  /*:  l  lNList0 */ "#thaw";
+  var len = l.length;
   var b = i < len; 
-  /*: list (~lNList, thwd lNList0) */ "#freeze";
+  /*: l (~lNList, thwd lNList0) */ "#freeze";
 
-  /*: (&list: Ref(~lNList), &b : Bool, &len: Int) -> sameType */ 
+  /*: (&i: i0: {Int | (>= v 0)}, 
+      &l: Ref(~lNList), 
+      &b : Bool, 
+      &len: Int, 
+      &s: {(or (v::Ref(~lNode)))}) 
+      -> sameType */ 
   for (i = 0; b; i += 1) {
-    /*:  list  lNList2 */ "#thaw";
-    len = list.length;
-    b = i < len;
-    list[i];
-    /*: list (~lNList, thwd lNList2) */ "#freeze";
+    /*:  l lNList2 */ "#thaw";
+    b = i < l.length;
+    if (b) s = l[i];
+    /*: l (~lNList, thwd lNList2) */ "#freeze";
   }
 
+  return s;
 
 };
