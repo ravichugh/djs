@@ -23,3 +23,5 @@ var makePacked = function(n)
   return a;
 };
 //print(makePacked(5));
+
+var a = (/*: [;l;] */ makePacked)(5);

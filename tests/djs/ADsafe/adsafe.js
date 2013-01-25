@@ -76,40 +76,37 @@
               } > lObjPro 
 */ "#define";
 
-/*: tyQuery { Arr(NotUndef) | (and (packed v) (>= (len v) 0)) }  > lArrPro */ "#define";
-
+/*: tyQueryLoc  { Arr(NotUndef)     | (and (packed v) (>= (len v) 0)) } > lArrPro */ "#define";
+/*: tyResultLoc { Arr(Ref(~lNode))  | (and (packed v) (>= (len v) 0)) } > lArrPro */ "#define";
 
 // EVENTS
-/*: (~lEvent          : { "type": Str } > lObjPro) */ "#weak";
+/*: (~lEvent          : { "type": Str } > lObjPro)  */ "#weak";
 
-/*: (~lUIEvent        : {  } > ~lEvent) */ "#weak";
-
+/*: (~lUIEvent        : {  } > ~lEvent)             */ "#weak";
 
 /*: (~lKEyboardEvent  : 
       {
         altKey            : Bool,
         ctrlKey           : Bool
 
-      } > ~lUIEvent) */ "#weak";
-//TODO: fill these up
+      } > ~lUIEvent)                                */ "#weak";
 
-
-
-
-
-/*: (~lCCSStyle: Dict > lObjPro) */ "#weak";
+/*: (~lCCSStyle: Dict > lObjPro)                    */ "#weak";
 
 /*: (~lNode:
       {
-        getComputedStyle  : (this: Ref(~lNode), node: Ref(~lNode), str: Str) / () -> Ref(~lCCSStyle) / sameExact,
-        currentStyle      : Ref(~lCCSStyle),
-        firstChild        : Ref(~lNode),
-        nextSibling       : Ref(~lNode),
-        change            : Ref(~lEvent),
-        "___ on ___"      : Ref(~lEvent),
-        tagName           : Str
+        getComputedStyle      : (this: Ref(~lNode), node: Ref(~lNode), str: Str) / () -> Ref(~lCCSStyle) / sameExact,
+        currentStyle          : Ref(~lCCSStyle),
+        firstChild            : Ref(~lNode),
+        nextSibling           : Ref(~lNode),
+        change                : Ref(~lEvent),
+        "___ on ___"          : Ref(~lEvent),
+        tagName               : Str,
+        getElementsByTagName  : [;L;] (this: Ref(~lNode), name: Str) / () ->  Ref(L) / (L: { Arr(Ref(~lNode)) | (and (packed v)) })
 
-      } > lObjPro) */ "#weak";
+      } > lObjPro)                                  */ "#weak";
+
+//TODO: getElementsByTagName should accept "*" as "get all elementes"
 
 var document = /*: lDocument */ {};
 
@@ -117,7 +114,7 @@ var document = /*: lDocument */ {};
 
 
 
-//PV: Change adsage to all capital.
+//TODO: Change adsage to all capital.
 /*: adsafe = () / (lDocument: { defaultView: Ref(~lNode) }  > lObjPro )
       -> Top / sameType */ "#type";
 var adsafe = (function () {
@@ -417,7 +414,7 @@ var adsafe = (function () {
 
     
         var parse_query = function (text, id)
-        /*: [;L;] (text: Str, id: Str) / () -> Ref(L) / (L : tyQuery) */ 
+        /*: [;L;] (text: Str, id: Str) / () -> Ref(L) / (L : tyQueryLoc) */ 
         {
     
     // Convert a query string into an array of op/name/value selectors.
@@ -442,7 +439,7 @@ var adsafe = (function () {
     
     // Loop over all of the selectors in the text.
     
-            /*: ( &text: Str, &query: Ref(L), L: tyQuery) -> ( &text: sameType, &query: sameType, L: sameType) */ 
+            /*: ( &text: Str, &query: Ref(L), L: tyQueryLoc) -> ( &text: sameType, &query: sameType, L: sameType) */ 
 
             do {
     
@@ -524,83 +521,101 @@ var adsafe = (function () {
     //                };
     //            }
     
-    // Add the selector to the query.
+    //// Add the selector to the query.
     
-                query.push(selector);
+    //            query.push(selector);
     
-    // Remove the selector from the text. If there is more text, have another go.
+    //// Remove the selector from the text. If there is more text, have another go.
     
-                text = text.slice(match[0].length);
+    //            text = text.slice(match[0].length);
                 
                 /*: match (~lMatch, thwd lMatch) */ "#freeze";
 
             } while (text);
             return query;
         };
-    //
-    //
-    //    hunter = {
-    //
-    //// These functions implement the hunter behaviors.
-    //
-    //        '': function (node) {
-    //            var array, nodelist = node.getElementsByTagName(name), i, length;
-    //
-    //// getElementsByTagName produces a nodeList, which is one of the world's most
-    //// inefficient data structures. It is so slow that JavaScript's pseudo arrays
-    //// look terrifically swift by comparison. So we do the conversion. This is
-    //// easily done on some browsers, less easily on others.
-    //
-    //            try {
-    //                array = Array.prototype.slice.call(nodelist, 0);
-    //                result = result.length ? result.concat(array) : array;
-    //            } catch (ie) {
-    //                length = nodelist.length;
-    //                for (i = 0; i < length; i += 1) {
-    //                    result.push(nodelist[i]);
-    //                }
-    //            }
-    //        },
-    //        '+': function (node) {
-    //            node = node.nextSibling;
-    //            name = name.toUpperCase();
-    //            while (node && !node.tagName) {
-    //                node = node.nextSibling;
-    //            }
-    //            if (node && node.tagName === name) {
-    //                result.push(node);
-    //            }
-    //        },
-    //        '>': function (node) {
-    //            node = node.firstChild;
-    //            name = name.toUpperCase();
-    //            while (node) {
-    //                if (node.tagName === name) {
-    //                    result.push(node);
-    //                }
-    //                node = node.nextSibling;
-    //            }
-    //        },
-    //        '#': function () {
-    //            var n = document.getElementById(name);
-    //            if (n.tagName) {
-    //                result.push(n);
-    //            }
-    //        },
-    //        '/': function (node) {
-    //            var nodes = node.childNodes, i, length = nodes.length;
-    //            for (i = 0; i < length; i += 1) {
-    //                result.push(nodes[i]);
-    //            }
-    //        },
-    //        '*': function (node) {
-    //            star = true;
-    //            walkTheDOM(node, function (node) {
-    //                result.push(node);
-    //            }, true);
-    //        }
-    //    };
-    //
+    
+    
+        hunter = {
+    
+    // These functions implement the hunter behaviors.
+    
+            '': function (node) 
+            /*:[;L]  (node: Ref(~lNode)) / (&name: Str) -> Top / sameExact */ 
+            {
+
+                /*: node lNode */ "#thaw";
+                var f = node.getElementsByTagName;        //TODO: substitute f
+                var array, nodelist = (/*: [;l;] */f)(name), i, length;
+    
+    // getElementsByTagName produces a nodeList, which is one of the world's most
+    // inefficient data structures. It is so slow that JavaScript's pseudo arrays
+    // look terrifically swift by comparison. So we do the conversion. This is
+    // easily done on some browsers, less easily on others.
+    
+                //TODO: Array + exceptions
+                //try {
+                //    array = Array.prototype.slice.call(nodelist, 0);
+                //    result = result.length ? result.concat(array) : array;
+                //} catch (ie) {
+                //    length = nodelist.length;
+                //    for (i = 0; i < length; i += 1) {
+                //        result.push(nodelist[i]);
+                //    }
+                //}
+                
+                /*: node (~lNode, thwd lNode) */ "#freeze";
+            }
+            ,
+            '+': function (node) 
+            /*: [;L;] (node: Ref(~lNode)) / (&name: Str, &result: Ref(L), L: tyResultLoc) -> Top / sameType */
+            {              
+                node = node.nextSibling;
+                name = name.toUpperCase();
+                /*: (&node: Ref(~lNode)) -> (&node: sameType) */
+                while (node && !node.tagName) {
+                    node = node.nextSibling;
+                }
+                if (node && node.tagName === name) {
+                    result.push(node);
+                }
+            }
+            ,
+            '>': function (node) 
+            /*: [;L;] (node: Ref(~lNode)) / (&name: Str, &result: Ref(L), L: tyResultLoc) -> Top / sameType */
+            {
+                node = node.firstChild;
+                name = name.toUpperCase();
+                /*: (&node: Ref(~lNode), L: tyResultLoc) -> sameType  */
+                while (node) {
+                    if (node.tagName === name) {
+                        result.push(node);
+                    }
+                    node = node.nextSibling;
+                }
+            }
+            //,
+            //'#': function () 
+            //{
+            //    var n = document.getElementById(name);
+            //    if (n.tagName) {
+            //        result.push(n);
+            //    }
+            //},
+            //'/': function (node) {
+            //    var nodes = node.childNodes, i, length = nodes.length;
+            //    for (i = 0; i < length; i += 1) {
+            //        result.push(nodes[i]);
+            //    }
+            //},
+            //'*': function (node) {
+            //    star = true;
+            //    walkTheDOM(node, function (node) {
+            //        result.push(node);
+            //    }, true);
+            //}
+        };
+    
     //    pecker = {
     //        '.': function (node) {
     //            return (' ' + node.className + ' ').indexOf(' ' + name + ' ') >= 0;

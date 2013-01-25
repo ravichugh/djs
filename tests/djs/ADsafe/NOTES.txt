@@ -1,5 +1,8 @@
 ====================================================
-- ADsafety:
+ADsafety:
+====================================================
+
+Properties:
   1 widgets cannot load new code at runtime
   2 widgets cannot affect the DOM (outside their designated subtree)
   3 widgets cannot obtain direct references to the DOM
@@ -11,27 +14,30 @@
 
 - Proto: there are several safe prototypes
 
+- Ban guest scripts from accessing specific member names, denoted as "banned".
+
 
 ====================================================
 From trying to typecheck the code:
-
-- Need to represent the document (DOM).
-  document.defaultView
-
-- Ban guest scripts from accessing specific member names, denoted as "banned".
+====================================================
 
 - Higher-order functions:  
   need to restore Sub.checkArrows
 
 - Exception throwing/handling
 
-- Variable names all capital (e.g. ADSAFE)
-
 - Object.prototype.hasOwnProperty.call(object, "aaa");
 
-- Scoping issue makes user have to rename variables:
-  TS-Let-Bare: let __name = ...
-  [__name] already in scope, so please use a different name.
+- Array: 
+  * Array.prototype.slice.call(nodelist, 0);
+  * concat, ...
+
+- Naming/Scope:
+  * Scoping issue makes user have to rename variables:
+    TS-Let-Bare: let __name = ...
+    [__name] already in scope, so please use a different name.
+
+  * Variable names all capital (e.g. ADSAFE)
 
 
 - Probably going to need an "assume" statement. ADSafety recognizes runtime
@@ -41,11 +47,16 @@ From trying to typecheck the code:
 
 ====================================================
 NOTES
+====================================================
 
 - x["f"] when used as a "boolean" condition should be typed as truthy or falsy. 
 
+- Using single (strong) location for Document.
+
 
 ====================================================
-QUESTIONS
+THINK ABOUT
+====================================================
 
 - When can a weak location be updated?
+- Implicit thawing?
