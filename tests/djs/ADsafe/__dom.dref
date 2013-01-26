@@ -31,6 +31,8 @@ weak (~lNode: {
     tagName:Str, 
     className:Str, 
     name:Str,
+    nodeName:Str,
+    nodeValue:Str,
     disabled:Bool,
     checked:Bool,
     getElementsByTagName:[;L;H_] (this:Ref(~lNode), name:Str) / H_ -> Ref(L) / H_ + (L: _underscore_3:{Arr(Ref(~lNode))|(packed v)})} > lObjPro)

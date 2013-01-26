@@ -21,6 +21,6 @@ while(t) {
   }
   /*: match (~lMatch, thwd lMatch) */ "#freeze";
   
-  t = t.slice(1);
+  t = t.slice(1,2);
 
 } ;

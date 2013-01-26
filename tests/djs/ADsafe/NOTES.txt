@@ -43,6 +43,7 @@ From trying to typecheck the code:
 - Probably going to need an "assume" statement. ADSafety recognizes runtime
   checks of the form: reject_global(this).
 
+- Regular expresion support
 
 
 ====================================================

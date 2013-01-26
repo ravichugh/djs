@@ -59,69 +59,19 @@
 */
 
 
-//PV: definitions
-//
 
-/*: tyBanned  { arguments       : { Bool | (= v true)},
-                callee          : { Bool | (= v true)},
-                caller          : { Bool | (= v true)},
-                constructor     : { Bool | (= v true)},
-                eval            : { Bool | (= v true)},
-                prototype       : { Bool | (= v true)},
-                stack           : { Bool | (= v true)},
-                unwatch         : { Bool | (= v true)},
-                valueOf         : { Bool | (= v true)},
-                watch           : { Bool | (= v true)},
-                _ : Bot
-              } > lObjPro 
-*/ "#define";
+//TODO: Flushed-left comments are placed to speed up TC
 
-/*: tyQueryLoc  { Arr(NotUndef)     | (and (packed v) (>= (len v) 0)) } > lArrPro */ "#define";
-/*: (~lResult         : { Arr(Ref(~lNode)) | (and (packed v) (>= (len v) 0))} > lArrPro) */ "#weak";
-
-// EVENTS
-/*: (~lEvent          : { "type": Str } > lObjPro)  */ "#weak";
-
-/*: (~lUIEvent        : {  } > ~lEvent)             */ "#weak";
-
-/*: (~lKEyboardEvent  : 
-      {
-        altKey            : Bool,
-        ctrlKey           : Bool
-
-      } > ~lUIEvent)                                */ "#weak";
-
-/*: (~lCCSStyle: Dict > lObjPro)                    */ "#weak";
-
-/*: (~lNList: { Arr(Ref(~lNode)) | (and (packed v) (>= (len v) 1)) } > lArrPro)            */ "#weak";
-
-/*: (~lNode:
-      {
-        getComputedStyle      : (this: Ref(~lNode), node: Ref(~lNode), str: Str) / () -> Ref(~lCCSStyle) / sameExact,
-        currentStyle          : Ref(~lCCSStyle),
-        firstChild            : Ref(~lNode),
-        nextSibling           : Ref(~lNode),
-        childNodes            : Ref(~lNList),
-        change                : Ref(~lEvent),
-        "___ on ___"          : Ref(~lEvent),
-        tagName               : Str,
-        getElementsByTagName  : [;L;] (this: Ref(~lNode), name: Str) / () ->  Ref(L) / (L: { Arr(Ref(~lNode)) | (and (packed v)) })
-
-      } > lObjPro)                                  */ "#weak";
-
-      //TODO: getElementsByTagName should accept "*" as "get all elementes"
+/*: "tests/djs/ADsafe/__dom.dref" */ "#use";
 
 
-/*: (~lDocument        : { defaultView: Ref(~lNode), getElementById: (s: Str) -> Ref(~lNode) } > lObjPro)  */ "#weak";
-var document;
+/*: tyQueryLoc { Arr(NotUndef) | (and (packed v) (>= (len v) 0)) } > lArrPro */ "#define";
 
 
-//PV: End of definitions
+var document /*: Ref(~lDocument) */ = null;
 
-
-
-//TODO: Change adsage to all capital.
-/*: adsafe = () / (&document: Ref(~lDocument)) -> Top / sameType */ "#type";
+//TODO: Change "adsafe" to all capital.
+/*: adsafe = () -> Top  */ "#type";
 var adsafe = (function () {
   
     "use strict";
@@ -145,99 +95,99 @@ var adsafe = (function () {
             watch           : true
         },
 
-        cache_style_object,
-        cache_style_node,
+        cache_style_object /*: Ref(~lCCSStyle) */ = null,
+        cache_style_node /*: Ref(~lNode) */ = null,
         defaultView = document.defaultView,
         ephemeral,
-        flipflop,       // Used in :even/:odd processing
+        flipflop /*: Bool */ = false,       // Used in :even/:odd processing
         has_focus,
         hunter,         // Set of hunter patterns
         interceptors = [],
 
-        makeableTagName = {
-
-// This is the whitelist of elements that may be created with the .tag(tagName)
-// method.
-
-            a         : true,
-            abbr      : true,
-            acronym   : true,
-            address   : true,
-            area      : true,
-            b         : true,
-            bdo       : true,
-            big       : true,
-            blockquote: true,
-            br        : true,
-            button    : true,
-            canvas    : true,
-            caption   : true,
-            center    : true,
-            cite      : true,
-            code      : true,
-            col       : true,
-            colgroup  : true,
-            dd        : true,
-            del       : true,
-            dfn       : true,
-            dir       : true,
-            div       : true,
-            dl        : true,
-            dt        : true,
-            em        : true,
-            fieldset  : true,
-            font      : true,
-            form      : true,
-            h1        : true,
-            h2        : true,
-            h3        : true,
-            h4        : true,
-            h5        : true,
-            h6        : true,
-            hr        : true,
-            i         : true,
-            img       : true,
-            input     : true,
-            ins       : true,
-            kbd       : true,
-            label     : true,
-            legend    : true,
-            li        : true,
-            map       : true,
-            menu      : true,
-            object    : true,
-            ol        : true,
-            optgroup  : true,
-            option    : true,
-            p         : true,
-            pre       : true,
-            q         : true,
-            samp      : true,
-            select    : true,
-            small     : true,
-            span      : true,
-            strong    : true,
-            sub       : true,
-            sup       : true,
-            table     : true,
-            tbody     : true,
-            td        : true,
-            textarea  : true,
-            tfoot     : true,
-            th        : true,
-            thead     : true,
-            tr        : true,
-            tt        : true,
-            u         : true,
-            ul        : true,
-            'var'     : true
-        },
-        name,
+//        makeableTagName = {
+//
+//// This is the whitelist of elements that may be created with the .tag(tagName)
+//// method.
+//
+//            a         : true,
+//            abbr      : true,
+//            acronym   : true,
+//            address   : true,
+//            area      : true,
+//            b         : true,
+//            bdo       : true,
+//            big       : true,
+//            blockquote: true,
+//            br        : true,
+//            button    : true,
+//            canvas    : true,
+//            caption   : true,
+//            center    : true,
+//            cite      : true,
+//            code      : true,
+//            col       : true,
+//            colgroup  : true,
+//            dd        : true,
+//            del       : true,
+//            dfn       : true,
+//            dir       : true,
+//            div       : true,
+//            dl        : true,
+//            dt        : true,
+//            em        : true,
+//            fieldset  : true,
+//            font      : true,
+//            form      : true,
+//            h1        : true,
+//            h2        : true,
+//            h3        : true,
+//            h4        : true,
+//            h5        : true,
+//            h6        : true,
+//            hr        : true,
+//            i         : true,
+//            img       : true,
+//            input     : true,
+//            ins       : true,
+//            kbd       : true,
+//            label     : true,
+//            legend    : true,
+//            li        : true,
+//            map       : true,
+//            menu      : true,
+//            object    : true,
+//            ol        : true,
+//            optgroup  : true,
+//            option    : true,
+//            p         : true,
+//            pre       : true,
+//            q         : true,
+//            samp      : true,
+//            select    : true,
+//            small     : true,
+//            span      : true,
+//            strong    : true,
+//            sub       : true,
+//            sup       : true,
+//            table     : true,
+//            tbody     : true,
+//            td        : true,
+//            textarea  : true,
+//            tfoot     : true,
+//            th        : true,
+//            thead     : true,
+//            tr        : true,
+//            tt        : true,
+//            u         : true,
+//            ul        : true,
+//            'var'     : true
+//        },
+        name /*: Str */ = "",
         pecker,     // set of pecker patterns
-        result,
+        result /*: Ref(~lResult) */ = null,
         star,
         the_range,
-        value;
+        value /*: Str */ = "";
 
 
 //  The error function is called if there is a violation or confusion.
@@ -255,19 +205,19 @@ var adsafe = (function () {
     };
 
 
-//    Some of JavaScript's implicit string conversions can grant extraordinary
-//    powers to untrusted code. So we use the string_check function to prevent
-//    such abuses.
-
-    var string_check = function (string) 
-    /*: (string: Str) -> Str */
-    {
-        if (typeof string !== 'string') {
-            error("ADsafe string violation.");
-        }
-        return string;
-    };
-
+////    Some of JavaScript's implicit string conversions can grant extraordinary
+////    powers to untrusted code. So we use the string_check function to prevent
+////    such abuses.
+//
+//    var string_check = function (string) 
+//    /*: (string: Str) -> Str */
+//    {
+//        if (typeof string !== 'string') {
+//            error("ADsafe string violation.");
+//        }
+//        return string;
+//    };
+//
 
 //    The object.hasOwnProperty method has a number of hazards. So we wrap it in
 //    the owns function.
@@ -287,59 +237,58 @@ var adsafe = (function () {
 
 
 
-//TODO: switch name1 to name    
-    var reject_name = function (name1) 
-    //TODO: changed the func annot cause it was slowing it down
-    /* (name1: Str) / (lBanned: tyBanned) -> 
-         { (implies  (falsy v)
-                    (and 
-                      (not (= name1 "arguments"))
-                      (not (= name1 "callee"))
-                      (not (= name1 "caller"))
-                      (not (= name1 "constructor"))
-                      (not (= name1 "prototype"))
-                      (not (= name1 "stack"))
-                      (not (= name1 "eval"))
-                      (not (= name1 "unwatch"))
-                      (not (= name1 "valueOf"))
-                      (not (= name1 "watch"))
-                    )) }  
-                    / sameExact */
-
-    /*: (name1: Str) / (lBanned:Dict > lObjPro) -> Top / sameExact */
-    {  
-      return 
-        typeof name1 !== 'number' 
-        && (
-            typeof name1 !== 'string' 
-            || banned[name1] 
-            || name1.charAt(0) === '_' 
-            || name1.slice(-1) === '_'
-           );
-    };
-
-
-    var reject_property = function(object, name1) 
-    //TODO: changed the func annot cause it was slowing it down
-    /* (object: Top, name1: Str) / (lBanned: tyBanned) -> 
-          { (implies  (falsy v)
-                    (and 
-                      (not (= name1 "arguments"))
-                      (not (= name1 "callee"))
-                      (not (= name1 "caller"))
-                      (not (= name1 "constructor"))
-                      (not (= name1 "prototype"))
-                      (not (= name1 "stack"))
-                      (not (= name1 "eval"))
-                      (not (= name1 "unwatch"))
-                      (not (= name1 "valueOf"))
-                      (not (= name1 "watch"))
-                    )) }  
-      / sameExact */
-    /*: (object: Top, name1: Str) / (lBanned:Dict > lObjPro) -> Top / sameExact */
-    {
-        return typeof object !== 'object' || reject_name(name1);
-    };
+//    var reject_name = function (name1) 
+//    //TODO: commenting expressive type for speed
+//    /* (name1: Str) / (lBanned: tyBanned) -> 
+//         { (implies  (falsy v)
+//                    (and 
+//                      (not (= name1 "arguments"))
+//                      (not (= name1 "callee"))
+//                      (not (= name1 "caller"))
+//                      (not (= name1 "constructor"))
+//                      (not (= name1 "prototype"))
+//                      (not (= name1 "stack"))
+//                      (not (= name1 "eval"))
+//                      (not (= name1 "unwatch"))
+//                      (not (= name1 "valueOf"))
+//                      (not (= name1 "watch"))
+//                    )) }  
+//                    / sameExact */
+//
+//    /*: (name1: Str) / (lBanned:Dict > lObjPro) -> Top / sameExact */
+//    {  
+//      return 
+//        typeof name1 !== 'number' 
+//        && (
+//            typeof name1 !== 'string' 
+//            || banned[name1] 
+//            || name1.charAt(0) === '_' 
+//            || name1.slice(-1, 0) === '_' //PV: added 2nd argument to slice
+//           );
+//    };
+//
+//
+//    var reject_property = function(object, name1) 
+//    //TODO: commenting expressive type for speed
+//    /* (object: Top, name1: Str) / (lBanned: tyBanned) -> 
+//          { (implies  (falsy v)
+//                    (and 
+//                      (not (= name1 "arguments"))
+//                      (not (= name1 "callee"))
+//                      (not (= name1 "caller"))
+//                      (not (= name1 "constructor"))
+//                      (not (= name1 "prototype"))
+//                      (not (= name1 "stack"))
+//                      (not (= name1 "eval"))
+//                      (not (= name1 "unwatch"))
+//                      (not (= name1 "valueOf"))
+//                      (not (= name1 "watch"))
+//                    )) }  
+//      / sameExact */
+//    /*: (object: Top, name1: Str) / (lBanned:Dict > lObjPro) -> Top / sameExact */
+//    {
+//        return typeof object !== 'object' || reject_name(name1);
+//    };
 
 
     //TODO: TC reject_global
@@ -351,12 +300,7 @@ var adsafe = (function () {
 
 
       var getStyleObject = function(node) 
-      /*: (node: Ref(~lNode)) / 
-            (
-              &cache_style_node: Ref(~lNode),
-              &cache_style_object: Ref(~lCCSStyle)
-            ) 
-              -> Ref(~lCCSStyle) / sameType */ 
+      /*: (node: Ref(~lNode)) -> Ref(~lCCSStyle) */
       {
     
     // The getStyleObject function returns the computed style object for a node.
@@ -369,180 +313,175 @@ var adsafe = (function () {
             cache_style_object =
                 node.currentStyle || defaultView.getComputedStyle(node, '');    //TODO: not really sure what the "or" means
             return cache_style_object;
-        };
+      };
     
         /*: (~lSelector : Dict     > lObjPro) */ "#weak"; 
         /*: (~lMatch    : Arr(Str) > lArrPro) */ "#weak"; 
 
     
-        var walkTheDOM = function walkTheDOM_rec(node, func, skip) 
-        /*: ( node: Ref(~lNode),
-              func:(Ref(~lNode)) / (~lNode: frzn, &result: Ref(~lResult)) -> Top / sameType,
-              skip: Bool) 
-              / (~lNode: frzn, &result: Ref(~lResult))
-          -> Top / sameType */
-        {
-    
-    // Recursively traverse the DOM tree, starting with the node, in document
-    // source order, calling the func on each node visisted.
-    
-            if (!skip) {
-                func(node);
-            }
-            node = node.firstChild;
-            /*: (&node: Ref(~lNode), &result: Ref(~lResult)) -> (&node: sameType, &result: sameType) */
-            while (node) {
-                walkTheDOM_rec(node, func, true);   //XXX: PV added third argument to match definition
-                node = node.nextSibling;
-            }
-        };
-    
-    
-        var purge_event_handlers = function(node) 
-        /*: (node: Ref(~lNode)) / (&result: Ref(~lResult)) -> Top / sameType */
-        {
-    
-    // We attach all event handlers to an '___ on ___' property. The property name
-    // contains spaces to insure that there is no collision with HTML attribues.
-    // Keeping the handlers in a single property makes it easy to remove them
-    // all at once. Removal is required to avoid memory leakage on IE6 and IE7.
-    
-          //TODO: PV had to rename the argument name
-            walkTheDOM(node, function (node1)
-                /*: (Ref(~lNode)) / (~lNode: frzn, &result: Ref(~lResult)) -> Top / sameType */
-                {
-                    if (node1.tagName) {
-                        node1['___ on ___'] = node1.change = null;
-                    }
-                },
-                //XXX: PV added third argument to match definition
-                true
-                );
-        };
+//        var walkTheDOM = function walkTheDOM_rec(node, func, skip) 
+//        /*: ( node: Ref(~lNode), func:(Ref(~lNode)) -> Top, skip: Bool) -> Top */
+//        {
+//    
+//    // Recursively traverse the DOM tree, starting with the node, in document
+//    // source order, calling the func on each node visisted.
+//    
+//            if (!skip) {
+//                func(node);
+//            }
+//            node = node.firstChild;
+//            /*: (&node: Ref(~lNode)) -> (&node: sameType) */
+//            while (node) {
+//                walkTheDOM_rec(node, func, true);   //XXX: PV added third argument to match definition
+//                node = node.nextSibling;
+//            }
+//        };
+//    
+//    
+//        var purge_event_handlers = function(node) 
+//        /*: (node: Ref(~lNode)) -> Top */
+//        {
+//    
+//    // We attach all event handlers to an '___ on ___' property. The property name
+//    // contains spaces to insure that there is no collision with HTML attribues.
+//    // Keeping the handlers in a single property makes it easy to remove them
+//    // all at once. Removal is required to avoid memory leakage on IE6 and IE7.
+//    
+//          //TODO: PV had to rename the argument name
+//            walkTheDOM(node, function (node1)
+//                /*: (Ref(~lNode)) -> Top */
+//                {
+//                    if (node1.tagName) {
+//                        node1['___ on ___'] = node1.change = null;
+//                    }
+//                },
+//                //XXX: PV added third argument to match definition
+//                true
+//                );
+//        };
 
 
     
-        var parse_query = function (text, id)
-        /*: [;L;] (text: Str, id: Str) / () -> Ref(L) / (L : tyQueryLoc) */ 
-        {
-    
-    // Convert a query string into an array of op/name/value selectors.
-    // A query string is a sequence of triples wrapped in brackets; or names,
-    // possibly prefixed by # . & > _, or :option, or * or /. A triple is a name,
-    // and operator (one of [=, [!=, [*=, [~=, [|=, [$=, or [^=) and a value.
-    
-    // If the id parameter is supplied, then the name following # must have the
-    // id as a prefix and must match the ADsafe rule for id: being all uppercase
-    // letters and digits with one underbar.
-    
-    // A name must be all lower case and may contain digits, -, or _.
-    
-            var match     /*: Ref(~lMatch) */     =           null,     // A match array  //XXX: PV: added "null"
-                query                             = /*: L */  [],       // The resulting query array
-                selector  /*: Ref(~lSelector) */  =           null;     //XXX: PV: added "null"
-
-                //TODO: Exception Failure: convert CRegExp
-                //,qx = id
-                //    ? /^\s*(?:([\*\/])|\[\s*([a-z][0-9a-z_\-]*)\s*(?:([!*~|$\^]?\=)\s*([0-9A-Za-z_\-*%&;.\/:!]+)\s*)?\]|#\s*([A-Z]+_[A-Z0-9]+)|:\s*([a-z]+)|([.&_>\+]?)\s*([a-z][0-9a-z\-]*))\s*/
-                //    : /^\s*(?:([\*\/])|\[\s*([a-z][0-9a-z_\-]*)\s*(?:([!*~|$\^]?\=)\s*([0-9A-Za-z_\-*%&;.\/:!]+)\s*)?\]|#\s*([\-A-Za-z0-9_]+)|:\s*([a-z]+)|([.&_>\+]?)\s*([a-z][0-9a-z\-]*))\s*/;
-    
-    // Loop over all of the selectors in the text.
-    
-            /*: ( &text: Str, &query: Ref(L), L: tyQueryLoc) -> ( &text: sameType, &query: sameType, L: sameType) */ 
-
-            do {
-    
-    // The qx teases the components of one selector out of the text, ignoring
-    // whitespace.
-    
-    //          match[0]  the whole selector
-    //          match[1]  * /
-    //          match[2]  attribute name
-    //          match[3]  = != *= ~= |= $= ^=
-    //          match[4]  attribute value
-    //          match[5]  # id
-    //          match[6]  : option
-    //          match[7]  . & _ > +
-    //          match[8]      name
-    
-                /*: match lMatch */ "#thaw";
-                //match = qx.exec(string_check(text));      //TODO: Fix with regex support
-                match = /*: Arr(Str) */ ["a", "b", "c"];    //PV: temporarily using this 
-
-                if (!match) {
-                    error("ADsafe: Bad query:" + text);
-                }
-    
-    // Make a selector object and stuff it in the query.
-    
-                if (match[1]) {
-    
-    // The selector is * or /
-    
-                    /*: selector lSelector */ "#thaw";
-                    selector = {
-                        op: "a"// match[1]
-                    };
-                    /*: selector (~lSelector, thwd lSelector) */ "#freeze";
-                } 
-                
-    //TODO: resuse after "if-then-else" type optimization
-    //            else if (match[2]) {
-    
-    //// The selector is in brackets.
-    
-    //                selector = match[3] ? {
-    //                    op: '[' + match[3],
-    //                    name: match[2],
-    //                    value: match[4]
-    //                } : {
-    //                    op: '[',
-    //                    name: match[2]
-    //                };
-    //            } 
-    
-    //            else if (match[5]) {
-    
-    //// The selector is an id.
-    
-    //                if (query.length > 0 || match[5].length <= id.length ||
-    //                        match[5].slice(0, id.length) !== id) {
-    //                    error("ADsafe: Bad query: " + text);
-    //                }
-    //                selector = {
-    //                    op: '#',
-    //                    name: match[5]
-    //                };
-    
-    //// The selector is a colon.
-    
-    //            } else if (match[6]) {
-    //                selector = {
-    //                    op: ':' + match[6]
-    //                };
-    
-    //// The selector is one of > + . & _ or a naked tag name
-    
-    //            } else {
-    //                selector = {
-    //                    op: match[7],
-    //                    name: match[8]
-    //                };
-    //            }
-    
-    //// Add the selector to the query.
-    
-    //            query.push(selector);
-    
-    //// Remove the selector from the text. If there is more text, have another go.
-    
-    //            text = text.slice(match[0].length);
-                
-                /*: match (~lMatch, thwd lMatch) */ "#freeze";
-
-            } while (text);
-            return query;
-        };
+//        var parse_query = function (text, id)
+//        /*: [;L;] (text: Str, id: Str) / () -> Ref(L) / (L : tyQueryLoc) */ 
+//        {
+//    
+//    // Convert a query string into an array of op/name/value selectors.
+//    // A query string is a sequence of triples wrapped in brackets; or names,
+//    // possibly prefixed by # . & > _, or :option, or * or /. A triple is a name,
+//    // and operator (one of [=, [!=, [*=, [~=, [|=, [$=, or [^=) and a value.
+//    
+//    // If the id parameter is supplied, then the name following # must have the
+//    // id as a prefix and must match the ADsafe rule for id: being all uppercase
+//    // letters and digits with one underbar.
+//    
+//    // A name must be all lower case and may contain digits, -, or _.
+//    
+//            var match     /*: Ref(~lMatch) */     =           null,     // A match array  //XXX: PV: added "null"
+//                query                             = /*: L */  [],       // The resulting query array
+//                selector  /*: Ref(~lSelector) */  =           null;     //XXX: PV: added "null"
+//
+//                //TODO: Exception Failure: convert CRegExp
+//                //,qx = id
+//                //    ? /^\s*(?:([\*\/])|\[\s*([a-z][0-9a-z_\-]*)\s*(?:([!*~|$\^]?\=)\s*([0-9A-Za-z_\-*%&;.\/:!]+)\s*)?\]|#\s*([A-Z]+_[A-Z0-9]+)|:\s*([a-z]+)|([.&_>\+]?)\s*([a-z][0-9a-z\-]*))\s*/
+//                //    : /^\s*(?:([\*\/])|\[\s*([a-z][0-9a-z_\-]*)\s*(?:([!*~|$\^]?\=)\s*([0-9A-Za-z_\-*%&;.\/:!]+)\s*)?\]|#\s*([\-A-Za-z0-9_]+)|:\s*([a-z]+)|([.&_>\+]?)\s*([a-z][0-9a-z\-]*))\s*/;
+//    
+//    // Loop over all of the selectors in the text.
+//    
+//            /*: ( &text: Str, &query: Ref(L), L: tyQueryLoc) -> ( &text: sameType, &query: sameType, L: sameType) */ 
+//
+//            do {
+//    
+//    // The qx teases the components of one selector out of the text, ignoring
+//    // whitespace.
+//    
+//    //          match[0]  the whole selector
+//    //          match[1]  * /
+//    //          match[2]  attribute name
+//    //          match[3]  = != *= ~= |= $= ^=
+//    //          match[4]  attribute value
+//    //          match[5]  # id
+//    //          match[6]  : option
+//    //          match[7]  . & _ > +
+//    //          match[8]      name
+//    
+//                /*: match lMatch */ "#thaw";
+//                //match = qx.exec(string_check(text));      //TODO: Fix with regex support
+//                match = /*: Arr(Str) */ ["a", "b", "c"];    //PV: temporarily using this 
+//
+//                if (!match) {
+//                    error("ADsafe: Bad query:" + text);
+//                }
+//    
+//    // Make a selector object and stuff it in the query.
+//    
+//                if (match[1]) {
+//    
+//    // The selector is * or /
+//    
+//                    /*: selector lSelector */ "#thaw";
+//                    selector = {
+//                        op: "a"// match[1]
+//                    };
+//                    /*: selector (~lSelector, thwd lSelector) */ "#freeze";
+//                } 
+//                
+//                else if (match[2]) {
+//    
+//    // The selector is in brackets.
+//    
+//                    selector = match[3] ? {
+//                        op: '[' + match[3],
+//                        name: match[2],
+//                        value: match[4]
+//                    } : {
+//                        op: '[',
+//                        name: match[2]
+//                    };
+//                } 
+//    
+//                else if (match[5]) {
+//    
+//    // The selector is an id.
+//    
+//                    if (query.length > 0 || match[5].length <= id.length ||
+//                            match[5].slice(0, id.length) !== id) {
+//                        error("ADsafe: Bad query: " + text);
+//                    }
+//                    selector = {
+//                        op: '#',
+//                        name: match[5]
+//                    };
+//    
+//    // The selector is a colon.
+//    
+//                } else if (match[6]) {
+//                    selector = {
+//                        op: ':' + match[6]
+//                    };
+//    
+//    // The selector is one of > + . & _ or a naked tag name
+//    
+//                } else {
+//                    selector = {
+//                        op: match[7],
+//                        name: match[8]
+//                    };
+//                }
+//    
+//    // Add the selector to the query.
+//    
+//                query.push(selector);
+//    
+//    // Remove the selector from the text. If there is more text, have another go.
+//    
+//                text = text.slice(match[0].length, 0);    //PV: added 2nd argument to slice              
+//                
+//                /*: match (~lMatch, thwd lMatch) */ "#freeze";
+//
+//            } while (text);
+//            return query;
+//        };
     
     
         hunter = {
@@ -575,187 +514,254 @@ var adsafe = (function () {
                 
                 /*: node (~lNode, thwd lNode) */ "#freeze";
             }
-            ,
-            '+': function (node) 
-            /*: (node: Ref(~lNode)) / (&name: Str, &result: Ref(~lResult)) -> Top / sameType */
-            {              
-                node = node.nextSibling;
-                name = name.toUpperCase();
-                /*: (&node: Ref(~lNode)) -> (&node: sameType) */
-                while (node && !node.tagName) {
-                    node = node.nextSibling;
-                }
-                if (node && node.tagName === name) {
-                    /*: result lResult */ "#thaw";
-                    result.push(node);
-                    /*: result (~lResult, thwd lResult) */ "#freeze";
-                }
-            }
-            ,
-            '>': function (node) 
-            /*: (node: Ref(~lNode)) / (&name: Str, &result: Ref(~lResult)) -> Top / sameType */
-            {
-                node = node.firstChild;
-                name = name.toUpperCase();
-                /*: (&node: Ref(~lNode), &result: Ref(~lResult)) -> sameType  */
-                while (node) {
-                    if (node.tagName === name) {
-                        /*: result lResult */ "#thaw";
-                        result.push(node);
-                        /*: result (~lResult, thwd lResult) */ "#freeze";
-                    }
-                    node = node.nextSibling;
-                }
-            }
-            ,
-            '#': function () 
-            /*: () / (&name: Str, &result: Ref(~lResult)) -> Top / sameType */
-            {
-                var n = document.getElementById(name);
-                if (n.tagName) {
-                    /*: result lResult */ "#thaw";
-                    result.push(n);
-                    /*: result (~lResult, thwd lResult) */ "#freeze";
-                }
-            }
-            ,
-            '/': function (node) 
-            /*: (node: Ref(~lNode)) / (&result: Ref(~lResult)) -> Top / sameType */
-            {
-                var nodes = node.childNodes;
-                var i /*: {Int | (>= v 0)} */ = 0 ;
-
-                /*:  nodes  lNList0 */ "#thaw";
-                var length = nodes.length;
-                var b = i < length; 
-                /*: nodes (~lNList, thwd lNList0) */ "#freeze";
-
-                /*: (&nodes: Ref(~lNList), &b : Bool, &length: Int, &result: Ref(~lResult)) -> sameType */ 
-                for (i = 0; b; i += 1) {
-                    /*: nodes lNList1 */ "#thaw";
-                    length = nodes.length;
-                    b = i < length;
-                    if (b) {
-                      /*: result lResult */ "#thaw";
-                      result.push(nodes[i]);
-                      /*: result (~lResult, thwd lResult) */ "#freeze";
-                    }
-                    /*: nodes (~lNList, thwd lNList1) */ "#freeze";
-                }
-            }
-            ,
-            '*': function (node)
-            /*: (node: Ref(~lNode)) / (&result: Ref(~lResult), &star: Bool, ~lNode: frzn) -> Top / sameType */
-            {
-                star = true;
-                walkTheDOM(
-                    node, 
-                    function (node1) 
-                    /*: (Ref(~lNode)) / (~lNode: frzn, &result: Ref(~lResult)) -> Top / sameType */
-                    {
-                      /*: result lResult */ "#thaw";
-                      result.push(node1);
-                      /*: result (~lResult, thwd lResult) */ "#freeze";
-                    }, true);
-            }
+//            ,
+//            '+': function (node) 
+//            /*: (node: Ref(~lNode)) / (&name: Str) -> Top / sameType */
+//            {              
+//                node = node.nextSibling;
+//                name = name.toUpperCase();
+//                /*: (&node: Ref(~lNode)) -> (&node: sameType) */
+//                while (node && !node.tagName) {
+//                    node = node.nextSibling;
+//                }
+//                if (node && node.tagName === name) {
+//                    /*: result lResult */ "#thaw";
+//                    result.push(node);
+//                    /*: result (~lResult, thwd lResult) */ "#freeze";
+//                }
+//            }
+//            ,
+//            '>': function (node) 
+//            /*: (node: Ref(~lNode)) / (&name: Str) -> Top / sameType */
+//            {
+//                node = node.firstChild;
+//                name = name.toUpperCase();
+//                /*: (&node: Ref(~lNode)) -> sameType  */
+//                while (node) {
+//                    if (node.tagName === name) {
+//                        /*: result lResult */ "#thaw";
+//                        result.push(node);
+//                        /*: result (~lResult, thwd lResult) */ "#freeze";
+//                    }
+//                    node = node.nextSibling;
+//                }
+//            }
+//            ,
+//            '#': function () 
+//            /*: () / (&name: Str) -> Top / sameType */
+//            {
+//                var n = document.getElementById(name);
+//                if (n.tagName) {
+//                    /*: result lResult */ "#thaw";
+//                    result.push(n);
+//                    /*: result (~lResult, thwd lResult) */ "#freeze";
+//                }
+//            }
+//            ,
+//            '/': function (node) 
+//            /*: (node: Ref(~lNode)) -> Top  */
+//            {
+//                var nodes = node.childNodes;
+//                var i /*: {Int | (>= v 0)} */ = 0 ;
+//
+//                /*:  nodes  lNList0 */ "#thaw";
+//                var length = nodes.length;
+//                var b = i < length; 
+//                /*: nodes (~lNList, thwd lNList0) */ "#freeze";
+//
+//                /*: (&nodes: Ref(~lNList), &b : Bool, &length: Int) -> sameType */ 
+//                for (i = 0; b; i += 1) {
+//                    /*: nodes lNList1 */ "#thaw";
+//                    length = nodes.length;
+//                    b = i < length;
+//                    if (b) {
+//                      /*: result lResult */ "#thaw";
+//                      result.push(nodes[i]);
+//                      /*: result (~lResult, thwd lResult) */ "#freeze";
+//                    }
+//                    /*: nodes (~lNList, thwd lNList1) */ "#freeze";
+//                }
+//            }
+//            ,
+//            '*': function (node)
+//            /*: (node: Ref(~lNode)) / (&star: Bool) -> Top / sameType */
+//            {
+//                star = true;
+//                walkTheDOM(
+//                    node, 
+//                    function (node1) 
+//                    /*: (Ref(~lNode)) -> Top */
+//                    {
+//                      /*: result lResult */ "#thaw";
+//                      result.push(node1);
+//                      /*: result (~lResult, thwd lResult) */ "#freeze";
+//                    }, true);
+//            }
         };
     
-    //    pecker = {
-    //        '.': function (node) {
-    //            return (' ' + node.className + ' ').indexOf(' ' + name + ' ') >= 0;
-    //        },
-    //        '&': function (node) {
-    //            return node.name === name;
-    //        },
-    //        '_': function (node) {
-    //            return node.type === name;
-    //        },
-    //        '[': function (node) {
-    //            return typeof node[name] === 'string';
-    //        },
-    //        '[=': function (node) {
-    //            var member = node[name];
-    //            return typeof member === 'string' && member === value;
-    //        },
-    //        '[!=': function (node) {
-    //            var member = node[name];
-    //            return typeof member === 'string' && member !== value;
-    //        },
-    //        '[^=': function (node) {
-    //            var member = node[name];
-    //            return typeof member === 'string' &&
-    //                member.slice(0, member.length) === value;
-    //        },
-    //        '[$=': function (node) {
-    //            var member = node[name];
-    //            return typeof member === 'string' &&
-    //                member.slice(-member.length) === value;
-    //        },
-    //        '[*=': function (node) {
-    //            var member = node[name];
-    //            return typeof member === 'string' &&
-    //                member.indexOf(value) >= 0;
-    //        },
-    //        '[~=': function (node) {
-    //            var member = node[name];
-    //            return typeof member === 'string' &&
-    //                (' ' + member + ' ').indexOf(' ' + value + ' ') >= 0;
-    //        },
-    //        '[|=': function (node) {
-    //            var member = node[name];
-    //            return typeof member === 'string' &&
-    //                ('-' + member + '-').indexOf('-' + value + '-') >= 0;
-    //        },
-    //        ':blur': function (node) {
-    //            return node !== has_focus;
-    //        },
-    //        ':checked': function (node) {
-    //            return node.checked;
-    //        },
-    //        ':disabled': function (node) {
-    //            return node.tagName && node.disabled;
-    //        },
-    //        ':enabled': function (node) {
-    //            return node.tagName && !node.disabled;
-    //        },
-    //        ':even': function (node) {
-    //            var f;
-    //            if (node.tagName) {
-    //                f = flipflop;
-    //                flipflop = !flipflop;
-    //                return f;
-    //            }
-    //            return false;
-    //        },
-    //        ':focus': function (node) {
-    //            return node === has_focus;
-    //        },
-    //        ':hidden': function (node) {
-    //            return node.tagName && getStyleObject(node).visibility !== 'visible';
-    //        },
-    //        ':odd': function (node) {
-    //            if (node.tagName) {
-    //                flipflop = !flipflop;
-    //                return flipflop;
-    //            }
-    //            return false;
-    //        },
-    //        ':tag': function (node) {
-    //            return node.tagName;
-    //        },
-    //        ':text': function (node) {
-    //            return node.nodeName === '#text';
-    //        },
-    //        ':trim': function (node) {
-    //            return node.nodeName !== '#text' || /\W/.test(node.nodeValue);
-    //        },
-    //        ':unchecked': function (node) {
-    //            return node.tagName && !node.checked;
-    //        },
-    //        ':visible': function (node) {
-    //            return node.tagName && getStyleObject(node).visibility === 'visible';
-    //        }
-    //    };
+//        pecker = {
+//            '.': function (node) 
+//            /*: (Ref(~lNode)) -> Bool */ 
+//            {
+//                return (' ' + node.className + ' ').indexOf(' ' + name + ' ') >= 0;
+//            }
+//            ,
+//            '&': function (node) 
+//            /*: (Ref(~lNode)) -> Bool */          
+//            {
+//                return node.name === name;
+//            },
+//            '_': function (node) 
+//            /*: (Ref(~lNode)) -> Bool */
+//            {
+//                return node.type === name;
+//            },
+//            '[': function (node)
+//            /*: (Ref(~lNode)) -> Bool */
+//            {
+//                return typeof node[name] === 'string';
+//            },
+//            '[=': function (node) 
+//            /*: (Ref(~lNode)) -> Bool */          
+//            {
+//                var member = node[name];
+//                return typeof member === 'string' && member === value;
+//            },
+//            '[!=': function (node)
+//            /*: (Ref(~lNode)) -> Bool */          
+//            {
+//                var member = node[name];
+//                return typeof member === 'string' && member !== value;
+//            }
+//            ,
+//            '[^=': function (node) 
+//            /*: (Ref(~lNode)) -> Bool */
+//            {
+//                var member = node[name];
+//                //Applying a refactoring to allow the use of slice (applied
+//                //later as well)
+//                //PV: Original code: 
+//                //return typeof member === 'string' &&
+//                //    member.slice(0, member.length) === value;
+//                if (typeof member === 'string') 
+//                  return member.slice(0, member.length) === value;
+//                return false;
+//            }
+//            ,
+//            '[$=': function (node)
+//            /*: (Ref(~lNode)) -> Bool */
+//            {
+//                var member = node[name];
+//                if (typeof member === 'string')
+//                    return member.slice(-member.length, 0) === value;  //PV: added 2nd argument to slice
+//                return false;
+//            },
+//            '[*=': function (node)
+//            /*: (Ref(~lNode)) -> Bool */
+//            {
+//                var member = node[name];
+//                if (typeof member === 'string')
+//                    return member.indexOf(value) >= 0;
+//                return false;
+//            },
+//            '[~=': function (node) 
+//            /*: (Ref(~lNode)) -> Bool */
+//            {
+//                var member = node[name];
+//                if (typeof member === 'string')                  
+//                    return (' ' + member + ' ').indexOf(' ' + value + ' ') >= 0;
+//                return false;
+//            },
+//            '[|=': function (node) 
+//            /*: (Ref(~lNode)) -> Bool */
+//            {
+//                var member = node[name];
+//                if (typeof member === 'string')
+//                    return ('-' + member + '-').indexOf('-' + value + '-') >= 0;
+//                return false;
+//            }
+//            ,
+//            ':blur': function (node)
+//            /*: (Ref(~lNode)) -> Bool */
+//            {
+//                return node !== has_focus;
+//            },
+//            ':checked': function (node)
+//            /*: (Ref(~lNode)) -> Bool */
+//            {
+//                return node.checked;
+//            },
+//            ':disabled': function (node)
+//            /*: (Ref(~lNode)) -> Top */
+//            {
+//                return node.tagName && node.disabled;
+//            },
+//            ':enabled': function (node) 
+//            /*: (Ref(~lNode)) -> Top */
+//            {
+//                return node.tagName && !node.disabled;
+//            }
+//            ,
+//            ':even': function (node) 
+//            /*: (Ref(~lNode)) -> Bool */
+//            {
+//                var f;
+//                if (node.tagName) {
+//                    f = flipflop;
+//                    flipflop = !flipflop;
+//                    return f;
+//                }
+//                return false;
+//            }
+//            ,
+//            ':focus': function (node) 
+//            /*: (Ref(~lNode)) -> Bool */
+//            {
+//                return node === has_focus;
+//            },
+//            ':hidden': function (node) 
+//            /*: (Ref(~lNode)) -> Top */
+//            {
+//                return node.tagName && getStyleObject(node).visibility !== 'visible';
+//            }
+//            ,
+//            ':odd': function (node) 
+//            /*: (Ref(~lNode)) -> Bool */
+//            {
+//                if (node.tagName) {
+//                    flipflop = !flipflop;
+//                    return flipflop;
+//                }
+//                return false;
+//            },
+//            ':tag': function (node) 
+//            /*: (Ref(~lNode)) -> Str */
+//            {
+//                return node.tagName;
+//            },
+//            ':text': function (node)
+//            /*: (Ref(~lNode)) -> Bool */
+//            {
+//                return node.nodeName === '#text';
+//            },
+//            ':trim': function (node)
+//            /*: (Ref(~lNode)) -> Bool */
+//            {
+//            //TODO: regex support
+//            //    return node.nodeName !== '#text' || /\W/.test(node.nodeValue);  
+//                return false;
+//            },
+//            ':unchecked': function (node)
+//            /*: (Ref(~lNode)) -> Top */
+//            {
+//                return node.tagName && !node.checked;
+//            },
+//            ':visible': function (node)
+//            /*: (Ref(~lNode)) -> Top */
+//            {
+//                return node.tagName && getStyleObject(node).visibility === 'visible';
+//            }
+//        };
     //
     //
     //    function quest(query, nodes) {
