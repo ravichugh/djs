@@ -1,0 +1,39 @@
+(***** ../tests/djs/ADsafe/__dom.js *******************************************)
+
+(*
+let seq_000002 = "__ macro tyBanned __" 
+
+let seq_000001 = "__ macro tyQueryLoc __" 
+
+*)
+weak (~lResult: {Arr(Ref(~lNode))|(and (packed v) (>= (len v) 0))} > lArrPro)
+
+weak (~lQuery: {Arr(Ref(~lNode))|(and (packed v) (>= (len v) 0))} > lArrPro)
+
+weak (~lEvent: {"type":Str} > lObjPro)
+
+weak (~lUIEvent: Dict > ~lEvent)
+
+weak (~lKEyboardEvent: {altKey:Bool, ctrlKey:Bool} > ~lUIEvent)
+
+weak (~lCCSStyle: {
+    visibility: Str
+} > lObjPro)
+
+weak (~lNList: {Arr(Ref(~lNode))|(and (packed v) (>= (len v) 1))} > lArrPro)
+
+weak (~lNode: {
+    getComputedStyle:[;;H_] (this:Ref(~lNode), node:Ref(~lNode),str:Str) / H_ -> Ref(~lCCSStyle) / (H_), currentStyle:Ref(~lCCSStyle),
+    firstChild:Ref(~lNode), 
+    nextSibling:Ref(~lNode), 
+    childNodes:Ref(~lNList),
+    change:Ref(~lEvent), "___ on ___":Ref(~lEvent), 
+    tagName:Str, 
+    className:Str, 
+    name:Str,
+    disabled:Bool,
+    checked:Bool,
+    getElementsByTagName:[;L;H_] (this:Ref(~lNode), name:Str) / H_ -> Ref(L) / H_ + (L: _underscore_3:{Arr(Ref(~lNode))|(packed v)})} > lObjPro)
+
+weak (~lDocument: {defaultView:Ref(~lNode), getElementById:[;;H_] (this:Top, s:Str) / H_ -> Ref(~lNode) / (H_)} > lObjPro)
+
