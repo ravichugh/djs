@@ -1911,7 +1911,8 @@ and quickWrapperBaseOps g h qb v2 =
     match qb, v2.value with
       | BStr, VBase(Str "length") -> TQuick ("v", QBase BInt, ge theV (wInt 0))
       | BStr, VBase(Str "charAt") -> tySimpleArrow [tyAny; tyInt] tyStr
-      | BStr, VBase(Str "slice") -> tySimpleArrow [tyAny; tyInt] tyStr
+      | BStr, VBase(Str "slice") -> tySimpleArrow [tyAny; tyInt; tyInt] tyStr
+      | BStr, VBase(Str "indexOf") -> tySimpleArrow [tyAny; tyStr] tyInt
       | BStr, VBase(Str "toLowerCase") -> tySimpleArrow [tyAny] tyStr
       | BStr, VBase(Str "toUpperCase") -> tySimpleArrow [tyAny] tyStr
       | BInt, VBase(Str "toString")
