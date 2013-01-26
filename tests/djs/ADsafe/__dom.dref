@@ -37,5 +37,7 @@ weak (~lNode: {
     checked:Bool,
     getElementsByTagName:[;L;H_] (this:Ref(~lNode), name:Str) / H_ -> Ref(L) / H_ + (L: _underscore_3:{Arr(Ref(~lNode))|(packed v)})} > lObjPro)
 
-weak (~lDocument: {defaultView:Ref(~lNode), getElementById:[;;H_] (this:Top, s:Str) / H_ -> Ref(~lNode) / (H_)} > lObjPro)
+weak (~lDocument: {
+    defaultView:Ref(~lNode), 
+    getElementById:[;;H_] (this:Top, s:Str) / H_ -> Ref(~lNode) / (H_)} > lObjPro)
 

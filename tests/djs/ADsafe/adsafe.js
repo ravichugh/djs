@@ -315,7 +315,7 @@ var adsafe = (function () {
             return cache_style_object;
       };
     
-        /*: (~lSelector : Dict     > lObjPro) */ "#weak"; 
+        /*: (~lSelector : { op:Str, name:Str }     > lObjPro) */ "#weak"; 
         /*: (~lMatch    : Arr(Str) > lArrPro) */ "#weak"; 
 
     
@@ -762,67 +762,78 @@ var adsafe = (function () {
 //                return node.tagName && getStyleObject(node).visibility === 'visible';
 //            }
 //        };
-    //
-    //
-    //    function quest(query, nodes) {
-    //        var selector, func, i, j;
-    //
-    //// Step through each selector.
-    //
-    //        for (i = 0; i < query.length; i += 1) {
-    //            selector = query[i];
-    //            name = selector.name;
-    //            func = hunter[selector.op];
-    //
-    //// There are two kinds of selectors: hunters and peckers. If this is a hunter,
-    //// loop through the the nodes, passing each node to the hunter function.
-    //// Accumulate all the nodes it finds.
-    //
-    //            if (typeof func === 'function') {
-    //                if (star) {
-    //                    error("ADsafe: Query violation: *" + selector.op +
-    //                        (selector.name || ''));
-    //                }
-    //                result = [];
-    //                for (j = 0; j < nodes.length; j += 1) {
-    //                    func(nodes[j]);
-    //                }
-    //            } else {
-    //
-    //// If this is a pecker, get its function. There is a special case for
-    //// the :first and :rest selectors because they are so simple.
-    //
-    //                value = selector.value;
-    //                flipflop = false;
-    //                func = pecker[selector.op];
-    //                if (typeof func !== 'function') {
-    //                    switch (selector.op) {
-    //                    case ':first':
-    //                        result = nodes.slice(0, 1);
-    //                        break;
-    //                    case ':rest':
-    //                        result = nodes.slice(1);
-    //                        break;
-    //                    default:
-    //                        error('ADsafe: Query violation: :' + selector.op);
-    //                    }
-    //                } else {
-    //
-    //// For the other selectors, make an array of nodes that are filtered by
-    //// the pecker function.
-    //
-    //                    result = [];
-    //                    for (j = 0; j < nodes.length; j += 1) {
-    //                        if (func(nodes[j])) {
-    //                            result.push(nodes[j]);
-    //                        }
-    //                    }
-    //                }
-    //            }
-    //            nodes = result;
-    //        }
-    //        return result;
-    //    }
+    
+//XXX: Should TC until here        
+    
+        var quest = function(query, nodes) 
+        /*: [; L1, L2;] (Ref(L1), Ref(L2)) / 
+              (L1: { Arr(Ref(~lSelector)) | (packed v) } > lArrPro,
+               L2: { Arr(Ref(~lNode))     | (packed v) } > lArrPro)
+               -> Top / sameType */ 
+        {
+            var selector /*: Ref(~lSelector) */ = null; 
+                //func /*: (Ref(~lNode)) -> Top */ = function() {} ,  //TODO: throws exception
+            var func = function(a) /*: (a:Ref(~lNode)) -> Top */ { return; },
+                i /*: { Int | (>= v 0) }*/ = 0,
+                j;
+    
+    // Step through each selector.
+    
+            /*: (&func: (Ref(~lNode)) -> Top)  -> sameType */
+            for (i = 0; i < query.length; i += 1) {
+                selector = query[i];                
+                name = selector.name;
+//                func = hunter[selector.op];
+//    
+//    // There are two kinds of selectors: hunters and peckers. If this is a hunter,
+//    // loop through the the nodes, passing each node to the hunter function.
+//    // Accumulate all the nodes it finds.
+//    
+//                if (typeof func === 'function') {
+//                    if (star) {
+//                        error("ADsafe: Query violation: *" + selector.op +
+//                            (selector.name || ''));
+//                    }
+//                    result = [];
+//                    for (j = 0; j < nodes.length; j += 1) {
+//                        func(nodes[j]);
+//                    }
+//                } else {
+//    
+//    // If this is a pecker, get its function. There is a special case for
+//    // the :first and :rest selectors because they are so simple.
+//    
+//                    value = selector.value;
+//                    flipflop = false;
+//                    func = pecker[selector.op];
+//                    if (typeof func !== 'function') {
+//                        switch (selector.op) {
+//                        case ':first':
+//                            result = nodes.slice(0, 1);
+//                            break;
+//                        case ':rest':
+//                            result = nodes.slice(1);
+//                            break;
+//                        default:
+//                            error('ADsafe: Query violation: :' + selector.op);
+//                        }
+//                    } else {
+//    
+//    // For the other selectors, make an array of nodes that are filtered by
+//    // the pecker function.
+//    
+//                        result = [];
+//                        for (j = 0; j < nodes.length; j += 1) {
+//                            if (func(nodes[j])) {
+//                                result.push(nodes[j]);
+//                            }
+//                        }
+//                    }
+//                }
+//                nodes = result;
+            }
+            return result;
+        };
     //
     //
     //    function make_root(root, id) {
