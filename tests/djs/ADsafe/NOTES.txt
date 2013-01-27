@@ -63,4 +63,15 @@ THINK ABOUT
 ====================================================
 
 - When can a weak location be updated?
+
 - Implicit thawing?
+
+
+====================================================
+QUESTIONS
+====================================================
+
+- Does it make sense to have separate weak locations of the same type? E.g.:
+  weak (~lResult: {Arr(Ref(~lNode))|(and (packed v) (>= (len v) 0))} > lArrPro)
+  weak (~lQuery: {Arr(Ref(~lNode))|(and (packed v) (>= (len v) 0))} > lArrPro)
+

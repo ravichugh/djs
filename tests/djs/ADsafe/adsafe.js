@@ -184,7 +184,7 @@ var adsafe = (function () {
 //        },
         name /*: Str */ = "",
         pecker,     // set of pecker patterns
-        result /*: Ref(~lResult) */ = null,
+        result /*: Ref(~lNodes) */ = null,
         star,
         the_range,
         value /*: Str */ = "";
@@ -315,7 +315,7 @@ var adsafe = (function () {
             return cache_style_object;
       };
     
-        /*: (~lSelector : { op:Str, name:Str }     > lObjPro) */ "#weak"; 
+        /*: (~lSelector : { op:Str, name:Str, value:Str }     > lObjPro) */ "#weak"; 
         /*: (~lMatch    : Arr(Str) > lArrPro) */ "#weak"; 
 
     
@@ -527,7 +527,7 @@ var adsafe = (function () {
 //                if (node && node.tagName === name) {
 //                    /*: result lResult */ "#thaw";
 //                    result.push(node);
-//                    /*: result (~lResult, thwd lResult) */ "#freeze";
+//                    /*: result (~lNodes, thwd lResult) */ "#freeze";
 //                }
 //            }
 //            ,
@@ -541,7 +541,7 @@ var adsafe = (function () {
 //                    if (node.tagName === name) {
 //                        /*: result lResult */ "#thaw";
 //                        result.push(node);
-//                        /*: result (~lResult, thwd lResult) */ "#freeze";
+//                        /*: result (~lNodes, thwd lResult) */ "#freeze";
 //                    }
 //                    node = node.nextSibling;
 //                }
@@ -554,7 +554,7 @@ var adsafe = (function () {
 //                if (n.tagName) {
 //                    /*: result lResult */ "#thaw";
 //                    result.push(n);
-//                    /*: result (~lResult, thwd lResult) */ "#freeze";
+//                    /*: result (~lNodes, thwd lResult) */ "#freeze";
 //                }
 //            }
 //            ,
@@ -577,7 +577,7 @@ var adsafe = (function () {
 //                    if (b) {
 //                      /*: result lResult */ "#thaw";
 //                      result.push(nodes[i]);
-//                      /*: result (~lResult, thwd lResult) */ "#freeze";
+//                      /*: result (~lNodes, thwd lResult) */ "#freeze";
 //                    }
 //                    /*: nodes (~lNList, thwd lNList1) */ "#freeze";
 //                }
@@ -594,7 +594,7 @@ var adsafe = (function () {
 //                    {
 //                      /*: result lResult */ "#thaw";
 //                      result.push(node1);
-//                      /*: result (~lResult, thwd lResult) */ "#freeze";
+//                      /*: result (~lNodes, thwd lResult) */ "#freeze";
 //                    }, true);
 //            }
         };
@@ -763,33 +763,36 @@ var adsafe = (function () {
 //            }
 //        };
     
-//XXX: Should TC until here        
+//XXX: Should TC until here
+
+//TODO: TC flushed-left commented lines in function quest
     
         var quest = function(query, nodes) 
-        /*: [; L1, L2;] (Ref(L1), Ref(L2)) / 
-              (L1: { Arr(Ref(~lSelector)) | (packed v) } > lArrPro,
-               L2: { Arr(Ref(~lNode))     | (packed v) } > lArrPro)
-               -> Top / sameType */ 
+        /*: [; L1;] (Ref(L1), Ref(~lNodes)) / 
+              (L1: { Arr(Ref(~lSelector)) | (packed v) } > lArrPro)
+               -> Ref(~lNodes) / 
+                    ( L1: sameType) */ 
         {
             var selector /*: Ref(~lSelector) */ = null; 
                 //func /*: (Ref(~lNode)) -> Top */ = function() {} ,  //TODO: throws exception
-            var func = function(a) /*: (a:Ref(~lNode)) -> Top */ { return; },
+            //var func = function(a) /*: (Ref(~lNode)) -> Top */ { return; },
+            var func,
                 i /*: { Int | (>= v 0) }*/ = 0,
                 j;
     
     // Step through each selector.
     
-            /*: (&func: (Ref(~lNode)) -> Top)  -> sameType */
+            /*: (&nodes: Ref(~lNodes)) -> sameType  */
             for (i = 0; i < query.length; i += 1) {
                 selector = query[i];                
                 name = selector.name;
 //                func = hunter[selector.op];
-//    
-//    // There are two kinds of selectors: hunters and peckers. If this is a hunter,
-//    // loop through the the nodes, passing each node to the hunter function.
-//    // Accumulate all the nodes it finds.
-//    
-//                if (typeof func === 'function') {
+    
+    // There are two kinds of selectors: hunters and peckers. If this is a hunter,
+    // loop through the the nodes, passing each node to the hunter function.
+    // Accumulate all the nodes it finds.
+    
+                if (typeof func === 'function') {
 //                    if (star) {
 //                        error("ADsafe: Query violation: *" + selector.op +
 //                            (selector.name || ''));
@@ -798,15 +801,16 @@ var adsafe = (function () {
 //                    for (j = 0; j < nodes.length; j += 1) {
 //                        func(nodes[j]);
 //                    }
-//                } else {
-//    
-//    // If this is a pecker, get its function. There is a special case for
-//    // the :first and :rest selectors because they are so simple.
-//    
-//                    value = selector.value;
-//                    flipflop = false;
+                } 
+                else {
+    
+    // If this is a pecker, get its function. There is a special case for
+    // the :first and :rest selectors because they are so simple.
+    
+                    value = selector.value;
+                    flipflop = false;
 //                    func = pecker[selector.op];
-//                    if (typeof func !== 'function') {
+                    if (typeof func !== 'function') {
 //                        switch (selector.op) {
 //                        case ':first':
 //                            result = nodes.slice(0, 1);
@@ -817,20 +821,21 @@ var adsafe = (function () {
 //                        default:
 //                            error('ADsafe: Query violation: :' + selector.op);
 //                        }
-//                    } else {
-//    
-//    // For the other selectors, make an array of nodes that are filtered by
-//    // the pecker function.
-//    
-//                        result = [];
+                    } 
+                    else {
+    
+    // For the other selectors, make an array of nodes that are filtered by
+    // the pecker function.
+    
+                        result = [];
 //                        for (j = 0; j < nodes.length; j += 1) {
 //                            if (func(nodes[j])) {
 //                                result.push(nodes[j]);
 //                            }
 //                        }
-//                    }
-//                }
-//                nodes = result;
+                    }
+                }
+                nodes = result;
             }
             return result;
         };

@@ -6,9 +6,7 @@ let seq_000002 = "__ macro tyBanned __"
 let seq_000001 = "__ macro tyQueryLoc __" 
 
 *)
-weak (~lResult: {Arr(Ref(~lNode))|(and (packed v) (>= (len v) 0))} > lArrPro)
-
-weak (~lQuery: {Arr(Ref(~lNode))|(and (packed v) (>= (len v) 0))} > lArrPro)
+weak (~lNodes: {Arr(Ref(~lNode))|(and (packed v) (>= (len v) 0))} > lArrPro)
 
 weak (~lEvent: {"type":Str} > lObjPro)
 
