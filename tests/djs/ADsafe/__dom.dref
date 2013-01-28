@@ -10,6 +10,13 @@ weak (~lNodes: {Arr(Ref(~lNode))|(and (packed v) (>= (len v) 0))} > lArrPro)
 
 weak (~lEvent: {"type":Str} > lObjPro)
 
+weak (~lSelector: {
+  op:Str,
+  name:Str,
+  value:Str
+} > lObjPro)
+
+
 weak (~lUIEvent: Dict > ~lEvent)
 
 weak (~lKEyboardEvent: {altKey:Bool, ctrlKey:Bool} > ~lUIEvent)

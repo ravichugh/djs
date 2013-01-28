@@ -315,7 +315,7 @@ var adsafe = (function () {
             return cache_style_object;
       };
     
-        /*: (~lSelector : { op:Str, name:Str, value:Str }     > lObjPro) */ "#weak"; 
+        //TODO: move this definition to definitions file
         /*: (~lMatch    : Arr(Str) > lArrPro) */ "#weak"; 
 
     
@@ -362,57 +362,57 @@ var adsafe = (function () {
 
 
     
-//        var parse_query = function (text, id)
-//        /*: [;L;] (text: Str, id: Str) / () -> Ref(L) / (L : tyQueryLoc) */ 
-//        {
-//    
-//    // Convert a query string into an array of op/name/value selectors.
-//    // A query string is a sequence of triples wrapped in brackets; or names,
-//    // possibly prefixed by # . & > _, or :option, or * or /. A triple is a name,
-//    // and operator (one of [=, [!=, [*=, [~=, [|=, [$=, or [^=) and a value.
-//    
-//    // If the id parameter is supplied, then the name following # must have the
-//    // id as a prefix and must match the ADsafe rule for id: being all uppercase
-//    // letters and digits with one underbar.
-//    
-//    // A name must be all lower case and may contain digits, -, or _.
-//    
-//            var match     /*: Ref(~lMatch) */     =           null,     // A match array  //XXX: PV: added "null"
-//                query                             = /*: L */  [],       // The resulting query array
-//                selector  /*: Ref(~lSelector) */  =           null;     //XXX: PV: added "null"
-//
-//                //TODO: Exception Failure: convert CRegExp
-//                //,qx = id
-//                //    ? /^\s*(?:([\*\/])|\[\s*([a-z][0-9a-z_\-]*)\s*(?:([!*~|$\^]?\=)\s*([0-9A-Za-z_\-*%&;.\/:!]+)\s*)?\]|#\s*([A-Z]+_[A-Z0-9]+)|:\s*([a-z]+)|([.&_>\+]?)\s*([a-z][0-9a-z\-]*))\s*/
-//                //    : /^\s*(?:([\*\/])|\[\s*([a-z][0-9a-z_\-]*)\s*(?:([!*~|$\^]?\=)\s*([0-9A-Za-z_\-*%&;.\/:!]+)\s*)?\]|#\s*([\-A-Za-z0-9_]+)|:\s*([a-z]+)|([.&_>\+]?)\s*([a-z][0-9a-z\-]*))\s*/;
-//    
-//    // Loop over all of the selectors in the text.
-//    
-//            /*: ( &text: Str, &query: Ref(L), L: tyQueryLoc) -> ( &text: sameType, &query: sameType, L: sameType) */ 
-//
-//            do {
-//    
-//    // The qx teases the components of one selector out of the text, ignoring
-//    // whitespace.
-//    
-//    //          match[0]  the whole selector
-//    //          match[1]  * /
-//    //          match[2]  attribute name
-//    //          match[3]  = != *= ~= |= $= ^=
-//    //          match[4]  attribute value
-//    //          match[5]  # id
-//    //          match[6]  : option
-//    //          match[7]  . & _ > +
-//    //          match[8]      name
-//    
-//                /*: match lMatch */ "#thaw";
-//                //match = qx.exec(string_check(text));      //TODO: Fix with regex support
-//                match = /*: Arr(Str) */ ["a", "b", "c"];    //PV: temporarily using this 
-//
-//                if (!match) {
-//                    error("ADsafe: Bad query:" + text);
-//                }
-//    
+        var parse_query = function (text, id)
+        /*: [;L;] (text: Str, id: Str) / () -> Ref(L) / (L : tyQueryLoc) */ 
+        {
+    
+    // Convert a query string into an array of op/name/value selectors.
+    // A query string is a sequence of triples wrapped in brackets; or names,
+    // possibly prefixed by # . & > _, or :option, or * or /. A triple is a name,
+    // and operator (one of [=, [!=, [*=, [~=, [|=, [$=, or [^=) and a value.
+    
+    // If the id parameter is supplied, then the name following # must have the
+    // id as a prefix and must match the ADsafe rule for id: being all uppercase
+    // letters and digits with one underbar.
+    
+    // A name must be all lower case and may contain digits, -, or _.
+    
+            var match     /*: Ref(~lMatch) */     =           null,     // A match array  //XXX: PV: added "null"
+                query                             = /*: L */  [],       // The resulting query array
+                selector  /*: Ref(~lSelector) */  =           null;     //XXX: PV: added "null"
+
+                //TODO: Exception Failure: convert CRegExp
+                //,qx = id
+                //    ? /^\s*(?:([\*\/])|\[\s*([a-z][0-9a-z_\-]*)\s*(?:([!*~|$\^]?\=)\s*([0-9A-Za-z_\-*%&;.\/:!]+)\s*)?\]|#\s*([A-Z]+_[A-Z0-9]+)|:\s*([a-z]+)|([.&_>\+]?)\s*([a-z][0-9a-z\-]*))\s*/
+                //    : /^\s*(?:([\*\/])|\[\s*([a-z][0-9a-z_\-]*)\s*(?:([!*~|$\^]?\=)\s*([0-9A-Za-z_\-*%&;.\/:!]+)\s*)?\]|#\s*([\-A-Za-z0-9_]+)|:\s*([a-z]+)|([.&_>\+]?)\s*([a-z][0-9a-z\-]*))\s*/;
+    
+    // Loop over all of the selectors in the text.
+    
+            /*: ( &text: Str, &query: Ref(L), L: tyQueryLoc) -> ( &text: sameType, &query: sameType, L: sameType) */ 
+
+            do {
+    
+    // The qx teases the components of one selector out of the text, ignoring
+    // whitespace.
+    
+    //          match[0]  the whole selector
+    //          match[1]  * /
+    //          match[2]  attribute name
+    //          match[3]  = != *= ~= |= $= ^=
+    //          match[4]  attribute value
+    //          match[5]  # id
+    //          match[6]  : option
+    //          match[7]  . & _ > +
+    //          match[8]      name
+    
+                /*: match lMatch */ "#thaw";
+                //match = qx.exec(string_check(text));      //TODO: Fix with regex support
+                match = /*: Arr(Str) */ ["a", "b", "c"];    //PV: temporarily using this 
+
+                if (!match) {
+                    error("ADsafe: Bad query:" + text);
+                }
+    
 //    // Make a selector object and stuff it in the query.
 //    
 //                if (match[1]) {
@@ -477,11 +477,11 @@ var adsafe = (function () {
 //    
 //                text = text.slice(match[0].length, 0);    //PV: added 2nd argument to slice              
 //                
-//                /*: match (~lMatch, thwd lMatch) */ "#freeze";
-//
-//            } while (text);
-//            return query;
-//        };
+                /*: match (~lMatch, thwd lMatch) */ "#freeze";
+
+            } while (text);
+            return query;
+        };
     
     
         hunter = {
@@ -768,16 +768,16 @@ var adsafe = (function () {
 //TODO: TC flushed-left commented lines in function quest
     
         var quest = function(query, nodes) 
-        /*: [; L1;] (Ref(L1), Ref(~lNodes)) / 
-              (L1: { Arr(Ref(~lSelector)) | (packed v) } > lArrPro)
+        /*: [; L;] (Ref(L), Ref(~lNodes)) / 
+              (L: { Arr(Ref(~lSelector)) | (packed v) } > lArrPro)
                -> Ref(~lNodes) / 
-                    ( L1: sameType) */ 
+                    ( L: sameType) */ 
         {
             var selector /*: Ref(~lSelector) */ = null; 
-                //func /*: (Ref(~lNode)) -> Top */ = function() {} ,  //TODO: throws exception
+            //func /*: (Ref(~lNode)) -> Top */ = function() {} ,  //TODO: throws exception
             //var func = function(a) /*: (Ref(~lNode)) -> Top */ { return; },
             var func,
-                i /*: { Int | (>= v 0) }*/ = 0,
+                i /*: { Int | (>= v 0) } */ = 0,
                 j;
     
     // Step through each selector.
@@ -787,7 +787,7 @@ var adsafe = (function () {
                 selector = query[i];                
                 name = selector.name;
 //                func = hunter[selector.op];
-    
+//    
     // There are two kinds of selectors: hunters and peckers. If this is a hunter,
     // loop through the the nodes, passing each node to the hunter function.
     // Accumulate all the nodes it finds.
@@ -816,7 +816,7 @@ var adsafe = (function () {
 //                            result = nodes.slice(0, 1);
 //                            break;
 //                        case ':rest':
-//                            result = nodes.slice(1);
+//                            result = nodes.slice(1, nodes.length);    //PV: added 2nd argument to slice
 //                            break;
 //                        default:
 //                            error('ADsafe: Query violation: :' + selector.op);
@@ -828,11 +828,11 @@ var adsafe = (function () {
     // the pecker function.
     
                         result = [];
-//                        for (j = 0; j < nodes.length; j += 1) {
-//                            if (func(nodes[j])) {
-//                                result.push(nodes[j]);
-//                            }
-//                        }
+                        for (j = 0; j < nodes.length; j += 1) {
+                            if (func(nodes[j])) {
+                                result.push(nodes[j]);
+                            }
+                        }
                     }
                 }
                 nodes = result;

@@ -17,7 +17,8 @@ var quest = function(query, selector)
            break;
     default:
            i = 3;
-  }
+           break;
+  };
 
 //  //PV: The following works
 //  if (selector.op == "one") {

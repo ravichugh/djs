@@ -48,6 +48,9 @@ From trying to typecheck the code:
 - When annotating a function variable definition I reached: 
   Fatal error: exception Failure("shouldn't get here: unannotated FuncExr")
 
+- Optional arguments
+
+- Array Slice
 
 ====================================================
 NOTES
