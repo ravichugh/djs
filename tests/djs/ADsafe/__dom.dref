@@ -6,9 +6,16 @@ let seq_000002 = "__ macro tyBanned __"
 let seq_000001 = "__ macro tyQueryLoc __" 
 
 *)
-weak (~lNodes: {Arr(Ref(~lNode))|(and (packed v) (>= (len v) 0))} > lArrPro)
+(*weak (~lNodes: {Arr(Ref(~lNode))|(and (packed v) (>= (len v) 0))} > lArrPro)*)
+weak (~lNodes: Arr(Ref(~lNode)) > lArrPro)
 
-weak (~lEvent: {"type":Str} > lObjPro)
+weak (~lEvent: {
+  "type":Str,
+  target:Ref(~lNode),    (* could also be Ref(~lEventTarget) *)
+  srcElement: Ref(~lNode)
+} > lObjPro)
+
+weak (~lEventTarget: { } > lObjPro)
 
 weak (~lSelector: {
   op:Str,
@@ -24,6 +31,8 @@ weak (~lKEyboardEvent: {altKey:Bool, ctrlKey:Bool} > ~lUIEvent)
 weak (~lCCSStyle: {
     visibility: Str
 } > lObjPro)
+
+weak (~lSelection: Dict > lObjPro) 
 
 weak (~lNList: {Arr(Ref(~lNode))|(and (packed v) (>= (len v) 1))} > lArrPro)
 
@@ -44,5 +53,6 @@ weak (~lNode: {
 
 weak (~lDocument: {
     defaultView:Ref(~lNode), 
+    selection: Ref(~lSelection),
     getElementById:[;;H_] (this:Top, s:Str) / H_ -> Ref(~lNode) / (H_)} > lObjPro)
 

@@ -64,11 +64,14 @@
 
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
 
-
+//DEFINITIONS HAVE TO BE IN THIS FILE
 /*: tyQueryLoc { Arr(NotUndef) | (and (packed v) (>= (len v) 0)) } > lArrPro */ "#define";
-
-
+/*: tyBunch { "___nodes___": Ref(~lNodes), "___star___": Bool} */ "#define";
 var document /*: Ref(~lDocument) */ = null;
+//END OF DEFINITIONS
+
+
+
 
 //TODO: Change "adsafe" to all capital.
 /*: adsafe = () -> Top  */ "#type";
@@ -185,7 +188,7 @@ var adsafe = (function () {
         name /*: Str */ = "",
         pecker,     // set of pecker patterns
         result /*: Ref(~lNodes) */ = null,
-        star,
+        star /*: Bool */ = false,   //PV: adding initial false value
         the_range,
         value /*: Str */ = "";
 
@@ -767,163 +770,172 @@ var adsafe = (function () {
 
 //TODO: TC flushed-left commented lines in function quest
     
-        var quest = function(query, nodes) 
-        /*: [; L;] (Ref(L), Ref(~lNodes)) / 
-              (L: { Arr(Ref(~lSelector)) | (packed v) } > lArrPro)
-               -> Ref(~lNodes) / 
-                    ( L: sameType) */ 
-        {
-            var selector /*: Ref(~lSelector) */ = null; 
-            //func /*: (Ref(~lNode)) -> Top */ = function() {} ,  //TODO: throws exception
-            //var func = function(a) /*: (Ref(~lNode)) -> Top */ { return; },
-            var func,
-                i /*: { Int | (>= v 0) } */ = 0,
-                j;
-    
-    // Step through each selector.
-    
-            /*: (&nodes: Ref(~lNodes)) -> sameType  */
-            for (i = 0; i < query.length; i += 1) {
-                selector = query[i];                
-                name = selector.name;
-//                func = hunter[selector.op];
+//        var quest = function(query, nodes) 
+//        /*: [; L;] (Ref(L), Ref(~lNodes)) / 
+//              (L: { Arr(Ref(~lSelector)) | (packed v) } > lArrPro)
+//               -> Ref(~lNodes) / 
+//                    ( L: sameType) */ 
+//        {
+//            var selector /*: Ref(~lSelector) */ = null; 
+//            //func /*: (Ref(~lNode)) -> Top */ = function() {} ,  //TODO: throws exception
+//            //var func = function(a) /*: (Ref(~lNode)) -> Top */ { return; },
+//            var func,
+//                i /*: { Int | (>= v 0) } */ = 0,
+//                j;
 //    
-    // There are two kinds of selectors: hunters and peckers. If this is a hunter,
-    // loop through the the nodes, passing each node to the hunter function.
-    // Accumulate all the nodes it finds.
-    
-                if (typeof func === 'function') {
-//                    if (star) {
-//                        error("ADsafe: Query violation: *" + selector.op +
-//                            (selector.name || ''));
-//                    }
-//                    result = [];
-//                    for (j = 0; j < nodes.length; j += 1) {
-//                        func(nodes[j]);
-//                    }
-                } 
-                else {
-    
-    // If this is a pecker, get its function. There is a special case for
-    // the :first and :rest selectors because they are so simple.
-    
-                    value = selector.value;
-                    flipflop = false;
-//                    func = pecker[selector.op];
-                    if (typeof func !== 'function') {
-//                        switch (selector.op) {
-//                        case ':first':
-//                            result = nodes.slice(0, 1);
-//                            break;
-//                        case ':rest':
-//                            result = nodes.slice(1, nodes.length);    //PV: added 2nd argument to slice
-//                            break;
-//                        default:
-//                            error('ADsafe: Query violation: :' + selector.op);
+//    // Step through each selector.
+//    
+//            /*: (&nodes: Ref(~lNodes)) -> sameType  */
+//            for (i = 0; i < query.length; i += 1) {
+//                selector = query[i];                
+//                name = selector.name;
+////                func = hunter[selector.op];
+////    
+//    // There are two kinds of selectors: hunters and peckers. If this is a hunter,
+//    // loop through the the nodes, passing each node to the hunter function.
+//    // Accumulate all the nodes it finds.
+//    
+//                if (typeof func === 'function') {
+////                    if (star) {
+////                        error("ADsafe: Query violation: *" + selector.op +
+////                            (selector.name || ''));
+////                    }
+////                    result = [];
+////                    for (j = 0; j < nodes.length; j += 1) {
+////                        func(nodes[j]);
+////                    }
+//                } 
+//                else {
+//    
+//    // If this is a pecker, get its function. There is a special case for
+//    // the :first and :rest selectors because they are so simple.
+//    
+//                    value = selector.value;
+//                    flipflop = false;
+////                    func = pecker[selector.op];
+//                    if (typeof func !== 'function') {
+////                        switch (selector.op) {
+////                        case ':first':
+////                            result = nodes.slice(0, 1);
+////                            break;
+////                        case ':rest':
+////                            result = nodes.slice(1, nodes.length);    //PV: added 2nd argument to slice
+////                            break;
+////                        default:
+////                            error('ADsafe: Query violation: :' + selector.op);
+////                        }
+//                    } 
+//                    else {
+//    
+//    // For the other selectors, make an array of nodes that are filtered by
+//    // the pecker function.
+//    
+//                        result = [];
+//                        for (j = 0; j < nodes.length; j += 1) {
+//                            if (func(nodes[j])) {
+//                                result.push(nodes[j]);
+//                            }
 //                        }
-                    } 
-                    else {
+//                    }
+//                }
+//                nodes = result;
+//            }
+//            return result;
+//        };
+//    
     
-    // For the other selectors, make an array of nodes that are filtered by
-    // the pecker function.
+        var make_root = function(root, id)
+        /*: (root:Ref(~lNode) , id:Str) -> Top */ 
+        {
     
-                        result = [];
-                        for (j = 0; j < nodes.length; j += 1) {
-                            if (func(nodes[j])) {
-                                result.push(nodes[j]);
-                            }
-                        }
-                    }
+            if (id) {
+                if (root.tagName !== 'DIV') {
+//                    error('ADsafe: Bad node.');
                 }
-                nodes = result;
-            }
-            return result;
-        };
-    //
-    //
-    //    function make_root(root, id) {
-    //
-    //        if (id) {
-    //            if (root.tagName !== 'DIV') {
-    //                error('ADsafe: Bad node.');
-    //            }
-    //        } else {
-    //            if (root.tagName !== 'BODY') {
-    //                error('ADsafe: Bad node.');
-    //            }
-    //        }
-    //
-    //// A Bunch is a container that holds zero or more dom nodes.
-    //// It has many useful methods.
-    //
-    //        function Bunch(nodes) {
-    //            this.___nodes___ = nodes;
-    //            this.___star___ = star && nodes.length > 1;
-    //            star = false;
-    //        }
-    //
-    //        var allow_focus = true,
-    //            dom,
-    //            dom_event = function (e) {
-    //                var key,
-    //                    target,
-    //                    that,
-    //                    the_event,
-    //                    the_target,
-    //                    the_actual_event = e || event,
-    //                    type = the_actual_event.type;
-    //
-    //// Get the target node and wrap it in a bunch.
-    //
-    //                the_target = the_actual_event.target || the_actual_event.srcElement;
-    //                target = new Bunch([the_target]);
-    //                that = target;
-    //
-    //// Use the PPK hack to make focus bubbly on IE.
-    //// When a widget has focus, it can use the focus method.
-    //
-    //                switch (type) {
-    //                case 'mousedown':
-    //                    allow_focus = true;
-    //                    if (document.selection) {
-    //                        the_range = document.selection.createRange();
-    //                    }
-    //                    break;
-    //                case 'focus':
-    //                case 'focusin':
-    //                    allow_focus = true;
-    //                    has_focus = the_target;
-    //                    the_actual_event.cancelBubble = false;
-    //                    type = 'focus';
-    //                    break;
-    //                case 'blur':
-    //                case 'focusout':
-    //                    allow_focus = false;
-    //                    has_focus = null;
-    //                    type = 'blur';
-    //                    break;
-    //                case 'keypress':
-    //                    allow_focus = true;
-    //                    has_focus = the_target;
-    //                    key = String.fromCharCode(the_actual_event.charCode ||
-    //                        the_actual_event.keyCode);
-    //                    switch (key) {
-    //                    case '\u000d':
-    //                    case '\u000a':
-    //                        type = 'enterkey';
-    //                        break;
-    //                    case '\u001b':
-    //                        type = 'escapekey';
-    //                        break;
-    //                    }
-    //                    break;
-    //
-    //// This is a workaround for Safari.
-    //
-    //                case 'click':
-    //                    allow_focus = true;
-    //                    break;
-    //                }
+            } else {
+                if (root.tagName !== 'BODY') {
+//                    error('ADsafe: Bad node.');
+                }
+            };
+    
+    // A Bunch is a container that holds zero or more dom nodes.
+    // It has many useful methods.
+    
+            function Bunch(nodes)
+            /*: new [;L;] (this:Ref, nodes: Ref(L)) / 
+                (this: Empty > lBunchProto, L: Arr(Ref(~lNode)) > lArrPro) ->
+                Ref(this) / (this:  {"___nodes___": Ref(L), "___star___": Bool} > lBunchProto) */
+            {
+                this.___nodes___ = nodes;
+                this.___star___ = star && nodes.length > 1;
+                star = false;
+                return this;      //PV: added this
+            };
+    
+            var allow_focus = true,
+                dom,
+                dom_event = function (event,e) 
+                /*: (event: Ref(~lEvent), e: Ref(~lEvent)) -> Top */
+                {
+                    var key,
+                        target,
+                        that,
+                        the_event,
+                        the_target,
+                        the_actual_event = e || event,
+                        type = the_actual_event.type;
+    
+    // Get the target node and wrap it in a bunch.
+    
+                    the_target = the_actual_event.target || the_actual_event.srcElement;
+                    target = new Bunch(/*: lTT Arr(Ref(~lNode)) */ [the_target]);
+                    that = target;
+    
+    // Use the PPK hack to make focus bubbly on IE.
+    // When a widget has focus, it can use the focus method.
+    
+//                    switch (type) {
+//                    case 'mousedown':
+//                        allow_focus = true;
+//                        if (document.selection) {
+//                            the_range = document.selection.createRange();
+//                        }
+//                        break;
+//                    case 'focus':
+//                    case 'focusin':
+//                        allow_focus = true;
+//                        has_focus = the_target;
+//                        the_actual_event.cancelBubble = false;
+//                        type = 'focus';
+//                        break;
+//                    case 'blur':
+//                    case 'focusout':
+//                        allow_focus = false;
+//                        has_focus = null;
+//                        type = 'blur';
+//                        break;
+//                    case 'keypress':
+//                        allow_focus = true;
+//                        has_focus = the_target;
+//                        key = String.fromCharCode(the_actual_event.charCode ||
+//                            the_actual_event.keyCode);
+//                        switch (key) {
+//                        case '\u000d':
+//                        case '\u000a':
+//                            type = 'enterkey';
+//                            break;
+//                        case '\u001b':
+//                            type = 'escapekey';
+//                            break;
+//                        }
+//                        break;
+//    
+//    // This is a workaround for Safari.
+//    
+//                    case 'click':
+//                        allow_focus = true;
+//                        break;
+//                    }
     //                if (the_actual_event.cancelBubble &&
     //                        the_actual_event.stopPropagation) {
     //                    the_actual_event.stopPropagation();
@@ -1003,7 +1015,7 @@ var adsafe = (function () {
     //                }
     //                that = the_target = the_event = the_actual_event = null;
     //                return;
-    //            };
+                };
     //
     //// Mark the node as a root. This prevents event bubbling from propagating
     //// past it.
@@ -1907,7 +1919,7 @@ var adsafe = (function () {
     //                root.onkeypress  = dom_event;
     //        }
     //        return [dom, Bunch.prototype];
-    //    }
+        };
     //
     //
     //    function F() {}
