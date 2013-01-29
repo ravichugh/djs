@@ -12,6 +12,9 @@ weak (~lNodes: Arr(Ref(~lNode)) > lArrPro)
 weak (~lEvent: {
   "type":Str,
   target:Ref(~lNode),    (* could also be Ref(~lEventTarget) *)
+  cancelBubble: Bool,
+  stopPropagation: () -> Top,
+  bubble: () -> Top,
   srcElement: Ref(~lNode)
 } > lObjPro)
 
@@ -23,16 +26,25 @@ weak (~lSelector: {
   value:Str
 } > lObjPro)
 
-
 weak (~lUIEvent: Dict > ~lEvent)
 
-weak (~lKEyboardEvent: {altKey:Bool, ctrlKey:Bool} > ~lUIEvent)
+weak (~lKEyboardEvent: {
+  altKey:Bool, 
+  ctrlKey:Bool} > ~lUIEvent)
+
+weak (~lBunchs: Arr(Ref(~lBunch)) > lArrPro)
+
+weak (~lBunch: {
+  "___nodes___": Ref(~lNodes),
+  "___star___": Bool
+  (*getParents: () -> Ref(~lBunchs) *) (* Need to fix arrow subtyping first *)
+} > lBunchProto)
 
 weak (~lCCSStyle: {
     visibility: Str
 } > lObjPro)
 
-weak (~lSelection: Dict > lObjPro) 
+weak (~lSelection: { createRange: () -> Ref(~lDocument) }  > lObjPro) 
 
 weak (~lNList: {Arr(Ref(~lNode))|(and (packed v) (>= (len v) 1))} > lArrPro)
 

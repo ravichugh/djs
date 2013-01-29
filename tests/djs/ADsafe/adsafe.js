@@ -103,7 +103,7 @@ var adsafe = (function () {
         defaultView = document.defaultView,
         ephemeral,
         flipflop /*: Bool */ = false,       // Used in :even/:odd processing
-        has_focus,
+        has_focus /*: Ref(~lNode) */ = null,
         hunter,         // Set of hunter patterns
         interceptors = [],
 
@@ -187,10 +187,10 @@ var adsafe = (function () {
 //        },
         name /*: Str */ = "",
         pecker,     // set of pecker patterns
-        result /*: Ref(~lNodes) */ = null,
-        star /*: Bool */ = false,   //PV: adding initial false value
-        the_range,
-        value /*: Str */ = "";
+        result    /*: Ref(~lNodes) */     = null,     //PV: adding initial value 
+        star      /*: Bool */             = false,    //PV: adding initial value
+        the_range /*: Ref(~lDocument) */  = null,     //PV: adding initial value
+        value     /*: Str */              = "";       //PV: adding initial value
 
 
 //  The error function is called if there is a violation or confusion.
@@ -766,9 +766,7 @@ var adsafe = (function () {
 //            }
 //        };
     
-//XXX: Should TC until here
-
-//TODO: TC flushed-left commented lines in function quest
+//TODO: Only TCing code left after removing leftmost comments.
     
 //        var quest = function(query, nodes) 
 //        /*: [; L;] (Ref(L), Ref(~lNodes)) / 
@@ -862,17 +860,20 @@ var adsafe = (function () {
     // It has many useful methods.
     
             function Bunch(nodes)
-            /*: new [;L;] (this:Ref, nodes: Ref(L)) / 
-                (this: Empty > lBunchProto, L: Arr(Ref(~lNode)) > lArrPro) ->
-                Ref(this) / (this:  {"___nodes___": Ref(L), "___star___": Bool} > lBunchProto) */
+            /*: new (this:Ref, nodes: Ref(~lNodes)) / (this: Empty > lBunchProto, ~lBunch: frzn) ->
+                Ref(~lBunch) / (~lBunch: frzn) */
             {
                 this.___nodes___ = nodes;
+                /*: nodes lNodes */ "#thaw";
                 this.___star___ = star && nodes.length > 1;
+                /*: nodes (~lNodes, thwd lNodes) */ "#freeze";
                 star = false;
-                return this;      //PV: added this
+                var self = this;
+                /*: self (~lBunch,frzn) */ "#freeze";
+                return self;      //PV: added this
             };
     
-            var allow_focus = true,
+            var allow_focus /*: Bool */ = true,
                 dom,
                 dom_event = function (event,e) 
                 /*: (event: Ref(~lEvent), e: Ref(~lEvent)) -> Top */
@@ -883,17 +884,22 @@ var adsafe = (function () {
                         the_event,
                         the_target,
                         the_actual_event = e || event,
-                        type = the_actual_event.type;
+                        type /*: Str */ = the_actual_event.type;
     
     // Get the target node and wrap it in a bunch.
     
                     the_target = the_actual_event.target || the_actual_event.srcElement;
-                    target = new Bunch(/*: lTT Arr(Ref(~lNode)) */ [the_target]);
-                    that = target;
-    
-    // Use the PPK hack to make focus bubbly on IE.
-    // When a widget has focus, it can use the focus method.
-    
+                    
+                    var tt = /*: lTT Arr(Ref(~lNode)) */ [the_target];
+                    /*: tt (~lNodes, frzn) */ "#freeze";
+
+                    target = new Bunch(tt);
+//                    that = target;
+//PV: Commenting to speed-up                    
+//    
+//    // Use the PPK hack to make focus bubbly on IE.
+//    // When a widget has focus, it can use the focus method.
+//    
 //                    switch (type) {
 //                    case 'mousedown':
 //                        allow_focus = true;
@@ -917,17 +923,17 @@ var adsafe = (function () {
 //                    case 'keypress':
 //                        allow_focus = true;
 //                        has_focus = the_target;
-//                        key = String.fromCharCode(the_actual_event.charCode ||
-//                            the_actual_event.keyCode);
-//                        switch (key) {
-//                        case '\u000d':
-//                        case '\u000a':
-//                            type = 'enterkey';
-//                            break;
-//                        case '\u001b':
-//                            type = 'escapekey';
-//                            break;
-//                        }
+////TODO: Add String.fromCharCode to prims                        
+////                        key = String.fromCharCode(the_actual_event.charCode || the_actual_event.keyCode);
+////                        switch (key) {
+////                        case '\u000d':
+////                        case '\u000a':
+////                            type = 'enterkey';
+////                            break;
+////                        case '\u001b':
+////                            type = 'escapekey';
+////                            break;
+////                        }
 //                        break;
 //    
 //    // This is a workaround for Safari.
@@ -936,53 +942,58 @@ var adsafe = (function () {
 //                        allow_focus = true;
 //                        break;
 //                    }
-    //                if (the_actual_event.cancelBubble &&
-    //                        the_actual_event.stopPropagation) {
-    //                    the_actual_event.stopPropagation();
-    //                }
-    //
-    //// Make the event object.
-    //
-    //                the_event = {
-    //                    altKey: the_actual_event.altKey,
-    //                    ctrlKey: the_actual_event.ctrlKey,
-    //                    bubble: function () {
-    //
-    //// Bubble up. Get the parent of that node. It becomes the new that.
-    //// getParent throws when bubbling is not possible.
-    //
-    //                        try {
-    //                            var parent = that.getParent(),
-    //                                b = parent.___nodes___[0];
-    //                            that = parent;
-    //                            the_event.that = that;
-    //
-    //// If that node has an event handler, fire it. Otherwise, bubble up.
-    //
-    //                            if (b['___ on ___'] &&
-    //                                    b['___ on ___'][type]) {
-    //                                that.fire(the_event);
-    //                            } else {
-    //                                the_event.bubble();
-    //                            }
-    //                        } catch (e) {
-    //                            error(e);
-    //                        }
-    //                    },
-    //                    key: key,
-    //                    preventDefault: function () {
-    //                        if (the_actual_event.preventDefault) {
-    //                            the_actual_event.preventDefault();
-    //                        }
-    //                        the_actual_event.returnValue = false;
-    //                    },
-    //                    shiftKey: the_actual_event.shiftKey,
-    //                    target: target,
-    //                    that: that,
-    //                    type: type,
-    //                    x: the_actual_event.clientX,
-    //                    y: the_actual_event.clientY
-    //                };
+                    
+//                    if (the_actual_event.cancelBubble &&
+//                            the_actual_event.stopPropagation) {
+//                        the_actual_event.stopPropagation();
+//                    }
+//    
+//    // Make the event object.
+//    
+//                    the_event = {
+//                        altKey: the_actual_event.altKey,
+//                        ctrlKey: the_actual_event.ctrlKey,
+//                        bubble: function () 
+//                        /*: () -> Top */
+//                        {
+//    
+//    // Bubble up. Get the parent of that node. It becomes the new that.
+//    // getParent throws when bubbling is not possible.
+//    
+//TODO: try-catch                          
+//                            try {
+//                                var parent = that.getParent(),
+//                                    b = parent.___nodes___[0];
+//                                //that = parent;
+//                                //the_event.that = that;
+//    
+//    // If that node has an event handler, fire it. Otherwise, bubble up.
+//    
+//                                //if (b['___ on ___'] &&
+//                                //        b['___ on ___'][type]) {
+//                                //    that.fire(the_event);
+//                                //} else {
+//                                //    the_event.bubble();
+//                                //}
+//                            } catch (e) {
+//                                error(e);
+//                            }
+//                        }
+//                        ,
+//                        key: key,
+//                        preventDefault: function () {
+//                            if (the_actual_event.preventDefault) {
+//                                the_actual_event.preventDefault();
+//                            }
+//                            the_actual_event.returnValue = false;
+//                        },
+//                        shiftKey: the_actual_event.shiftKey,
+//                        target: target,
+//                        that: that,
+//                        type: type,
+//                        x: the_actual_event.clientX,
+//                        y: the_actual_event.clientY
+//                    };
     //
     //// If the target has event handlers, then fire them. Otherwise, bubble up.
     //
