@@ -768,6 +768,18 @@ let maybeAugmentWorld g h e w =
     let cloInvariants = collectClosureInvariants g h fvs in
     (fst w, addAutoLocBindings (snd w) (snd cloInvariants))
 
+let collectWeakClosureInvariants h =
+  List.fold_left (fun (acc1,acc2) -> function
+    | (l,HEWeak(thaw)) -> ((l,HWeak(thaw))::acc1, (l,HWeak(thaw))::acc2)
+    | _ -> (acc1, acc2)
+  ) ([],[]) (snd h)
+
+let maybeAugmentCloInvariant h ci =
+  if not !Settings.augmentHeaps then ci
+  else match ci with
+    | None -> None
+    | Some(t) -> Some (augmentType (collectWeakClosureInvariants h) t)
+
 
 (***** TS application helpers *************************************************)
 
@@ -1186,6 +1198,7 @@ and tsExp_ g h = function
         | Some _ -> err ([cap; spr "location [%s] already bound" (strLoc l)])
         | None ->
             let _ = tsVal g h v in
+            let ci = maybeAugmentCloInvariant h ci in
             let h' = (fst h, snd h @ [(l, HEStrong (v, None, ci))]) in
             (* probably no need to use the more precise v=VRef(_) *)
             (Typ (tyRef l), h')
@@ -1226,6 +1239,7 @@ and tsExp_ g h = function
             let _ = tcVal g h (tyRef l2) v2 in
             let t1 = tsVal g h v1 in
             let d = freshVar "obj" in
+            let ci = maybeAugmentCloInvariant h ci in
             let h' = (fst h, snd h @ [l1, HEStrong (vVar d, Some l2, ci)]) in
             let s = (* probably no need to use the more precise v=VObjRef(_) *)
               TQuick ("v", QBoxes [URef l1], eq (tag theV) (wStr tagObj)) in
