@@ -1,5 +1,3 @@
-//NOT WORKING -- using "#use"
-
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
 var quest = function(arr) 
 /*: [; L;] (Ref(L)) / (L: { Arr(() -> Top ) | (packed v) } > lArrPro) -> Top / sameType */
