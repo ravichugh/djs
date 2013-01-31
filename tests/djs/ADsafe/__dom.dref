@@ -1,13 +1,6 @@
-(***** ../tests/djs/ADsafe/__dom.js *******************************************)
 
-(*
-let seq_000002 = "__ macro tyBanned __" 
-
-let seq_000001 = "__ macro tyQueryLoc __" 
-
-*)
 (*weak (~lNodes: {Arr(Ref(~lNode))|(and (packed v) (>= (len v) 0))} > lArrPro)*)
-weak (~lNodes: Arr(Ref(~lNode)) > lArrPro)
+weak (~lNodes: { Arr(Ref(~lNode)) | (packed v)} > lArrPro)
 
 weak (~lEvent: {
   "type":Str,
@@ -15,7 +8,10 @@ weak (~lEvent: {
   cancelBubble: Bool,
   stopPropagation: () -> Top,
   bubble: () -> Top,
-  srcElement: Ref(~lNode)
+  srcElement: Ref(~lNode),
+  altKey:Bool, 
+  ctrlKey:Bool,
+  shiftKey:Bool
 } > lObjPro)
 
 weak (~lEventTarget: { } > lObjPro)
@@ -26,17 +22,14 @@ weak (~lSelector: {
   value:Str
 } > lObjPro)
 
-weak (~lUIEvent: Dict > ~lEvent)
-
-weak (~lKEyboardEvent: {
-  altKey:Bool, 
-  ctrlKey:Bool} > ~lUIEvent)
+weak (~lQuery: { Arr(Ref(~lSelector)) | (packed v) } > lArrPro)
 
 weak (~lBunchs: Arr(Ref(~lBunch)) > lArrPro)
 
 weak (~lBunch: {
   "___nodes___": Ref(~lNodes),
-  "___star___": Bool
+  "___star___": Bool,
+  fire: (Ref(~lEvent)) -> Top
   (*getParents: () -> Ref(~lBunchs) *) (* Need to fix arrow subtyping first *)
 } > lBunchProto)
 
@@ -53,7 +46,9 @@ weak (~lNode: {
     firstChild:Ref(~lNode), 
     nextSibling:Ref(~lNode), 
     childNodes:Ref(~lNList),
-    change:Ref(~lEvent), "___ on ___":Ref(~lEvent), 
+    change:Ref(~lEvent), 
+    "___ on ___":Ref(~lEvent),
+    "___adsafe root___": Bool,
     tagName:Str, 
     className:Str, 
     name:Str,
@@ -61,10 +56,12 @@ weak (~lNode: {
     nodeValue:Str,
     disabled:Bool,
     checked:Bool,
-    getElementsByTagName:[;L;H_] (this:Ref(~lNode), name:Str) / H_ -> Ref(L) / H_ + (L: _underscore_3:{Arr(Ref(~lNode))|(packed v)})} > lObjPro)
+    fire:(NotUndef) -> Top,
+    getElementsByTagName:[;L;] (this:Ref(~lNode), name:Str) / () -> Ref(L) / (L: _underscore_3:{Arr(Ref(~lNode))|(packed v)})} > lObjPro)
 
 weak (~lDocument: {
-    defaultView:Ref(~lNode), 
+    defaultView:Ref(~lNode),
     selection: Ref(~lSelection),
     getElementById:[;;H_] (this:Top, s:Str) / H_ -> Ref(~lNode) / (H_)} > lObjPro)
+
 

@@ -50,7 +50,7 @@ From trying to typecheck the code:
 
 - Optional arguments
 
-- Array Slice
+- Add support for array slice
 
 ====================================================
 NOTES
@@ -69,12 +69,17 @@ THINK ABOUT
 
 - Implicit thawing?
 
-- Assing a thawed location (strong) to a reference to a weak one.
+- Assigning a thawed location (strong) to a reference to a weak one.
+
+
 
 ====================================================
 QUESTIONS
 ====================================================
 
-- Does it make sense to have separate weak locations of the same type? E.g.:
-  weak (~lResult: {Arr(Ref(~lNode))|(and (packed v) (>= (len v) 0))} > lArrPro)
-  weak (~lQuery: {Arr(Ref(~lNode))|(and (packed v) (>= (len v) 0))} > lArrPro)
+- Is there a way to create a prototype chain for weak locations? 
+  * One way is to create strong locations for the prototypes and use that as
+  * prototype for the newly defined weak locations.
+  E.g. Events - KeyboardEvents
+
+- Why are funcitons only defined with NotUndef?

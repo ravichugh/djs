@@ -318,50 +318,48 @@ var adsafe = (function () {
             return cache_style_object;
       };
     
-        //TODO: move this definition to definitions file
         /*: (~lMatch    : Arr(Str) > lArrPro) */ "#weak"; 
-
     
-//        var walkTheDOM = function walkTheDOM_rec(node, func, skip) 
-//        /*: ( node: Ref(~lNode), func:(Ref(~lNode)) -> Top, skip: Bool) -> Top */
-//        {
-//    
-//    // Recursively traverse the DOM tree, starting with the node, in document
-//    // source order, calling the func on each node visisted.
-//    
-//            if (!skip) {
-//                func(node);
-//            }
-//            node = node.firstChild;
-//            /*: (&node: Ref(~lNode)) -> (&node: sameType) */
-//            while (node) {
-//                walkTheDOM_rec(node, func, true);   //XXX: PV added third argument to match definition
-//                node = node.nextSibling;
-//            }
-//        };
-//    
-//    
-//        var purge_event_handlers = function(node) 
-//        /*: (node: Ref(~lNode)) -> Top */
-//        {
-//    
-//    // We attach all event handlers to an '___ on ___' property. The property name
-//    // contains spaces to insure that there is no collision with HTML attribues.
-//    // Keeping the handlers in a single property makes it easy to remove them
-//    // all at once. Removal is required to avoid memory leakage on IE6 and IE7.
-//    
-//          //TODO: PV had to rename the argument name
-//            walkTheDOM(node, function (node1)
-//                /*: (Ref(~lNode)) -> Top */
-//                {
-//                    if (node1.tagName) {
-//                        node1['___ on ___'] = node1.change = null;
-//                    }
-//                },
-//                //XXX: PV added third argument to match definition
-//                true
-//                );
-//        };
+        var walkTheDOM = function walkTheDOM_rec(node, func, skip) 
+        /*: ( node: Ref(~lNode), func:(Ref(~lNode)) -> Top, skip: Bool) -> Top */
+        {
+    
+    // Recursively traverse the DOM tree, starting with the node, in document
+    // source order, calling the func on each node visisted.
+    
+            if (!skip) {
+                func(node);
+            }
+            node = node.firstChild;
+            /*: (&node: Ref(~lNode)) -> (&node: sameType) */
+            while (node) {
+                walkTheDOM_rec(node, func, true);   //XXX: PV added third argument to match definition
+                node = node.nextSibling;
+            }
+        };
+    
+    
+        var purge_event_handlers = function(node) 
+        /*: (node: Ref(~lNode)) -> Top */
+        {
+    
+    // We attach all event handlers to an '___ on ___' property. The property name
+    // contains spaces to insure that there is no collision with HTML attribues.
+    // Keeping the handlers in a single property makes it easy to remove them
+    // all at once. Removal is required to avoid memory leakage on IE6 and IE7.
+    
+          //TODO: PV had to rename the argument name
+            walkTheDOM(node, function (node1)
+                /*: (Ref(~lNode)) -> Top */
+                {
+                    if (node1.tagName) {
+                        node1['___ on ___'] = node1.change = null;
+                    }
+                },
+                //XXX: PV added third argument to match definition
+                true
+                );
+        };
 
 
     
@@ -492,7 +490,7 @@ var adsafe = (function () {
     // These functions implement the hunter behaviors.
     
             '': function (node) 
-            /*:[;L]  (node: Ref(~lNode)) / (&name: Str) -> Top / sameExact */ 
+            /*: (node: Ref(~lNode)) / (&name: Str) -> Top / sameExact */ 
             {
 
                 /*: node lNode */ "#thaw";
@@ -766,80 +764,100 @@ var adsafe = (function () {
 //            }
 //        };
     
-//TODO: Only TCing code left after removing leftmost comments.
     
-//        var quest = function(query, nodes) 
-//        /*: [; L;] (Ref(L), Ref(~lNodes)) / 
-//              (L: { Arr(Ref(~lSelector)) | (packed v) } > lArrPro)
-//               -> Ref(~lNodes) / 
-//                    ( L: sameType) */ 
-//        {
-//            var selector /*: Ref(~lSelector) */ = null; 
-//            //func /*: (Ref(~lNode)) -> Top */ = function() {} ,  //TODO: throws exception
-//            //var func = function(a) /*: (Ref(~lNode)) -> Top */ { return; },
-//            var func,
-//                i /*: { Int | (>= v 0) } */ = 0,
-//                j;
-//    
-//    // Step through each selector.
-//    
-//            /*: (&nodes: Ref(~lNodes)) -> sameType  */
-//            for (i = 0; i < query.length; i += 1) {
-//                selector = query[i];                
-//                name = selector.name;
-////                func = hunter[selector.op];
-////    
-//    // There are two kinds of selectors: hunters and peckers. If this is a hunter,
-//    // loop through the the nodes, passing each node to the hunter function.
-//    // Accumulate all the nodes it finds.
-//    
-//                if (typeof func === 'function') {
-////                    if (star) {
-////                        error("ADsafe: Query violation: *" + selector.op +
-////                            (selector.name || ''));
-////                    }
-////                    result = [];
-////                    for (j = 0; j < nodes.length; j += 1) {
-////                        func(nodes[j]);
-////                    }
-//                } 
-//                else {
-//    
-//    // If this is a pecker, get its function. There is a special case for
-//    // the :first and :rest selectors because they are so simple.
-//    
+        var quest = function(query, nodes) 
+        /*: (Ref(~lQuery), Ref(~lNodes)) -> Ref(~lNodes) */ 
+        {
+            var selector /*: Ref(~lSelector) */ = null; 
+            //var func /*: (Ref(~lNode)) -> Top */ = function(a) /*: (Ref(~lNode)) -> Top */ { return; },
+            //TODO: Type func
+            var func,
+                i /*: { Int | (>= v 0) } */ = 0,
+                j /*: { Int | (>= v 0) } */ = 0;
+    
+
+    // Step through each selector.
+    
+            //TRICK: does not TC without query.length and nodes.length
+            /*: query lQuery */ "#thaw";
+            query.length;
+            
+            /*: nodes lNodes */ "#thaw";
+            nodes.length;
+
+            
+            /*: ( &result: Ref(~lNodes), 
+                  &query: Ref(lQuery), lQuery: {Arr(Ref(~lSelector))|(packed v)} > lArrPro, 
+                  &nodes: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) |(packed v)} > lArrPro) 
+                  -> sameType  */
+            for (i = 0; i < query.length; i += 1) {
+                selector = query[i];
+                name = selector.name;
+                //TODO: tough case
+                //func = hunter[selector.op];
+    
+    // There are two kinds of selectors: hunters and peckers. If this is a hunter,
+    // loop through the the nodes, passing each node to the hunter function.
+    // Accumulate all the nodes it finds.
+    
+                if (typeof func === 'function') {
+                    if (star) {
+                      //TODO: expects query and nodes frozen
+                        //error("ADsafe: Query violation: *" + selector.op +
+                        //    (selector.name || ''));
+                    }
+                    result = [];
+
+                    /*: (&nodes: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) |(packed v)} > lArrPro) 
+                        -> sameType */
+                    for (j = 0; j < nodes.length; j += 1) {
+                        func(nodes[j]);
+                    }
+                } 
+                else {
+    
+    // If this is a pecker, get its function. There is a special case for
+    // the :first and :rest selectors because they are so simple.
+    
 //                    value = selector.value;
 //                    flipflop = false;
-////                    func = pecker[selector.op];
-//                    if (typeof func !== 'function') {
-////                        switch (selector.op) {
-////                        case ':first':
-////                            result = nodes.slice(0, 1);
-////                            break;
-////                        case ':rest':
-////                            result = nodes.slice(1, nodes.length);    //PV: added 2nd argument to slice
-////                            break;
-////                        default:
-////                            error('ADsafe: Query violation: :' + selector.op);
-////                        }
-//                    } 
-//                    else {
-//    
-//    // For the other selectors, make an array of nodes that are filtered by
-//    // the pecker function.
-//    
-//                        result = [];
-//                        for (j = 0; j < nodes.length; j += 1) {
-//                            if (func(nodes[j])) {
-//                                result.push(nodes[j]);
-//                            }
+//                    func = pecker[selector.op];
+                    if (typeof func !== 'function') {
+//                        switch (selector.op) {
+//                        case ':first':
+//                            result = nodes.slice(0, 1);
+//                            break;
+//                        case ':rest':
+//                            result = nodes.slice(1, nodes.length);    //PV: added 2nd argument to slice
+//                            break;
+//                        default:
+//                            error('ADsafe: Query violation: :' + selector.op);
 //                        }
-//                    }
-//                }
+                    } 
+                    else {
+    
+    // For the other selectors, make an array of nodes that are filtered by
+    // the pecker function.
+    
+                        result = [];
+                        /*: (&nodes: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) |(packed v)} > lArrPro) 
+                            -> sameType */
+                        for (j = 0; j < nodes.length; j += 1) {
+                            if (func(nodes[j])) {
+                                result.push(nodes[j]);
+                            }
+                        }
+                    }
+                }
 //                nodes = result;
-//            }
-//            return result;
-//        };
+                
+            }
+
+            /*: nodes (~lNodes, thwd lNodes) */ "#freeze";
+            /*: query (~lQuery, thwd lQuery) */ "#freeze";
+                    
+            return result;
+        };
 //    
     
         var make_root = function(root, id)
@@ -859,43 +877,43 @@ var adsafe = (function () {
     // A Bunch is a container that holds zero or more dom nodes.
     // It has many useful methods.
     
-            function Bunch(nodes)
-            /*: new (this:Ref, nodes: Ref(~lNodes)) / (this: Empty > lBunchProto, ~lBunch: frzn) ->
-                Ref(~lBunch) / (~lBunch: frzn) */
-            {
-                this.___nodes___ = nodes;
-                /*: nodes lNodes */ "#thaw";
-                this.___star___ = star && nodes.length > 1;
-                /*: nodes (~lNodes, thwd lNodes) */ "#freeze";
-                star = false;
-                var self = this;
-                /*: self (~lBunch,frzn) */ "#freeze";
-                return self;      //PV: added this
-            };
+//PV: Commenting to speed-up                    
+//            function Bunch(nodes)
+//            /*: new (this:Ref, nodes: Ref(~lNodes)) / (this: Empty > lBunchProto, ~lBunch: frzn) ->
+//                Ref(~lBunch) / (~lBunch: frzn) */
+//            {
+//                this.___nodes___ = nodes;
+//                /*: nodes lNodes */ "#thaw";
+//                this.___star___ = star && nodes.length > 1;
+//                /*: nodes (~lNodes, thwd lNodes) */ "#freeze";
+//                star = false;
+//                var self = this;
+//                /*: self (~lBunch,frzn) */ "#freeze";
+//                return self;      //PV: added this
+//            };
     
             var allow_focus /*: Bool */ = true,
                 dom,
                 dom_event = function (event,e) 
                 /*: (event: Ref(~lEvent), e: Ref(~lEvent)) -> Top */
                 {
-                    var key,
+                    var key /*: Str */ = "",
                         target,
                         that,
                         the_event,
-                        the_target,
+                        the_target /*: Ref(~lNode) */ = null,
                         the_actual_event = e || event,
                         type /*: Str */ = the_actual_event.type;
     
-    // Get the target node and wrap it in a bunch.
-    
-                    the_target = the_actual_event.target || the_actual_event.srcElement;
-                    
-                    var tt = /*: lTT Arr(Ref(~lNode)) */ [the_target];
-                    /*: tt (~lNodes, frzn) */ "#freeze";
-
-                    target = new Bunch(tt);
+//    // Get the target node and wrap it in a bunch.
+//    
+                      the_target = the_actual_event.target || the_actual_event.srcElement;
+//                    
+//                    var tt = /*: lTT Arr(Ref(~lNode)) */ [the_target];
+//                    /*: tt (~lNodes, frzn) */ "#freeze";
+//
+//                    target = new Bunch(tt);
 //                    that = target;
-//PV: Commenting to speed-up                    
 //    
 //    // Use the PPK hack to make focus bubbly on IE.
 //    // When a widget has focus, it can use the focus method.
@@ -920,9 +938,9 @@ var adsafe = (function () {
 //                        has_focus = null;
 //                        type = 'blur';
 //                        break;
-//                    case 'keypress':
-//                        allow_focus = true;
-//                        has_focus = the_target;
+////                    case 'keypress':
+////                        allow_focus = true;
+////                        has_focus = the_target;
 ////TODO: Add String.fromCharCode to prims                        
 ////                        key = String.fromCharCode(the_actual_event.charCode || the_actual_event.keyCode);
 ////                        switch (key) {
@@ -934,7 +952,7 @@ var adsafe = (function () {
 ////                            type = 'escapekey';
 ////                            break;
 ////                        }
-//                        break;
+////                        break;
 //    
 //    // This is a workaround for Safari.
 //    
@@ -942,51 +960,50 @@ var adsafe = (function () {
 //                        allow_focus = true;
 //                        break;
 //                    }
-                    
+//                    
 //                    if (the_actual_event.cancelBubble &&
 //                            the_actual_event.stopPropagation) {
 //                        the_actual_event.stopPropagation();
 //                    }
 //    
-//    // Make the event object.
-//    
+    // Make the event object.
+    
 //                    the_event = {
 //                        altKey: the_actual_event.altKey,
 //                        ctrlKey: the_actual_event.ctrlKey,
-//                        bubble: function () 
-//                        /*: () -> Top */
-//                        {
-//    
-//    // Bubble up. Get the parent of that node. It becomes the new that.
-//    // getParent throws when bubbling is not possible.
-//    
-//TODO: try-catch                          
-//                            try {
-//                                var parent = that.getParent(),
-//                                    b = parent.___nodes___[0];
-//                                //that = parent;
-//                                //the_event.that = that;
-//    
-//    // If that node has an event handler, fire it. Otherwise, bubble up.
-//    
-//                                //if (b['___ on ___'] &&
-//                                //        b['___ on ___'][type]) {
-//                                //    that.fire(the_event);
-//                                //} else {
-//                                //    the_event.bubble();
-//                                //}
-//                            } catch (e) {
-//                                error(e);
-//                            }
-//                        }
-//                        ,
+//////TODO: try-catch                          
+////                        bubble: function () 
+////                        /*: () -> Top */
+////                        {
+////    
+////    // Bubble up. Get the parent of that node. It becomes the new that.
+////    // getParent throws when bubbling is not possible.
+////    
+////                            try {
+////                                var parent = that.getParent(),
+////                                    b = parent.___nodes___[0];
+////                                that = parent;
+////                                the_event.that = that;
+////    
+////    // If that node has an event handler, fire it. Otherwise, bubble up.
+////    
+////                                if (b['___ on ___'] &&
+////                                        b['___ on ___'][type]) {
+////                                    that.fire(the_event);
+////                                } else {
+////                                    the_event.bubble();
+////                                }
+////                            } catch (e) {
+////                                error(e);
+////                            }
+////                        },                        
 //                        key: key,
-//                        preventDefault: function () {
-//                            if (the_actual_event.preventDefault) {
-//                                the_actual_event.preventDefault();
-//                            }
-//                            the_actual_event.returnValue = false;
-//                        },
+////                        preventDefault: function () {
+////                            if (the_actual_event.preventDefault) {
+////                                the_actual_event.preventDefault();
+////                            }
+////                            the_actual_event.returnValue = false;
+////                        },
 //                        shiftKey: the_actual_event.shiftKey,
 //                        target: target,
 //                        that: that,
@@ -994,30 +1011,32 @@ var adsafe = (function () {
 //                        x: the_actual_event.clientX,
 //                        y: the_actual_event.clientY
 //                    };
-    //
-    //// If the target has event handlers, then fire them. Otherwise, bubble up.
-    //
-    //                if (the_target['___ on ___'] &&
-    //                        the_target['___ on ___'][the_event.type]) {
-    //                    target.fire(the_event);
-    //                } else {
-    //                    for (;;) {
-    //                        the_target = the_target.parentNode;
-    //                        if (!the_target) {
-    //                            break;
-    //                        }
-    //                        if (the_target['___ on ___'] &&
-    //                                the_target['___ on ___'][the_event.type]) {
-    //                            that = new Bunch([the_target]);
-    //                            the_event.that = that;
-    //                            that.fire(the_event);
-    //                            break;
-    //                        }
-    //                        if (the_target['___adsafe root___']) {
-    //                            break;
-    //                        }
-    //                    }
-    //                }
+
+//    
+//    // If the target has event handlers, then fire them. Otherwise, bubble up.
+//    
+//                    if (the_target['___ on ___'] &&
+//                            the_target['___ on ___'][the_event.type]) {
+//                        target.fire(the_event);
+//                    } 
+//                    else {
+//                        for (;;) {
+//                            the_target = the_target.parentNode;
+//                            if (!the_target) {
+//                                break;
+//                            }
+//                            if (the_target['___ on ___'] &&
+//                                    the_target['___ on ___'][the_event.type]) {
+//                                that = new Bunch([the_target]);
+//                                the_event.that = that;
+//                                that.fire(the_event);
+//                                break;
+//                            }
+//                            if (the_target['___adsafe root___']) {
+//                                break;
+//                            }
+//                        }
+//                    }
     //                if (the_event.type === 'escapekey') {
     //                    if (ephemeral) {
     //                        ephemeral.remove();
