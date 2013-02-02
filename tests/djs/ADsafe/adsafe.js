@@ -765,155 +765,154 @@ var adsafe = (function () {
 //        };
     
     
-        var quest = function(query, nodes) 
-        /*: (Ref(~lQuery), Ref(~lNodes)) -> Ref(~lNodes) */ 
-        {
-            var selector /*: Ref(~lSelector) */ = null; 
-            //var func /*: (Ref(~lNode)) -> Top */ = function(a) /*: (Ref(~lNode)) -> Top */ { return; },
-            //TODO: Type func
-            var func,
-                i /*: { Int | (>= v 0) } */ = 0,
-                j /*: { Int | (>= v 0) } */ = 0;
-    
-
-    // Step through each selector.
-    
-            //TRICK: does not TC without query.length and nodes.length
-            /*: query lQuery */ "#thaw";
-            query.length;
-            
-            /*: nodes lNodes */ "#thaw";
-            nodes.length;
-
-            
-            /*: ( &result: Ref(~lNodes), 
-                  &query: Ref(lQuery), lQuery: {Arr(Ref(~lSelector))|(packed v)} > lArrPro, 
-                  &nodes: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) |(packed v)} > lArrPro) 
-                  -> sameType  */
-            for (i = 0; i < query.length; i += 1) {
-                selector = query[i];
-                name = selector.name;
-                //TODO: tough case
-                //func = hunter[selector.op];
-    
-    // There are two kinds of selectors: hunters and peckers. If this is a hunter,
-    // loop through the the nodes, passing each node to the hunter function.
-    // Accumulate all the nodes it finds.
-    
-                if (typeof func === 'function') {
-                    if (star) {
-                      //TODO: expects query and nodes frozen
-                        //error("ADsafe: Query violation: *" + selector.op +
-                        //    (selector.name || ''));
-                    }
-                    result = [];
-
-                    /*: (&nodes: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) |(packed v)} > lArrPro) 
-                        -> sameType */
-                    for (j = 0; j < nodes.length; j += 1) {
-                        func(nodes[j]);
-                    }
-                } 
-                else {
-    
-    // If this is a pecker, get its function. There is a special case for
-    // the :first and :rest selectors because they are so simple.
-    
-//                    value = selector.value;
-//                    flipflop = false;
-//                    func = pecker[selector.op];
-                    if (typeof func !== 'function') {
-//                        switch (selector.op) {
-//                        case ':first':
-//                            result = nodes.slice(0, 1);
-//                            break;
-//                        case ':rest':
-//                            result = nodes.slice(1, nodes.length);    //PV: added 2nd argument to slice
-//                            break;
-//                        default:
-//                            error('ADsafe: Query violation: :' + selector.op);
+//        var quest = function(query, nodes) 
+//        /*: (Ref(~lQuery), Ref(~lNodes)) -> Ref(~lNodes) */ 
+//        {
+//            var selector /*: Ref(~lSelector) */ = null; 
+//            //var func /*: (Ref(~lNode)) -> Top */ = function(a) /*: (Ref(~lNode)) -> Top */ { return; },
+//            //TODO: Type func
+//            var func,
+//                i /*: { Int | (>= v 0) } */ = 0,
+//                j /*: { Int | (>= v 0) } */ = 0;
+//    
+//
+//    // Step through each selector.
+//    
+//            //TRICK: does not TC without query.length and nodes.length
+//            /*: query lQuery */ "#thaw";
+//            query.length;
+//            
+//            /*: nodes lNodes */ "#thaw";
+//            nodes.length;
+//
+//            
+//            /*: ( &result: Ref(~lNodes), 
+//                  &query: Ref(lQuery), lQuery: {Arr(Ref(~lSelector))|(packed v)} > lArrPro, 
+//                  &nodes: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) |(packed v)} > lArrPro) 
+//                  -> sameType  */
+//            for (i = 0; i < query.length; i += 1) {
+//                selector = query[i];
+//                name = selector.name;
+//                //TODO: tough case
+//                //func = hunter[selector.op];
+//    
+//    // There are two kinds of selectors: hunters and peckers. If this is a hunter,
+//    // loop through the the nodes, passing each node to the hunter function.
+//    // Accumulate all the nodes it finds.
+//    
+//                if (typeof func === 'function') {
+//                    if (star) {
+//                      //TODO: expects query and nodes frozen
+//                        //error("ADsafe: Query violation: *" + selector.op +
+//                        //    (selector.name || ''));
+//                    }
+//                    result = [];
+//
+//                    /*: (&nodes: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) |(packed v)} > lArrPro) 
+//                        -> sameType */
+//                    for (j = 0; j < nodes.length; j += 1) {
+//                        func(nodes[j]);
+//                    }
+//                } 
+//                else {
+//    
+//    // If this is a pecker, get its function. There is a special case for
+//    // the :first and :rest selectors because they are so simple.
+//    
+////                    value = selector.value;
+////                    flipflop = false;
+////                    func = pecker[selector.op];
+//                    if (typeof func !== 'function') {
+////                        switch (selector.op) {
+////                        case ':first':
+////                            result = nodes.slice(0, 1);
+////                            break;
+////                        case ':rest':
+////                            result = nodes.slice(1, nodes.length);    //PV: added 2nd argument to slice
+////                            break;
+////                        default:
+////                            error('ADsafe: Query violation: :' + selector.op);
+////                        }
+//                    } 
+//                    else {
+//    
+//    // For the other selectors, make an array of nodes that are filtered by
+//    // the pecker function.
+//    
+//                        result = [];
+//                        /*: (&nodes: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) |(packed v)} > lArrPro) 
+//                            -> sameType */
+//                        for (j = 0; j < nodes.length; j += 1) {
+//                            if (func(nodes[j])) {
+//                                result.push(nodes[j]);
+//                            }
 //                        }
-                    } 
-                    else {
-    
-    // For the other selectors, make an array of nodes that are filtered by
-    // the pecker function.
-    
-                        result = [];
-                        /*: (&nodes: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) |(packed v)} > lArrPro) 
-                            -> sameType */
-                        for (j = 0; j < nodes.length; j += 1) {
-                            if (func(nodes[j])) {
-                                result.push(nodes[j]);
-                            }
-                        }
-                    }
-                }
-//                nodes = result;
-                
-            }
-
-            /*: nodes (~lNodes, thwd lNodes) */ "#freeze";
-            /*: query (~lQuery, thwd lQuery) */ "#freeze";
-                    
-            return result;
-        };
+//                    }
+//                }
+////                nodes = result;
+//                
+//            }
+//
+//            /*: nodes (~lNodes, thwd lNodes) */ "#freeze";
+//            /*: query (~lQuery, thwd lQuery) */ "#freeze";
+//                    
+//            return result;
+//        };
 //    
     
         var make_root = function(root, id)
         /*: (root:Ref(~lNode) , id:Str) -> Top */ 
         {
     
-            if (id) {
-                if (root.tagName !== 'DIV') {
+//            if (id) {
+//                if (root.tagName !== 'DIV') {
 //                    error('ADsafe: Bad node.');
-                }
-            } else {
-                if (root.tagName !== 'BODY') {
+//                }
+//            } else {
+//                if (root.tagName !== 'BODY') {
 //                    error('ADsafe: Bad node.');
-                }
-            };
+//                }
+//            };
     
     // A Bunch is a container that holds zero or more dom nodes.
     // It has many useful methods.
     
-//PV: Commenting to speed-up                    
-//            function Bunch(nodes)
-//            /*: new (this:Ref, nodes: Ref(~lNodes)) / (this: Empty > lBunchProto, ~lBunch: frzn) ->
-//                Ref(~lBunch) / (~lBunch: frzn) */
-//            {
-//                this.___nodes___ = nodes;
-//                /*: nodes lNodes */ "#thaw";
-//                this.___star___ = star && nodes.length > 1;
-//                /*: nodes (~lNodes, thwd lNodes) */ "#freeze";
-//                star = false;
-//                var self = this;
-//                /*: self (~lBunch,frzn) */ "#freeze";
-//                return self;      //PV: added this
-//            };
+            function Bunch(nodes)
+            /*: new (this:Ref, nodes: Ref(~lNodes)) / (this: Empty > lBunchProto, ~lBunch: frzn) ->
+                Ref(~lBunch) / (~lBunch: frzn) */
+            {
+                this.___nodes___ = nodes;
+                /*: nodes lNodes */ "#thaw";
+                this.___star___ = star && nodes.length > 1;
+                /*: nodes (~lNodes, thwd lNodes) */ "#freeze";
+                star = false;
+
+
+//                this.fire = function(a) /*: (NotUndef) -> Top */ { };
+
+                var self = this;
+                /*: self (~lBunch,frzn) */ "#freeze";
+                return self;      //PV: added return
+            };
     
             var allow_focus /*: Bool */ = true,
                 dom,
                 dom_event = function (event,e) 
                 /*: (event: Ref(~lEvent), e: Ref(~lEvent)) -> Top */
                 {
-                    var key /*: Str */ = "",
-                        target,
-                        that,
-                        the_event,
-                        the_target /*: Ref(~lNode) */ = null,
-                        the_actual_event = e || event,
-                        type /*: Str */ = the_actual_event.type;
+                    var key /*: Str */ = "";
+                    var the_actual_event = e || event;
+                    var type /*: Str */ = the_actual_event.type;
     
-//    // Get the target node and wrap it in a bunch.
-//    
-                      the_target = the_actual_event.target || the_actual_event.srcElement;
-//                    
-//                    var tt = /*: lTT Arr(Ref(~lNode)) */ [the_target];
-//                    /*: tt (~lNodes, frzn) */ "#freeze";
-//
-//                    target = new Bunch(tt);
-//                    that = target;
+    // Get the target node and wrap it in a bunch.
+    
+                    var the_target /*: Ref(~lNode) */ = the_actual_event.target || the_actual_event.srcElement;
+                    
+                    var tt = /*: lTT Arr(Ref(~lNode)) */ [the_target];
+                    /*: tt (~lNodes, frzn) */ "#freeze";
+
+                    var target = new Bunch(tt);
+                    var that = target;
 //    
 //    // Use the PPK hack to make focus bubbly on IE.
 //    // When a widget has focus, it can use the focus method.
@@ -968,6 +967,65 @@ var adsafe = (function () {
 //    
     // Make the event object.
     
+<<<<<<< HEAD
+                    var the_event = {
+                        altKey: the_actual_event.altKey,
+                        ctrlKey: the_actual_event.ctrlKey,
+////TODO: try-catch                          
+//                        bubble: function () 
+//                        /*: () -> Top */
+//                        {
+//    
+//    // Bubble up. Get the parent of that node. It becomes the new that.
+//    // getParent throws when bubbling is not possible.
+//    
+//                            try {
+//                                var parent = that.getParent(),
+//                                    b = parent.___nodes___[0];
+//                                that = parent;
+//                                the_event.that = that;
+//    
+//    // If that node has an event handler, fire it. Otherwise, bubble up.
+//    
+//                                if (b['___ on ___'] &&
+//                                        b['___ on ___'][type]) {
+//                                    that.fire(the_event);
+//                                } else {
+//                                    the_event.bubble();
+//                                }
+//                            } catch (e) {
+//                                error(e);
+//                            }
+//                        },                        
+                        key: key,
+//                        preventDefault: function () {
+//                            if (the_actual_event.preventDefault) {
+//                                the_actual_event.preventDefault();
+//                            }
+//                            the_actual_event.returnValue = false;
+//                        },
+                        shiftKey: the_actual_event.shiftKey,
+                        target: target,
+//                        that: that,
+                        type: type,
+                        x: the_actual_event.clientX,
+                        y: the_actual_event.clientY
+                    };
+
+    
+    // if the target has event handlers, then fire them. otherwise, bubble up.
+    
+                    if (the_target['___ on ___'] &&
+                            the_target['___ on ___'][the_event.type]) {
+//                        target.fire(the_event);
+                    } 
+                    else {
+                        for (;;) {
+                            the_target = the_target.parentNode;
+                            if (!the_target) {
+                                //break;
+                            }
+=======
 //                    the_event = {
 //                        altKey: the_actual_event.altKey,
 //                        ctrlKey: the_actual_event.ctrlKey,
@@ -1025,6 +1083,7 @@ var adsafe = (function () {
 //                            if (!the_target) {
 //                                break;
 //                            }
+>>>>>>> c2ac616... Adsafe.js: TCing most of quest
 //                            if (the_target['___ on ___'] &&
 //                                    the_target['___ on ___'][the_event.type]) {
 //                                that = new Bunch([the_target]);
@@ -1035,16 +1094,16 @@ var adsafe = (function () {
 //                            if (the_target['___adsafe root___']) {
 //                                break;
 //                            }
+                        }
+                    }
+//                    if (the_event.type === 'escapekey') {
+//                        if (ephemeral) {
+//                            ephemeral.remove();
 //                        }
+//                        ephemeral = null;
 //                    }
-    //                if (the_event.type === 'escapekey') {
-    //                    if (ephemeral) {
-    //                        ephemeral.remove();
-    //                    }
-    //                    ephemeral = null;
-    //                }
-    //                that = the_target = the_event = the_actual_event = null;
-    //                return;
+//                    that = the_target = the_event = the_actual_event = null;
+//                    return;
                 };
     //
     //// Mark the node as a root. This prevents event bubbling from propagating

@@ -21,65 +21,45 @@ Properties:
 From trying to typecheck the code:
 ====================================================
 
-- Higher-order functions:  
-  need to restore Sub.checkArrows
-
-- Exception throwing/handling
-
 - Object.prototype.hasOwnProperty.call(object, "aaa");
 
 - Array: 
   * Array.prototype.slice.call(nodelist, 0);
   * concat, ...
 
-- Naming/Scope:
-  * Scoping issue makes user have to rename variables:
-    TS-Let-Bare: let __name = ...
-    [__name] already in scope, so please use a different name.
+- 09,11 has similar behavior to func04.js
 
-  * Variable names all capital (e.g. ADSAFE)
+- 10 SLOW !!!
+  if (query.length > 0 || match[5].length <= id.length ||
+      match[5].slice(0, id.length) !== id) { ... } 
+
+- For cases when a dictionary is being assigned to a weak location of a
+  dictionary, use the most general type for the weak location. 
+
+- Fix type parser to accept strings as fields (hunter, pecker...).
 
 
-- Probably going to need an "assume" statement. ADSafety recognizes runtime
-  checks of the form: reject_global(this).
+====================================================
+PENDING
+====================================================
 
 - Regular expresion support
 
-- When annotating a function variable definition I reached: 
-  Fatal error: exception Failure("shouldn't get here: unannotated FuncExr")
+- Support for array slice
 
-- Optional arguments
+- Higher-order functions:  
+  need to restore Sub.checkArrows
 
-- Add support for array slice
+- Exception throwing/handling
+
 
 ====================================================
 NOTES
 ====================================================
 
-- x["f"] when used as a "boolean" condition should be typed as truthy or falsy. 
+- Example: 
+  for (...) {
+    a = /*: lA */ {};  
+  }
+  Is this location a single one?
 
-- Using single (strong) location for Document.
-
-
-====================================================
-THINK ABOUT
-====================================================
-
-- When can a weak location be updated?
-
-- Implicit thawing?
-
-- Assigning a thawed location (strong) to a reference to a weak one.
-
-
-
-====================================================
-QUESTIONS
-====================================================
-
-- Is there a way to create a prototype chain for weak locations? 
-  * One way is to create strong locations for the prototypes and use that as
-  * prototype for the newly defined weak locations.
-  E.g. Events - KeyboardEvents
-
-- Why are funcitons only defined with NotUndef?
