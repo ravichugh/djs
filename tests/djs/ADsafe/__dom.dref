@@ -1,5 +1,4 @@
 
-(*weak (~lNodes: {Arr(Ref(~lNode))|(and (packed v) (>= (len v) 0))} > lArrPro)*)
 weak (~lNodes: { Arr(Ref(~lNode)) | (packed v)} > lArrPro)
 
 weak (~lEvent     : {
@@ -19,8 +18,20 @@ weak (~lEventTarget: { } > lObjPro)
 weak (~lSelector : {
   op             : Str
 } > lObjPro)
+  
+weak (~lSelectorFull : {
+  op             : {(or (= v "empty_") 
+                        (= v "plus") 
+                        (= v "greater") 
+                        (= v "pound") 
+                        (= v "slash") 
+                        (= v "star"))},
+  name           : Str,
+  value          : Str
+} > lObjPro)
 
-weak (~lQuery: { Arr(Ref(~lSelector)) | (packed v) } > lArrPro)
+
+weak (~lQuery: { Arr(Ref(~lSelectorFull)) | (packed v) } > lArrPro)
 
 weak (~lBunchs: Arr(Ref(~lBunch)) > lArrPro)
 

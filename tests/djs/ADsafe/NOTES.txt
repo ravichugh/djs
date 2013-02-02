@@ -38,6 +38,7 @@ From trying to typecheck the code:
 
 - Fix type parser to accept strings as fields (hunter, pecker...).
 
+- Extern in an inner scope
 
 ====================================================
 PENDING

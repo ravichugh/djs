@@ -21,7 +21,7 @@ var parse_query = function (text, id)
 
   var match = /*: lA0 { Arr(Str) | (packed v) }*/ [] ,   // A match array  //XXX: PV: added "null"
       query                             = /*: L */  [],       // The resulting query array
-      selector  /*: Ref(~lSelector) */  =           null;     //XXX: PV: added "null"
+      selector  = null;                //PV: added "null"
 
   //TODO: Exception Failure: convert CRegExp
   //,qx = id
@@ -50,6 +50,7 @@ var parse_query = function (text, id)
 
     //match = qx.exec(string_check(text));      //TODO: Fix with regex support
     match =  /*: lA1 {Arr(Str) | (packed v)} */ ["0", "1", "2", "3", "4", "5", "6", "7", "8"];
+    //TODO: Encode regex info...
 
     if (!match) {
       error("ADsafe: Bad query:" + text);
@@ -90,36 +91,37 @@ var parse_query = function (text, id)
 //        /*: selector (~lSelector, thwd lSelector) */ "#freeze";
 //      }
 //    } 
-
-    else if (match[5]) {
-
-      // The selector is an id.
-
-//XXX: This really slows things down      
+//
+//    else if (match[5]) {
+//
+//      // The selector is an id.
+//
+////XXX: This really slows things down      
+//
 //      if (query.length > 0 || match[5].length <= id.length ||
 //          match[5].slice(0, id.length) !== id) {
 //        error("ADsafe: Bad query: " + text);
 //      }
-      /*: selector lSelector */ "#thaw";
-      selector = {
-        op: '#',
-        name: match[5]
-      };
-      /*: selector (~lSelector, thwd lSelector) */ "#freeze";
-
-      // The selector is a colon.
-
-    } 
-    else if (match[6]) {
-      /*: selector lSelector */ "#thaw";
-      selector = {
-        op: ':' + match[6]
-      };
-      /*: selector (~lSelector, thwd lSelector) */ "#freeze";
-
-      // The selector is one of > + . & _ or a naked tag name
-
-    }
+//      /*: selector lSelector */ "#thaw";
+//      selector = {
+//        op: '#',
+//        name: match[5]
+//      };
+//      /*: selector (~lSelector, thwd lSelector) */ "#freeze";
+//
+//      // The selector is a colon.
+//
+//    } 
+//    else if (match[6]) {
+//      /*: selector lSelector */ "#thaw";
+//      selector = {
+//        op: ':' + match[6]
+//      };
+//      /*: selector (~lSelector, thwd lSelector) */ "#freeze";
+//
+//      // The selector is one of > + . & _ or a naked tag name
+//
+//    }
     else {
       /*: selector lSelector */ "#thaw";
       selector = {
