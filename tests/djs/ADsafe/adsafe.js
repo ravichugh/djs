@@ -894,7 +894,7 @@ var adsafe = (function () {
                 /*: self (~lBunch,frzn) */ "#freeze";
                 return self;      //PV: added return
             };
-    
+
             var allow_focus /*: Bool */ = true,
                 dom,
                 dom_event = function (event,e) 
@@ -967,7 +967,6 @@ var adsafe = (function () {
 //    
     // Make the event object.
     
-<<<<<<< HEAD
                     var the_event = {
                         altKey: the_actual_event.altKey,
                         ctrlKey: the_actual_event.ctrlKey,
@@ -1025,7 +1024,6 @@ var adsafe = (function () {
                             if (!the_target) {
                                 //break;
                             }
-=======
 //                    the_event = {
 //                        altKey: the_actual_event.altKey,
 //                        ctrlKey: the_actual_event.ctrlKey,
@@ -1083,7 +1081,6 @@ var adsafe = (function () {
 //                            if (!the_target) {
 //                                break;
 //                            }
->>>>>>> c2ac616... Adsafe.js: TCing most of quest
 //                            if (the_target['___ on ___'] &&
 //                                    the_target['___ on ___'][the_event.type]) {
 //                                that = new Bunch([the_target]);
