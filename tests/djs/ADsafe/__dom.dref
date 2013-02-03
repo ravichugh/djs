@@ -1,5 +1,6 @@
 
-weak (~lNodes: { Arr(Ref(~lNode)) | (packed v)} > lArrPro)
+weak (~lNodes:   { Arr(Ref(~lNode)) | (packed v)} > lArrPro)
+weak (~lNList:   { Arr(Ref(~lNode)) | (packed v)} > lArrPro)
 
 weak (~lEvent     : {
   "type"          : Str,
@@ -37,9 +38,9 @@ weak (~lBunchs: Arr(Ref(~lBunch)) > lArrPro)
 
 weak (~lBunch    : {
   "___nodes___"  : Ref(~lNodes),
-  "___star___"   : Bool,
+  "___star___"   : Bool
 
-  fire           : (NotUndef) -> Top
+  (*fire           : (NotUndef) -> Top*)
   (* getParents  : () -> Ref(~lBunchs) *)
 } > lBunchProto)
 
@@ -49,7 +50,6 @@ weak (~lCCSStyle : {
 
 weak (~lSelection: { createRange: () -> Ref(~lDocument) }  > lObjPro) 
 
-weak (~lNList: {Arr(Ref(~lNode)) | (packed v) } > lArrPro)
 
 weak (~lNode: {
     getComputedStyle     : (this: Ref(~lNode), node : Ref(~lNode), str  : Str) -> Ref(~lCCSStyle),
@@ -69,6 +69,7 @@ weak (~lNode: {
     disabled             : Bool,
     checked              : Bool,
     fire                 : (NotUndef) -> Top,
+    blur                 : (this: Ref(~lNode)) -> Top,
     getElementsByTagName : [;L;] (this: Ref(~lNode), name : Str) / () -> Ref(L) / (L: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
   } > lObjPro)
 
@@ -76,5 +77,4 @@ weak (~lDocument   : {
     defaultView    : Ref(~lNode),
     selection      : Ref(~lSelection),
     getElementById : [;;H_] (this      : Top, s : Str) / H_ -> Ref(~lNode) / (H_)} > lObjPro)
-
 
