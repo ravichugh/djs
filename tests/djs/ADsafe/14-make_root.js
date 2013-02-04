@@ -26,7 +26,26 @@ var class_fun =
     )} */ "#extern";
 
 
+var clone = /*: (this: Ref(~lBunch), deep:Bool, n: Num) -> Top */ "#extern";
 
+var count = /*: (this: Ref(~lBunch)) -> Int */ "#extern";
+
+var each = /*: (this: Ref(~lBunch), func: (Ref(~lBunch)) -> Top) -> Top */ "#extern";
+
+var empty = 
+/*: {(and
+    (v :: (this: Ref(~lBunch)) / (&value: Ref(lArr), lArr: { Arr(Str) | (packed v) }  > lArrPro) -> Ref(~lBunch) / sameType)
+    (v :: (this: Ref(~lBunch)) / (&value: Ref(lObj), lObj: { }  > lObjPro) -> Ref(~lBunch) / sameType)
+    )} */ "#extern";
+
+var enable = 
+/*: {(and
+    (v :: (this: Ref(~lBunch), enable: Ref(lArr)) / (lArr: { Arr(Str) | (packed v) }  > lArrPro) -> Ref(~lBunch) / sameType)
+    (v :: (this: Ref(~lBunch), enable: Ref(lObj)) / (lObj: { }  > lObjPro) -> Ref(~lBunch) / sameType))} */ "#extern";
+
+var ephemeral = /*: (this: Ref(~lBunch)) -> Ref(~lBunch) */ "#extern";
+
+var explode = /*: [;L;] (this: Ref(~lBunch)) / () -> Ref(L) / (L: Arr(Ref(~lBunch)) > lArrPro) */ "#extern";
 
 
 var make_root = function(root, id)
@@ -225,105 +244,22 @@ var make_root = function(root, id)
 
     check: check,
 
-    'class': class_fun
+    'class': class_fun,
 
-            //    clone: function (deep, n) {
-            //      var a = [],
-            //      b = this.___nodes___,
-            //      c,
-            //      i,
-            //      j,
-            //      k = n || 1;
-            //      for (i = 0; i < k; i += 1) {
-            //        c = [];
-            //        for (j = 0; j < b.length; j += 1) {
-            //          c.push(b[j].cloneNode(deep));
-            //        }
-            //        a.push(new Bunch(c));
-            //      }
-            //      return n ? a : a[0];
-            //    },
-            //    count: function () {
-            //      reject_global(this);
-            //      return this.___nodes___.length;
-            //    },
-            //    each: function (func) {
-            //      reject_global(this);
-            //      var b = this.___nodes___, i;
-            //      if (typeof func === 'function') {
-            //        for (i = 0; i < b.length; i += 1) {
-            //          func(new Bunch([b[i]]));
-            //        }
-            //        return this;
-            //      }
-            //      error();
-            //    },
-            //    empty: function () {
-            //      reject_global(this);
-            //      var b = this.___nodes___, i, node;
-            //      if (value instanceof Array) {
-            //        if (value.length !== b.length) {
-            //          error('ADsafe: Array length: ' + b.length + '-' +
-            //              value.length);
-            //        }
-            //        for (i = 0; i < b.length; i += 1) {
-            //          node = b[i];
-            //          while (node.firstChild) {
-            //            purge_event_handlers(node);
-            //            node.removeChild(node.firstChild);
-            //          }
-            //        }
-            //      } else {
-            //        for (i = 0; i < b.length; i += 1) {
-            //          node = b[i];
-            //          while (node.firstChild) {
-            //            purge_event_handlers(node);
-            //            node.removeChild(node.firstChild);
-            //          }
-            //        }
-            //      }
-            //      return this;
-            //    },
-            //    enable: function (enable) {
-            //      reject_global(this);
-            //      var b = this.___nodes___, i, node;
-            //      if (enable instanceof Array) {
-            //        if (enable.length !== b.length) {
-            //          error('ADsafe: Array length: ' + b.length + '-' +
-            //              enable.length);
-            //        }
-            //        for (i = 0; i < b.length; i += 1) {
-            //          node = b[i];
-            //          if (node.tagName) {
-            //            node.disabled = !enable[i];
-            //          }
-            //        }
-            //      } else {
-            //        for (i = 0; i < b.length; i += 1) {
-            //          node = b[i];
-            //          if (node.tagName) {
-            //            node.disabled = !enable;
-            //          }
-            //        }
-            //      }
-            //      return this;
-            //    },
-            //    ephemeral: function () {
-            //      reject_global(this);
-            //      if (ephemeral) {
-            //        ephemeral.remove();
-            //      }
-            //      ephemeral = this;
-            //      return this;
-            //    },
-            //    explode: function () {
-            //      reject_global(this);
-            //      var a = [], b = this.___nodes___, i;
-            //      for (i = 0; i < b.length; i += 1) {
-            //        a[i] = new Bunch([b[i]]);
-            //      }
-            //      return a;
-            //    },
+    clone: clone,
+    
+    count: count,
+    
+    each: each,
+    
+    empty: empty,
+      
+    enable: enable,
+    
+    ephemeral: ephemeral,
+
+    explode: explode
+
             //    fire: function (event) {
             //
             //      // Fire an event on an object. The event can be either

@@ -89,7 +89,7 @@ var adsafe_id,      // The id of the current widget
     cache_style_object /*: Ref(~lCCSStyle) */ = null,
     cache_style_node /*: Ref(~lNode) */ = null,
     defaultView = document.defaultView,
-    ephemeral;
+    ephemeral /*: Ref(~lBunch) */ = null;
     var flipflop /*: Bool */ = "#extern"; // Used in :even/:odd processing
     
     var has_focus /*: Ref(~lNode) */ = "#extern";
