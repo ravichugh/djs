@@ -1856,7 +1856,9 @@ and tsAppQuick g h (poly,vFun,vArg) = match (poly,vFun,vArg) with
       let cap = "TS-App-GetProp" in
       let (v1,v2) = twoVals cap vs in
       match tsVal g h v1 with
-        | TQuick(_,QBase(qb),_) -> quickWrapperBaseOps g h qb v2
+        | TQuick(_,QBase(qb),_) ->
+            if checkInconsistent "quickWrapperBaseOps" then Some (Typ tyAny, h)
+            else quickWrapperBaseOps g h qb v2
         | t1 -> begin
             match maybeGetNextMaybeRef g t1 with
               (* TODO pass l to avoid re-computing *)
