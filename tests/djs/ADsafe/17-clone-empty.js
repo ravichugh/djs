@@ -51,25 +51,37 @@ function Bunch(nodes)
 
 
 var clone =  function (deep, n) 
-/*: (this: Ref(~lBunch), deep:Bool, n: Num) -> Top */
+//TODO: make more precise type
+/*: (this: Ref(~lBunch), deep:Bool, n: Int) -> {(ite (truthy n) TRU TRU)} */
 {
   /*: this lBunch */ "#thaw";
-  var a = [],
-      b = this.___nodes___,     
-//      c,
-      c /*: Ref(~lNodes) */ = null,
-      i /*: { Int | (>= v 0)} */ = 0,
-      j /*: { Int | (>= v 0)} */ = 0,
-      k = n || 1;
+  var a = /*: lA {Arr(Ref(~lBunch))|(packed v)} */ [];
+  var b = this.___nodes___;    
   /*: this (~lBunch, thwd lBunch) */ "#freeze";
 
-//XXX: Will probably multiple strong locations for the same weak location
-//  for (i = 0; i < k; i += 1) {
-//    for (j = 0; j < b.length; j += 1) {
-//      c.push(b[j].cloneNode(deep));
-//    }
-//    a.push(new Bunch(c));
-//  }
+  var i /*: { Int | (>= v 0)} */ = 0,
+      j /*: { Int | (>= v 0)} */ = 0,
+      k = n || 1;
+
+  /*: (&a: Ref(lA), lA: {Arr(Ref(~lBunch))|(packed v)} > lArrPro
+       ,&b: Ref(~lNodes)
+      ) -> sameType */
+  for (i = 0; i < k; i += 1) {
+
+    var c  = /*: lC {Arr(Ref(~lNode))|(packed v)} */ [];
+    /*: b lNodes */ "#thaw";
+    b.length;        //XXX: WHY?????? 
+
+    /*: (&b: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) | (packed v)} > lArrPro,
+          &c: Ref(lC), lC: {Arr(Ref(~lNode))|(packed v)} > lArrPro) -> sameType */
+    for (j = 0; j < b.length && j < c.length; j += 1) {
+      c.push(b[j].cloneNode(deep));
+    }
+    /*: b (~lNodes, thwd lNodes) */ "#freeze";
+  
+    /*: c (~lNodes,frzn) */ "#freeze";
+    a.push(new Bunch(c));
+  }
   return n ? a : a[0];
 };
 
