@@ -29,9 +29,12 @@ val getPropNum ::
 val getPropObj ::
      (xx:Ref?, kk:Str) / (xx: dd:Dict > xx.pro)
   -> {(and (not (= xx null))
+           (= v (objsel dd kk cur xx.pro)))} / same
+(*
       (ite (objhas dd kk cur xx.pro)
            (= v (objsel dd kk cur xx.pro))
            (= v undefined)))} / same
+*)
 
 val getPropArr :: [A]
      (xx:Ref?, kk:Str) / (xx: aa:Arr(A) > xx.pro)

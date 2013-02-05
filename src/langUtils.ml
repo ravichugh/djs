@@ -710,6 +710,7 @@ let rec strWal = function
   | WApp(s,ws) ->
       spr "(%s %s)" (strFunSym s) (String.concat " " (List.map strWal ws))
   | WBot -> "bot"
+  | WHeapSel(([],[]),l,k) -> strVal vUndef
   | WHeapSel((h,[]),l,k) ->
       if !pretty then
         spr "(heapsel %s %s %s)" (strHeap (h,[])) (strLoc l) (strWal k)
@@ -866,6 +867,7 @@ and strForm = function
       if !pretty
         then spr "(%s :: %s)" (strWal w) (strTT u)
         else spr "(hastyp %s %d)" (strWal w) (registerBox u)
+  | PHeapHas(([],[]),l,k) -> strForm pFls
   | PHeapHas((h,[]),l,k) ->
       if !pretty then
         spr "(heaphas %s %s %s)" (strHeap (h,[])) (strLoc l) (strWal k)
