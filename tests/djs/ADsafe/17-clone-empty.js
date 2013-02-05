@@ -29,6 +29,7 @@
 
 var error = /*: (message: Str)  / () -> Top / sameType */ "#extern";
 var star    /*: Bool */         = "#extern";
+var purge_event_handlers = /*: (node: Ref(~lNode)) -> Top */ "#extern";
 
 // A Bunch is a container that holds zero or more dom nodes.
 // It has many useful methods.
@@ -67,7 +68,7 @@ var clone =  function (deep, n)
        ,&b: Ref(~lNodes)
       ) -> sameType */
   for (i = 0; i < k; i += 1) {
-
+    //TODO: moved var c from outer scope to here
     var c  = /*: lC {Arr(Ref(~lNode))|(packed v)} */ [];
     /*: b lNodes */ "#thaw";
     b.length;        //XXX: WHY?????? 
@@ -112,22 +113,25 @@ var each = function (func)
   /*: this (~lBunch, thwd lBunch) */ "#freeze";
   var i /*: { Int | (>= v 0)} */ = 0;
 
-
   if (typeof func === 'function') {
-    /*: b lNodes */ "#thaw";
-    b.length;        //XXX: WHY?????? 
 
-    /*: (&b: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) | (packed v)} > lArrPro) -> sameType */
-    for (i = 0; i < b.length; i += 1) {
+    /*: (&b: Ref(~lNodes)) -> sameType */
+    for (i = 0; true; i += 1) {
+      /*: b lNodes */ "#thaw";
+       
+      if (i < b.length) {
+        assert(/*: Ref(~lNode) */  (b[i]));
+        var bArr = /*: lBArr {Arr(Ref(~lNode))|(packed v)} */ [b[i]];
+        /*: b (~lNodes, thwd lNodes) */ "#freeze";
 
-      assert(/*: Ref(~lNode) */  (b[i]));
-      var bArr = /*: lBArg Arr(Ref(~lNode)) */ [b[i]];
-//XXX: Will probably multiple strong locations for the same weak location
-//      var bch = new Bunch(bArr);
-//      func(bch);
-
+        /*: bArr (~lNodes, frzn) */ "#freeze";
+        var bch = new Bunch(bArr);
+        func(bch);
+      }
+      else {
+        /*: b (~lNodes, thwd lNodes) */ "#freeze";
+      }
     }
-    /*: b (~lNodes, thwd lNodes) */ "#freeze";
     return this;
   }
   error("default");
@@ -157,16 +161,12 @@ var empty = function ()
     /*: (&b: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) | (packed v)} > lArrPro) -> sameType */
     for (i = 0; i < b.length; i += 1) {
       node = b[i];
-      /*: node lNode */ "#thaw";
-      assert(/*: Ref(~lNode) */  (node.firstChild));
-
-//      /*: (&node: Ref(lNode), lNode: tyNode) -> sameType */
-//      while (node.firstChild) {
-//        purge_event_handlers(node);
-//        node.removeChild(node.firstChild);
-//      }
-      
-      /*: node (~lNode, thwd lNode) */ "#freeze";
+      node.firstChild;
+      /*: (&node: Ref(~lNode)) -> sameType */
+      while (node.firstChild) {
+        purge_event_handlers(node);
+        node.removeChild(node.firstChild);
+      }
     }
     /*: b (~lNodes, thwd lNodes) */ "#freeze";
   } else {
@@ -175,13 +175,10 @@ var empty = function ()
     /*: (&b: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) | (packed v)} > lArrPro) -> sameType */
     for (i = 0; i < b.length; i += 1) {
       node = b[i];
-      /*: node lNode */ "#thaw";
-      assert(/*: Ref(~lNode) */  (node.firstChild));
-//      while (node.firstChild) {
-//        purge_event_handlers(node);
-//        node.removeChild(node.firstChild);
-//      }
-      /*: node (~lNode, thwd lNode) */ "#freeze";
+      while (node.firstChild) {
+        purge_event_handlers(node);
+        node.removeChild(node.firstChild);
+      }
     }
     /*: b (~lNodes, thwd lNodes) */ "#freeze";
   }
