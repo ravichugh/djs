@@ -1363,7 +1363,7 @@ and tsExp_ g h = function
     end
 
   | EExtern(x,s,e) -> begin
-      if !depth > 0 then err [spr "extern [%s] not at top-level" x];
+      (*if !depth > 0 then err [spr "extern [%s] not at top-level" x]; *)
       let s = ParseUtils.undoIntersectionHack g s in
       Wf.typ (spr "ts extern %s" x) g s;
       let g1 = tcAddBinding g x s in

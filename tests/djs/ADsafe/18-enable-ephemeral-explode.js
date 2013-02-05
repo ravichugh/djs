@@ -7,13 +7,11 @@ var star    /*: Bool */         = "#extern";
 
 // A Bunch is a container that holds zero or more dom nodes.
 // It has many useful methods.
-//////////
+
 function Bunch(nodes)
-  /*: new [;L;] (this:Ref, nodes: Ref(L)) / 
-    (L: {Arr(Ref(~lNode))|(packed v)} > lArrPro, this: Empty > lBunchProto, ~lBunch: frzn) ->
+  /*: new (this:Ref, nodes: Ref(~lNodes)) / (this: Empty > lBunchProto, ~lBunch: frzn) ->
     Ref(~lBunch) / (~lBunch: frzn) */
 {
-  /*: nodes (~lNodes, frzn) */ "#freeze";
   this.___nodes___ = nodes;
   /*: nodes lNodes */ "#thaw";
   this.___star___ = star && nodes.length > 1;
@@ -88,23 +86,27 @@ var explode = function ()
 /*: [;L;] (this: Ref(~lBunch)) / () -> Ref(L) / (L: Arr(Ref(~lBunch)) > lArrPro) */
 {
   //reject_global(this);
+
   var a = /*: L {Arr(Ref(~lBunch))|(packed v)} */ [];
   /*: this lBunch */ "#thaw";
   var b = this.___nodes___;
   /*: this (~lBunch, thwd lBunch) */ "#freeze";
   var i /*: { Int | (>= v 0)} */ = 0;
 
-  /*: b lNodes */ "#thaw";
-  b.length;
-  /*: (&b: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) | (packed v)} > lArrPro,
-       &a: Ref(L), L: Arr(Ref(~lBunch)) > lArrPro
-      ) -> sameType */
-  for (i = 0; i < b.length; i += 1) {
-    var bArr = /*: lBArr {Arr(Ref(~lNode))|(packed v)} */  [b[i]];
-    //TODO: TC new 
-    //a[i] =  new Bunch(bArr);
+  /*: (&b: Ref(~lNodes), &a: Ref(L), L: Arr(Ref(~lBunch)) > lArrPro) -> sameType */
+  for (i = 0; true; i += 1) {
+//    
+    /*: b lNodes */ "#thaw";
+    if (i < b.length) {
+      var bArr = /*: lBArr {Arr(Ref(~lNode))|(packed v)} */  [b[i]];
+      /*: b (~lNodes, thwd lNodes) */ "#freeze";
+      /*: bArr (~lNodes, frzn) */ "#freeze";
+      a[i] =  new Bunch(bArr);
+    }
+    else{
+      /*: b (~lNodes, thwd lNodes) */ "#freeze";
+    }
   }
-  /*: b (~lNodes, thwd lNodes) */ "#freeze";
   return a;
 };
 

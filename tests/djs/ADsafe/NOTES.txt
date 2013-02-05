@@ -64,4 +64,4 @@ QUESTIONS
   }
   Is this location a single one?
 
-- For Bunch.prototype.{empty, enable} how general should the type annotation for value be?
+- For Bunch.prototype.{empty, enable, fire} how general should the type annotation for value be?

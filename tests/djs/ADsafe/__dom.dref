@@ -4,7 +4,7 @@ weak (~lNodes_00 :   { Arr(Ref(~lNode)) | (packed v)} > lArrPro)
 weak (~lNList    :   { Arr(Ref(~lNode)) | (packed v)} > lArrPro)
 
 weak (~lEvent     : {
-  "type"          : Str,
+  type00          : Str,
   target          : Ref(~lNode),    (* could also be Ref(~lEventTarget) *)
   cancelBubble    : Bool,
   stopPropagation : () -> Top,
@@ -12,7 +12,8 @@ weak (~lEvent     : {
   srcElement      : Ref(~lNode),
   altKey          : Bool,
   ctrlKey         : Bool,
-  shiftKey        : Bool
+  shiftKey        : Bool,
+  _               : Bot
 } > lObjPro)
 
 weak (~lEventTarget: { } > lObjPro)
@@ -71,7 +72,8 @@ weak (~lNode: {
     checked              : Bool,
     fire                 : (NotUndef) -> Top,
     blur                 : (this: Ref(~lNode)) -> Top,
-    cloneNode             : (this: Ref(~lNode), deep:Bool) -> Ref(~lNode),
+    cloneNode            : (this: Ref(~lNode), deep:Bool) -> Ref(~lNode),
+    removeChild          : (this: Ref(~lNode), Ref(~lNode)) -> Top,
     getElementsByTagName : [;L;] (this: Ref(~lNode), name : Str) / () -> Ref(L) / (L: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
   } > lObjPro)
 

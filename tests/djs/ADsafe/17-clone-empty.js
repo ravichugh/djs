@@ -27,9 +27,10 @@
   } > lObjPro */ "#define";
 
 
-var error = /*: (message: Str)  / () -> Top / sameType */ "#extern";
+var error = /*: (message: Str)  -> {FLS}  */ "#extern";
 var star    /*: Bool */         = "#extern";
 var purge_event_handlers = /*: (node: Ref(~lNode)) -> Top */ "#extern";
+var int_to_string /*: (Int) -> Str */ = "#extern";
 
 // A Bunch is a container that holds zero or more dom nodes.
 // It has many useful methods.
@@ -68,11 +69,9 @@ var clone =  function (deep, n)
        ,&b: Ref(~lNodes)
       ) -> sameType */
   for (i = 0; i < k; i += 1) {
-    //TODO: moved var c from outer scope to here
     var c  = /*: lC {Arr(Ref(~lNode))|(packed v)} */ [];
     /*: b lNodes */ "#thaw";
-    b.length;        //XXX: WHY?????? 
-
+    b.length;
     /*: (&b: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) | (packed v)} > lArrPro,
           &c: Ref(lC), lC: {Arr(Ref(~lNode))|(packed v)} > lArrPro) -> sameType */
     for (j = 0; j < b.length && j < c.length; j += 1) {
@@ -155,8 +154,8 @@ var empty = function ()
   if (isArray(value)) {
     /*: b lNodes */ "#thaw";
     if (value.length !== b.length) {
-//      error('ADsafe: Array length: ' + b.length + '-' +
-//          value.length);
+//      error('ADsafe: Array length: ' + int_to_string(b.length) + '-' +
+//          int_to_string(value.length));
     }
     /*: (&b: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) | (packed v)} > lArrPro) -> sameType */
     for (i = 0; i < b.length; i += 1) {

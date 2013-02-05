@@ -196,7 +196,9 @@ var error = /*: (message: Str)  / () -> Top / sameType */ "#extern";
 //    powers to untrusted code. So we use the string_check function to prevent
 //    such abuses.
 
-var string_check = /*: (string: Str) -> Str */ "#extern";
+var string_check =
+  /*: {(and (v::(string: Str) -> {(= v string)})
+            (v::(string: {(not (Str v))}) -> {FLS})) } */  "#extern";
 
 //    The object.hasOwnProperty method has a number of hazards. So we wrap it in
 //    the owns function.
