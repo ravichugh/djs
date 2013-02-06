@@ -267,7 +267,24 @@ var make_root = function(root, id)
   var getValue =  /*: (this: Ref(~lBunch)) -> Top */ "#extern";
   var getValues = /*: (this: Ref(~lBunch)) -> Ref(~lValues) */ "#extern";
  
-  
+  var klass = /*: (this: Ref(~lBunch), value: Str) -> Top */ "#extern";
+
+  var mark =
+  /*: {(and
+      (v :: (this: Ref(~lBunch), value: Ref(lArr)) 
+        / (lArr: { Arr(Ref(~lBunch)) | (packed v) }  > lArrPro) -> Ref(~lBunch) / sameType)
+      (v :: (this: Ref(~lBunch), value: Str) -> Ref(~lBunch)) )} */ "#extern";
+
+  var off = /*: (this: Ref(~lBunch), type_:Top) -> Ref(~lBunch) */ "#extern";
+
+  var on = /*: (this: Ref(~lBunch), type_:Top, func: (Top) -> Top) -> Ref(~lBunch) */ "#extern";
+
+  var protect = /*: (this: Ref(~lBunch)) -> Ref(~lBunch) */ "#extern";
+
+  var q = /*: (this: Ref(~lBunch), Str) -> Ref(~lBunch) */ "#extern";
+
+  var remove = /*: (this: Ref(~lBunch)) -> Top */ "#extern";
+    
   Bunch.prototype = {
 
     append: append,
@@ -338,106 +355,23 @@ var make_root = function(root, id)
     
     getValue: getValue,
     
-    getValues: getValues
+    getValues: getValues,
 
+    klass: klass,
+    
+    mark: mark,
+    
+    off: off,
+    
+    on: on,
 
-    //    klass: function (value) {
-    //      return this['class'](value);
-    //    },
-    //    mark: function (value) {
-    //      reject_global(this);
-    //      var b = this.___nodes___, i, node;
-    //      if (value instanceof Array) {
-    //        if (value.length !== b.length) {
-    //          error('ADsafe: Array length: ' + b.length + '-' +
-    //              value.length);
-    //        }
-    //        for (i = 0; i < b.length; i += 1) {
-    //          node = b[i];
-    //          if (node.tagName) {
-    //            node['_adsafe mark_'] = String(value[i]);
-    //          }
-    //        }
-    //      } else {
-    //        for (i = 0; i < b.length; i += 1) {
-    //          node = b[i];
-    //          if (node.tagName) {
-    //            node['_adsafe mark_'] = String(value);
-    //          }
-    //        }
-    //      }
-    //      return this;
-    //    },
-    //    off: function (type) {
-    //      reject_global(this);
-    //      var b = this.___nodes___, i, node;
-    //      for (i = 0; i < b.length; i += 1) {
-    //        node = b[i];
-    //        if (typeof type === 'string') {
-    //          if (typeof node['___ on ___']) {
-    //            node['___ on ___'][type] = null;
-    //          }
-    //        } else {
-    //          node['___ on ___'] = null;
-    //        }
-    //      }
-    //      return this;
-    //    },
-    //    on: function (type, func) {
-    //      reject_global(this);
-    //      if (typeof type !== 'string' || typeof func !== 'function') {
-    //        error();
-    //      }
-    //
-    //      var b = this.___nodes___, i, node, on, ontype;
-    //      for (i = 0; i < b.length; i += 1) {
-    //        node = b[i];
-    //
-    //        // The change event does not propogate, so we must put the handler on the
-    //        // instance.
-    //
-    //        if (type === 'change') {
-    //          ontype = 'on' + type;
-    //          if (node[ontype] !== dom_event) {
-    //            node[ontype] = dom_event;
-    //          }
-    //        }
-    //
-    //        // Register an event. Put the function in a handler array, making one if it
-    //        // doesn't yet exist for this type on this node.
-    //
-    //        on = node['___ on ___'];
-    //        if (!on) {
-    //          on = {};
-    //          node['___ on ___'] = on;
-    //        }
-    //        if (owns(on, type)) {
-    //          on[type].push(func);
-    //        } else {
-    //          on[type] = [func];
-    //        }
-    //      }
-    //      return this;
-    //    },
-    //    protect: function () {
-    //      reject_global(this);
-    //      var b = this.___nodes___, i;
-    //      for (i = 0; i < b.length; i += 1) {
-    //        b[i]['___adsafe root___'] = '___adsafe root___';
-    //      }
-    //      return this;
-    //    },
-    //    q: function (text) {
-    //      reject_global(this);
-    //      star = this.___star___;
-    //      return new Bunch(quest(parse_query(string_check(text), id),
-    //            this.___nodes___));
-    //    },
-    //    remove: function () {
-    //      reject_global(this);
-    //      this.replace();
-    //    },
-    //    replace: function (replacement) {
+    protect: protect,
+      
+    q: q,
+    
+    remove: remove
+      
+//    replace: function (replacement) {
     //      reject_global(this);
     //      var b = this.___nodes___,
     //          flag = false,

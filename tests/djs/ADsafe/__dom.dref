@@ -40,7 +40,7 @@ weak (~lSelectorFull : {
 } > lObjPro)
 
 
-weak (~lQuery: { Arr(Ref(~lSelectorFull)) | (packed v) } > lArrPro)
+weak (~lQuery: { Arr(Ref(~lSelector)) | (packed v) } > lArrPro)
 
 weak (~lBunchs: Arr(Ref(~lBunch)) > lArrPro)
 
@@ -68,7 +68,7 @@ weak (~lNode: {
     childNodes           : Ref(~lNodes),
     change               : Ref(~lEvent),
     "___ on ___"         : Ref(~lEvent),
-    "___adsafe root___"  : Bool,
+    "___adsafe root___"  : Str,
     "_adsafe mark_"      : Str,
     tagName              : Str,
     className            : Str,

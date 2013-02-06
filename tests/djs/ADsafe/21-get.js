@@ -44,9 +44,7 @@ var getChecks = function ()
 {
   reject_global(this);
   var a = /*: lA {Arr(Bool)|(packed v)} */ [];
-  /*: this lBunch */ "#thaw";
   var b = this.___nodes___;
-  /*: this (~lBunch, thwd lBunch) */ "#freeze";
   var i = 0;
 
   /*: b lNodes */ "#thaw";
@@ -74,9 +72,7 @@ var getClasses =  function ()
 {
   reject_global(this);
   var a = /*: lA {Arr(Str)|(packed v)} */ [];
-  /*: this lBunch */ "#thaw";
   var b = this.___nodes___;
-  /*: this (~lBunch, thwd lBunch) */ "#freeze";
   var i /*: { Int | (>= v 0)} */ = 0;
 
   /*: b lNodes */ "#thaw";
@@ -105,9 +101,7 @@ var getMarks = function ()
 {
   reject_global(this);
   var a = /*: lA {Arr(Str)|(packed v)} */ [];
-  /*: this lBunch */ "#thaw";
   var b = this.___nodes___;
-  /*: this (~lBunch, thwd lBunch) */ "#freeze";
   var i /*: { Int | (>= v 0)} */ = 0;
 
   /*: b lNodes */ "#thaw";
@@ -137,9 +131,7 @@ var getNames = function ()
 {
   reject_global(this);
   var a = /*: lA {Arr(Str)|(packed v)} */ [];
-  /*: this lBunch */ "#thaw";
   var b = this.___nodes___;
-  /*: this (~lBunch, thwd lBunch) */ "#freeze";
   var i /*: { Int | (>= v 0)} */ = 0;
 
   /*: b lNodes */ "#thaw";
@@ -169,9 +161,7 @@ var getOffsetHeights = function ()
 {
   reject_global(this);
   var a = /*: lN {Arr(Num)|(packed v)} */ [];
-  /*: this lBunch */ "#thaw";
   var b = this.___nodes___;
-  /*: this (~lBunch, thwd lBunch) */ "#freeze";
   var i /*: { Int | (>= v 0)} */ = 0;
 
   /*: b lNodes */ "#thaw";
@@ -200,9 +190,7 @@ var getOffsetWidths = function ()
 {
   reject_global(this);
   var a = /*: lN {Arr(Num)|(packed v)} */ [];
-  /*: this lBunch */ "#thaw";
   var b = this.___nodes___;
-  /*: this (~lBunch, thwd lBunch) */ "#freeze";
   var i /*: { Int | (>= v 0)} */ = 0;
 
   /*: b lNodes */ "#thaw";
@@ -225,9 +213,7 @@ var getParent = function ()
 {
   reject_global(this);
   var a = /*: lA {Arr(Ref(~lNode))|(packed v)} */ [];
-  /*: this lBunch */ "#thaw";
   var b = this.___nodes___;
-  /*: this (~lBunch, thwd lBunch) */ "#freeze";
   var i /*: { Int | (>= v 0)} */ = 0;
 
   var n /*: Ref(~lNode) */ = null;
@@ -254,9 +240,7 @@ var getSelection = function ()
 /*: (this: Ref(~lBunch)) -> {(or (Str v) (= v null))} */
 {
   reject_global(this);
-  /*: this lBunch */ "#thaw";
   var b = this.___nodes___;
-  /*: this (~lBunch, thwd lBunch) */ "#freeze";
   var end, node, start, range;
   var str;  //PV 
   /*: b lNodes */ "#thaw";
@@ -302,9 +286,7 @@ var getStyles = function (name)
   }
 
   var a = /*: lA Arr(Str) */ [];
-  /*: this lBunch */ "#thaw";
   var b = this.___nodes___;
-  /*: this (~lBunch, thwd lBunch) */ "#freeze";
   var i /*: { Int | (>= v 0)} */ = 0;
   var node /*: Ref(~lNode) */ = null , s;
 
@@ -342,9 +324,7 @@ var getTagNames = function ()
 {
   reject_global(this);
   var a = /*: lA {Arr(Str)|(packed v)} */ [];
-  /*: this lBunch */ "#thaw";
   var b = this.___nodes___;
-  /*: this (~lBunch, thwd lBunch) */ "#freeze";
   var i /*: { Int | (>= v 0)} */ = 0;
 
   /*: b lNodes */ "#thaw";
@@ -375,9 +355,7 @@ var getTitles = function ()
 {
   reject_global(this);
   var a = /*: lA {Arr(Str)|(packed v)} */ [];
-  /*: this lBunch */ "#thaw";
   var b = this.___nodes___;
-  /*: this (~lBunch, thwd lBunch) */ "#freeze";
   var i /*: { Int | (>= v 0)} */ = 0;
 
   /*: b lNodes */ "#thaw";
@@ -406,9 +384,7 @@ var getValues = function ()
 {
   reject_global(this);
   var a = /*: lA Arr(Str) */ [];
-  /*: this lBunch */ "#thaw";
   var b = this.___nodes___;
-  /*: this (~lBunch, thwd lBunch) */ "#freeze";
   var i /*: { Int | (>= v 0)} */ = 0;
   var node /*: Ref(~lNode) */ = null;
 

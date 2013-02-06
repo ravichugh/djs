@@ -1,11 +1,10 @@
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
 
-/*: tyQueryLoc { Arr(NotUndef) | (and (packed v) (>= (len v) 0)) } > lArrPro */ "#define";
+/*: tyQueryLoc {Arr(Ref(~lSelector))|(packed v)} > lArrPro */ "#define";
 
 var error = /*: (message: Str)  / () -> Top / sameType */ "#extern";
 
-var parse_query = function (text, id)
-  /*: [;L;] (text: Str, id: Str) / () -> Ref(L) / (L : tyQueryLoc) */ 
+var parse_query = function (text, id) /*: (text: Str, id: Str) -> Ref(~lQuery) */
 {
 
   // Convert a query string into an array of op/name/value selectors.
@@ -20,8 +19,8 @@ var parse_query = function (text, id)
   // A name must be all lower case and may contain digits, -, or _.
 
   var match = /*: lA0 { Arr(Str) | (packed v) }*/ [] ,   // A match array  //XXX: PV: added "null"
-      query                             = /*: L */  [],       // The resulting query array
-      selector  = null;                //PV: added "null"
+      query = /*: lQ  { Arr(Ref(~lSelector))|(packed v)} */  [],       // The resulting query array
+      selector  /*: Ref(~lSelector) */ = null; //PV: added "null"
 
   //TODO: Exception Failure: convert CRegExp
   //,qx = id
@@ -30,8 +29,7 @@ var parse_query = function (text, id)
 
   // Loop over all of the selectors in the text.
 
-  /*: ( &text: Str, &query: Ref(L), L: tyQueryLoc, 
-        &selector: Ref(~lSelector), 
+  /*: ( &text: Str, &query: Ref(lQ), lQ: tyQueryLoc, 
         &match: {(or (v::Ref(lA0)) (v::Ref(lA1)))} ) -> sameType */ 
   do {
 
@@ -140,5 +138,8 @@ var parse_query = function (text, id)
     text = text.slice(match[0].length, 0);    //PV: added 2nd argument to slice              
 
   } while (text);
+  
+  /*: query (~lQuery, frzn) */ "#freeze";
+
   return query;
 };

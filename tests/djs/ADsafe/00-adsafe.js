@@ -231,9 +231,7 @@ var walkTheDOM = /*: ( node: Ref(~lNode), func:(Ref(~lNode)) -> Top, skip: Bool)
 
 var purge_event_handlers = /*: (node: Ref(~lNode)) -> Top */ "#extern";
 
-var parse_query = 
-  /*: [;L;] (text: Str, id: Str) / () -> Ref(L) / (L : tyQueryLoc) */ "#extern";
-
+var parse_query = /*: (text: Str, id: Str) -> Ref(~lQuery) */ "#extern";
 
 //TODO: changed names because string literals could not be parsed
 var hunter = 
