@@ -1,7 +1,12 @@
-
-weak (~lNodes    :   { Arr(Ref(~lNode)) | (packed v)} > lArrPro)
-weak (~lNodes_00 :   { Arr(Ref(~lNode)) | (packed v)} > lArrPro)
-weak (~lNList    :   { Arr(Ref(~lNode)) | (packed v)} > lArrPro)
+weak (~lNodes       :   { Arr(Ref(~lNode)) | (packed v)} > lArrPro)
+weak (~lChecked     :  { Arr(Bool)         | (packed v)} > lArrPro)
+weak (~lClassNames  :  { Arr(Str)          | (packed v)} > lArrPro)
+weak (~lADsafeMarks :  { Arr(Str)          | (packed v)} > lArrPro)
+weak (~lNames       :  { Arr(Str)          | (packed v)} > lArrPro)
+weak (~lValues      :  Arr(Str)  > lArrPro)
+weak (~lOffsetHeights :  { Arr(Num)          | (packed v)} > lArrPro)
+weak (~lOffsetWidths :  { Arr(Num)          | (packed v)} > lArrPro)
+weak (~lStyles      :  Arr(Str)  > lArrPro)
 
 weak (~lEvent     : {
   type00          : Str,
@@ -21,16 +26,17 @@ weak (~lEventTarget: { } > lObjPro)
 weak (~lSelector : {
   op             : Str
 } > lObjPro)
+ 
+weak (~lRange : {
+  text: Str,
+  expand: (this:Ref(~lRange), Str) -> Bool
+} > lObjPro)
   
 weak (~lSelectorFull : {
-  op             : {(or (= v "empty_") 
-                        (= v "plus") 
-                        (= v "greater") 
-                        (= v "pound") 
-                        (= v "slash") 
-                        (= v "star"))},
-  name           : Str,
-  value          : Str
+  op    : {(or (= v "empty_") (= v "plus") (= v "greater") 
+               (= v "pound") (= v "slash") (= v "star"))},
+  name  : Str,
+  value : Str
 } > lObjPro)
 
 
@@ -41,7 +47,7 @@ weak (~lBunchs: Arr(Ref(~lBunch)) > lArrPro)
 weak (~lBunch    : {
   "___nodes___"  : Ref(~lNodes),
   "___star___"   : Bool
-
+  (* Calls within Bunch *)
   (*fire           : (NotUndef) -> Top*)
   (* getParents  : () -> Ref(~lBunchs) *)
 } > lBunchProto)
@@ -59,26 +65,38 @@ weak (~lNode: {
     firstChild           : Ref(~lNode),
     nextSibling          : Ref(~lNode),
     parentNode           : Ref(~lNode),
-    childNodes           : Ref(~lNList),
+    childNodes           : Ref(~lNodes),
     change               : Ref(~lEvent),
     "___ on ___"         : Ref(~lEvent),
     "___adsafe root___"  : Bool,
+    "_adsafe mark_"      : Str,
     tagName              : Str,
     className            : Str,
     name                 : Str,
     nodeName             : Str,
     nodeValue            : Str,
+    value                : Str,
+    title                : Str,
     disabled             : Bool,
     checked              : Bool,
+    offsetHeight         : Num,
+    offsetWidth          : Num,
+    selectionStart       : Int,
+    selectionEnd         : Int,
     fire                 : (NotUndef) -> Top,
     blur                 : (this: Ref(~lNode)) -> Top,
     cloneNode            : (this: Ref(~lNode), deep:Bool) -> Ref(~lNode),
     removeChild          : (this: Ref(~lNode), Ref(~lNode)) -> Top,
-    getElementsByTagName : [;L;] (this: Ref(~lNode), name : Str) / () -> Ref(L) / (L: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
+    focus                : (this: Ref(~lNode)) -> Top,   
+    createTextRange      : (this: Ref(~lNode)) -> Ref(~lRange), 
+    getElementsByTagName : [;L;] (this: Ref(~lNode), name : Str) / () -> 
+                              Ref(L) / (L: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
   } > lObjPro)
 
 weak (~lDocument   : {
     defaultView    : Ref(~lNode),
     selection      : Ref(~lSelection),
-    getElementById : [;;H_] (this      : Top, s : Str) / H_ -> Ref(~lNode) / (H_)} > lObjPro)
+    getElementById : (this: Top, s : Str) -> Ref(~lNode),
+    createDocumentFragment : (this:Ref(~lDocument)) -> Ref(~lNode)
+  } > lObjPro)
 

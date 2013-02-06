@@ -6,47 +6,7 @@ var value     /*: Str */              = "#extern";
 
 var int_to_string /*: (Int) -> Str */ = "#extern";
 
-var  append = 
-  /*: (this: Ref(~lBunch), appendage: Ref(lArr)) 
-      / (lArr: Arr(Ref(~lBunch)) > lArrPro) -> Top / sameType */
-      "#extern";
-      
-var blur = /*: (this: Ref(~lBunch)) -> Ref(~lBunch) */ "#extern";
-
-var check  = 
-/*: {(and
-    (v :: (this: Ref(~lBunch), value: Ref(lArr)) / (lArr: { Arr(NotUndef) | (packed v) }  > lArrPro) -> Ref(~lBunch) / sameType)
-    (v :: (this: Ref(~lBunch), value: Ref) / (value: {} > lObjPro) -> Ref(~lBunch) / sameType) 
-    ) } */ "#extern";
-
-var class_fun =
-/*: {(and
-    (v :: (this: Ref(~lBunch), value: Ref(lArr)) / (lArr: { Arr(Str) | (packed v) }  > lArrPro) -> Ref(~lBunch) / sameType)
-    (v :: (this: Ref(~lBunch), value: Str) -> Ref(~lBunch) ) 
-    )} */ "#extern";
-
-
-var clone = /*: (this: Ref(~lBunch), deep:Bool, n: Num) -> Top */ "#extern";
-
-var count = /*: (this: Ref(~lBunch)) -> Int */ "#extern";
-
-var each = /*: (this: Ref(~lBunch), func: (Ref(~lBunch)) -> Top) -> Top */ "#extern";
-
-var empty = 
-/*: {(and
-    (v :: (this: Ref(~lBunch)) / (&value: Ref(lArr), lArr: { Arr(Str) | (packed v) }  > lArrPro) -> Ref(~lBunch) / sameType)
-    (v :: (this: Ref(~lBunch)) / (&value: Ref(lObj), lObj: { }  > lObjPro) -> Ref(~lBunch) / sameType)
-    )} */ "#extern";
-
-var enable = 
-/*: {(and
-    (v :: (this: Ref(~lBunch), enable: Ref(lArr)) / (lArr: { Arr(Str) | (packed v) }  > lArrPro) -> Ref(~lBunch) / sameType)
-    (v :: (this: Ref(~lBunch), enable: Ref(lObj)) / (lObj: { }  > lObjPro) -> Ref(~lBunch) / sameType))} */ "#extern";
-
-var ephemeral = /*: (this: Ref(~lBunch)) -> Ref(~lBunch) */ "#extern";
-
-var explode = /*: [;L;] (this: Ref(~lBunch)) / () -> Ref(L) / (L: Arr(Ref(~lBunch)) > lArrPro) */ "#extern";
-
+     
 
 var make_root = function(root, id)
   /*: (root:Ref(~lNode) , id:Str) -> Top */ 
@@ -79,7 +39,7 @@ var make_root = function(root, id)
     return self;      //PV: added return
   };
 
-//  var allow_focus /*: Bool */ = true,
+  var allow_focus /*: Bool */ = true;
 //      dom,
 //      dom_event = function (event,e) 
 //        /*: (event: Ref(~lEvent), e: Ref(~lEvent)) -> Top */
@@ -236,6 +196,78 @@ var make_root = function(root, id)
 //  root['___adsafe root___'] = '___adsafe root___';
 //
 
+  var  append = 
+  /*: (this: Ref(~lBunch), appendage: Ref(lArr)) 
+      / (lArr: Arr(Ref(~lBunch)) > lArrPro) -> Top / sameType */
+      "#extern";
+   
+  var blur = /*: (this: Ref(~lBunch)) -> Ref(~lBunch) */ "#extern";
+
+  var check  = 
+  /*: {(and
+      (v :: (this: Ref(~lBunch), value: Ref(lArr)) / (lArr: { Arr(NotUndef) | (packed v) }  > lArrPro) -> Ref(~lBunch) / sameType)
+      (v :: (this: Ref(~lBunch), value: Ref) / (value: {} > lObjPro) -> Ref(~lBunch) / sameType) 
+      ) } */ "#extern";
+
+  var class_fun =
+  /*: {(and
+      (v :: (this: Ref(~lBunch), value: Ref(lArr)) / (lArr: { Arr(Str) | (packed v) }  > lArrPro) -> Ref(~lBunch) / sameType)
+      (v :: (this: Ref(~lBunch), value: Str) -> Ref(~lBunch) ) 
+      )} */ "#extern";
+
+
+  var clone = /*: (this: Ref(~lBunch), deep:Bool, n: Num) -> Top */ "#extern";
+
+  var count = /*: (this: Ref(~lBunch)) -> Int */ "#extern";
+
+  var each = /*: (this: Ref(~lBunch), func: (Ref(~lBunch)) -> Top) -> Top */ "#extern";
+
+  var empty = 
+  /*: {(and
+      (v :: (this: Ref(~lBunch)) / (&value: Ref(lArr), lArr: { Arr(Str) | (packed v) }  > lArrPro) -> Ref(~lBunch) / sameType)
+      (v :: (this: Ref(~lBunch)) / (&value: Ref(lObj), lObj: { }  > lObjPro) -> Ref(~lBunch) / sameType)
+      )} */ "#extern";
+
+  var enable = 
+  /*: {(and
+      (v :: (this: Ref(~lBunch), enable: Ref(lArr)) / (lArr: { Arr(Str) | (packed v) }  > lArrPro) -> Ref(~lBunch) / sameType)
+      (v :: (this: Ref(~lBunch), enable: Ref(lObj)) / (lObj: { }  > lObjPro) -> Ref(~lBunch) / sameType))} */ "#extern";
+
+  var ephemeral = /*: (this: Ref(~lBunch)) -> Ref(~lBunch) */ "#extern";
+
+  var explode = /*: [;L;] (this: Ref(~lBunch)) / () -> Ref(L) / (L: Arr(Ref(~lBunch)) > lArrPro) */ "#extern";
+
+  var fire = 
+  /*: {(and
+      (v :: (this: Ref(~lBunch), event: Str) -> Ref(~lBunch))
+      (v :: (this: Ref(~lBunch), event: Ref(~lEvent)) -> Ref(~lBunch)))} */ "#extern";
+
+  var focus = /*: (this: Ref(~lBunch)) / (&has_focus: Top) -> Top / sameType*/ "#extern";
+  var fragment = /*: (this: Ref(~lBunch)) -> Ref(~lBunch) */ "#extern";
+  var getCheck = /*: (this: Ref(~lBunch)) -> Top */ "#extern";
+  var getChecks = /*: (this: Ref(~lBunch)) -> Ref(~lChecked) */ "#extern";
+  var getClass = /*: (this: Ref(~lBunch)) -> Top */ "#extern";
+  var getClasses = /*: (this: Ref(~lBunch)) -> Ref(~lClassNames) */ "#extern";
+  var getMark = /*: (this: Ref(~lBunch)) -> Top */ "#extern";
+  var getMarks = /*: (this: Ref(~lBunch)) -> Ref(~lADsafeMarks) */ "#extern";
+  var getName =  /*: (this: Ref(~lBunch)) -> Top */ "#extern";
+  var getNames = /*: (this: Ref(~lBunch)) -> Ref(~lNames) */ "#extern";
+  var getOffsetHeight =  /*: (this: Ref(~lBunch)) -> Top */ "#extern";
+  var getOffsetHeights = /*: (this: Ref(~lBunch)) -> Ref(~lOffsetHeights) */ "#extern";
+  var getOffsetWidth =  /*: (this: Ref(~lBunch)) -> Top */ "#extern";
+  var getOffsetWidths = /*: (this: Ref(~lBunch)) -> Ref(~lOffsetWidths) */ "#extern";
+  var getParent =  /*: (this: Ref(~lBunch)) -> Ref(~lBunch) */ "#extern";
+  var getSelection =  /*: (this: Ref(~lBunch)) -> {(or (Str v) (= v null))} */ "#extern";
+  var getStyle =  /*: (this: Ref(~lBunch), Str) -> Top */ "#extern";
+  var getStyles = /*: (this: Ref(~lBunch), Str) -> Ref(~lStyles) */ "#extern";
+  var getTagName = /*: (this: Ref(~lBunch)) -> Top */ "#extern";
+  var getTagNames = /*: (this: Ref(~lBunch)) -> Ref(~lNames) */ "#extern";
+  var getTitle =  /*: (this: Ref(~lBunch)) -> Top */ "#extern";
+  var getTitles = /*: (this: Ref(~lBunch)) -> Ref(~lNames) */ "#extern";
+  var getValue =  /*: (this: Ref(~lBunch)) -> Top */ "#extern";
+  var getValues = /*: (this: Ref(~lBunch)) -> Ref(~lValues) */ "#extern";
+ 
+  
   Bunch.prototype = {
 
     append: append,
@@ -258,586 +290,413 @@ var make_root = function(root, id)
     
     ephemeral: ephemeral,
 
-    explode: explode
+    explode: explode,
 
-            //    fire: function (event) {
-            //
-            //      // Fire an event on an object. The event can be either
-            //      // a string containing the name of the event, or an
-            //      // object containing a type property containing the
-            //      // name of the event. Handlers registered by the 'on'
-            //      // method that match the event name will be invoked.
-            //
-            //      reject_global(this);
-            //      var array,
-            //          b,
-            //          i,
-            //          j,
-            //          n,
-            //          node,
-            //          on,
-            //          type;
-            //
-            //      if (typeof event === 'string') {
-            //        type = event;
-            //        event = {type: type};
-            //      } else if (typeof event === 'object') {
-            //        type = event.type;
-            //      } else {
-            //        error();
-            //      }
-            //      b = this.___nodes___;
-            //      n = b.length;
-            //      for (i = 0; i < n; i += 1) {
-            //        node = b[i];
-            //        on = node['___ on ___'];
-            //
-            //        // If an array of handlers exist for this event, then
-            //        // loop through it and execute the handlers in order.
-            //
-            //        if (owns(on, type)) {
-            //          array = on[type];
-            //          for (j = 0; j < array.length; j += 1) {
-            //
-            //            // Invoke a handler. Pass the event object.
-            //
-            //            array[j].call(this, event);
-            //          }
-            //        }
-            //      }
-            //      return this;
-            //    },
-            //    focus: function () {
-            //      reject_global(this);
-            //      var b = this.___nodes___;
-            //      if (b.length > 0 && allow_focus) {
-            //        has_focus = b[0].focus();
-            //        return this;
-            //      }
-            //      error();
-            //    },
-            //    fragment: function () {
-            //      reject_global(this);
-            //      return new Bunch([document.createDocumentFragment()]);
-            //    },
-            //    getCheck: function () {
-            //      return this.getChecks()[0];
-            //    },
-            //    getChecks: function () {
-            //      reject_global(this);
-            //      var a = [], b = this.___nodes___, i;
-            //      for (i = 0; i < b.length; i += 1) {
-            //        a[i] = b[i].checked;
-            //      }
-            //      return a;
-            //    },
-            //    getClass: function () {
-            //      return this.getClasses()[0];
-            //    },
-            //    getClasses: function () {
-            //      reject_global(this);
-            //      var a = [], b = this.___nodes___, i;
-            //      for (i = 0; i < b.length; i += 1) {
-            //        a[i] = b[i].className;
-            //      }
-            //      return a;
-            //    },
-            //    getMark: function () {
-            //      return this.getMarks()[0];
-            //    },
-            //    getMarks: function () {
-            //      reject_global(this);
-            //      var a = [], b = this.___nodes___, i;
-            //      for (i = 0; i < b.length; i += 1) {
-            //        a[i] = b[i]['_adsafe mark_'];
-            //      }
-            //      return a;
-            //    },
-            //    getName: function () {
-            //      return this.getNames()[0];
-            //    },
-            //    getNames: function () {
-            //      reject_global(this);
-            //      var a = [], b = this.___nodes___, i;
-            //      for (i = 0; i < b.length; i += 1) {
-            //        a[i] = b[i].name;
-            //      }
-            //      return a;
-            //    },
-            //    getOffsetHeight: function () {
-            //      return this.getOffsetHeights()[0];
-            //    },
-            //    getOffsetHeights: function () {
-            //      reject_global(this);
-            //      var a = [], b = this.___nodes___, i;
-            //      for (i = 0; i < b.length; i += 1) {
-            //        a[i] = b[i].offsetHeight;
-            //      }
-            //      return a;
-            //    },
-            //    getOffsetWidth: function () {
-            //      return this.getOffsetWidths()[0];
-            //    },
-            //    getOffsetWidths: function () {
-            //      reject_global(this);
-            //      var a = [], b = this.___nodes___, i;
-            //      for (i = 0; i < b.length; i += 1) {
-            //        a[i] = b[i].offsetWidth;
-            //      }
-            //      return a;
-            //    },
-            //    getParent: function () {
-            //      reject_global(this);
-            //      var a = [], b = this.___nodes___, i, n;
-            //      for (i = 0; i < b.length; i += 1) {
-            //        n = b[i].parentNode;
-            //        if (n['___adsafe root___']) {
-            //          error('ADsafe parent violation.');
-            //        }
-            //        a[i] = n;
-            //      }
-            //      return new Bunch(a);
-            //    },
-            //    getSelection: function () {
-            //      reject_global(this);
-            //      var b = this.___nodes___, end, node, start, range;
-            //      if (b.length === 1 && allow_focus) {
-            //        node = b[0];
-            //        if (typeof node.selectionStart === 'number') {
-            //          start = node.selectionStart;
-            //          end = node.selectionEnd;
-            //          return node.value.slice(start, end);
-            //        }
-            //        range = node.createTextRange();
-            //        range.expand('textedit');
-            //        if (range.inRange(the_range)) {
-            //          return the_range.text;
-            //        }
-            //      }
-            //      return null;
-            //    },
-            //    getStyle: function (name) {
-            //      return this.getStyles(name)[0];
-            //    },
-            //    getStyles: function (name) {
-            //      reject_global(this);
-            //      if (reject_name(name)) {
-            //        error("ADsafe style violation.");
-            //      }
-            //      var a = [], b = this.___nodes___, i, node, s;
-            //      for (i = 0; i < b.length; i += 1) {
-            //        node = b[i];
-            //        if (node.tagName) {
-            //          s = name !== 'float'
-            //            ? getStyleObject(node)[name]
-            //            : getStyleObject(node).cssFloat ||
-            //            getStyleObject(node).styleFloat;
-            //          if (typeof s === 'string') {
-            //            a[i] = s;
-            //          }
-            //        }
-            //      }
-            //      return a;
-            //    },
-            //    getTagName: function () {
-            //      return this.getTagNames()[0];
-            //    },
-            //    getTagNames: function () {
-            //      reject_global(this);
-            //      var a = [], b = this.___nodes___, i, name;
-            //      for (i = 0; i < b.length; i += 1) {
-            //        name = b[i].tagName;
-            //        a[i] = typeof name === 'string' ? name.toLowerCase() : name;
-            //      }
-            //      return a;
-            //    },
-            //    getTitle: function () {
-            //      return this.getTitles()[0];
-            //    },
-            //    getTitles: function () {
-            //      reject_global(this);
-            //      var a = [], b = this.___nodes___, i;
-            //      for (i = 0; i < b.length; i += 1) {
-            //        a[i] = b[i].title;
-            //      }
-            //      return a;
-            //    },
-            //    getValue: function () {
-            //      return this.getValues()[0];
-            //    },
-            //    getValues: function () {
-            //      reject_global(this);
-            //      var a = [], b = this.___nodes___, i, node;
-            //      for (i = 0; i < b.length; i += 1) {
-            //        node = b[i];
-            //        if (node.nodeName === '#text') {
-            //          a[i] = node.nodeValue;
-            //        } else if (node.tagName && node.type !== 'password') {
-            //          a[i] = node.value;
-            //          if (!a[i] && node.firstChild &&
-            //              node.firstChild.nodeName === '#text') {
-            //                a[i] = node.firstChild.nodeValue;
-            //              }
-            //        }
-            //      }
-            //      return a;
-            //    },
-            //    klass: function (value) {
-            //      return this['class'](value);
-            //    },
-            //    mark: function (value) {
-            //      reject_global(this);
-            //      var b = this.___nodes___, i, node;
-            //      if (value instanceof Array) {
-            //        if (value.length !== b.length) {
-            //          error('ADsafe: Array length: ' + b.length + '-' +
-            //              value.length);
-            //        }
-            //        for (i = 0; i < b.length; i += 1) {
-            //          node = b[i];
-            //          if (node.tagName) {
-            //            node['_adsafe mark_'] = String(value[i]);
-            //          }
-            //        }
-            //      } else {
-            //        for (i = 0; i < b.length; i += 1) {
-            //          node = b[i];
-            //          if (node.tagName) {
-            //            node['_adsafe mark_'] = String(value);
-            //          }
-            //        }
-            //      }
-            //      return this;
-            //    },
-            //    off: function (type) {
-            //      reject_global(this);
-            //      var b = this.___nodes___, i, node;
-            //      for (i = 0; i < b.length; i += 1) {
-            //        node = b[i];
-            //        if (typeof type === 'string') {
-            //          if (typeof node['___ on ___']) {
-            //            node['___ on ___'][type] = null;
-            //          }
-            //        } else {
-            //          node['___ on ___'] = null;
-            //        }
-            //      }
-            //      return this;
-            //    },
-            //    on: function (type, func) {
-            //      reject_global(this);
-            //      if (typeof type !== 'string' || typeof func !== 'function') {
-            //        error();
-            //      }
-            //
-            //      var b = this.___nodes___, i, node, on, ontype;
-            //      for (i = 0; i < b.length; i += 1) {
-            //        node = b[i];
-            //
-            //        // The change event does not propogate, so we must put the handler on the
-            //        // instance.
-            //
-            //        if (type === 'change') {
-            //          ontype = 'on' + type;
-            //          if (node[ontype] !== dom_event) {
-            //            node[ontype] = dom_event;
-            //          }
-            //        }
-            //
-            //        // Register an event. Put the function in a handler array, making one if it
-            //        // doesn't yet exist for this type on this node.
-            //
-            //        on = node['___ on ___'];
-            //        if (!on) {
-            //          on = {};
-            //          node['___ on ___'] = on;
-            //        }
-            //        if (owns(on, type)) {
-            //          on[type].push(func);
-            //        } else {
-            //          on[type] = [func];
-            //        }
-            //      }
-            //      return this;
-            //    },
-            //    protect: function () {
-            //      reject_global(this);
-            //      var b = this.___nodes___, i;
-            //      for (i = 0; i < b.length; i += 1) {
-            //        b[i]['___adsafe root___'] = '___adsafe root___';
-            //      }
-            //      return this;
-            //    },
-            //    q: function (text) {
-            //      reject_global(this);
-            //      star = this.___star___;
-            //      return new Bunch(quest(parse_query(string_check(text), id),
-            //            this.___nodes___));
-            //    },
-            //    remove: function () {
-            //      reject_global(this);
-            //      this.replace();
-            //    },
-            //    replace: function (replacement) {
-            //      reject_global(this);
-            //      var b = this.___nodes___,
-            //          flag = false,
-            //          i,
-            //          j,
-            //          newnode,
-            //          node,
-            //          parent,
-            //          rep;
-            //      if (b.length === 0) {
-            //        return;
-            //      }
-            //      for (i = 0; i < b.length; i += 1) {
-            //        purge_event_handlers(b[i]);
-            //      }
-            //      if (!replacement || replacement.length === 0 ||
-            //          (replacement.___nodes___ &&
-            //           replacement.___nodes___.length === 0)) {
-            //             for (i = 0; i < b.length; i += 1) {
-            //               node = b[i];
-            //               purge_event_handlers(node);
-            //               if (node.parentNode) {
-            //                 node.parentNode.removeChild(node);
-            //               }
-            //             }
-            //           } else if (replacement instanceof Array) {
-            //             if (replacement.length !== b.length) {
-            //               error('ADsafe: Array length: ' +
-            //                   b.length + '-' + value.length);
-            //             }
-            //             for (i = 0; i < b.length; i += 1) {
-            //               node = b[i];
-            //               parent = node.parentNode;
-            //               purge_event_handlers(node);
-            //               if (parent) {
-            //                 rep = replacement[i].___nodes___;
-            //                 if (rep.length > 0) {
-            //                   newnode = rep[0];
-            //                   parent.replaceChild(newnode, node);
-            //                   for (j = 1; j < rep.length; j += 1) {
-            //                     node = newnode;
-            //                     newnode = rep[j];
-            //                     parent.insertBefore(newnode, node.nextSibling);
-            //                   }
-            //                 } else {
-            //                   parent.removeChild(node);
-            //                 }
-            //               }
-            //             }
-            //           } else {
-            //             rep = replacement.___nodes___;
-            //             for (i = 0; i < b.length; i += 1) {
-            //               node = b[i];
-            //               purge_event_handlers(node);
-            //               parent = node.parentNode;
-            //               if (parent) {
-            //                 newnode = flag ? rep[0].cloneNode(true) : rep[0];
-            //                 parent.replaceChild(newnode, node);
-            //                 for (j = 1; j < rep.length; j += 1) {
-            //                   node = newnode;
-            //                   newnode = flag ? rep[j].clone(true) : rep[j];
-            //                   parent.insertBefore(newnode, node.nextSibling);
-            //                 }
-            //                 flag = true;
-            //               }
-            //             }
-            //           }
-            //      return this;
-            //    },
-            //    select: function () {
-            //      reject_global(this);
-            //      var b = this.___nodes___;
-            //      if (b.length < 1 || !allow_focus) {
-            //        error();
-            //      }
-            //      b[0].focus();
-            //      b[0].select();
-            //      return this;
-            //    },
-            //    selection: function (string) {
-            //      reject_global(this);
-            //      string_check(string);
-            //      var b = this.___nodes___, end, node, old, start, range;
-            //      if (b.length === 1 && allow_focus) {
-            //        node = b[0];
-            //        if (typeof node.selectionStart === 'number') {
-            //          start = node.selectionStart;
-            //          end = node.selectionEnd;
-            //          old = node.value;
-            //          node.value = old.slice(0, start) + string + old.slice(end);
-            //          node.selectionStart = node.selectionEnd = start +
-            //            string.length;
-            //          node.focus();
-            //        } else {
-            //          range = node.createTextRange();
-            //          range.expand('textedit');
-            //          if (range.inRange(the_range)) {
-            //            the_range.select();
-            //            the_range.text = string;
-            //            the_range.select();
-            //          }
-            //        }
-            //      }
-            //      return this;
-            //    },
-            //    style: function (name, value) {
-            //      reject_global(this);
-            //      if (reject_name(name)) {
-            //        error("ADsafe style violation.");
-            //      }
-            //      if (value === undefined || /url/i.test(string_check(value))) {
-            //        error();
-            //      }
-            //      var b = this.___nodes___,
-            //          i,
-            //          node,
-            //          v;
-            //      if (value instanceof Array) {
-            //        if (value.length !== b.length) {
-            //          error('ADsafe: Array length: ' +
-            //              b.length + '-' + value.length);
-            //        }
-            //        for (i = 0; i < b.length; i += 1) {
-            //          node = b[i];
-            //          v = string_check(value[i]);
-            //          if (/url/i.test(v)) {
-            //            error();
-            //          }
-            //          if (node.tagName) {
-            //            if (name !== 'float') {
-            //              node.style[name] = v;
-            //            } else {
-            //              node.style.cssFloat = node.style.styleFloat = v;
-            //            }
-            //          }
-            //        }
-            //      } else {
-            //        v = string_check(value);
-            //        if (/url/i.test(v)) {
-            //          error();
-            //        }
-            //        for (i = 0; i < b.length; i += 1) {
-            //          node = b[i];
-            //          if (node.tagName) {
-            //            if (name !== 'float') {
-            //              node.style[name] = v;
-            //            } else {
-            //              node.style.cssFloat = node.style.styleFloat = v;
-            //            }
-            //          }
-            //        }
-            //      }
-            //      return this;
-            //    },
-            //    tag: function (tag, type, name) {
-            //      reject_global(this);
-            //      var node;
-            //      if (typeof tag !== 'string') {
-            //        error();
-            //      }
-            //      if (makeableTagName[tag] !== true) {
-            //        error('ADsafe: Bad tag: ' + tag);
-            //      }
-            //      node = document.createElement(tag);
-            //      if (name) {
-            //        node.autocomplete = 'off';
-            //        node.name = string_check(name);
-            //      }
-            //      if (type) {
-            //        node.type = string_check(type);
-            //      }
-            //      return new Bunch([node]);
-            //    },
-            //    text: function (text) {
-            //      reject_global(this);
-            //      var a, i;
-            //      if (text instanceof Array) {
-            //        a = [];
-            //        for (i = 0; i < text.length; i += 1) {
-            //          a[i] = document.createTextNode(string_check(text[i]));
-            //        }
-            //        return new Bunch(a);
-            //      }
-            //      return new Bunch([document.createTextNode(string_check(text))]);
-            //    },
-            //    title: function (value) {
-            //      reject_global(this);
-            //      var b = this.___nodes___, i, node;
-            //      if (value instanceof Array) {
-            //        if (value.length !== b.length) {
-            //          error('ADsafe: Array length: ' + b.length +
-            //              '-' + value.length);
-            //        }
-            //        for (i = 0; i < b.length; i += 1) {
-            //          node = b[i];
-            //          if (node.tagName) {
-            //            node.title = string_check(value[i]);
-            //          }
-            //        }
-            //      } else {
-            //        string_check(value);
-            //        for (i = 0; i < b.length; i += 1) {
-            //          node = b[i];
-            //          if (node.tagName) {
-            //            node.title = value;
-            //          }
-            //        }
-            //      }
-            //      return this;
-            //    },
-            //    value: function (value) {
-            //      reject_global(this);
-            //      if (value === undefined) {
-            //        error();
-            //      }
-            //      var b = this.___nodes___, i, node;
-            //      if (value instanceof Array && b.length === value.length) {
-            //        for (i = 0; i < b.length; i += 1) {
-            //          node = b[i];
-            //          if (node.tagName) {
-            //            if (node.type !== 'password') {
-            //              if (typeof node.value === 'string') {
-            //                node.value = value[i];
-            //              } else {
-            //                while (node.firstChild) {
-            //                  purge_event_handlers(node.firstChild);
-            //                  node.removeChild(node.firstChild);
-            //                }
-            //                node.appendChild(document.createTextNode(
-            //                      String(value[i])
-            //                      ));
-            //              }
-            //            }
-            //          } else if (node.nodeName === '#text') {
-            //            node.nodeValue = String(value[i]);
-            //          }
-            //        }
-            //      } else {
-            //        value = String(value);
-            //        for (i = 0; i < b.length; i += 1) {
-            //          node = b[i];
-            //          if (node.tagName) {
-            //            if (node.tagName !== 'BUTTON' &&
-            //                typeof node.value === 'string') {
-            //                  node.value = value;
-            //                } else {
-            //                  while (node.firstChild) {
-            //                    purge_event_handlers(node.firstChild);
-            //                    node.removeChild(node.firstChild);
-            //                  }
-            //                  node.appendChild(document.createTextNode(value));
-            //                }
-            //          } else if (node.nodeName === '#text') {
-            //            node.nodeValue = value;
-            //          }
-            //        }
-            //      }
-            //      return this;
-            //    }
+    fire: fire,
+
+    focus: focus,
+    
+    fragment: fragment,
+      
+    getCheck: getCheck, 
+    
+    getClass: getClass,
+    
+    getClasses: getClasses,
+    
+    getMark: getMark,
+    
+    getMarks: getMarks,
+    
+    getName: getName,
+    
+    getNames: getNames,
+    
+    getOffsetHeight: getOffsetHeight,
+    
+    getOffsetHeights: getOffsetHeights, 
+    
+    getOffsetWidth: getOffsetWidth,
+
+    getOffsetWidths: getOffsetWidths,
+    
+    getParent: getParent,
+    
+    getSelection: getSelection,
+    
+    getStyle: getStyle,
+    
+    getStyles: getStyles,
+    
+    getTagName: getTagName,
+    
+    getTagNames: getTagNames,
+    
+    getTitle: getTitle,
+    
+    getTitles: getTitles,
+    
+    getValue: getValue,
+    
+    getValues: getValues
+
+
+    //    klass: function (value) {
+    //      return this['class'](value);
+    //    },
+    //    mark: function (value) {
+    //      reject_global(this);
+    //      var b = this.___nodes___, i, node;
+    //      if (value instanceof Array) {
+    //        if (value.length !== b.length) {
+    //          error('ADsafe: Array length: ' + b.length + '-' +
+    //              value.length);
+    //        }
+    //        for (i = 0; i < b.length; i += 1) {
+    //          node = b[i];
+    //          if (node.tagName) {
+    //            node['_adsafe mark_'] = String(value[i]);
+    //          }
+    //        }
+    //      } else {
+    //        for (i = 0; i < b.length; i += 1) {
+    //          node = b[i];
+    //          if (node.tagName) {
+    //            node['_adsafe mark_'] = String(value);
+    //          }
+    //        }
+    //      }
+    //      return this;
+    //    },
+    //    off: function (type) {
+    //      reject_global(this);
+    //      var b = this.___nodes___, i, node;
+    //      for (i = 0; i < b.length; i += 1) {
+    //        node = b[i];
+    //        if (typeof type === 'string') {
+    //          if (typeof node['___ on ___']) {
+    //            node['___ on ___'][type] = null;
+    //          }
+    //        } else {
+    //          node['___ on ___'] = null;
+    //        }
+    //      }
+    //      return this;
+    //    },
+    //    on: function (type, func) {
+    //      reject_global(this);
+    //      if (typeof type !== 'string' || typeof func !== 'function') {
+    //        error();
+    //      }
+    //
+    //      var b = this.___nodes___, i, node, on, ontype;
+    //      for (i = 0; i < b.length; i += 1) {
+    //        node = b[i];
+    //
+    //        // The change event does not propogate, so we must put the handler on the
+    //        // instance.
+    //
+    //        if (type === 'change') {
+    //          ontype = 'on' + type;
+    //          if (node[ontype] !== dom_event) {
+    //            node[ontype] = dom_event;
+    //          }
+    //        }
+    //
+    //        // Register an event. Put the function in a handler array, making one if it
+    //        // doesn't yet exist for this type on this node.
+    //
+    //        on = node['___ on ___'];
+    //        if (!on) {
+    //          on = {};
+    //          node['___ on ___'] = on;
+    //        }
+    //        if (owns(on, type)) {
+    //          on[type].push(func);
+    //        } else {
+    //          on[type] = [func];
+    //        }
+    //      }
+    //      return this;
+    //    },
+    //    protect: function () {
+    //      reject_global(this);
+    //      var b = this.___nodes___, i;
+    //      for (i = 0; i < b.length; i += 1) {
+    //        b[i]['___adsafe root___'] = '___adsafe root___';
+    //      }
+    //      return this;
+    //    },
+    //    q: function (text) {
+    //      reject_global(this);
+    //      star = this.___star___;
+    //      return new Bunch(quest(parse_query(string_check(text), id),
+    //            this.___nodes___));
+    //    },
+    //    remove: function () {
+    //      reject_global(this);
+    //      this.replace();
+    //    },
+    //    replace: function (replacement) {
+    //      reject_global(this);
+    //      var b = this.___nodes___,
+    //          flag = false,
+    //          i,
+    //          j,
+    //          newnode,
+    //          node,
+    //          parent,
+    //          rep;
+    //      if (b.length === 0) {
+    //        return;
+    //      }
+    //      for (i = 0; i < b.length; i += 1) {
+    //        purge_event_handlers(b[i]);
+    //      }
+    //      if (!replacement || replacement.length === 0 ||
+    //          (replacement.___nodes___ &&
+    //           replacement.___nodes___.length === 0)) {
+    //             for (i = 0; i < b.length; i += 1) {
+    //               node = b[i];
+    //               purge_event_handlers(node);
+    //               if (node.parentNode) {
+    //                 node.parentNode.removeChild(node);
+    //               }
+    //             }
+    //           } else if (replacement instanceof Array) {
+    //             if (replacement.length !== b.length) {
+    //               error('ADsafe: Array length: ' +
+    //                   b.length + '-' + value.length);
+    //             }
+    //             for (i = 0; i < b.length; i += 1) {
+    //               node = b[i];
+    //               parent = node.parentNode;
+    //               purge_event_handlers(node);
+    //               if (parent) {
+    //                 rep = replacement[i].___nodes___;
+    //                 if (rep.length > 0) {
+    //                   newnode = rep[0];
+    //                   parent.replaceChild(newnode, node);
+    //                   for (j = 1; j < rep.length; j += 1) {
+    //                     node = newnode;
+    //                     newnode = rep[j];
+    //                     parent.insertBefore(newnode, node.nextSibling);
+    //                   }
+    //                 } else {
+    //                   parent.removeChild(node);
+    //                 }
+    //               }
+    //             }
+    //           } else {
+    //             rep = replacement.___nodes___;
+    //             for (i = 0; i < b.length; i += 1) {
+    //               node = b[i];
+    //               purge_event_handlers(node);
+    //               parent = node.parentNode;
+    //               if (parent) {
+    //                 newnode = flag ? rep[0].cloneNode(true) : rep[0];
+    //                 parent.replaceChild(newnode, node);
+    //                 for (j = 1; j < rep.length; j += 1) {
+    //                   node = newnode;
+    //                   newnode = flag ? rep[j].clone(true) : rep[j];
+    //                   parent.insertBefore(newnode, node.nextSibling);
+    //                 }
+    //                 flag = true;
+    //               }
+    //             }
+    //           }
+    //      return this;
+    //    },
+    //    select: function () {
+    //      reject_global(this);
+    //      var b = this.___nodes___;
+    //      if (b.length < 1 || !allow_focus) {
+    //        error();
+    //      }
+    //      b[0].focus();
+    //      b[0].select();
+    //      return this;
+    //    },
+    //    selection: function (string) {
+    //      reject_global(this);
+    //      string_check(string);
+    //      var b = this.___nodes___, end, node, old, start, range;
+    //      if (b.length === 1 && allow_focus) {
+    //        node = b[0];
+    //        if (typeof node.selectionStart === 'number') {
+    //          start = node.selectionStart;
+    //          end = node.selectionEnd;
+    //          old = node.value;
+    //          node.value = old.slice(0, start) + string + old.slice(end);
+    //          node.selectionStart = node.selectionEnd = start +
+    //            string.length;
+    //          node.focus();
+    //        } else {
+    //          range = node.createTextRange();
+    //          range.expand('textedit');
+    //          if (range.inRange(the_range)) {
+    //            the_range.select();
+    //            the_range.text = string;
+    //            the_range.select();
+    //          }
+    //        }
+    //      }
+    //      return this;
+    //    },
+    //    style: function (name, value) {
+    //      reject_global(this);
+    //      if (reject_name(name)) {
+    //        error("ADsafe style violation.");
+    //      }
+    //      if (value === undefined || /url/i.test(string_check(value))) {
+    //        error();
+    //      }
+    //      var b = this.___nodes___,
+    //          i,
+    //          node,
+    //          v;
+    //      if (value instanceof Array) {
+    //        if (value.length !== b.length) {
+    //          error('ADsafe: Array length: ' +
+    //              b.length + '-' + value.length);
+    //        }
+    //        for (i = 0; i < b.length; i += 1) {
+    //          node = b[i];
+    //          v = string_check(value[i]);
+    //          if (/url/i.test(v)) {
+    //            error();
+    //          }
+    //          if (node.tagName) {
+    //            if (name !== 'float') {
+    //              node.style[name] = v;
+    //            } else {
+    //              node.style.cssFloat = node.style.styleFloat = v;
+    //            }
+    //          }
+    //        }
+    //      } else {
+    //        v = string_check(value);
+    //        if (/url/i.test(v)) {
+    //          error();
+    //        }
+    //        for (i = 0; i < b.length; i += 1) {
+    //          node = b[i];
+    //          if (node.tagName) {
+    //            if (name !== 'float') {
+    //              node.style[name] = v;
+    //            } else {
+    //              node.style.cssFloat = node.style.styleFloat = v;
+    //            }
+    //          }
+    //        }
+    //      }
+    //      return this;
+    //    },
+    //    tag: function (tag, type, name) {
+    //      reject_global(this);
+    //      var node;
+    //      if (typeof tag !== 'string') {
+    //        error();
+    //      }
+    //      if (makeableTagName[tag] !== true) {
+    //        error('ADsafe: Bad tag: ' + tag);
+    //      }
+    //      node = document.createElement(tag);
+    //      if (name) {
+    //        node.autocomplete = 'off';
+    //        node.name = string_check(name);
+    //      }
+    //      if (type) {
+    //        node.type = string_check(type);
+    //      }
+    //      return new Bunch([node]);
+    //    },
+    //    text: function (text) {
+    //      reject_global(this);
+    //      var a, i;
+    //      if (text instanceof Array) {
+    //        a = [];
+    //        for (i = 0; i < text.length; i += 1) {
+    //          a[i] = document.createTextNode(string_check(text[i]));
+    //        }
+    //        return new Bunch(a);
+    //      }
+    //      return new Bunch([document.createTextNode(string_check(text))]);
+    //    },
+    //    title: function (value) {
+    //      reject_global(this);
+    //      var b = this.___nodes___, i, node;
+    //      if (value instanceof Array) {
+    //        if (value.length !== b.length) {
+    //          error('ADsafe: Array length: ' + b.length +
+    //              '-' + value.length);
+    //        }
+    //        for (i = 0; i < b.length; i += 1) {
+    //          node = b[i];
+    //          if (node.tagName) {
+    //            node.title = string_check(value[i]);
+    //          }
+    //        }
+    //      } else {
+    //        string_check(value);
+    //        for (i = 0; i < b.length; i += 1) {
+    //          node = b[i];
+    //          if (node.tagName) {
+    //            node.title = value;
+    //          }
+    //        }
+    //      }
+    //      return this;
+    //    },
+    //    value: function (value) {
+    //      reject_global(this);
+    //      if (value === undefined) {
+    //        error();
+    //      }
+    //      var b = this.___nodes___, i, node;
+    //      if (value instanceof Array && b.length === value.length) {
+    //        for (i = 0; i < b.length; i += 1) {
+    //          node = b[i];
+    //          if (node.tagName) {
+    //            if (node.type !== 'password') {
+    //              if (typeof node.value === 'string') {
+    //                node.value = value[i];
+    //              } else {
+    //                while (node.firstChild) {
+    //                  purge_event_handlers(node.firstChild);
+    //                  node.removeChild(node.firstChild);
+    //                }
+    //                node.appendChild(document.createTextNode(
+    //                      String(value[i])
+    //                      ));
+    //              }
+    //            }
+    //          } else if (node.nodeName === '#text') {
+    //            node.nodeValue = String(value[i]);
+    //          }
+    //        }
+    //      } else {
+    //        value = String(value);
+    //        for (i = 0; i < b.length; i += 1) {
+    //          node = b[i];
+    //          if (node.tagName) {
+    //            if (node.tagName !== 'BUTTON' &&
+    //                typeof node.value === 'string') {
+    //                  node.value = value;
+    //                } else {
+    //                  while (node.firstChild) {
+    //                    purge_event_handlers(node.firstChild);
+    //                    node.removeChild(node.firstChild);
+    //                  }
+    //                  node.appendChild(document.createTextNode(value));
+    //                }
+    //          } else if (node.nodeName === '#text') {
+    //            node.nodeValue = value;
+    //          }
+    //        }
+    //      }
+    //      return this;
+    //    }
   };
   //
   //  // Return an ADsafe dom object.

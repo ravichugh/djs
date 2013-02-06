@@ -15,29 +15,30 @@
 // contains "__hack__", or if an array literal does not have Array.prototype
 // as its prototype (and its prototype chain does not contain "__hack__").
 
-Array.prototype.__hack__ = "dummy";
+//Array.prototype.__hack__ = "dummy";
 
 /*: #define tyScalar
     {(or (= (tag v) "number") (= (tag v) "boolean") (= (tag v) "string")
          (= (tag v) "undefined") (= v null))} */ "#define";
 
 /*: #define ty1
-    (v :: [[value:tyScalar]]
+    (v :: (value:tyScalar)
        -> {(ite (= value null) (= v "null") (= v (tag value)))}) */ "#define";
 
 /*: #define ty2
-    (v :: [;L1,L2;H]
-          [[value:Ref(L1)]] / [H ++ L1 |-> (x:Dict, L2)]
-       -> {(ite (objhas x "__hack__" H L2) (= v "array") (= v "object"))}
+    (v :: [;L1,L2;]
+          (value:Ref(L1)) / (L1 : x:Dict > L2)
+       -> {(ite (objhas x "__hack__" cur L2) (= v "array") (= v "object"))}
         / same) */ "#define";
 
 /*: #define ty3
-    (v :: [A;L1,L2;H]
-          [[value:Ref(L1)]] / [H ++ L1 |-> (_:Arr(A), L2)]
-       -> {(ite (heaphas H L2 "__hack__") (= v "array") (= v "object"))}
+    (v :: [A;L1,L2;]
+          (value:Ref(L1)) / (L1 : Arr(A) > L2)
+       -> {(ite (heaphas cur L2 "__hack__") (= v "array") (= v "object"))}
         / same) */ "#define";
 
-var typeOf = function(value) /*: {(and ty1 ty2 ty3)} */
+//var typeOf = function(value) /*: {(and ty1 ty2 ty3)} */
+var typeOf = function(value) /*: {ty1} */
 {
   var s = typeof value;
   if (s == 'object') {

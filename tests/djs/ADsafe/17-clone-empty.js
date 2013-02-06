@@ -2,6 +2,13 @@
 
 /*: tyArr {Arr(Ref(~lNode))|(packed v)} > lArrPro */ "#define";
 
+var reject_global = 
+/*: {(and
+      (v:: [;L1,L2;] (that: Ref(L1)) / (L1: d: Dict > L2) -> 
+          { (implies (truthy (objsel d "window" cur L2)) FLS) } / sameExact)
+      (v:: (that: Ref(~lBunch)) ->  Top)
+    )} */ "#extern";
+
 
 /*: tyNode  {
     getComputedStyle     : (this: Ref(~lNode), node : Ref(~lNode), str  : Str) -> Ref(~lCCSStyle),
@@ -9,7 +16,7 @@
     firstChild           : Ref(~lNode),
     nextSibling          : Ref(~lNode),
     parentNode           : Ref(~lNode),
-    childNodes           : Ref(~lNList),
+    childNodes           : Ref(~lNodes),
     change               : Ref(~lEvent),
     "___ on ___"         : Ref(~lEvent),
     "___adsafe root___"  : Bool,
@@ -89,7 +96,7 @@ var clone =  function (deep, n)
 var count = function () 
 /*: (this: Ref(~lBunch)) -> Int */
 {
-  //reject_global(this);
+  reject_global(this);
 
   /*: this lBunch */ "#thaw";
   var nodes =  this.___nodes___;
@@ -105,7 +112,7 @@ var count = function ()
 var each = function (func) 
 /*: (this: Ref(~lBunch), func: (Ref(~lBunch)) -> Top) -> Top */
 {
-  //reject_global(this);
+  reject_global(this);
 
   /*: this lBunch */ "#thaw";
   var b = this.___nodes___;
@@ -113,13 +120,14 @@ var each = function (func)
   var i /*: { Int | (>= v 0)} */ = 0;
 
   if (typeof func === 'function') {
+    /*: b lNodes */ "#thaw";
+    var cond = i < b.length; 
+    /*: b (~lNodes, thwd lNodes) */ "#freeze";
 
-    /*: (&b: Ref(~lNodes)) -> sameType */
-    for (i = 0; true; i += 1) {
+    /*: (&b: Ref(~lNodes), &cond: Bool) -> sameType */
+    for (i = 0; cond; i += 1) {
       /*: b lNodes */ "#thaw";
-       
       if (i < b.length) {
-        assert(/*: Ref(~lNode) */  (b[i]));
         var bArr = /*: lBArr {Arr(Ref(~lNode))|(packed v)} */ [b[i]];
         /*: b (~lNodes, thwd lNodes) */ "#freeze";
 
@@ -144,7 +152,7 @@ var empty = function ()
     (v :: (this: Ref(~lBunch)) / (&value: Ref(lObj), lObj: { }  > lObjPro) -> Ref(~lBunch) / sameType)
     )} */
 {
-  //reject_global(this);
+  reject_global(this);
   /*: this lBunch */ "#thaw";
   var b = this.___nodes___;
   /*: this (~lBunch, thwd lBunch) */ "#freeze";

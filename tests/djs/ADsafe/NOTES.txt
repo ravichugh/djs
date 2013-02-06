@@ -33,12 +33,6 @@ From trying to typecheck the code:
   if (query.length > 0 || match[5].length <= id.length ||
       match[5].slice(0, id.length) !== id) { ... } 
 
-- For cases when a dictionary is being assigned to a weak location of a
-  dictionary, use the most general type for the weak location. 
-
-- Fix type parser to accept strings as fields (hunter, pecker...).
-
-- Extern in an inner scope
 
 ====================================================
 PENDING

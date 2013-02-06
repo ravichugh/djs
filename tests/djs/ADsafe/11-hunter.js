@@ -87,22 +87,24 @@ var hunter = {
       var nodes = node.childNodes;
       var i /*: {Int | (>= v 0)} */ = 0 ;
 
-      /*:  nodes  lNList0 */ "#thaw";
-      var length = nodes.length;
-      var b = i < length; 
-      /*: nodes (~lNList, thwd lNList0) */ "#freeze";
+      /*:  nodes  lNodes */ "#thaw";
+      var cond = i < nodes.length; 
+      /*: nodes (~lNodes, thwd lNodes) */ "#freeze";
 
-      /*: (&nodes: Ref(~lNList), &b : Bool, &length: Int) -> sameType */ 
-      for (i = 0; b; i += 1) {
-        /*: nodes lNList1 */ "#thaw";
-        length = nodes.length;
-        b = i < length;
-        if (b) {
+      /*: (&nodes: Ref(~lNodes), &cond : Bool) -> sameType */ 
+      for (i = 0; cond; i += 1) {
+        /*: nodes lNodes */ "#thaw";
+        cond = i < nodes.length;
+        if (i < nodes.length) {
+          var curnode = nodes[i];
+          /*: nodes (~lNodes, thwd lNodes) */ "#freeze";
           /*: result lResult */ "#thaw";
-          result.push(nodes[i]);
+          result.push(curnode);
           /*: result (~lNodes, thwd lResult) */ "#freeze";
         }
-        /*: nodes (~lNList, thwd lNList1) */ "#freeze";
+        else {
+          /*: nodes (~lNodes, thwd lNodes) */ "#freeze";
+        }
       }
     }
   ,

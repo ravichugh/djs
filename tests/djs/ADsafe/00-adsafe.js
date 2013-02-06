@@ -181,7 +181,7 @@ var adsafe_id,      // The id of the current widget
 //  var pecker;   // set of pecker patterns
   var result  /*: Ref(~lNodes) */ = "#extern";
   var star    /*: Bool */         = "#extern";
-  var the_range /*: Ref(~lDocument) */  = null;
+  var the_range /*: Ref(~lRange) */  = null;
   var value     /*: Str */              = "#extern";       
 
 //  The error function is called if there is a violation or confusion.
