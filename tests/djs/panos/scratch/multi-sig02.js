@@ -9,22 +9,24 @@ var foo = function(a)
         (v:: (a: Ref(~lObj)) -> Top )
     )} */
 {
-
   /*: a lA */ "#thaw";
+  a.m;
+  if (a) {
   if (isArray(a)) {
-//    assert(/*: Ref(lA) */ (a));
-    var i /*: {Int|(>= v 0)} */ = 0;
-
-    //    /*: (&a: Ref(lA), lA: tyArr) -> sameExact */
-    //    for (i = 0; i < a.length; i += 1) {
-    //      a[i];
-    //    }
+    assert(/*: Ref(lA) */ (a));
+    //var i /*: {Int|(>= v 0)} */ = 0;
+    ///*: (&a: Ref(lA), lA: tyArr) -> sameExact */
+    //for (i = 0; i < a.length; i += 1) {
+    //  a[i];
+    //}
     
-//    /*: a (~lArr, thwd lA) */ "#freeze";
+    /*: a (~lArr, thwd lA) */ "#freeze";
   }
   else {
-//    assert(/*: Ref(lO) */ (a));
-//    /*: a (~lObj, thwd lA) */ "#freeze";
+    a.n;
+    assert(/*: Ref(lO) */ (a));
+    /*: a (~lObj, thwd lA) */ "#freeze";
+  }
   }
 
 };

@@ -1,6 +1,7 @@
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
 
-/*: tyBunch { "___nodes___": Ref(~lNodes), "___star___": Bool} */ "#define";
+/*: tyBunchObj { "___nodes___": Ref(~lNodes), "___star___": Bool} > lObjPro */ "#define";
+/*: tyBunchArr { Arr(Ref(~lBunch))|(packed v)} > lArrPro */ "#define";
 
 var star    /*: Bool */ = "#extern";
 var reject_global = 
@@ -12,22 +13,30 @@ var reject_global =
 
 var purge_event_handlers = /*: (node: Ref(~lNode)) -> Top */ "#extern";
 
+
+var array_check  = function(a) /*: [;L;] (a: Ref(L)) / (L: tyBunchArr) -> Top / sameExact */ {};
+
+var object_check = function(a) /*: [;L;] (a: Ref(L)) / (L: tyBunchObj) -> Top / sameExact */ {};
+
+
 var replace = function (replacement)
 /*: {(and
-        (v:: (this: Ref(~lBunch), replacement: Ref(~lBunch)) -> Top )
-        (v:: (this: Ref(~lBunch), replacement: Ref(~lBunchs)) -> Top )
-        
+        (v:: (this: Ref(~lBunch), replacement: Ref(lA)) / (lA: tyBunchArr) -> Top / sameExact )
+        (v:: (this: Ref(~lBunch), replacement: Ref(lO)) / (lO: tyBunchObj) -> Top / sameExact )
     )} */
 {
   reject_global(this);
   var b = this.___nodes___,
       flag = false,
       i /*: { Int | (>= v 0)} */ = 0,
-      j,
-      newnode,
+      j /*: { Int | (>= v 0)} */ = 0,
+      newnode /*: Ref(~lNode) */ = null,
       node /*: Ref(~lNode) */ = null,
-      parent,
-      rep;
+      parent /*: Ref(~lNode) */ = null,
+      rep /*: Ref(~lNodes) */ = null;
+  
+  var cond;   //PV: added this
+  
   /*: b lNodes */ "#thaw";
   if (b.length === 0) {
     /*: b (~lNodes, thwd lNodes) */ "#freeze";
@@ -46,72 +55,87 @@ var replace = function (replacement)
   /*: b (~lNodes, thwd lNodes) */ "#freeze";
 
 
+  if (    !replacement 
+      ||  replacement.length === 0 
+      ||  (replacement.___nodes___ /*&& replacement.___nodes___.length === 0*/) //TODO
+    )
+  {
+    /*: b lNodes */ "#thaw";
+    /*: ( &i:i0:{Int|(>= v 0)}, &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
+      -> sameType */ 
+    for (i = 0; i < b.length; i += 1) {
+      node = b[i];
+      purge_event_handlers(node);
+      if (node.parentNode) {
+        node.parentNode.removeChild(node);
+      }
+    }
+    /*: b (~lNodes, thwd lNodes) */ "#freeze";
+  }
+  else if (isArray(replacement)) {
+    /*: b lNodes */ "#thaw";
+    if (replacement.length !== b.length) {
+      //error('ADsafe: Array length: ' +
+      //    b.length + '-' + value.length);
+    }
 
-//
-//  var rnodes = replacement.___nodes___;
-//  /*: rnodes lNodes */ "#thaw";
-//
-//  if (!replacement || replacement.length === 0 ||
-//      (rnodes &&
-//       rnodes.length === 0)) 
-//  {
-//    /*: rnodes (~lNodes, thwd lNodes) */ "#freeze";
-//
-//    /*: b lNodes */ "#thaw";
-//    /*: ( &i:i0:{Int|(>= v 0)}, &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
-//      -> sameType */ 
+//    //PV: added extra condition - might be able to infer this
+    cond = i < b.length && i < replacement.length;
+    /*: b (~lNodes, thwd lNodes) */ "#freeze";
+
+    /*: (&b: Ref(~lNodes), &cond: Bool) -> sameType */ 
+    for (i = 0; cond; i += 1) {
+      /*: b lNodes */ "#thaw";
+      cond = i < b.length && i < replacement.length;
+      if (cond) {
+        node = b[i];
+//        parent = node.parentNode;
+        purge_event_handlers(node);
+      }
+      /*: b (~lNodes, thwd lNodes) */ "#freeze";
+//TODO: 
+      if (parent) {
+        if (i < replacement.length) {
+//          rep = replacement[i].___nodes___;
+//          assert(/*: Ref(~lNodes) */ (rep));
+//          /*: rep lNodesRep */ "#thaw";
+//          rep.length;
+//          if (rep.length > 0) {
+//            newnode = rep[0];
+//            parent.replaceChild(newnode, node);
+//            /*: (&rep: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro) -> sameType */ 
+//            for (j = 1; j < rep.length; j += 1) {
+//              node = newnode;
+//              newnode = rep[j];
+//              parent.insertBefore(newnode, node.nextSibling);
+//            }
+//          }
+//          /*: rep (~lNodes, thwd lNodesRep) */ "#freeze";
+        } else {
+//          parent.removeChild(node);
+        }
+      }
+    }
+  } 
+  else {
+//    rep = replacement.___nodes___;
 //    for (i = 0; i < b.length; i += 1) {
 //      node = b[i];
 //      purge_event_handlers(node);
-//      if (node.parentNode) {
-//        node.parentNode.removeChild(node);
+//      parent = node.parentNode;
+//      if (parent) {
+//        newnode = flag ? rep[0].cloneNode(true) : rep[0];
+//        parent.replaceChild(newnode, node);
+//        for (j = 1; j < rep.length; j += 1) {
+//          node = newnode;
+//          newnode = flag ? rep[j].clone(true) : rep[j];
+//          parent.insertBefore(newnode, node.nextSibling);
+//        }
+//        flag = true;
 //      }
 //    }
-//    /*: b (~lNodes, thwd lNodes) */ "#freeze";
-//  }
-  //else if (isArray(replacement)) {
-  //         if (replacement.length !== b.length) {
-  //           error('ADsafe: Array length: ' +
-  //               b.length + '-' + value.length);
-  //         }
-  //         for (i = 0; i < b.length; i += 1) {
-  //           node = b[i];
-  //           parent = node.parentNode;
-  //           purge_event_handlers(node);
-  //           if (parent) {
-  //             rep = replacement[i].___nodes___;
-  //             if (rep.length > 0) {
-  //               newnode = rep[0];
-  //               parent.replaceChild(newnode, node);
-  //               for (j = 1; j < rep.length; j += 1) {
-  //                 node = newnode;
-  //                 newnode = rep[j];
-  //                 parent.insertBefore(newnode, node.nextSibling);
-  //               }
-  //             } else {
-  //               parent.removeChild(node);
-  //             }
-  //           }
-  //         }
-  //} 
-  //else {
-  //         rep = replacement.___nodes___;
-  //         for (i = 0; i < b.length; i += 1) {
-  //           node = b[i];
-  //           purge_event_handlers(node);
-  //           parent = node.parentNode;
-  //           if (parent) {
-  //             newnode = flag ? rep[0].cloneNode(true) : rep[0];
-  //             parent.replaceChild(newnode, node);
-  //             for (j = 1; j < rep.length; j += 1) {
-  //               node = newnode;
-  //               newnode = flag ? rep[j].clone(true) : rep[j];
-  //               parent.insertBefore(newnode, node.nextSibling);
-  //             }
-  //             flag = true;
-  //           }
-  //         }
-  //}
-  //  return this;
+  }
+
+  return this;
 };
 

@@ -59,13 +59,13 @@
 */
 
 
-
+///////////////// DJS ////////////////////
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
-
-//DEFINITIONS HAVE TO BE IN THIS FILE
-/*: tyBunch { "___nodes___": Ref(~lNodes), "___star___": Bool} */ "#define";
 var document  = /*: Ref(~lDocument) */ "#extern";
-//END OF DEFINITIONS
+///////////////// DJS ////////////////////
+
+
+
 
 var adsafe_id,      // The id of the current widget
     adsafe_lib,     // The script libraries loaded by the current widget

@@ -87,6 +87,8 @@ weak (~lNode: {
     blur                 : (this: Ref(~lNode)) -> Top,
     cloneNode            : (this: Ref(~lNode), deep:Bool) -> Ref(~lNode),
     removeChild          : (this: Ref(~lNode), Ref(~lNode)) -> Top,
+    replaceChild         : (this: Ref(~lNode), Ref(~lNode), Ref(~lNode)) -> Top,
+    insertBefore         : (this: Ref(~lNode), Ref(~lNode), Ref(~lNode)) -> Top,
     focus                : (this: Ref(~lNode)) -> Top,   
     createTextRange      : (this: Ref(~lNode)) -> Ref(~lRange), 
     getElementsByTagName : [;L;] (this: Ref(~lNode), name : Str) / () -> 

@@ -284,6 +284,12 @@ var make_root = function(root, id)
   var q = /*: (this: Ref(~lBunch), Str) -> Ref(~lBunch) */ "#extern";
 
   var remove = /*: (this: Ref(~lBunch)) -> Top */ "#extern";
+
+
+  var replace = /*: {(and
+        (v:: (this: Ref(~lBunch), replacement: Ref(lA)) / (lA: tyBunchArr) -> Top / sameExact )
+        (v:: (this: Ref(~lBunch), replacement: Ref(lO)) / (lO: tyBunchObj) -> Top / sameExact )
+    )} */ "#extern";
     
   Bunch.prototype = {
 
@@ -369,78 +375,10 @@ var make_root = function(root, id)
       
     q: q,
     
-    remove: remove
-      
-//    replace: function (replacement) {
-    //      reject_global(this);
-    //      var b = this.___nodes___,
-    //          flag = false,
-    //          i,
-    //          j,
-    //          newnode,
-    //          node,
-    //          parent,
-    //          rep;
-    //      if (b.length === 0) {
-    //        return;
-    //      }
-    //      for (i = 0; i < b.length; i += 1) {
-    //        purge_event_handlers(b[i]);
-    //      }
-    //      if (!replacement || replacement.length === 0 ||
-    //          (replacement.___nodes___ &&
-    //           replacement.___nodes___.length === 0)) {
-    //             for (i = 0; i < b.length; i += 1) {
-    //               node = b[i];
-    //               purge_event_handlers(node);
-    //               if (node.parentNode) {
-    //                 node.parentNode.removeChild(node);
-    //               }
-    //             }
-    //           } else if (replacement instanceof Array) {
-    //             if (replacement.length !== b.length) {
-    //               error('ADsafe: Array length: ' +
-    //                   b.length + '-' + value.length);
-    //             }
-    //             for (i = 0; i < b.length; i += 1) {
-    //               node = b[i];
-    //               parent = node.parentNode;
-    //               purge_event_handlers(node);
-    //               if (parent) {
-    //                 rep = replacement[i].___nodes___;
-    //                 if (rep.length > 0) {
-    //                   newnode = rep[0];
-    //                   parent.replaceChild(newnode, node);
-    //                   for (j = 1; j < rep.length; j += 1) {
-    //                     node = newnode;
-    //                     newnode = rep[j];
-    //                     parent.insertBefore(newnode, node.nextSibling);
-    //                   }
-    //                 } else {
-    //                   parent.removeChild(node);
-    //                 }
-    //               }
-    //             }
-    //           } else {
-    //             rep = replacement.___nodes___;
-    //             for (i = 0; i < b.length; i += 1) {
-    //               node = b[i];
-    //               purge_event_handlers(node);
-    //               parent = node.parentNode;
-    //               if (parent) {
-    //                 newnode = flag ? rep[0].cloneNode(true) : rep[0];
-    //                 parent.replaceChild(newnode, node);
-    //                 for (j = 1; j < rep.length; j += 1) {
-    //                   node = newnode;
-    //                   newnode = flag ? rep[j].clone(true) : rep[j];
-    //                   parent.insertBefore(newnode, node.nextSibling);
-    //                 }
-    //                 flag = true;
-    //               }
-    //             }
-    //           }
-    //      return this;
-    //    },
+    remove: remove,
+    
+    replace: replace  //TODO
+
     //    select: function () {
     //      reject_global(this);
     //      var b = this.___nodes___;
