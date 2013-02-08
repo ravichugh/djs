@@ -6,7 +6,7 @@ weak (~lNames       :  { Arr(Str)          | (packed v)} > lArrPro)
 weak (~lValues      :  Arr(Str)  > lArrPro)
 weak (~lOffsetHeights :  { Arr(Num)          | (packed v)} > lArrPro)
 weak (~lOffsetWidths :  { Arr(Num)          | (packed v)} > lArrPro)
-weak (~lStyles      :  Arr(Str)  > lArrPro)
+weak (~lStyles      :  Arr(Ref(~lStyle))  > lArrPro)
 
 weak (~lEvent     : {
   type00          : Str,
@@ -52,16 +52,19 @@ weak (~lBunch    : {
   (* getParents  : () -> Ref(~lBunchs) *)
 } > lBunchProto)
 
-weak (~lCCSStyle : {
-    visibility   : Str
+weak (~lStyle : {
+    visibility   : Str,
+    cssFloat     : Str,
+    styleFloat   : Str
 } > lObjPro)
 
 weak (~lSelection: { createRange: () -> Ref(~lDocument) }  > lObjPro) 
 
 
 weak (~lNode: {
-    getComputedStyle     : (this: Ref(~lNode), node : Ref(~lNode), str  : Str) -> Ref(~lCCSStyle),
-    currentStyle         : Ref(~lCCSStyle),
+    getComputedStyle     : (this: Ref(~lNode), node : Ref(~lNode), str  : Str) -> Ref(~lStyle),
+    currentStyle         : Ref(~lStyle),
+    style                : Ref(~lStyle),
     firstChild           : Ref(~lNode),
     nextSibling          : Ref(~lNode),
     parentNode           : Ref(~lNode),
@@ -75,7 +78,7 @@ weak (~lNode: {
     name                 : Str,
     nodeName             : Str,
     nodeValue            : Str,
-    value                : Str,
+    value                : Top,     (*XXX: This might break stuff *)
     title                : Str,
     disabled             : Bool,
     checked              : Bool,
@@ -83,14 +86,17 @@ weak (~lNode: {
     offsetWidth          : Num,
     selectionStart       : Int,
     selectionEnd         : Int,
+    autocomplete         : Str,
     fire                 : (NotUndef) -> Top,
     blur                 : (this: Ref(~lNode)) -> Top,
     cloneNode            : (this: Ref(~lNode), deep:Bool) -> Ref(~lNode),
     removeChild          : (this: Ref(~lNode), Ref(~lNode)) -> Top,
+    appendChild          : (this: Ref(~lNode), Ref(~lNode)) -> Top,
     replaceChild         : (this: Ref(~lNode), Ref(~lNode), Ref(~lNode)) -> Top,
     insertBefore         : (this: Ref(~lNode), Ref(~lNode), Ref(~lNode)) -> Top,
-    focus                : (this: Ref(~lNode)) -> Top,   
-    createTextRange      : (this: Ref(~lNode)) -> Ref(~lRange), 
+    focus                : () -> Top,   
+    select               : (this: Ref(~lNode)) -> Top,   
+    createTextRange      : () -> Ref(~lRange), 
     getElementsByTagName : [;L;] (this: Ref(~lNode), name : Str) / () -> 
                               Ref(L) / (L: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
   } > lObjPro)
@@ -99,6 +105,8 @@ weak (~lDocument   : {
     defaultView    : Ref(~lNode),
     selection      : Ref(~lSelection),
     getElementById : (this: Top, s : Str) -> Ref(~lNode),
-    createDocumentFragment : (this:Ref(~lDocument)) -> Ref(~lNode)
+    createDocumentFragment : (this:Ref(~lDocument)) -> Ref(~lNode),
+    createElement  : (this: Ref(~lDocument), s: Str) -> Ref(~lNode),
+    createTextNode : (this: Ref(~lDocument), s: Str) -> Ref(~lNode)
   } > lObjPro)
 

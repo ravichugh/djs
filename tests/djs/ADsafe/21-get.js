@@ -29,7 +29,7 @@ var reject_name = /*: (Str) -> Bool */ "#extern";
 
 var error = /*: (message: Str)  -> { FLS } */ "#extern";
 
-var getStyleObject = /*: (node: Ref(~lNode)) -> Ref(~lCCSStyle) */ "#extern";
+var getStyleObject = /*: (node: Ref(~lNode)) -> Ref(~lStyle) */ "#extern";
 
 
 //TODO
@@ -272,7 +272,7 @@ var getSelection = function ()
 
 //TODO
 var getStyle = function (name) 
-/*: (this: Ref(~lBunch), Str) -> Top */
+/*: (this: Ref(~lBunch), Str) -> Ref(~lStyle) */
 {
 //  return this.getStyles(name)[0];
 };

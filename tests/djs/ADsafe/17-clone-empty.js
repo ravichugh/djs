@@ -11,8 +11,8 @@ var reject_global =
 
 
 /*: tyNode  {
-    getComputedStyle     : (this: Ref(~lNode), node : Ref(~lNode), str  : Str) -> Ref(~lCCSStyle),
-    currentStyle         : Ref(~lCCSStyle),
+    getComputedStyle     : (this: Ref(~lNode), node : Ref(~lNode), str  : Str) -> Ref(~lStyle),
+    currentStyle         : Ref(~lStyle),
     firstChild           : Ref(~lNode),
     nextSibling          : Ref(~lNode),
     parentNode           : Ref(~lNode),

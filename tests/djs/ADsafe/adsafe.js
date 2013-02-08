@@ -98,7 +98,7 @@ var adsafe = (function () {
             watch           : true
         },
 
-        cache_style_object /*: Ref(~lCCSStyle) */ = null,
+        cache_style_object /*: Ref(~lStyle) */ = null,
         cache_style_node /*: Ref(~lNode) */ = null,
         defaultView = document.defaultView,
         ephemeral,
@@ -303,7 +303,7 @@ var adsafe = (function () {
 
 
       var getStyleObject = function(node) 
-      /*: (node: Ref(~lNode)) -> Ref(~lCCSStyle) */
+      /*: (node: Ref(~lNode)) -> Ref(~lStyle) */
       {
     
     // The getStyleObject function returns the computed style object for a node.

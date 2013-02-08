@@ -258,7 +258,7 @@ var make_root = function(root, id)
   var getOffsetWidths = /*: (this: Ref(~lBunch)) -> Ref(~lOffsetWidths) */ "#extern";
   var getParent =  /*: (this: Ref(~lBunch)) -> Ref(~lBunch) */ "#extern";
   var getSelection =  /*: (this: Ref(~lBunch)) -> {(or (Str v) (= v null))} */ "#extern";
-  var getStyle =  /*: (this: Ref(~lBunch), Str) -> Top */ "#extern";
+  var getStyle =  /*: (this: Ref(~lBunch), Str) -> Ref(~lStyle) */ "#extern";
   var getStyles = /*: (this: Ref(~lBunch), Str) -> Ref(~lStyles) */ "#extern";
   var getTagName = /*: (this: Ref(~lBunch)) -> Top */ "#extern";
   var getTagNames = /*: (this: Ref(~lBunch)) -> Ref(~lNames) */ "#extern";
@@ -291,6 +291,34 @@ var make_root = function(root, id)
         (v:: (this: Ref(~lBunch), replacement: Ref(lO)) / (lO: tyBunchObj) -> Top / sameExact )
     )} */ "#extern";
     
+  var select = /*: (this: Ref(~lBunch)) -> Top */ "#extern";
+
+  var selection = /*: (this: Ref(~lBunch), string: Str) -> Ref(~lBunch) */ "#extern";
+
+  var style = /*: {( and 
+      (v:: (this: Ref(~lBunch), name: Str, value: Str) -> Ref(~lBunch))
+      (v:: (this: Ref(~lBunch), name: Str, value: Ref(lA)) 
+      / (lA: {Arr(Str)|(packed v)} > lArrPro) -> Ref(~lBunch) / sameType)
+    )}*/ "#extern";
+
+  var tag = /*: (this: Ref(~lBunch), tag_: Str, type_: Str, name: Str) -> Ref(~lBunch) */ "#extern";
+
+  var text = /*: {( and 
+      (v:: (this: Ref(~lBunch), text: Str) / (lT: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType)
+      (v:: (this: Ref(~lBunch), text: Ref(lT)) / (lT: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType)
+    )}*/ "#extern";
+
+  var title = /*: {( and 
+      (v:: (this: Ref(~lBunch), value: Str) / (lT: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType)
+      (v:: (this: Ref(~lBunch), value: Ref(lT)) / (lT: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType)
+    )}*/ "#extern";
+
+  var value_ = /*: {( and 
+      (v:: (this: Ref(~lBunch), value: Str)     / (lT: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType)
+      (v:: (this: Ref(~lBunch), value: Ref(lT)) / (lT: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType)
+    )}*/ "#extern";
+
+
   Bunch.prototype = {
 
     append: append,
@@ -377,198 +405,22 @@ var make_root = function(root, id)
     
     remove: remove,
     
-    replace: replace  //TODO
+    replace: replace,  //TODO
 
-    //    select: function () {
-    //      reject_global(this);
-    //      var b = this.___nodes___;
-    //      if (b.length < 1 || !allow_focus) {
-    //        error();
-    //      }
-    //      b[0].focus();
-    //      b[0].select();
-    //      return this;
-    //    },
-    //    selection: function (string) {
-    //      reject_global(this);
-    //      string_check(string);
-    //      var b = this.___nodes___, end, node, old, start, range;
-    //      if (b.length === 1 && allow_focus) {
-    //        node = b[0];
-    //        if (typeof node.selectionStart === 'number') {
-    //          start = node.selectionStart;
-    //          end = node.selectionEnd;
-    //          old = node.value;
-    //          node.value = old.slice(0, start) + string + old.slice(end);
-    //          node.selectionStart = node.selectionEnd = start +
-    //            string.length;
-    //          node.focus();
-    //        } else {
-    //          range = node.createTextRange();
-    //          range.expand('textedit');
-    //          if (range.inRange(the_range)) {
-    //            the_range.select();
-    //            the_range.text = string;
-    //            the_range.select();
-    //          }
-    //        }
-    //      }
-    //      return this;
-    //    },
-    //    style: function (name, value) {
-    //      reject_global(this);
-    //      if (reject_name(name)) {
-    //        error("ADsafe style violation.");
-    //      }
-    //      if (value === undefined || /url/i.test(string_check(value))) {
-    //        error();
-    //      }
-    //      var b = this.___nodes___,
-    //          i,
-    //          node,
-    //          v;
-    //      if (value instanceof Array) {
-    //        if (value.length !== b.length) {
-    //          error('ADsafe: Array length: ' +
-    //              b.length + '-' + value.length);
-    //        }
-    //        for (i = 0; i < b.length; i += 1) {
-    //          node = b[i];
-    //          v = string_check(value[i]);
-    //          if (/url/i.test(v)) {
-    //            error();
-    //          }
-    //          if (node.tagName) {
-    //            if (name !== 'float') {
-    //              node.style[name] = v;
-    //            } else {
-    //              node.style.cssFloat = node.style.styleFloat = v;
-    //            }
-    //          }
-    //        }
-    //      } else {
-    //        v = string_check(value);
-    //        if (/url/i.test(v)) {
-    //          error();
-    //        }
-    //        for (i = 0; i < b.length; i += 1) {
-    //          node = b[i];
-    //          if (node.tagName) {
-    //            if (name !== 'float') {
-    //              node.style[name] = v;
-    //            } else {
-    //              node.style.cssFloat = node.style.styleFloat = v;
-    //            }
-    //          }
-    //        }
-    //      }
-    //      return this;
-    //    },
-    //    tag: function (tag, type, name) {
-    //      reject_global(this);
-    //      var node;
-    //      if (typeof tag !== 'string') {
-    //        error();
-    //      }
-    //      if (makeableTagName[tag] !== true) {
-    //        error('ADsafe: Bad tag: ' + tag);
-    //      }
-    //      node = document.createElement(tag);
-    //      if (name) {
-    //        node.autocomplete = 'off';
-    //        node.name = string_check(name);
-    //      }
-    //      if (type) {
-    //        node.type = string_check(type);
-    //      }
-    //      return new Bunch([node]);
-    //    },
-    //    text: function (text) {
-    //      reject_global(this);
-    //      var a, i;
-    //      if (text instanceof Array) {
-    //        a = [];
-    //        for (i = 0; i < text.length; i += 1) {
-    //          a[i] = document.createTextNode(string_check(text[i]));
-    //        }
-    //        return new Bunch(a);
-    //      }
-    //      return new Bunch([document.createTextNode(string_check(text))]);
-    //    },
-    //    title: function (value) {
-    //      reject_global(this);
-    //      var b = this.___nodes___, i, node;
-    //      if (value instanceof Array) {
-    //        if (value.length !== b.length) {
-    //          error('ADsafe: Array length: ' + b.length +
-    //              '-' + value.length);
-    //        }
-    //        for (i = 0; i < b.length; i += 1) {
-    //          node = b[i];
-    //          if (node.tagName) {
-    //            node.title = string_check(value[i]);
-    //          }
-    //        }
-    //      } else {
-    //        string_check(value);
-    //        for (i = 0; i < b.length; i += 1) {
-    //          node = b[i];
-    //          if (node.tagName) {
-    //            node.title = value;
-    //          }
-    //        }
-    //      }
-    //      return this;
-    //    },
-    //    value: function (value) {
-    //      reject_global(this);
-    //      if (value === undefined) {
-    //        error();
-    //      }
-    //      var b = this.___nodes___, i, node;
-    //      if (value instanceof Array && b.length === value.length) {
-    //        for (i = 0; i < b.length; i += 1) {
-    //          node = b[i];
-    //          if (node.tagName) {
-    //            if (node.type !== 'password') {
-    //              if (typeof node.value === 'string') {
-    //                node.value = value[i];
-    //              } else {
-    //                while (node.firstChild) {
-    //                  purge_event_handlers(node.firstChild);
-    //                  node.removeChild(node.firstChild);
-    //                }
-    //                node.appendChild(document.createTextNode(
-    //                      String(value[i])
-    //                      ));
-    //              }
-    //            }
-    //          } else if (node.nodeName === '#text') {
-    //            node.nodeValue = String(value[i]);
-    //          }
-    //        }
-    //      } else {
-    //        value = String(value);
-    //        for (i = 0; i < b.length; i += 1) {
-    //          node = b[i];
-    //          if (node.tagName) {
-    //            if (node.tagName !== 'BUTTON' &&
-    //                typeof node.value === 'string') {
-    //                  node.value = value;
-    //                } else {
-    //                  while (node.firstChild) {
-    //                    purge_event_handlers(node.firstChild);
-    //                    node.removeChild(node.firstChild);
-    //                  }
-    //                  node.appendChild(document.createTextNode(value));
-    //                }
-    //          } else if (node.nodeName === '#text') {
-    //            node.nodeValue = value;
-    //          }
-    //        }
-    //      }
-    //      return this;
-    //    }
+    select: select,
+    
+    selection: selection,
+
+    style: style,
+
+    tag: tag,
+
+    text: text,
+    
+    title: title,
+
+    value: value_
+
   };
   //
   //  // Return an ADsafe dom object.

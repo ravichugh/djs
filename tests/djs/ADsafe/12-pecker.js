@@ -9,7 +9,7 @@ var value     /*: Str */              = "#extern";
 var has_focus /*: Ref(~lNode) */ = "#extern";
 var flipflop /*: Bool */ = "#extern"; // Used in :even/:odd processing
 
-var getStyleObject = /*: (node: Ref(~lNode)) -> Ref(~lCCSStyle) */ "#extern";
+var getStyleObject = /*: (node: Ref(~lNode)) -> Ref(~lStyle) */ "#extern";
 
 var pecker = {
     '.': function (node) /*: (Ref(~lNode)) -> Bool */ 

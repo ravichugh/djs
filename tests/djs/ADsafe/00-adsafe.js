@@ -86,7 +86,7 @@ var adsafe_id,      // The id of the current widget
       watch           : true
     },
 
-    cache_style_object /*: Ref(~lCCSStyle) */ = null,
+    cache_style_object /*: Ref(~lStyle) */ = null,
     cache_style_node /*: Ref(~lNode) */ = null,
     defaultView = document.defaultView,
     ephemeral /*: Ref(~lBunch) */ = null;
@@ -223,7 +223,7 @@ var reject_property =
 //var reject_global(that) = /*: ... */ "#extern";
 
 
-var getStyleObject = /*: (node: Ref(~lNode)) -> Ref(~lCCSStyle) */ "#extern";
+var getStyleObject = /*: (node: Ref(~lNode)) -> Ref(~lStyle) */ "#extern";
 
 
 var walkTheDOM = /*: ( node: Ref(~lNode), func:(Ref(~lNode)) -> Top, skip: Bool)
