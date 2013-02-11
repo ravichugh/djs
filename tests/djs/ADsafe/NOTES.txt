@@ -33,6 +33,7 @@ From trying to typecheck the code:
   if (query.length > 0 || match[5].length <= id.length ||
       match[5].slice(0, id.length) !== id) { ... } 
 
+- Add array.concat to fast path.
 
 ====================================================
 PENDING

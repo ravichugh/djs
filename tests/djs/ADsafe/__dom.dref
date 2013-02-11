@@ -42,14 +42,14 @@ weak (~lSelectorFull : {
 
 weak (~lQuery: { Arr(Ref(~lSelector)) | (packed v) } > lArrPro)
 
-weak (~lBunchs: Arr(Ref(~lBunch)) > lArrPro)
+weak (~lBunches: {Arr(Ref(~lBunch))|(packed v)} > lArrPro)
 
 weak (~lBunch    : {
   "___nodes___"  : Ref(~lNodes),
   "___star___"   : Bool
   (* Calls within Bunch *)
   (*fire           : (NotUndef) -> Top*)
-  (* getParents  : () -> Ref(~lBunchs) *)
+  (* getParents  : () -> Ref(~lBunches) *)
 } > lBunchProto)
 
 weak (~lStyle : {
@@ -110,3 +110,19 @@ weak (~lDocument   : {
     createTextNode : (this: Ref(~lDocument), s: Str) -> Ref(~lNode)
   } > lObjPro)
 
+weak (~lDom: { 
+    append: (Ref(~lBunch)) -> Ref(~lDom),
+    combine: (Ref(~lBunches)) -> Ref(~lBunch),
+    count: () -> Int,
+    ephemeral: (Ref(~lBunch)) -> Ref(~lDom),
+    fragment: (Ref(~lBunch)) -> Ref(~lBunch),
+    prepend: (Ref(~lBunch)) -> Ref(~lDom), 
+    q: (Ref(text)) -> Ref(~lBunch),
+    remove: () -> Top,
+    row: (Top) -> Ref(~lBunch),
+    tag_: (tag_: Str, type_: Str, name: Str) -> Ref(~lBunch),
+    text:{( and 
+      (v:: (text: Str) / (lT: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType)
+      (v:: (text: Ref(lT)) / (lT: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType)
+    )}
+}  > lObjPro) 

@@ -39,8 +39,8 @@ var make_root = function(root, id)
     return self;      //PV: added return
   };
 
-  var allow_focus /*: Bool */ = true;
-//      dom,
+  var allow_focus /*: Bool */ = true,
+      dom = /*: Ref(~lDom) */ = null;
 //      dom_event = function (event,e) 
 //        /*: (event: Ref(~lEvent), e: Ref(~lEvent)) -> Top */
 //      {
@@ -422,122 +422,122 @@ var make_root = function(root, id)
     value: value_
 
   };
-  //
-  //  // Return an ADsafe dom object.
-  //
-  //  dom = {
-  //    append: function (bunch) {
-  //      var b = bunch.___nodes___, i, n;
-  //      for (i = 0; i < b.length; i += 1) {
-  //        n = b[i];
-  //        if (typeof n === 'string' || typeof n === 'number') {
-  //          n = document.createTextNode(String(n));
-  //        }
-  //        root.appendChild(n);
-  //      }
-  //      return dom;
-  //    },
-  //    combine: function (array) {
-  //      if (!array || !array.length) {
-  //        error('ADsafe: Bad combination.');
-  //      }
-  //      var b = array[0].___nodes___, i;
-  //      for (i = 0; i < array.length; i += 1) {
-  //        b = b.concat(array[i].___nodes___);
-  //      }
-  //      return new Bunch(b);
-  //    },
-  //    count: function () {
-  //      return 1;
-  //    },
-  //    ephemeral: function (bunch) {
-  //      if (ephemeral) {
-  //        ephemeral.remove();
-  //      }
-  //      ephemeral = bunch;
-  //      return dom;
-  //    },
-  //    fragment: function () {
-  //      return new Bunch([document.createDocumentFragment()]);
-  //    },
-  //    prepend: function (bunch) {
-  //      var b = bunch.___nodes___, i;
-  //      for (i = 0; i < b.length; i += 1) {
-  //        root.insertBefore(b[i], root.firstChild);
-  //      }
-  //      return dom;
-  //    },
-  //    q: function (text) {
-  //      star = false;
-  //      var query = parse_query(text, id);
-  //      if (typeof hunter[query[0].op] !== 'function') {
-  //        error('ADsafe: Bad query: ' + query[0]);
-  //      }
-  //      return new Bunch(quest(query, [root]));
-  //    },
-  //    remove: function () {
-  //      purge_event_handlers(root);
-  //      root.parent.removeElement(root);
-  //      root = null;
-  //    },
-  //    row: function (values) {
-  //      var tr = document.createElement('tr'),
-  //      td,
-  //      i;
-  //      for (i = 0; i < values.length; i += 1) {
-  //        td = document.createElement('td');
-  //        td.appendChild(document.createTextNode(String(values[i])));
-  //        tr.appendChild(td);
-  //      }
-  //      return new Bunch([tr]);
-  //    },
-  //    tag: function (tag, type, name) {
-  //      var node;
-  //      if (typeof tag !== 'string') {
-  //        error();
-  //      }
-  //      if (makeableTagName[tag] !== true) {
-  //        error('ADsafe: Bad tag: ' + tag);
-  //      }
-  //      node = document.createElement(tag);
-  //      if (name) {
-  //        node.autocomplete = 'off';
-  //        node.name = name;
-  //      }
-  //      if (type) {
-  //        node.type = type;
-  //      }
-  //      return new Bunch([node]);
-  //    },
-  //    text: function (text) {
-  //      var a, i;
-  //      if (text instanceof Array) {
-  //        a = [];
-  //        for (i = 0; i < text.length; i += 1) {
-  //          a[i] = document.createTextNode(string_check(text[i]));
-  //        }
-  //        return new Bunch(a);
-  //      }
-  //      return new Bunch([document.createTextNode(string_check(text))]);
-  //    }
-  //  };
-  //
-  //  if (typeof root.addEventListener === 'function') {
-  //    root.addEventListener('focus', dom_event, true);
-  //    root.addEventListener('blur', dom_event, true);
-  //    root.addEventListener('mouseover', dom_event, true);
-  //    root.addEventListener('mouseout', dom_event, true);
-  //    root.addEventListener('mouseup', dom_event, true);
-  //    root.addEventListener('mousedown', dom_event, true);
-  //    root.addEventListener('mousemove', dom_event, true);
-  //    root.addEventListener('click', dom_event, true);
-  //    root.addEventListener('dblclick', dom_event, true);
-  //    root.addEventListener('keypress', dom_event, true);
-  //  } else {
-  //    root.onfocusin       = root.onfocusout  = root.onmouseout  =
-  //      root.onmousedown = root.onmousemove = root.onmouseup   =
-  //      root.onmouseover = root.onclick     = root.ondblclick  =
-  //      root.onkeypress  = dom_event;
-  //  }
-  //  return [dom, Bunch.prototype];
+  
+    // Return an ADsafe dom object.
+
+  dom = {
+    //    append: function (bunch) {
+    //      var b = bunch.___nodes___, i, n;
+    //      for (i = 0; i < b.length; i += 1) {
+    //        n = b[i];
+    //        if (typeof n === 'string' || typeof n === 'number') {
+    //          n = document.createTextNode(String(n));
+    //        }
+    //        root.appendChild(n);
+    //      }
+    //      return dom;
+    //    },
+    //    combine: function (array) {
+    //      if (!array || !array.length) {
+    //        error('ADsafe: Bad combination.');
+    //      }
+    //      var b = array[0].___nodes___, i;
+    //      for (i = 0; i < array.length; i += 1) {
+    //        b = b.concat(array[i].___nodes___);
+    //      }
+    //      return new Bunch(b);
+    //    },
+    //    count: function () {
+    //      return 1;
+    //    },
+    //    ephemeral: function (bunch) {
+    //      if (ephemeral) {
+    //        ephemeral.remove();
+    //      }
+    //      ephemeral = bunch;
+    //      return dom;
+    //    },
+    //    fragment: function () {
+    //      return new Bunch([document.createDocumentFragment()]);
+    //    },
+    //    prepend: function (bunch) {
+    //      var b = bunch.___nodes___, i;
+    //      for (i = 0; i < b.length; i += 1) {
+    //        root.insertBefore(b[i], root.firstChild);
+    //      }
+    //      return dom;
+    //    },
+    //    q: function (text) {
+    //      star = false;
+    //      var query = parse_query(text, id);
+    //      if (typeof hunter[query[0].op] !== 'function') {
+    //        error('ADsafe: Bad query: ' + query[0]);
+    //      }
+    //      return new Bunch(quest(query, [root]));
+    //    },
+    //    remove: function () {
+    //      purge_event_handlers(root);
+    //      root.parent.removeElement(root);
+    //      root = null;
+    //    },
+    //    row: function (values) {
+    //      var tr = document.createElement('tr'),
+    //      td,
+    //      i;
+    //      for (i = 0; i < values.length; i += 1) {
+    //        td = document.createElement('td');
+    //        td.appendChild(document.createTextNode(String(values[i])));
+    //        tr.appendChild(td);
+    //      }
+    //      return new Bunch([tr]);
+    //    },
+    //    tag: function (tag, type, name) {
+    //      var node;
+    //      if (typeof tag !== 'string') {
+    //        error();
+    //      }
+    //      if (makeableTagName[tag] !== true) {
+    //        error('ADsafe: Bad tag: ' + tag);
+    //      }
+    //      node = document.createElement(tag);
+    //      if (name) {
+    //        node.autocomplete = 'off';
+    //        node.name = name;
+    //      }
+    //      if (type) {
+    //        node.type = type;
+    //      }
+    //      return new Bunch([node]);
+    //    },
+    //    text: function (text) {
+    //      var a, i;
+    //      if (text instanceof Array) {
+    //        a = [];
+    //        for (i = 0; i < text.length; i += 1) {
+    //          a[i] = document.createTextNode(string_check(text[i]));
+    //        }
+    //        return new Bunch(a);
+    //      }
+    //      return new Bunch([document.createTextNode(string_check(text))]);
+    //    }
+      };
+    //
+    //  if (typeof root.addEventListener === 'function') {
+    //    root.addEventListener('focus', dom_event, true);
+    //    root.addEventListener('blur', dom_event, true);
+    //    root.addEventListener('mouseover', dom_event, true);
+    //    root.addEventListener('mouseout', dom_event, true);
+    //    root.addEventListener('mouseup', dom_event, true);
+    //    root.addEventListener('mousedown', dom_event, true);
+    //    root.addEventListener('mousemove', dom_event, true);
+    //    root.addEventListener('click', dom_event, true);
+    //    root.addEventListener('dblclick', dom_event, true);
+    //    root.addEventListener('keypress', dom_event, true);
+    //  } else {
+    //    root.onfocusin       = root.onfocusout  = root.onmouseout  =
+    //      root.onmousedown = root.onmousemove = root.onmouseup   =
+    //      root.onmouseover = root.onclick     = root.ondblclick  =
+    //      root.onkeypress  = dom_event;
+    //  }
+    //  return [dom, Bunch.prototype];
 };
