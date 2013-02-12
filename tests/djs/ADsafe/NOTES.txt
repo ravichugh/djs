@@ -35,6 +35,16 @@ From trying to typecheck the code:
 
 - Add array.concat to fast path.
 
+- it would be quite convenient to add define in included files.
+
+- Cannot assing to: 
+  var foo = /*: Ref(~lWeak) */ "#extern";
+
+  foo = null;
+
+  Had to change to:
+  var foo /*: Ref(~lWeak) */ = null;
+
 ====================================================
 PENDING
 ====================================================

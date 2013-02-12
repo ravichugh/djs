@@ -1,7 +1,7 @@
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
 
 /*: tyEvent {
-  type00          : Str,
+  type_           : Str,
   target          : Ref(~lNode),    (* could also be Ref(~lEventTarget) *)
   cancelBubble    : Bool,
   stopPropagation : () -> Top,

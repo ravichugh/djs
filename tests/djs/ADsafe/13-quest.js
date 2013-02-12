@@ -19,7 +19,7 @@ var quest = function(query, nodes)
       } > lObjPro)  
     -> Ref(~lNodes) / sameType */ 
 {
-  var selector /*: Ref(~lSelectorFull) */ = null; 
+  var selector /*: Ref(~lSelector) */ = null; 
 
 //  var func /*: (Ref(~lNode)) -> Top */ = 
 //    function(node) /*: (Ref(~lNode)) -> Top */ { };
@@ -35,18 +35,15 @@ var quest = function(query, nodes)
   /*: query lQuery */ "#thaw";
   query.length;
 
-  /*: nodes lNodes */ "#thaw";
-  nodes.length;
-
   /*: ( 
     &result: Ref(~lNodes), 
-    &query: Ref(lQuery), lQuery: {Arr(Ref(~lSelectorFull))|(packed v)} > lArrPro, 
-    &nodes: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) |(packed v)} > lArrPro,
+    &query: Ref(lQuery), lQuery: {Arr(Ref(~lSelector))|(packed v)} > lArrPro, 
     &name: Str
     ) -> sameType  */
   for (i = 0; i < query.length; i += 1) {
-    selector = query[i];
-    name = selector.name;
+    selector = query[0];
+    var s = query[0];
+//    name = selector.name;
     
     assert(/*:  {(or (= v "empty_") 
                         (= v "plus") 
@@ -118,7 +115,6 @@ var quest = function(query, nodes)
 
   }
 
-  /*: nodes (~lNodes, thwd lNodes) */ "#freeze";
   /*: query (~lQuery, thwd lQuery) */ "#freeze";
 
   return result;

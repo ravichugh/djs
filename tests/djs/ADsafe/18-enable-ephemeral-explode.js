@@ -73,7 +73,7 @@ var ephemeral = function ()
 {
   //reject_global(this);
   if (ephemeral_00) {
-    //TODO: add after TCing remove
+    //TODO: add after TCing Bunch.prototype
     //ephemeral_00.remove();
   }
   ephemeral_00 = this;

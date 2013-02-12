@@ -28,10 +28,10 @@ var fire = function (event)
 
   if (typeof event === 'string') {
     type = event;
-    event = {type00: type};
+    event = {type_: type};
   }
   else if (typeof event === 'object') {
-    type = event.type00;
+    type = event.type_;
   } 
   else {
     //error();

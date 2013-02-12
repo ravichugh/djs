@@ -1,30 +1,35 @@
-weak (~lNodes       :   { Arr(Ref(~lNode)) | (packed v)} > lArrPro)
-weak (~lChecked     :  { Arr(Bool)         | (packed v)} > lArrPro)
-weak (~lClassNames  :  { Arr(Str)          | (packed v)} > lArrPro)
-weak (~lADsafeMarks :  { Arr(Str)          | (packed v)} > lArrPro)
-weak (~lNames       :  { Arr(Str)          | (packed v)} > lArrPro)
-weak (~lValues      :  Arr(Str)  > lArrPro)
-weak (~lOffsetHeights :  { Arr(Num)          | (packed v)} > lArrPro)
-weak (~lOffsetWidths :  { Arr(Num)          | (packed v)} > lArrPro)
-weak (~lStyles      :  Arr(Ref(~lStyle))  > lArrPro)
+weak (~lNodes         : { Arr(Ref(~lNode)) | (packed v)} > lArrPro)
+weak (~lChecked       : { Arr(Bool)         | (packed v)} > lArrPro)
+weak (~lClassNames    : { Arr(Str)          | (packed v)} > lArrPro)
+weak (~lADsafeMarks   : { Arr(Str)          | (packed v)} > lArrPro)
+weak (~lNames         : { Arr(Str)          | (packed v)} > lArrPro)
+weak (~lValues        : Arr(Str)  > lArrPro)
+weak (~lOffsetHeights : { Arr(Num)          | (packed v)} > lArrPro)
+weak (~lOffsetWidths  : { Arr(Num)          | (packed v)} > lArrPro)
+weak (~lStyles        : Arr(Ref(~lStyle))  > lArrPro)
 
 weak (~lEvent     : {
-  type00          : Str,
+  type_           : Str,
   target          : Ref(~lNode),    (* could also be Ref(~lEventTarget) *)
   cancelBubble    : Bool,
   stopPropagation : () -> Top,
   bubble          : () -> Top,
+  preventDefault  : () -> Top,
   srcElement      : Ref(~lNode),
+  key             : Str, 
   altKey          : Bool,
   ctrlKey         : Bool,
   shiftKey        : Bool,
+  that            : Ref(~lBunch),
   _               : Bot
 } > lObjPro)
 
 weak (~lEventTarget: { } > lObjPro)
 
 weak (~lSelector : {
-  op             : Str
+  (*op             : Str*)
+  op    : {(or (= v "empty_") (= v "plus") (= v "greater") 
+               (= v "pound") (= v "slash") (= v "star"))}
 } > lObjPro)
  
 weak (~lRange : {
@@ -46,10 +51,8 @@ weak (~lBunches: {Arr(Ref(~lBunch))|(packed v)} > lArrPro)
 
 weak (~lBunch    : {
   "___nodes___"  : Ref(~lNodes),
-  "___star___"   : Bool
-  (* Calls within Bunch *)
-  (*fire           : (NotUndef) -> Top*)
-  (* getParents  : () -> Ref(~lBunches) *)
+  "___star___"   : Bool,
+  _              : Bot    (* Needed to inherit fields from prototype *)
 } > lBunchProto)
 
 weak (~lStyle : {
@@ -58,7 +61,7 @@ weak (~lStyle : {
     styleFloat   : Str
 } > lObjPro)
 
-weak (~lSelection: { createRange: () -> Ref(~lDocument) }  > lObjPro) 
+weak (~lSelection: { createRange: () -> Ref(~lRange) }  > lObjPro) 
 
 
 weak (~lNode: {
@@ -68,6 +71,8 @@ weak (~lNode: {
     firstChild           : Ref(~lNode),
     nextSibling          : Ref(~lNode),
     parentNode           : Ref(~lNode),
+    parent               : Ref(~lNode),
+    getParent            : (this: Ref(~lNode)) -> Ref(~lNode),
     childNodes           : Ref(~lNodes),
     change               : Ref(~lEvent),
     "___ on ___"         : Ref(~lEvent),
@@ -91,9 +96,11 @@ weak (~lNode: {
     blur                 : (this: Ref(~lNode)) -> Top,
     cloneNode            : (this: Ref(~lNode), deep:Bool) -> Ref(~lNode),
     removeChild          : (this: Ref(~lNode), Ref(~lNode)) -> Top,
+    removeElement        : (this: Ref(~lNode), Ref(~lNode)) -> Top,
     appendChild          : (this: Ref(~lNode), Ref(~lNode)) -> Top,
     replaceChild         : (this: Ref(~lNode), Ref(~lNode), Ref(~lNode)) -> Top,
     insertBefore         : (this: Ref(~lNode), Ref(~lNode), Ref(~lNode)) -> Top,
+    addEventListener     : (this: Ref(~lNode), Str, Ref(~lNode)) -> Top,
     focus                : () -> Top,   
     select               : (this: Ref(~lNode)) -> Top,   
     createTextRange      : () -> Ref(~lRange), 
