@@ -48,6 +48,9 @@ From trying to typecheck the code:
 - arguments: Array-like object corresponding to the arguments passed to a
   function.
 
+- Model the window object 
+  * Add fields like: console
+
 
 
 ====================================================
