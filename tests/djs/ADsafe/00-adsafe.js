@@ -65,8 +65,6 @@ var document  = /*: Ref(~lDocument) */ "#extern";
 ///////////////// DJS ////////////////////
 
 
-
-
 var adsafe_id,      // The id of the current widget
     adsafe_lib,     // The script libraries loaded by the current widget
 
@@ -190,20 +188,19 @@ var adsafe_id,      // The id of the current widget
 
 var error = /*: (message: Str)  / () -> Top / sameType */ "#extern";
 
-
-
 //    Some of JavaScript's implicit string conversions can grant extraordinary
 //    powers to untrusted code. So we use the string_check function to prevent
 //    such abuses.
 
-var string_check =
-  /*: {(and (v::(string: Str) -> {(= v string)})
+var string_check = /*: {(and (v::(string: Str) -> {(= v string)})
             (v::(string: {(not (Str v))}) -> {FLS})) } */  "#extern";
 
 //    The object.hasOwnProperty method has a number of hazards. So we wrap it in
 //    the owns function.
-//TODO: TC owns
-//    var owns = /*: (object, string) */ "#extern";
+
+var owns = /*: (object: Ref, string: Str) 
+             / (object: d: {Dict|(not (has v "hasOwnProperty"))} > lObjPro) -> 
+    { (implies (= v true) (has d {string}))} / sameType */ "#extern";
 
 
 //  The reject functions enforce the restriction on property names.
@@ -213,7 +210,7 @@ var string_check =
 
 
 //TODO: reject_name can have a more expressive type
-var reject_name = /*: (name1: Str) / (lBanned:Dict > lObjPro) -> Top / sameExact */ "#extern";
+var reject_name = /*: (name: Str) / (lBanned:Dict > lObjPro) -> Top / sameExact */ "#extern";
 
 
 var reject_property = 

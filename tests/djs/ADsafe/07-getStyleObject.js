@@ -1,8 +1,9 @@
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
-var document           = /*: Ref(~lDocument) */  "#extern";
-var cache_style_node    /*: Ref(~lNode) */     = "#extern";
-var cache_style_object  /*: Ref(~lStyle) */ = "#extern";
-var defaultView                                = document.defaultView;
+var document  = /*: Ref(~lDocument) */ "#extern";
+var cache_style_node /*: Ref(~lNode) */ = "#extern";
+var cache_style_object /*: Ref(~lStyle) */ = "#extern";
+
+var defaultView = document.defaultView;
 
 var getStyleObject = function(node) /*: (node: Ref(~lNode)) -> Ref(~lStyle) */
 {
@@ -15,8 +16,8 @@ var getStyleObject = function(node) /*: (node: Ref(~lNode)) -> Ref(~lStyle) */
   
   cache_style_node = node;
 
-  cache_style_object =
-    node.currentStyle || defaultView.getComputedStyle(node, '');
+  cache_style_object = node.currentStyle || defaultView.getComputedStyle(node, '');
+
   return cache_style_object;
 };
 

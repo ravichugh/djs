@@ -57,14 +57,12 @@ function Bunch(nodes)
 };
 
 
-
-
 var clone =  function (deep, n) 
-//TODO: make more precise type
-/*: (this: Ref(~lBunch), deep:Bool, n: Int) -> {(ite (truthy n) TRU TRU)} */
+/*: (this: Ref(~lBunch), deep:Bool, n: {Int|(>= v 0)}) -> 
+  {(ite (truthy n) (v::Ref(~lBunches)) (v::Ref(~lBunch)))} */
 {
   /*: this lBunch */ "#thaw";
-  var a = /*: lA {Arr(Ref(~lBunch))|(packed v)} */ [];
+  var a = /*: lA {Arr(Ref(~lBunch))|(and (packed v) (= (len v) 0))} */ [];
   var b = this.___nodes___;    
   /*: this (~lBunch, thwd lBunch) */ "#freeze";
 
@@ -72,9 +70,11 @@ var clone =  function (deep, n)
       j /*: { Int | (>= v 0)} */ = 0,
       k = n || 1;
 
-  /*: (&a: Ref(lA), lA: {Arr(Ref(~lBunch))|(packed v)} > lArrPro
-       ,&b: Ref(~lNodes)
-      ) -> sameType */
+  /*: (&i:i0: {Int|(and (>= v 0) (<= v k0))}, &k:k0:{Int|(> v 0)},
+       &a: Ref(lA), lA: {Arr(Ref(~lBunch))|(and (packed v) (= (len v) i0))} > lArrPro, &b: Ref(~lNodes)) -> 
+      (&i: {Int|(= v k0)}, &k:sameExact,
+       &a: Ref(lA), lA: {Arr(Ref(~lBunch))|(and (packed v) (> (len v) 0))} > lArrPro, &b: sameType)
+  */
   for (i = 0; i < k; i += 1) {
     var c  = /*: lC {Arr(Ref(~lNode))|(packed v)} */ [];
     /*: b lNodes */ "#thaw";
@@ -89,7 +89,14 @@ var clone =  function (deep, n)
     /*: c (~lNodes,frzn) */ "#freeze";
     a.push(new Bunch(c));
   }
-  return n ? a : a[0];
+  if (n) {
+    /*: a (~lBunches,frzn) */ "#freeze";
+    return a;
+  }
+  else {
+    return a[0];
+  }
+//  return n ? a : a[0];    //PV: original code
 };
 
 
@@ -162,6 +169,7 @@ var empty = function ()
   if (isArray(value)) {
     /*: b lNodes */ "#thaw";
     if (value.length !== b.length) {
+//TODO      
 //      error('ADsafe: Array length: ' + int_to_string(b.length) + '-' +
 //          int_to_string(value.length));
     }

@@ -6,15 +6,15 @@ weak (~lNames         : { Arr(Str)          | (packed v)} > lArrPro)
 weak (~lValues        : Arr(Str)  > lArrPro)
 weak (~lOffsetHeights : { Arr(Num)          | (packed v)} > lArrPro)
 weak (~lOffsetWidths  : { Arr(Num)          | (packed v)} > lArrPro)
-weak (~lStyles        : Arr(Ref(~lStyle))  > lArrPro)
+weak (~lStyles        : Arr(Str)  > lArrPro)
 
 weak (~lEvent     : {
   type_           : Str,
   target          : Ref(~lNode),    (* could also be Ref(~lEventTarget) *)
   cancelBubble    : Bool,
-  stopPropagation : () -> Top,
-  bubble          : () -> Top,
-  preventDefault  : () -> Top,
+  stopPropagation : (this: Ref(~lEvent))-> Top,
+  bubble          : (this: Ref(~lEvent))-> Top,
+  preventDefault  : (this: Ref(~lEvent)) -> Top,
   srcElement      : Ref(~lNode),
   key             : Str, 
   altKey          : Bool,
@@ -26,10 +26,17 @@ weak (~lEvent     : {
 
 weak (~lEventTarget: { } > lObjPro)
 
-weak (~lSelector : {
+weak (~lSelector : { Dict |
   (*op             : Str*)
-  op    : {(or (= v "empty_") (= v "plus") (= v "greater") 
-               (= v "pound") (= v "slash") (= v "star"))}
+  (and 
+    (has v "op") ({(or  (= v "empty_") 
+                        (= v "plus") 
+                        (= v "greater") 
+                        (= v "pound") 
+                        (= v "slash") 
+                        (= v "star"))
+                  } (sel v "op"))
+    (implies (has v "name") (Str (sel v "name"))))
 } > lObjPro)
  
 weak (~lRange : {
@@ -37,14 +44,6 @@ weak (~lRange : {
   expand: (this:Ref(~lRange), Str) -> Bool
 } > lObjPro)
   
-weak (~lSelectorFull : {
-  op    : {(or (= v "empty_") (= v "plus") (= v "greater") 
-               (= v "pound") (= v "slash") (= v "star"))},
-  name  : Str,
-  value : Str
-} > lObjPro)
-
-
 weak (~lQuery: { Arr(Ref(~lSelector)) | (packed v) } > lArrPro)
 
 weak (~lBunches: {Arr(Ref(~lBunch))|(packed v)} > lArrPro)
@@ -83,7 +82,7 @@ weak (~lNode: {
     name                 : Str,
     nodeName             : Str,
     nodeValue            : Str,
-    value                : Top,     (*XXX: This might break stuff *)
+    value                : Str,     (*XXX: This might break stuff *)
     title                : Str,
     disabled             : Bool,
     checked              : Bool,
@@ -100,7 +99,7 @@ weak (~lNode: {
     appendChild          : (this: Ref(~lNode), Ref(~lNode)) -> Top,
     replaceChild         : (this: Ref(~lNode), Ref(~lNode), Ref(~lNode)) -> Top,
     insertBefore         : (this: Ref(~lNode), Ref(~lNode), Ref(~lNode)) -> Top,
-    addEventListener     : (this: Ref(~lNode), Str, Ref(~lNode)) -> Top,
+    addEventListener     : (this: Ref(~lNode), Str, (Ref(~lEvent)) -> Top, Bool) -> Top,
     focus                : () -> Top,   
     select               : (this: Ref(~lNode)) -> Top,   
     createTextRange      : () -> Ref(~lRange), 

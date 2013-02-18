@@ -2,7 +2,7 @@
 
 /*: tyQueryLoc {Arr(Ref(~lSelector))|(packed v)} > lArrPro */ "#define";
 
-var error = /*: (message: Str)  / () -> Top / sameType */ "#extern";
+var error = /*: (message: Str)  -> { FLS } */ "#extern";
 
 var parse_query = function (text, id) /*: (text: Str, id: Str) -> Ref(~lQuery) */
 {
@@ -20,9 +20,9 @@ var parse_query = function (text, id) /*: (text: Str, id: Str) -> Ref(~lQuery) *
 
   var match = /*: lA0 { Arr(Str) | (packed v) }*/ [] ,   // A match array  //XXX: PV: added "null"
       query = /*: lQ  { Arr(Ref(~lSelector))|(packed v)} */  [],       // The resulting query array
-      selector  /*: Ref(~lSelector) */ = null; //PV: added "null"
+      selector  /*: Ref(~lSelector) */ = null;       //PV: added "null"
 
-  //TODO: Exception Failure: convert CRegExp
+  //TODO: RegEx
   //,qx = id
   //    ? /^\s*(?:([\*\/])|\[\s*([a-z][0-9a-z_\-]*)\s*(?:([!*~|$\^]?\=)\s*([0-9A-Za-z_\-*%&;.\/:!]+)\s*)?\]|#\s*([A-Z]+_[A-Z0-9]+)|:\s*([a-z]+)|([.&_>\+]?)\s*([a-z][0-9a-z\-]*))\s*/
   //    : /^\s*(?:([\*\/])|\[\s*([a-z][0-9a-z_\-]*)\s*(?:([!*~|$\^]?\=)\s*([0-9A-Za-z_\-*%&;.\/:!]+)\s*)?\]|#\s*([\-A-Za-z0-9_]+)|:\s*([a-z]+)|([.&_>\+]?)\s*([a-z][0-9a-z\-]*))\s*/;
@@ -46,8 +46,8 @@ var parse_query = function (text, id) /*: (text: Str, id: Str) -> Ref(~lQuery) *
     //          match[7]  . & _ > +
     //          match[8]      name
 
-    //match = qx.exec(string_check(text));      //TODO: Fix with regex support
-    match =  /*: lA1 {Arr(Str) | (packed v)} */ ["0", "1", "2", "3", "4", "5", "6", "7", "8"];
+    //match = qx.exec(string_check(text));
+    match =  /*: lA1 {Arr(Str) | (packed v)} */ ["0", "1", "2", "3", "4", "5", "6", "7", "8"];    //PV: using this temporarily
     //TODO: Encode regex info...
 
     if (!match) {
@@ -66,35 +66,32 @@ var parse_query = function (text, id) /*: (text: Str, id: Str) -> Ref(~lQuery) *
       };
       /*: selector (~lSelector, thwd lSelector) */ "#freeze";
     } 
+    else if (match[2]) {
 
-//    else if (match[2]) {
-//
-//      // The selector is in brackets.
-//
-//      if (match[3]) {
-//        /*: selector lSelector */ "#thaw";
-//        selector = {
-//          op: '[' + match[3],
-//          name: match[2],
-//          value: match[4]
-//        };
-//        /*: selector (~lSelector, thwd lSelector) */ "#freeze";
-//      }
-//      else {
-//        /*: selector lSelector */ "#thaw";
-//        selector = {
-//          op: '[',
-//          name: match[2]
-//        };
-//        /*: selector (~lSelector, thwd lSelector) */ "#freeze";
-//      }
-//    } 
-//
+      // The selector is in brackets.
+
+      if (match[3]) {
+        /*: selector lSelector */ "#thaw";
+        selector = {
+          op: '[' + match[3],
+          name: match[2],
+          value: match[4]
+        };
+        /*: selector (~lSelector, thwd lSelector) */ "#freeze";
+      }
+      else {
+        /*: selector lSelector */ "#thaw";
+        selector = {
+          op: '[',
+          name: match[2]
+        };
+        /*: selector (~lSelector, thwd lSelector) */ "#freeze";
+      }
+    } 
+
 //    else if (match[5]) {
 //
 //      // The selector is an id.
-//
-////XXX: This really slows things down      
 //
 //      if (query.length > 0 || match[5].length <= id.length ||
 //          match[5].slice(0, id.length) !== id) {
@@ -120,22 +117,23 @@ var parse_query = function (text, id) /*: (text: Str, id: Str) -> Ref(~lQuery) *
 //      // The selector is one of > + . & _ or a naked tag name
 //
 //    }
-    else {
-      /*: selector lSelector */ "#thaw";
-      selector = {
-        op: match[7],
-        name: match[8]
-      };
-      /*: selector (~lSelector, thwd lSelector) */ "#freeze";
-    }
+//    else {
+//      /*: selector lSelector */ "#thaw";
+//      selector = {
+//        op: match[7],
+//        name: match[8]
+//      };
+//      /*: selector (~lSelector, thwd lSelector) */ "#freeze";
+//    }
 
     // Add the selector to the query.
 
-    query.push(selector);
-
-    // Remove the selector from the text. If there is more text, have another go.
-
-    text = text.slice(match[0].length, 0);    //PV: added 2nd argument to slice              
+//XXX: SLOW DOWN !!! 
+//    query.push(selector);
+//
+//    // Remove the selector from the text. If there is more text, have another go.
+//
+//    text = text.slice(match[0].length, 0);    //PV: added 2nd argument to slice              
 
   } while (text);
   

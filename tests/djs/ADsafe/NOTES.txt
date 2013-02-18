@@ -45,13 +45,15 @@ From trying to typecheck the code:
   Had to change to:
   var foo /*: Ref(~lWeak) */ = null;
 
+- Model global window object?
+
 ====================================================
 PENDING
 ====================================================
 
-- Regular expresion support
+- Regular expresions
 
-- Support for array slice
+- Array slice
 
 - Higher-order functions:  
   need to restore Sub.checkArrows

@@ -9,8 +9,7 @@ var reject_global =
     )} */ "#extern";
 
 
-//TODO: reject_name can have a more expressive type
-var reject_name = /*: (name1: Str) -> Top */ "#extern";
+var reject_name = /*: (name: Str) -> Top */ "#extern";
 
 var error = /*: (message: Str)  -> { FLS } */ "#extern";
 
@@ -58,7 +57,7 @@ var style = function (name, value)
 //        error();
 //      }
       if (node.tagName) {
-//TODO: Does not work if function parameter is of type Str.        
+//TODO: this will be hard to TC without knowing what v is         
 //        style = node.style;
 //        /*: style lStyle */ "#thaw";
 //        if (name !== "float") {

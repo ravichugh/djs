@@ -38,9 +38,9 @@ var hunter = {
     /*: node (~lNode, thwd lNode) */ "#freeze";
   }
   ,
-    '+': function (node) 
+    '+': function (node)
       /*: (node: Ref(~lNode)) / (&name: Str) -> Top / sameType */
-    {              
+    { 
       node = node.nextSibling;
       name = name.toUpperCase();
       /*: (&node: Ref(~lNode)) -> (&node: sameType) */

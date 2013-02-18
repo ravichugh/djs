@@ -22,6 +22,14 @@ function Bunch(nodes)
   return self;      //PV: added return
 };
 
+var replace = /*: {(and
+        (v:: (this: Ref(~lBunch), replacement: Ref(lA)) / (lA: tyBunchArr) -> Top / sameExact )
+        (v:: (this: Ref(~lBunch), replacement: Ref(lO)) / (lO: tyBunchObj) -> Top / sameExact )
+        (v:: (this: Ref(~lBunch))-> Top )
+    )} */ "#extern";
+Bunch.prototype.replace = replace;
+
+
 var quest = /*: (Ref(~lQuery), Ref(~lNodes)) -> Ref(~lNodes) */ "#extern";
 
 var parse_query = /*: (text: Str, id: Str) -> Ref(~lQuery) */ "#extern";
@@ -31,7 +39,11 @@ var string_check =
             (v::(string: {(not (Str v))}) -> {FLS})) } */  "#extern";
 
 var id = /*: Str */ "#extern";
+
 //----------------------------------------------------------------------------
+
+
+
 var protect = function ()
 /*: (this: Ref(~lBunch)) -> Ref(~lBunch) */
 {
@@ -58,11 +70,8 @@ var q = function (text)
         this.___nodes___));
 };
 
-//TODO
-var remove = function () 
-/*: (this: Ref(~lBunch)) -> Top */
-{
+var remove = function () /*: (this: Ref(~lBunch)) -> Top */ {
   reject_global(this);
-//  this.replace();
+  this.replace();
 };
 

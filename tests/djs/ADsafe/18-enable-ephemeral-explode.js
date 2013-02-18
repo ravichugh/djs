@@ -2,7 +2,7 @@
 
 /*: tyArr {Arr(Ref(~lNode))|(packed v)} > lArrPro */ "#define";
 
-var ephemeral_00 /*: Ref(~lBunch) */ = "#extern";
+var ephemeral /*: Ref(~lBunch) */ = "#extern";
 var star    /*: Bool */         = "#extern";
 
 // A Bunch is a container that holds zero or more dom nodes.
@@ -22,12 +22,23 @@ function Bunch(nodes)
   return self;      //PV: added return
 };
 
+var remove = /*: (this: Ref(~lBunch)) -> Top */ "#extern";
+Bunch.prototype.remove = remove;
+
+var reject_global = /*: {(and
+      (v:: [;L1,L2;] (that: Ref(L1)) / (L1: d: Dict > L2) -> 
+          { (implies (truthy (objsel d "window" cur L2)) FLS) } / sameExact)
+      (v:: (that: Ref(~lBunch)) ->  Top)
+    )} */ "#extern";
+
+// -----------------------------------------------------------------------------------
+
 var enable = function (enable) 
 /*: {(and
     (v :: (this: Ref(~lBunch), enable: Ref(lArr)) / (lArr: { Arr(Str) | (packed v) }  > lArrPro) -> Ref(~lBunch) / sameType)
     (v :: (this: Ref(~lBunch), enable: Ref(lObj)) / (lObj: { }  > lObjPro) -> Ref(~lBunch) / sameType))} */
 {
-  //reject_global(this);
+  reject_global(this);
  
   /*: this lBunch */ "#thaw";
   var b = this.___nodes___;
@@ -38,6 +49,7 @@ var enable = function (enable)
   if (isArray(enable)) {
     /*: b lNodes */ "#thaw";
     if (enable.length !== b.length) {
+//TODO      
 //      error('ADsafe: Array length: ' + b.length + '-' +
 //          enable.length);
     }
@@ -68,15 +80,14 @@ var enable = function (enable)
   return this;
 };
 
-var ephemeral = function () 
+var ephemeral_ = function () 
 /*: (this: Ref(~lBunch)) -> Ref(~lBunch) */
 {
-  //reject_global(this);
-  if (ephemeral_00) {
-    //TODO: add after TCing Bunch.prototype
-    //ephemeral_00.remove();
+  reject_global(this);
+  if (ephemeral) {
+    ephemeral.remove();
   }
-  ephemeral_00 = this;
+  ephemeral = this;
   return this;
 };
 
@@ -85,8 +96,7 @@ var ephemeral = function ()
 var explode = function () 
 /*: [;L;] (this: Ref(~lBunch)) / () -> Ref(L) / (L: Arr(Ref(~lBunch)) > lArrPro) */
 {
-  //reject_global(this);
-
+  reject_global(this);
   var a = /*: L {Arr(Ref(~lBunch))|(packed v)} */ [];
   /*: this lBunch */ "#thaw";
   var b = this.___nodes___;
@@ -95,7 +105,6 @@ var explode = function ()
 
   /*: (&b: Ref(~lNodes), &a: Ref(L), L: Arr(Ref(~lBunch)) > lArrPro) -> sameType */
   for (i = 0; true; i += 1) {
-//    
     /*: b lNodes */ "#thaw";
     if (i < b.length) {
       var bArr = /*: lBArr {Arr(Ref(~lNode))|(packed v)} */  [b[i]];

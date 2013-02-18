@@ -29,8 +29,7 @@ var purge_event_handlers = /*: (node: Ref(~lNode)) -> Top */ "#extern";
 //var concat = /* [A] (a: Ref(lA), b: Ref(lB)) / (lA: a0: Arr(A) > lArrPro, lB: b0: Arr(A) > lArrPro)
 //              -> Ref(lA) / (lA: {Arr(A)|(= (len v) (+ (len a0) (len b0)))} > lArrPro) */  "#extern";
 
-//TODO: PV: might need to do this more general - not sure if this is possible /
-//helpful
+//TODO: PV: might need to do this more general
 var concat = /*: (a: Ref(~lNodes), b: Ref(~lNodes)) -> Ref(~lNodes) */  "#extern";
 
 var hunter =  "#extern";

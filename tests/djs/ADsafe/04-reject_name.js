@@ -1,22 +1,31 @@
-var reject_name = function (name1) 
-  //TODO: commenting expressive type for speed
-  /* (name1: Str) / (lBanned: tyBanned) -> 
-     { (implies  (falsy v)
-     (and 
-     (not (= name1 "arguments"))
-     (not (= name1 "callee"))
-     (not (= name1 "caller"))
-     (not (= name1 "constructor"))
-     (not (= name1 "prototype"))
-     (not (= name1 "stack"))
-     (not (= name1 "eval"))
-     (not (= name1 "unwatch"))
-     (not (= name1 "valueOf"))
-     (not (= name1 "watch"))
-     )) }  
-     / sameExact */
+var banned = /*: lBanned */ {
+      'arguments'     : true,
+      callee          : true,
+      caller          : true,
+      constructor     : true,
+      'eval'          : true,
+      prototype       : true,
+      stack           : true,
+      unwatch         : true,
+      valueOf         : true,
+      watch           : true
+    };
 
-  /*: (name1: Str) / (lBanned:Dict > lObjPro) -> Top / sameExact */
+
+var reject_name = function (name1) 
+  /*: (name1: Str) -> { (implies  (falsy v)
+                          (and 
+                             (not (= name1 "arguments"))
+                             (not (= name1 "callee"))
+                             (not (= name1 "caller"))
+                             (not (= name1 "constructor"))
+                             (not (= name1 "prototype"))
+                             (not (= name1 "stack"))
+                             (not (= name1 "eval"))
+                             (not (= name1 "unwatch"))
+                             (not (= name1 "valueOf"))
+                             (not (= name1 "watch"))
+                             )) }  */
 {  
   return 
     typeof name1 !== 'number' 

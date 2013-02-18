@@ -1,8 +1,39 @@
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
 
+/*: tyEvent {
+  type_           : Str,
+  target          : Ref(~lNode),    (* could also be Ref(~lEventTarget) *)
+  cancelBubble    : Bool,
+  stopPropagation : (this: Ref(~lEvent))-> Top,
+  bubble          : (this: Ref(~lEvent))-> Top,
+  preventDefault  : (this: Ref(~lEvent)) -> Top,
+  srcElement      : Ref(~lNode),
+  key             : Str, 
+  altKey          : Bool,
+  ctrlKey         : Bool,
+  shiftKey        : Bool,
+  that            : Ref(~lBunch),
+  _               : Bot
+} */ "#define";
+
+
 var owns = 
-/*: [;L;](object: Ref(L), string: Str) / (L: d: {Dict|(not (has v "hasOwnProperty"))} > lObjPro) -> 
-    { (implies (= v true) (has d {string}))} / sameType */ "#extern";
+/*: (object: Ref, string: Str) / (object: d: tyEvent > lObjPro) -> 
+    {Bool|(implies (= v true) (has d {string}))} / sameType */ "#extern";
+
+//var owns = 
+///*: (object: Ref(~lEvent), string: Str) -> Bool */ "#extern";
+
+var reject_global = /*: {(and
+      (v:: [;L1,L2;] (that: Ref(L1)) / (L1: d: Dict > L2) -> 
+          { (implies (truthy (objsel d "window" cur L2)) FLS) } / sameExact)
+      (v:: (that: Ref(~lBunch)) ->  Top)
+    )} */ "#extern";
+
+var error = /*: (message: Str)  -> {FLS}  */ "#extern";
+
+// -----------------------------------------------------------------------------------
+
 
 var fire = function (event) 
 /*: {(and
@@ -16,7 +47,7 @@ var fire = function (event)
   // name of the event. Handlers registered by the 'on'
   // method that match the event name will be invoked.
 
-  //reject_global(this);
+  reject_global(this);
   var array,
       b,      
       i /*: { Int | (>= v 0)} */ = 0,
@@ -34,12 +65,10 @@ var fire = function (event)
     type = event.type_;
   } 
   else {
-    //error();
+    error("default"); //PV: adding arg
   }
 
-  /*: this lBunch */ "#thaw";
   b = this.___nodes___;
-  /*: this (~lBunch, thwd lBunch) */ "#freeze";
   /*: b lNodes */ "#thaw";
   b.l;
   /*: (&b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro) -> sameType */
@@ -50,8 +79,12 @@ var fire = function (event)
     // If an array of handlers exist for this event, then
     // loop through it and execute the handlers in order.
   
-//TODO:     
-//    if (owns(on, type)) {
+    assert(/*: Ref(~lEvent) */ (on));
+    /*: on lEvent */ "#thaw";
+    on.l;
+//PV: Adding the following line adds 400 more queries    
+    if ( owns(on, type)) {
+//TODO      
 //      array = on[type];
 //      for (j = 0; j < array.length; j += 1) {
 //
@@ -59,7 +92,8 @@ var fire = function (event)
 //
 //        array[j].call(this, event);
 //      }
-//    }
+    }
+    /*: on (~lEvent, thwd lEvent) */ "#freeze";
   }
   /*: b (~lNodes, thwd lNodes) */ "#freeze";
   return this;

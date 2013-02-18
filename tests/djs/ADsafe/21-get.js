@@ -31,17 +31,10 @@ var error = /*: (message: Str)  -> { FLS } */ "#extern";
 
 var getStyleObject = /*: (node: Ref(~lNode)) -> Ref(~lStyle) */ "#extern";
 
+// -----------------------------------------------------------------------------------
 
-//TODO
-var getCheck = function () 
-/*: (this: Ref(~lBunch)) -> Top */
-{
-//  return this.getChecks()[0];
-};
 
-var getChecks = function () 
-/*: (this: Ref(~lBunch)) -> Ref(~lChecked) */
-{
+Bunch.prototype.getChecks = function () /*: (this: Ref(~lBunch)) -> Ref(~lChecked) */ {
   reject_global(this);
   var a = /*: lA {Arr(Bool)|(packed v)} */ [];
   var b = this.___nodes___;
@@ -60,16 +53,7 @@ var getChecks = function ()
   return a;
 };
 
-//TODO
-var getClass = function () 
-/*: (this: Ref(~lBunch)) -> Top */
-{
-//  return this.getClasses()[0];
-};
-
-var getClasses =  function () 
-/*: (this: Ref(~lBunch)) -> Ref(~lClassNames) */
-{
+Bunch.prototype.getClasses =  function () /*: (this: Ref(~lBunch)) -> Ref(~lClassNames) */ {
   reject_global(this);
   var a = /*: lA {Arr(Str)|(packed v)} */ [];
   var b = this.___nodes___;
@@ -89,16 +73,7 @@ var getClasses =  function ()
   return a;
 };
 
-//TODO:
-var getMark = function () 
-/*: (this: Ref(~lBunch)) -> Top */
-{
-//  return this.getMarks()[0];
-};
-
-var getMarks = function () 
-/*: (this: Ref(~lBunch)) -> Ref(~lADsafeMarks) */
-{
+Bunch.prototype.getMarks = function () /*: (this: Ref(~lBunch)) -> Ref(~lADsafeMarks) */ {
   reject_global(this);
   var a = /*: lA {Arr(Str)|(packed v)} */ [];
   var b = this.___nodes___;
@@ -106,7 +81,6 @@ var getMarks = function ()
 
   /*: b lNodes */ "#thaw";
   b.l;
-
   /*: ( &i:i0:{Int|(>= v 0)}, lA:{Arr(Str)|(and (packed v) (= (len v) i0))} > lArrPro,
         &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
       -> ( &i: sameType, lA: {Arr(Str)|(packed v)} > lArrPro, &b: sameType, lNodes: sameType) */ 
@@ -118,25 +92,13 @@ var getMarks = function ()
   return a;
 };
 
-
-//TODO:
-var getName = function () 
-/*: (this: Ref(~lBunch)) -> Top */
-{
-//  return this.getNames()[0];
-};
-
-var getNames = function () 
-/*: (this: Ref(~lBunch)) -> Ref(~lNames) */
-{
+Bunch.prototype.getNames = function () /*: (this: Ref(~lBunch)) -> Ref(~lNames) */ {
   reject_global(this);
   var a = /*: lA {Arr(Str)|(packed v)} */ [];
   var b = this.___nodes___;
   var i /*: { Int | (>= v 0)} */ = 0;
-
   /*: b lNodes */ "#thaw";
   b.l;
-
   /*: ( &i:i0:{Int|(>= v 0)}, lA:{Arr(Str)|(and (packed v) (= (len v) i0))} > lArrPro,
         &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
       -> ( &i: sameType, lA: {Arr(Str)|(packed v)} > lArrPro, &b: sameType, lNodes: sameType) */ 
@@ -148,25 +110,13 @@ var getNames = function ()
   return a;
 };
 
-
-//TODO:
-var getOffsetHeight = function () 
-/*: (this: Ref(~lBunch)) -> Top */
-{
-//  return this.getOffsetHeights()[0];
-};
-
-var getOffsetHeights = function () 
-/*: (this: Ref(~lBunch)) -> Ref(~lOffsetHeights) */
-{
+Bunch.prototype.getOffsetHeights = function () /*: (this: Ref(~lBunch)) -> Ref(~lOffsetHeights) */ {
   reject_global(this);
   var a = /*: lN {Arr(Num)|(packed v)} */ [];
   var b = this.___nodes___;
   var i /*: { Int | (>= v 0)} */ = 0;
-
   /*: b lNodes */ "#thaw";
   b.l;
-
   /*: ( &i:i0:{Int|(>= v 0)}, lN:{Arr(Num)|(and (packed v) (= (len v) i0))} > lArrPro,
         &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
       -> ( &i: sameType, lN: {Arr(Num)|(packed v)} > lArrPro, &b: sameType, lNodes: sameType) */ 
@@ -178,24 +128,13 @@ var getOffsetHeights = function ()
   return a;
 };
 
-//TODO:
-var getOffsetWidth = function () 
-/*: (this: Ref(~lBunch)) -> Top */
-{
-//  return this.getOffsetWidths()[0];
-};
-
-var getOffsetWidths = function () 
-/*: (this: Ref(~lBunch)) -> Ref(~lOffsetWidths) */
-{
+Bunch.prototype.getOffsetWidths = function () /*: (this: Ref(~lBunch)) -> Ref(~lOffsetWidths) */ {
   reject_global(this);
   var a = /*: lN {Arr(Num)|(packed v)} */ [];
   var b = this.___nodes___;
   var i /*: { Int | (>= v 0)} */ = 0;
-
   /*: b lNodes */ "#thaw";
   b.l;
-
   /*: ( &i:i0:{Int|(>= v 0)}, lN:{Arr(Num)|(and (packed v) (= (len v) i0))} > lArrPro,
         &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
       -> ( &i: sameType, lN: {Arr(Num)|(packed v)} > lArrPro, &b: sameType, lNodes: sameType) */ 
@@ -207,19 +146,165 @@ var getOffsetWidths = function ()
   return a;
 };
 
+Bunch.prototype.getStyles = function (name) /*: (this: Ref(~lBunch), Str) -> Ref(~lStyles) */ {
+  reject_global(this);
+  if (reject_name(name)) {
+    error("ADsafe style violation.");
+  }
+  var a = /*: lA Arr(Str) */ [];
+  var b = this.___nodes___;
+  var i /*: { Int | (>= v 0)} */ = 0;
+  var node /*: Ref(~lNode) */ = null , s;
+  /*: b lNodes */ "#thaw";
+  b.l;
+  /*: ( &i:i0:{Int|(>= v 0)}, lA:Arr(Str)  > lArrPro,
+        &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro, &s: Top)
+      -> ( &i: sameType, lA: Arr(Str) > lArrPro, &b: sameType, lNodes: sameType, &s: sameType) */ 
+  for (i = 0; i < b.length; i += 1) {
+    node = b[i];
+    if (node.tagName) {
+      s = name !== 'float'
+        ? getStyleObject(node)[name]
+        : getStyleObject(node).cssFloat ||
+        getStyleObject(node).styleFloat;
+      if (typeof s === 'string') {
+        a[i] = s;
+      }
+    }
+  }
+  /*: b (~lNodes, thwd lNodes) */ "#freeze";
+  /*: a (~lStyles, frzn) */ "#freeze";
+  return a;
+};
 
-var getParent = function () 
-/*: (this: Ref(~lBunch)) -> Ref(~lBunch) */
-{
+Bunch.prototype.getTagNames = function () /*: (this: Ref(~lBunch)) -> Ref(~lNames) */ {
+  reject_global(this);
+  var a = /*: lA {Arr(Str)|(packed v)} */ [];
+  var b = this.___nodes___;
+  var i /*: { Int | (>= v 0)} */ = 0;
+  /*: b lNodes */ "#thaw";
+  b.l;
+  var name /*: Str */ = "";
+  /*: ( &i:i0:{Int|(>= v 0)}, lA:{Arr(Str)|(and (packed v) (= (len v) i0))} > lArrPro,
+        &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
+      -> ( &i: sameType, lA: {Arr(Str)|(packed v)} > lArrPro, &b: sameType, lNodes: sameType) */ 
+  for (i = 0; i < b.length; i += 1) {
+    name = b[i].tagName;
+    a[i] = typeof name === 'string' ? name.toLowerCase() : name;
+  }
+  /*: b (~lNodes, thwd lNodes) */ "#freeze";
+  /*: a (~lNames, frzn) */ "#freeze";
+  return a;
+};
+
+Bunch.prototype.getTitles = function () /*: (this: Ref(~lBunch)) -> Ref(~lNames) */ {
+  reject_global(this);
+  var a = /*: lA {Arr(Str)|(packed v)} */ [];
+  var b = this.___nodes___;
+  var i /*: { Int | (>= v 0)} */ = 0;
+  /*: b lNodes */ "#thaw";
+  b.l;
+  /*: ( &i:i0:{Int|(>= v 0)}, lA:{Arr(Str)|(and (packed v) (= (len v) i0))} > lArrPro,
+        &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
+      -> ( &i: sameType, lA: {Arr(Str)|(packed v)} > lArrPro, &b: sameType, lNodes: sameType) */ 
+  for (i = 0; i < b.length; i += 1) {
+    a[i] = b[i].title;
+  }
+  /*: b (~lNodes, thwd lNodes) */ "#freeze";
+  /*: a (~lNames, frzn) */ "#freeze";
+  return a;
+};
+
+Bunch.prototype.getValues = function () /*: (this: Ref(~lBunch)) -> Ref(~lValues) */ {
+  reject_global(this);
+  var a = /*: lA Arr(Str) */ [];
+  var b = this.___nodes___;
+  var i /*: { Int | (>= v 0)} */ = 0;
+  var node /*: Ref(~lNode) */ = null;
+  /*: b lNodes */ "#thaw";
+  b.l;
+  /*: ( &i:i0:{Int|(>= v 0)}, lA:Arr(Str)  > lArrPro,
+        &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
+      -> ( &i: sameType, lA: Arr(Str) > lArrPro, &b: sameType, lNodes: sameType) */ 
+  for (i = 0; i < b.length; i += 1) {
+    node = b[i];
+    if (node.nodeName === '#text') {
+      a[i] = node.nodeValue;
+    } else if (node.tagName && node.type !== 'password') {
+      a[i] = node.value;
+      if (!a[i] && node.firstChild &&
+          node.firstChild.nodeName === '#text') {
+            a[i] = node.firstChild.nodeValue;
+          }
+    }
+  }
+  /*: b (~lNodes, thwd lNodes) */ "#freeze";
+  /*: a (~lValues, frzn) */ "#freeze";
+  return a;
+};
+
+var getCheck = function () /*: (this: Ref(~lBunch)) -> {?(Bool)|TRU} */ {
+//  return this.getChecks()[0];   //PV: original code
+  var elts = this.getChecks();
+  /*: elts lElts */ "#thaw";
+  var ret = elts[0];
+  /*: elts (~lChecked, thwd lElts) */ "#freeze";
+  return ret;
+};
+
+var getClass = function () /*: (this: Ref(~lBunch)) ->  {?(Str)|TRU} */ {
+//  return this.getClasses()[0]; //PV: original code
+  var elts = this.getClasses();
+  /*: elts lElts */ "#thaw";
+  var ret = elts[0];
+  /*: elts (~lClassNames, thwd lElts) */ "#freeze";
+  return ret;
+};
+
+var getMark = function () /*: (this: Ref(~lBunch)) -> {?(Str)|TRU} */ {
+//  return this.getMarks()[0];    //PV: o.c.
+  var elts = this.getMarks();
+  /*: elts lElts */ "#thaw";
+  var ret = elts[0];
+  /*: elts (~lADsafeMarks, thwd lElts) */ "#freeze";
+  return ret;
+};
+
+var getName = function () /*: (this: Ref(~lBunch)) -> {?(Str)|TRU} */ {
+//return this.getNames()[0];    //PV: o.c.
+  var names = this.getNames();
+  /*: names lNames */ "#thaw";
+  var ret = names[0];
+  /*: names (~lNames, thwd lNames) */ "#freeze";
+  return ret;
+};
+
+var getOffsetHeight = function () /*: (this: Ref(~lBunch)) -> {?(Num)|TRU} */ {
+//  return this.getOffsetHeights()[0];
+  var elts = this.getOffsetHeights();
+  /*: elts lElts */ "#thaw";
+  var ret = elts[0];
+  /*: elts (~lOffsetHeights, thwd lElts) */ "#freeze";
+  return ret;
+};
+
+var getOffsetWidth = function () /*: (this: Ref(~lBunch)) -> {?(Num)|TRU} */ {
+//  return this.getOffsetWidths()[0];
+  var elts = this.getOffsetWidths();
+  /*: elts lElts */ "#thaw";
+  var ret = elts[0];
+  /*: elts (~lOffsetWidths, thwd lElts) */ "#freeze";
+  return ret;
+};
+
+var getParent = function () /*: (this: Ref(~lBunch)) -> Ref(~lBunch) */ {
   reject_global(this);
   var a = /*: lA {Arr(Ref(~lNode))|(packed v)} */ [];
   var b = this.___nodes___;
   var i /*: { Int | (>= v 0)} */ = 0;
-
   var n /*: Ref(~lNode) */ = null;
   /*: b lNodes */ "#thaw";
   b.l;
-
   /*: ( &i:i0:{Int|(>= v 0)},  &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro, 
         lA:{Arr(Ref(~lNode))|(and (packed v) (= (len v) i0))} > lArrPro)
       -> (&i: sameType, &b: sameType, lA: {Arr(Ref(~lNode))|(packed v)} > lArrPro,lNodes: sameType) */ 
@@ -270,142 +355,39 @@ var getSelection = function ()
   return null;
 };
 
-//TODO
-var getStyle = function (name) 
-/*: (this: Ref(~lBunch), Str) -> Ref(~lStyle) */
-{
-//  return this.getStyles(name)[0];
+var getStyle = function (name) /*: (this: Ref(~lBunch), Str) -> {?(Str)|TRU} */ {
+//  return this.getStyles(name)[0];   //PV: o.c.
+  var elts = this.getStyles(name);
+  /*: elts lElts */ "#thaw";
+  var ret = elts[0];
+  /*: elts (~lStyles, thwd lElts) */ "#freeze";
+  return ret;
 };
 
-var getStyles = function (name) 
-/*: (this: Ref(~lBunch), Str) -> Ref(~lStyles) */
-{
-  reject_global(this);
-  if (reject_name(name)) {
-    error("ADsafe style violation.");
-  }
-
-  var a = /*: lA Arr(Str) */ [];
-  var b = this.___nodes___;
-  var i /*: { Int | (>= v 0)} */ = 0;
-  var node /*: Ref(~lNode) */ = null , s;
-
-  /*: b lNodes */ "#thaw";
-  b.l;
-  /*: ( &i:i0:{Int|(>= v 0)}, lA:Arr(Str)  > lArrPro,
-        &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro, &s: Top)
-      -> ( &i: sameType, lA: Arr(Str) > lArrPro, &b: sameType, lNodes: sameType, &s: sameType) */ 
-  for (i = 0; i < b.length; i += 1) {
-    node = b[i];
-    if (node.tagName) {
-      s = name !== 'float'
-        ? getStyleObject(node)[name]
-        : getStyleObject(node).cssFloat ||
-        getStyleObject(node).styleFloat;
-      if (typeof s === 'string') {
-        a[i] = s;
-      }
-    }
-  }
-  /*: b (~lNodes, thwd lNodes) */ "#freeze";
-  /*: a (~lStyles, frzn) */ "#freeze";
-  return a;
+var getTagName = function () /*: (this: Ref(~lBunch)) -> {?(Str)|TRU} */ {
+//  return this.getTagNames()[0];   //PV: o.c.
+  var elts = this.getTagNames();
+  /*: elts lElts */ "#thaw";
+  var ret = elts[0];
+  /*: elts (~lNames, thwd lElts) */ "#freeze";
+  return ret;
 };
 
-//TODO
-var getTagName = function () 
-/*: (this: Ref(~lBunch)) -> Top */
-{
-//  return this.getTagNames()[0];
-};
-
-var getTagNames = function () 
-/*: (this: Ref(~lBunch)) -> Ref(~lNames) */
-{
-  reject_global(this);
-  var a = /*: lA {Arr(Str)|(packed v)} */ [];
-  var b = this.___nodes___;
-  var i /*: { Int | (>= v 0)} */ = 0;
-
-  /*: b lNodes */ "#thaw";
-  b.l;
-  var name /*: Str */ = "";
-
-  /*: ( &i:i0:{Int|(>= v 0)}, lA:{Arr(Str)|(and (packed v) (= (len v) i0))} > lArrPro,
-        &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
-      -> ( &i: sameType, lA: {Arr(Str)|(packed v)} > lArrPro, &b: sameType, lNodes: sameType) */ 
-  for (i = 0; i < b.length; i += 1) {
-    name = b[i].tagName;
-    a[i] = typeof name === 'string' ? name.toLowerCase() : name;
-  }
-  /*: b (~lNodes, thwd lNodes) */ "#freeze";
-  /*: a (~lNames, frzn) */ "#freeze";
-  return a;
-};
-
-//TODO
-var getTitle = function () 
-/*: (this: Ref(~lBunch)) -> Top */
-{
+var getTitle = function () /*: (this: Ref(~lBunch)) -> {?(Str)|TRU} */ {
 //  return this.getTitles()[0];
+  var elts = this.getTitles();
+  /*: elts lElts */ "#thaw";
+  var ret = elts[0];
+  /*: elts (~lNames, thwd lElts) */ "#freeze";
+  return ret;
 };
 
-var getTitles = function () 
-/*: (this: Ref(~lBunch)) -> Ref(~lNames) */
-{
-  reject_global(this);
-  var a = /*: lA {Arr(Str)|(packed v)} */ [];
-  var b = this.___nodes___;
-  var i /*: { Int | (>= v 0)} */ = 0;
-
-  /*: b lNodes */ "#thaw";
-  b.l;
-
-  /*: ( &i:i0:{Int|(>= v 0)}, lA:{Arr(Str)|(and (packed v) (= (len v) i0))} > lArrPro,
-        &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
-      -> ( &i: sameType, lA: {Arr(Str)|(packed v)} > lArrPro, &b: sameType, lNodes: sameType) */ 
-  for (i = 0; i < b.length; i += 1) {
-    a[i] = b[i].title;
-  }
-  /*: b (~lNodes, thwd lNodes) */ "#freeze";
-  /*: a (~lNames, frzn) */ "#freeze";
-  return a;
-};
-
-//TODO
-var getValue = function () 
-/*: (this: Ref(~lBunch)) -> Top */
-{
+var getValue = function () /*: (this: Ref(~lBunch)) -> {?(Str)|TRU} */ {
 //  return this.getValues()[0];
+  var elts = this.getValues();
+  /*: elts lElts */ "#thaw";
+  var ret = elts[0];
+  /*: elts (~lValues, thwd lElts) */ "#freeze";
+  return ret;
 };
 
-var getValues = function () 
-/*: (this: Ref(~lBunch)) -> Ref(~lValues) */
-{
-  reject_global(this);
-  var a = /*: lA Arr(Str) */ [];
-  var b = this.___nodes___;
-  var i /*: { Int | (>= v 0)} */ = 0;
-  var node /*: Ref(~lNode) */ = null;
-
-  /*: b lNodes */ "#thaw";
-  b.l;
-  /*: ( &i:i0:{Int|(>= v 0)}, lA:Arr(Str)  > lArrPro,
-        &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
-      -> ( &i: sameType, lA: Arr(Str) > lArrPro, &b: sameType, lNodes: sameType) */ 
-  for (i = 0; i < b.length; i += 1) {
-    node = b[i];
-    if (node.nodeName === '#text') {
-      a[i] = node.nodeValue;
-    } else if (node.tagName && node.type !== 'password') {
-      a[i] = node.value;
-      if (!a[i] && node.firstChild &&
-          node.firstChild.nodeName === '#text') {
-            a[i] = node.firstChild.nodeValue;
-          }
-    }
-  }
-  /*: b (~lNodes, thwd lNodes) */ "#freeze";
-  /*: a (~lValues, frzn) */ "#freeze";
-  return a;
-};

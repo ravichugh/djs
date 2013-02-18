@@ -17,8 +17,7 @@ var blur = function () /*: (this: Ref(~lBunch)) -> Ref(~lBunch) */
       has_focus /*: Ref(~lNode) */ = null;
 
   /*: b lNodes */ "#thaw";
-  b.length;         //XXX: WHY??????
-
+  b.l;
   /*: (&b: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) | (packed v)} > lArrPro) -> sameType */
   for (i = 0; i < b.length; i += 1) {
     node = b[i];
@@ -118,7 +117,7 @@ var class_fun = function (value)
 //      error('ADsafe error.');
 //    }
     /*: b lNodes */ "#thaw";
-    b.length;        //XXX: WHY?????? 
+    b.l;
     /*: (&b: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) | (packed v)} > lArrPro) -> sameType */
     for (i = 0; i < b.length; i += 1) {
       node = b[i];

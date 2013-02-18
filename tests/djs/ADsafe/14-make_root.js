@@ -1,7 +1,8 @@
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
 
 var document  = /*: Ref(~lDocument) */ "#extern";
-var error         = /*: (message: Str)  / () -> Top / sameType */ "#extern";
+var error = /*: (message: Str)  -> { FLS } */ "#extern";
+
 var int_to_string = /*: (Int) -> Str */ "#extern";
 
 var star          /*: Bool */ = "#extern";
@@ -58,14 +59,15 @@ var make_root = function(root, id) /*: (root:Ref(~lNode) , id:Str) -> Top */
 //      (v :: (this: Ref(~lBunch), value: Ref) / (value: {} > lObjPro) -> Ref(~lBunch) / sameType) 
 //      ) } */ "#extern";
 //
-//  var class_fun =
+//  var class_ =
 //  /*: {(and
 //      (v :: (this: Ref(~lBunch), value: Ref(lArr)) / (lArr: { Arr(Str) | (packed v) }  > lArrPro) -> Ref(~lBunch) / sameType)
 //      (v :: (this: Ref(~lBunch), value: Str) -> Ref(~lBunch) ) 
 //      )} */ "#extern";
 //
 //
-//  var clone = /*: (this: Ref(~lBunch), deep:Bool, n: Num) -> Top */ "#extern";
+//  var clone = /*: (this: Ref(~lBunch), deep:Bool, n: {Int|(>= v 0)}) -> 
+//    {(ite (truthy n) (v::Ref(~lBunches)) (v::Ref(~lBunch)))} */ "#extern";
 //
 //  var count = /*: (this: Ref(~lBunch)) -> Int */ "#extern";
 //
@@ -138,6 +140,7 @@ var make_root = function(root, id) /*: (root:Ref(~lNode) , id:Str) -> Top */
 //  var replace = /*: {(and
 //        (v:: (this: Ref(~lBunch), replacement: Ref(lA)) / (lA: tyBunchArr) -> Top / sameExact )
 //        (v:: (this: Ref(~lBunch), replacement: Ref(lO)) / (lO: tyBunchObj) -> Top / sameExact )
+//        (v:: (this: Ref(~lBunch))-> Top )
 //    )} */ "#extern";
 //    
 //  var select = /*: (this: Ref(~lBunch)) -> Top */ "#extern";
@@ -173,7 +176,7 @@ Bunch.prototype.append = append;
 //TODO: Commenting rest of the functions to scale  
 //Bunch.prototype.blur = blur;
 //Bunch.prototype.check = check;
-//Bunch.prototype['class'] = class_fun;
+//Bunch.prototype['class'] = class_;
 //Bunch.prototype.clone = clone;
 //Bunch.prototype.count = count;
 //Bunch.prototype.each = each;
@@ -230,7 +233,7 @@ Bunch.prototype.remove = remove;
       dom /*: Ref(~lDom) */ = null,
 
       dom_event = function (e) 
-      /*: (e: Ref(~lEvent)) -> Top */
+      /*: (Ref(~lEvent)) -> Top */
       {
         var key /*: Str */ = "";
         var the_actual_event = e || event;
@@ -249,7 +252,7 @@ Bunch.prototype.remove = remove;
         // Use the PPK hack to make focus bubbly on IE.
         // When a widget has focus, it can use the focus method.
 
-//TODO: replace switch with if statement below
+//TODO: replaced switch with if statement below
 //        switch (type) {
 //          case 'mousedown':
 //            allow_focus = true;
@@ -293,7 +296,7 @@ Bunch.prototype.remove = remove;
 //            break;
 //        }
 
-//TODO: if statements slow it down        
+//TODO: if statements slow it down
 //        if (type == 'mousedown') {
 //          allow_focus = true;
 //          if (document.selection) {
@@ -344,47 +347,47 @@ Bunch.prototype.remove = remove;
         
         // if the target has event handlers, then fire them. otherwise, bubble up.
 
-        if (the_target['___ on ___'] &&
-//TODO            
-//            the_target['___ on ___'][the_event.type])  //PV: original code - not TCing 
-            the_target['___ on ___']["a"]) 
-        {
-          target.fire(the_event);
-        } 
-        else {
-          var brk /*: Bool */ = false;
-          for (;!brk;) {
-            the_target = the_target.parentNode;
-            if (!the_target) {
-              brk = true;             //PV: replaced break with this
-            }
-            else if (the_target['___ on ___'] &&
-//TODO                
-//                the_target['___ on ___'][the_event.type]) 
-                the_target['___ on ___']["a"]) 
-            {
-              var tt1 = /*: lTT Arr(Ref(~lNode)) */ [the_target];
-              /*: tt1 (~lNodes, frzn) */ "#freeze";
-              that = new Bunch(tt1);
-              /*: the_event lEvent */ "#thaw";
-              the_event.that = that;
-              that.fire(the_event);
-              /*: the_event (~lEvent, thwd lEvent) */ "#freeze";
-              brk = true;             //PV: replaced break with this
-            }
-            else if (the_target['___adsafe root___']) {
-              brk = true;             //PV: replaced break with this
-            }
-          }
-        };
-        if (the_event.type_ === 'escapekey') {
-          if (ephemeral) {
-            ephemeral.remove();
-          }
-          ephemeral = null;
-        }
-        that = the_target = the_event = the_actual_event = null;
-
+//        if (the_target['___ on ___'] &&
+////TODO            
+////            the_target['___ on ___'][the_event.type])  //PV: original code - not TCing 
+//            the_target['___ on ___']["a"]) 
+//        {
+//          target.fire(the_event);
+//        } 
+//        else {
+//          var brk /*: Bool */ = false;
+//          for (;!brk;) {
+//            the_target = the_target.parentNode;
+//            if (!the_target) {
+//              brk = true;             //PV: replaced break with this
+//            }
+//            else if (the_target['___ on ___'] &&
+////TODO                
+////                the_target['___ on ___'][the_event.type]) 
+//                the_target['___ on ___']["a"]) 
+//            {
+//              var tt1 = /*: lTT Arr(Ref(~lNode)) */ [the_target];
+//              /*: tt1 (~lNodes, frzn) */ "#freeze";
+//              that = new Bunch(tt1);
+//              /*: the_event lEvent */ "#thaw";
+//              the_event.that = that;
+//              that.fire(the_event);
+//              /*: the_event (~lEvent, thwd lEvent) */ "#freeze";
+//              brk = true;             //PV: replaced break with this
+//            }
+//            else if (the_target['___adsafe root___']) {
+//              brk = true;             //PV: replaced break with this
+//            }
+//          }
+//        };
+//        if (the_event.type_ === 'escapekey') {
+//          if (ephemeral) {
+//            ephemeral.remove();
+//          }
+//          ephemeral = null;
+//        }
+//        that = the_target = the_event = the_actual_event = null;
+//
         return;
       };
 
@@ -452,23 +455,23 @@ Bunch.prototype.remove = remove;
 //        };
 //
 //
-//      if (typeof root.addEventListener === 'function') {
-//        //    root.addEventListener('focus', dom_event, true);
-//        //    root.addEventListener('blur', dom_event, true);
-//        //    root.addEventListener('mouseover', dom_event, true);
-//        //    root.addEventListener('mouseout', dom_event, true);
-//        //    root.addEventListener('mouseup', dom_event, true);
-//        //    root.addEventListener('mousedown', dom_event, true);
-//        //    root.addEventListener('mousemove', dom_event, true);
-//        //    root.addEventListener('click', dom_event, true);
-//        //    root.addEventListener('dblclick', dom_event, true);
-//        //    root.addEventListener('keypress', dom_event, true);
-//      } else {
-//        //    root.onfocusin       = root.onfocusout  = root.onmouseout  =
-//        //      root.onmousedown = root.onmousemove = root.onmouseup   =
-//        //      root.onmouseover = root.onclick     = root.ondblclick  =
-//        //      root.onkeypress  = dom_event;
-//      }
-//      //TODO: treat dom and bunch as the same type ???  
-//      //  return [dom, Bunch.prototype];
+      if (typeof root.addEventListener === 'function') {
+//TODO: Need to fix function subtyping
+        // root.addEventListener('focus', dom_event, true);
+        // root.addEventListener('blur', dom_event, true);
+        // root.addEventListener('mouseover', dom_event, true);
+        // root.addEventListener('mouseout', dom_event, true);
+        // root.addEventListener('mouseup', dom_event, true);
+        // root.addEventListener('mousedown', dom_event, true);
+        // root.addEventListener('mousemove', dom_event, true);
+        // root.addEventListener('click', dom_event, true);
+        // root.addEventListener('dblclick', dom_event, true);
+        // root.addEventListener('keypress', dom_event, true);
+      } else {
+        // root.onfocusin       = root.onfocusout  = root.onmouseout  =
+        // root.onmousedown = root.onmousemove = root.onmouseup   =
+        // root.onmouseover = root.onclick     = root.ondblclick  =
+        // root.onkeypress  = dom_event;
+      }
+      return [dom, Bunch.prototype];
 };

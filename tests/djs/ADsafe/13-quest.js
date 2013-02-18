@@ -1,49 +1,44 @@
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
 
 var star   /*: Bool */         = "#extern";
-var name   /*: Str */          = "#extern";
+var name   /*: {(or (Str v) (= v null))} */ = "#extern";
 var result /*: Ref(~lNodes) */ = "#extern";
-var hunter = "#extern";
+
+//XXX: Not the exact inferred type for hunter
+var hunter = {
+               empty_  : function(n) /*: (Ref(~lNode)) -> Top */{ },
+               plus    : function(n) /*: (Ref(~lNode)) -> Top */{ },
+               greater : function(n) /*: (Ref(~lNode)) -> Top */{ },
+               pound   : function(n) /*: (Ref(~lNode)) -> Top */{ },
+               slash   : function(n) /*: (Ref(~lNode)) -> Top */{ },
+               star    : function(n) /*: (Ref(~lNode)) -> Top */{ }
+              };
 
 var quest = function(query, nodes) 
-  //XXX: Not the exact inferred type for hunter
-  /*: [;L;] (Ref(~lQuery), Ref(~lNodes)) /
-    ( &hunter: Ref(L), L: {
-        empty_  : (Ref(~lNode)) -> Top ,
-        plus    : (Ref(~lNode)) -> Top ,
-        greater : (Ref(~lNode)) -> Top ,
-        pound   : (Ref(~lNode)) -> Top ,
-        slash   : (Ref(~lNode)) -> Top ,
-        star    : (Ref(~lNode)) -> Top ,
-        _       : Bot
-      } > lObjPro)  
-    -> Ref(~lNodes) / sameType */ 
+  /*: (Ref(~lQuery), Ref(~lNodes)) -> Ref(~lNodes) */ 
 {
   var selector /*: Ref(~lSelector) */ = null; 
 
-//  var func /*: (Ref(~lNode)) -> Top */ = 
-//    function(node) /*: (Ref(~lNode)) -> Top */ { };
-
-//  var func;
+//  var func /*: (Ref(~lNode)) -> Top */ = function(node) /*: (Ref(~lNode)) -> Top */ { };
 
   var i /*: { Int | (>= v 0) } */ = 0,
       j /*: { Int | (>= v 0) } */ = 0;
 
   // Step through each selector.
 
-  //TRICK: does not TC without query.length and nodes.length
   /*: query lQuery */ "#thaw";
   query.length;
 
   /*: ( 
     &result: Ref(~lNodes), 
-    &query: Ref(lQuery), lQuery: {Arr(Ref(~lSelector))|(packed v)} > lArrPro, 
-    &name: Str
+    &query: Ref(lQuery), lQuery: {Arr(Ref(~lSelector))|(packed v)} > lArrPro
     ) -> sameType  */
   for (i = 0; i < query.length; i += 1) {
     selector = query[0];
-    var s = query[0];
-//    name = selector.name;
+
+    /*: selector lSelector */ "#thaw";
+    assert(/*: {(or (= v null) (Str v))} */ (selector.name));
+    name = selector.name;
     
     assert(/*:  {(or (= v "empty_") 
                         (= v "plus") 
@@ -51,17 +46,16 @@ var quest = function(query, nodes)
                         (= v "pound") 
                         (= v "slash") 
                         (= v "star"))} */ (selector.op));
+//TODO: arrow subtyping
     //func = hunter[selector.op];
     //assert(/*: (Ref(~lNode)) -> Top */ (hunter[selector.op]));
-    hunter[selector.op];
-    
-    
-    
+   
+    /*: selector (~lSelector, thwd lSelector) */ "#freeze";   
 
-//    // There are two kinds of selectors: hunters and peckers. If this is a hunter,
-//    // loop through the the nodes, passing each node to the hunter function.
-//    // Accumulate all the nodes it finds.
-//
+    // There are two kinds of selectors: hunters and peckers. If this is a hunter,
+    // loop through the the nodes, passing each node to the hunter function.
+    // Accumulate all the nodes it finds.
+
 //    if (typeof func === 'function') {
 //      if (star) {
 //        //TODO: expects query and nodes frozen
@@ -75,26 +69,26 @@ var quest = function(query, nodes)
 //      for (j = 0; j < nodes.length; j += 1) {
 //        func(nodes[j]);
 //      }
-//    } 
+//    }
 //    else {
 //
 //      // If this is a pecker, get its function. There is a special case for
 //      // the :first and :rest selectors because they are so simple.
 //
-//      //                    value = selector.value;
-//      //                    flipflop = false;
-//      //                    func = pecker[selector.op];
+//      value = selector.value;
+//      flipflop = false;
+//      func = pecker[selector.op];
 //      if (typeof func !== 'function') {
-//        //                        switch (selector.op) {
-//        //                        case ':first':
-//        //                            result = nodes.slice(0, 1);
-//        //                            break;
-//        //                        case ':rest':
-//        //                            result = nodes.slice(1, nodes.length);    //PV: added 2nd argument to slice
-//        //                            break;
-//        //                        default:
-//        //                            error('ADsafe: Query violation: :' + selector.op);
-//        //                        }
+//        switch (selector.op) {
+//          case ':first':
+//              result = nodes.slice(0, 1);
+//              break;
+//          case ':rest':
+//              result = nodes.slice(1, nodes.length);    //PV: added 2nd argument to slice
+//              break;
+//          default:
+//              error('ADsafe: Query violation: :' + selector.op);
+//        }
 //      } 
 //      else {
 //
