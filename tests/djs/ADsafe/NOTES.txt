@@ -45,7 +45,10 @@ From trying to typecheck the code:
   Had to change to:
   var foo /*: Ref(~lWeak) */ = null;
 
-- Model global window object?
+- arguments: Array-like object corresponding to the arguments passed to a
+  function.
+
+
 
 ====================================================
 PENDING

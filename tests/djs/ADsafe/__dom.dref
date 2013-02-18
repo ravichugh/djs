@@ -9,18 +9,18 @@ weak (~lOffsetWidths  : { Arr(Num)          | (packed v)} > lArrPro)
 weak (~lStyles        : Arr(Str)  > lArrPro)
 
 weak (~lEvent     : {
-  type_           : Str,
-  target          : Ref(~lNode),    (* could also be Ref(~lEventTarget) *)
-  cancelBubble    : Bool,
-  stopPropagation : (this: Ref(~lEvent))-> Top,
-  bubble          : (this: Ref(~lEvent))-> Top,
-  preventDefault  : (this: Ref(~lEvent)) -> Top,
-  srcElement      : Ref(~lNode),
-  key             : Str, 
   altKey          : Bool,
+  bubble          : (this: Ref(~lEvent))-> Top,
+  cancelBubble    : Bool,
   ctrlKey         : Bool,
+  key             : Str, 
+  preventDefault  : (this: Ref(~lEvent)) -> Top,
   shiftKey        : Bool,
+  srcElement      : Ref(~lNode),
+  stopPropagation : (this: Ref(~lEvent))-> Top,
+  target          : Ref(~lNode),    (* could also be Ref(~lEventTarget) *)
   that            : Ref(~lBunch),
+  type_           : Str,
   _               : Bot
 } > lObjPro)
 
@@ -64,56 +64,55 @@ weak (~lSelection: { createRange: () -> Ref(~lRange) }  > lObjPro)
 
 
 weak (~lNode: {
-    getComputedStyle     : (this: Ref(~lNode), node : Ref(~lNode), str  : Str) -> Ref(~lStyle),
-    currentStyle         : Ref(~lStyle),
-    style                : Ref(~lStyle),
-    firstChild           : Ref(~lNode),
-    nextSibling          : Ref(~lNode),
-    parentNode           : Ref(~lNode),
-    parent               : Ref(~lNode),
-    getParent            : (this: Ref(~lNode)) -> Ref(~lNode),
-    childNodes           : Ref(~lNodes),
-    change               : Ref(~lEvent),
     "___ on ___"         : Ref(~lEvent),
     "___adsafe root___"  : Str,
     "_adsafe mark_"      : Str,
-    tagName              : Str,
+    addEventListener     : (this: Ref(~lNode), Str, (Ref(~lEvent)) -> Top, Bool) -> Top,
+    appendChild          : (this: Ref(~lNode), Ref(~lNode)) -> Top,
+    autocomplete         : Str,
+    blur                 : (this: Ref(~lNode)) -> Top,
+    change               : Ref(~lEvent),
+    checked              : Bool,
+    childNodes           : Ref(~lNodes),
     className            : Str,
+    cloneNode            : (this: Ref(~lNode), deep:Bool) -> Ref(~lNode),
+    createTextRange      : () -> Ref(~lRange), 
+    currentStyle         : Ref(~lStyle),
+    disabled             : Bool,
+    fire                 : (NotUndef) -> Top,
+    firstChild           : Ref(~lNode),
+    focus                : () -> Top,   
+    getComputedStyle     : (this: Ref(~lNode), node : Ref(~lNode), str  : Str) -> Ref(~lStyle),
+    getElementsByTagName : [;L;] (this: Ref(~lNode), name : Str) / () -> Ref(L) / (L: {Arr(Ref(~lNode))|(packed v)} > lArrPro),
+    getParent            : (this: Ref(~lNode)) -> Ref(~lNode),
+    insertBefore         : (this: Ref(~lNode), Ref(~lNode), Ref(~lNode)) -> Top,
     name                 : Str,
+    nextSibling          : Ref(~lNode),
     nodeName             : Str,
     nodeValue            : Str,
-    value                : Str,     (*XXX: This might break stuff *)
-    title                : Str,
-    disabled             : Bool,
-    checked              : Bool,
     offsetHeight         : Num,
     offsetWidth          : Num,
-    selectionStart       : Int,
-    selectionEnd         : Int,
-    autocomplete         : Str,
-    fire                 : (NotUndef) -> Top,
-    blur                 : (this: Ref(~lNode)) -> Top,
-    cloneNode            : (this: Ref(~lNode), deep:Bool) -> Ref(~lNode),
+    parent               : Ref(~lNode),
+    parentNode           : Ref(~lNode),
     removeChild          : (this: Ref(~lNode), Ref(~lNode)) -> Top,
     removeElement        : (this: Ref(~lNode), Ref(~lNode)) -> Top,
-    appendChild          : (this: Ref(~lNode), Ref(~lNode)) -> Top,
     replaceChild         : (this: Ref(~lNode), Ref(~lNode), Ref(~lNode)) -> Top,
-    insertBefore         : (this: Ref(~lNode), Ref(~lNode), Ref(~lNode)) -> Top,
-    addEventListener     : (this: Ref(~lNode), Str, (Ref(~lEvent)) -> Top, Bool) -> Top,
-    focus                : () -> Top,   
     select               : (this: Ref(~lNode)) -> Top,   
-    createTextRange      : () -> Ref(~lRange), 
-    getElementsByTagName : [;L;] (this: Ref(~lNode), name : Str) / () -> 
-                              Ref(L) / (L: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
+    selectionEnd         : Int,
+    selectionStart       : Int,
+    style                : Ref(~lStyle),
+    tagName              : Str,
+    title                : Str,
+    value                : Str     (*XXX: This might break stuff *)
   } > lObjPro)
 
 weak (~lDocument   : {
-    defaultView    : Ref(~lNode),
-    selection      : Ref(~lSelection),
-    getElementById : (this: Top, s : Str) -> Ref(~lNode),
     createDocumentFragment : (this:Ref(~lDocument)) -> Ref(~lNode),
     createElement  : (this: Ref(~lDocument), s: Str) -> Ref(~lNode),
-    createTextNode : (this: Ref(~lDocument), s: Str) -> Ref(~lNode)
+    createTextNode : (this: Ref(~lDocument), s: Str) -> Ref(~lNode),
+    defaultView    : Ref(~lNode),
+    getElementById : (this: Ref(~lDocument), s : Str) -> Ref(~lNode),
+    selection      : Ref(~lSelection)
   } > lObjPro)
 
 weak (~lDom: { 
@@ -127,8 +126,10 @@ weak (~lDom: {
     remove: () -> Top,
     row: (Top) -> Ref(~lBunch),
     tag_: (tag_: Str, type_: Str, name: Str) -> Ref(~lBunch),
-    text:{( and 
-      (v:: (text: Str) / (lT: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType)
-      (v:: (text: Ref(lT)) / (lT: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType)
-    )}
+    text:{( and (v:: (text: Str) / (lT: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType) (v:: (text: Ref(lT)) / (lT: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType) )}
 }  > lObjPro) 
+
+weak (~lF: { _: Bot } > lFProto)
+
+weak (~lId: { } > lObjPro)
+weak (~lLib: { } > lObjPro)

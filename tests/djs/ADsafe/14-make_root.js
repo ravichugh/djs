@@ -17,7 +17,15 @@ var the_event /*: Ref(~lEvent) */ = "#extern";
 
 var ephemeral /*: {(or (= v null) (v:: Ref(~lBunch)))} */ = "#extern";
 
-var make_root = function(root, id) /*: (root:Ref(~lNode) , id:Str) -> Top */
+var make_root = function(root, id) 
+  /*: [;L;] (root:Ref(~lNode) , id:Str) / () -> 
+      Ref(L) / (L: {Arr(Top) | 
+                        (and 
+                           (packed v) 
+                           (= (len v) 2)
+                           ({(v::Ref(~lDom))} (sel v 0))
+                           ({(v::Ref(~lBunch))} (sel v 1))
+                        )} > lArrPro) */
 {
 //TODO: slow 
 //  if (id) {
@@ -388,7 +396,7 @@ Bunch.prototype.remove = remove;
 //        }
 //        that = the_target = the_event = the_actual_event = null;
 //
-        return;
+//        return;
       };
 
       // Mark the node as a root. This prevents event bubbling from propagating
@@ -473,5 +481,5 @@ Bunch.prototype.remove = remove;
         // root.onmouseover = root.onclick     = root.ondblclick  =
         // root.onkeypress  = dom_event;
       }
-      return [dom, Bunch.prototype];
+      return /*: L {Arr(Top)|(and  (packed v)  (= (len v) 2)  ({(v::Ref(~lDom))} (sel v 0))   ({(v::Ref(~lBunch))} (sel v 1))) } */ [dom, Bunch.prototype];
 };
