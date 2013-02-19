@@ -24,8 +24,10 @@ var make_root = function(root, id)
                            (packed v) 
                            (= (len v) 2)
                            ({(v::Ref(~lDom))} (sel v 0))
-                           ({(v::Ref(~lBunch))} (sel v 1))
+                           ({(v::Ref(lBunchProto))} (sel v 1))
                         )} > lArrPro) */
+  /* [;L;] (root:Ref(~lNode) , id:Str) ->  Top */
+
 {
 //TODO: slow 
 //  if (id) {
@@ -481,5 +483,9 @@ Bunch.prototype.remove = remove;
         // root.onmouseover = root.onclick     = root.ondblclick  =
         // root.onkeypress  = dom_event;
       }
-      return /*: L {Arr(Top)|(and  (packed v)  (= (len v) 2)  ({(v::Ref(~lDom))} (sel v 0))   ({(v::Ref(~lBunch))} (sel v 1))) } */ [dom, Bunch.prototype];
+
+
+
+      return /*: L {Arr(Top)|(and  (packed v)  (= (len v) 2)  ({(v::Ref(~lDom))} (sel v 0))   ({(v::Ref(lBunchProto))} (sel v 1))) } */ [dom, Bunch.prototype];
+//      return [dom, Bunch.prototype];
 };

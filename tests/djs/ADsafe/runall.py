@@ -54,7 +54,7 @@ parser.add_option(  "--stop",
                     help="give the number of the file to stop at")
 parser.add_option(  "-t", "--timeout",
                     dest="timeout", 
-                    default="1000000",
+                    default="0",
                     help="maximum number of seconds to verify")
 
 (options, args) = parser.parse_args()
@@ -89,13 +89,14 @@ def timeout_command(command, timeout):
   import subprocess, datetime, os, time, signal
   start = datetime.datetime.now()
   process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-  while process.poll() is None:
-    time.sleep(0.1)
-    now = datetime.datetime.now()
-    if (now - start).seconds> timeout:
-      os.kill(process.pid, signal.SIGKILL)
-      os.waitpid(-1, os.WNOHANG)
-      return None
+  if timeout > 0:
+    while process.poll() is None:
+      time.sleep(1)
+      now = datetime.datetime.now()
+      if (now - start).seconds> timeout:
+        os.kill(process.pid, signal.SIGKILL)
+        os.waitpid(-1, os.WNOHANG)
+        return None
   return process.stdout.read()
 
 file_range = range(int(options.file_start), int(options.file_stop))
@@ -105,12 +106,14 @@ reOK = re.compile(r'OK! (\d*)')
 reFail = re.compile(r'TC ERROR!')
 rePError = re.compile(r'PARSE ERROR!')
 tot_queries = 0
+tot_time = 0
 
 for i in file_range:
   f = files[i]
   start_time = time.time()
   output = timeout_command(com + [f], timeout)
   elapsed_time = float(time.time() - start_time)
+  tot_time = tot_time + elapsed_time
 
   if output:
     matchOK = reOK.search(output)
@@ -118,17 +121,17 @@ for i in file_range:
       groupOK = matchOK.group
       q = int(groupOK(1))
       tot_queries = tot_queries + q
-      print  "%30s (ET: %4.3f sec) " % (f, elapsed_time) + bcolors.OKGREEN + "OK! %s queries" % q + bcolors.ENDC
+      print  "%30s (ET: %7.3f sec) " % (f, elapsed_time) + bcolors.OKGREEN + "OK! %s queries" % q + bcolors.ENDC
     
     matchFail = reFail.search(output)
     if matchFail:
-      print "%30s (ET: %4.3f sec) " % (f, elapsed_time) + bcolors.FAIL + "TC Fail" + bcolors.ENDC
+      print "%30s (ET: %7.3f sec) " % (f, elapsed_time) + bcolors.FAIL + "TC Fail" + bcolors.ENDC
 
     matchPError = rePError.search(output)
     if matchPError:
-      print "%30s (ET: %4.3f sec) " % (f, elapsed_time) + bcolors.FAIL + "Parse Error" + bcolors.ENDC
+      print "%30s (ET: %7.3f sec) " % (f, elapsed_time) + bcolors.FAIL + "Parse Error" + bcolors.ENDC
   else:
-      print "%30s (ET: %4.3f sec) " % (f, elapsed_time) + bcolors.WARNING + "Timed out" + bcolors.ENDC
+      print "%30s (ET: %7.3f sec) " % (f, elapsed_time) + bcolors.WARNING + "Timed out" + bcolors.ENDC
 
 print "-------------------------------------------------------------"
-print  bcolors.OKGREEN + "Total queries: %d" % tot_queries + bcolors.ENDC
+print  bcolors.OKGREEN + "Total Time: %7.3f sec, Total queries: %d" % (tot_time, tot_queries) + bcolors.ENDC

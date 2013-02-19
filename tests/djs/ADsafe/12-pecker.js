@@ -43,8 +43,7 @@ var pecker = {
     {
       var member = node[name];
       return typeof member === 'string' && member !== value;
-    }
-  ,
+    },
     '[^=': function (node) 
       /*: (Ref(~lNode)) -> Bool */
     {
@@ -57,8 +56,7 @@ var pecker = {
       if (typeof member === 'string') 
         return member.slice(0, member.length) === value;
       return false;
-    }
-  ,
+    },
     '[$=': function (node)
       /*: (Ref(~lNode)) -> Bool */
     {

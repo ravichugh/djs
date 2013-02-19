@@ -7,6 +7,7 @@ weak (~lValues        : Arr(Str)  > lArrPro)
 weak (~lOffsetHeights : { Arr(Num)          | (packed v)} > lArrPro)
 weak (~lOffsetWidths  : { Arr(Num)          | (packed v)} > lArrPro)
 weak (~lKeys          : { Arr(Str)          | (packed v)} > lArrPro)
+weak (~lStyles        : Arr(Str) > lArrPro)
 
 weak (~lEvent     : {
   altKey          : Bool,

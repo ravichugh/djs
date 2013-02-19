@@ -21,7 +21,7 @@ var make_root =
                            (packed v) 
                            (= (len v) 2)
                            ({(v::Ref(~lDom))} (sel v 0))
-                           ({(v::Ref(~lBunch))} (sel v 1))
+                           ({(v::Ref(lBunchProto))} (sel v 1))
                         )} > lArrPro) */ "#extern";
 
 /*: tyInterceptor {Arr((Ref(~lId), Ref(~lDom), Ref(~lLib), Ref(~lBunch)) -> Top)|(and (packed v))} */ 
