@@ -1,6 +1,8 @@
 #! /usr/bin/env python
 import re
 import time
+from multiprocessing import Process, Pipe, Queue
+from Queue import Empty
 
 from optparse import OptionParser
 
@@ -83,24 +85,17 @@ class bcolors:
 
 
 
-def timeout_command(command, timeout):
-  """call shell-command and either return its output or kill it
-  if it doesn't normally exit within timeout seconds and return None"""
+def timeout_command(command, q):
   import subprocess, datetime, os, time, signal
-  start = datetime.datetime.now()
   process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-  if timeout > 0:
-    while process.poll() is None:
-      time.sleep(1)
-      now = datetime.datetime.now()
-      if (now - start).seconds> timeout:
-        os.kill(process.pid, signal.SIGKILL)
-        os.waitpid(-1, os.WNOHANG)
-        return None
+  q.put(process.stdout.read())
+
+def command(command):
+  import subprocess, datetime, os, time, signal
+  process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
   return process.stdout.read()
 
 file_range = range(int(options.file_start), int(options.file_stop))
-
 
 reOK = re.compile(r'OK! (\d*)')
 reFail = re.compile(r'TC ERROR!')
@@ -108,13 +103,9 @@ rePError = re.compile(r'PARSE ERROR!')
 tot_queries = 0
 tot_time = 0
 
-for i in file_range:
-  f = files[i]
-  start_time = time.time()
-  output = timeout_command(com + [f], timeout)
-  elapsed_time = float(time.time() - start_time)
-  tot_time = tot_time + elapsed_time
 
+def process(output, elapsed_time):
+  global tot_queries
   if output:
     matchOK = reOK.search(output)
     if matchOK:
@@ -131,7 +122,31 @@ for i in file_range:
     if matchPError:
       print "%30s (ET: %7.3f sec) " % (f, elapsed_time) + bcolors.FAIL + "Parse Error" + bcolors.ENDC
   else:
-      print "%30s (ET: %7.3f sec) " % (f, elapsed_time) + bcolors.WARNING + "Timed out" + bcolors.ENDC
+    print "%30s (ET: %7.3f sec) " % (f, elapsed_time) + bcolors.WARNING + "Timed out" + bcolors.ENDC
+
+
+for i in file_range:
+  f = files[i]
+  result_queue = Queue(1)
+  if timeout > 0:
+    p = Process(target=timeout_command, args=(com + [f], result_queue, ))
+    start_time = time.time()
+    p.start()
+    try:
+      output = result_queue.get(True, timeout)
+      p.terminate()
+      p.join()
+    except Empty:
+      p.terminate()
+      p.join()
+      output = None
+  else:
+    start_time = time.time()
+    output = command(com + [f])
+
+  elapsed_time = float(time.time() - start_time)
+  tot_time = tot_time + elapsed_time
+  process(output, elapsed_time)
 
 print "-------------------------------------------------------------"
 print  bcolors.OKGREEN + "Total Time: %7.3f sec, Total queries: %d" % (tot_time, tot_queries) + bcolors.ENDC
