@@ -125,7 +125,7 @@ and fooIter curFunc lexScope varScope es =
 let checkVars e =
   let init = List.fold_left
                (fun env x -> IdSet.add x env) IdSet.empty
-               ("assert" :: predefinedVars) in
+               ("assert" :: "assume" :: predefinedVars) in
   try ignore (foo "TOP_LEVEL" init IdSet.empty e)
   with NeedVarLifting(foo,x) ->
          Log.printParseErr (spr
@@ -709,6 +709,16 @@ let rec ds (env:env) = function
   | E.SeqExpr (_, E.HintExpr (_, s, E.ConstExpr (_, J.CString "#assume")), e) ->
       let t = desugarTypHint (spr "{%s}" s) env in
       EExtern (freshVar "djsAssume", t, ds env e)
+
+  (**  assume(e1); e2  **)
+  | E.SeqExpr (_, E.AppExpr (_, E.VarExpr (_, "assume"), es), e2) ->
+      let e1 =
+        match es with
+          | [e1] -> e1
+          | _    -> Log.printParseErr "assume() takes exactly one argument" in
+      let tmp = freshVar "tmp" in
+      let t = ty (eq (wVar tmp) (wBool true)) in
+      ELet (tmp, None, ds env e1, EExtern (freshVar "djsAssume", t, ds env e2))
 
   (**  var f = function (...) { ... }; e2                      **)
   (**    insert the hint "f" so that the type macro f is used  **)

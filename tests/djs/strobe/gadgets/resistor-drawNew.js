@@ -44,26 +44,26 @@ var drawNewColorBand = function(color) /*: ({Int|(and (>= v 0) (< v 16))}) -> To
     //    }
     //}
     if (currentBandIndex == 0) {
-  assert (/*: Str */ (buttonStrs[color]));
-//      firstBand.downImage = "stock_images\\Button" + buttonStrs[color] + "Down.PNG";
-//      firstBand.image = "stock_images\\Button" + buttonStrs[color] + "Normal.PNG";
-//      firstBand.overImage = "stock_images\\Button" + buttonStrs[color] + "Over.PNG";
+      // rkc: TODO speed up packed array access
+      firstBand.downImage = "stock_images\\Button" + buttonStrs[color] + "Down.PNG";
+      firstBand.image = "stock_images\\Button" + buttonStrs[color] + "Normal.PNG";
+      firstBand.overImage = "stock_images\\Button" + buttonStrs[color] + "Over.PNG";
     }
-//    else if (currentBandIndex == 1) {
-//      secondBand.downImage = "stock_images\\Button" + buttonStrs[color] + "Down.PNG";
-//      secondBand.image = "stock_images\\Button" + buttonStrs[color] + "Normal.PNG";
-//      secondBand.overImage = "stock_images\\Button" + buttonStrs[color] + "Over.PNG";
-//    }
-//    else if (currentBandIndex == 2) {
-//      thirdBand.downImage = "stock_images\\Button" + buttonStrs[color] + "Down.PNG";
-//      thirdBand.image = "stock_images\\Button" + buttonStrs[color] + "Normal.PNG";
-//      thirdBand.overImage = "stock_images\\Button" + buttonStrs[color] + "Over.PNG";
-//    }
-//    else if (currentBandIndex == 3) {
-//      fourthBand.downImage = "stock_images\\Button" + buttonStrs[color] + "Down.PNG";
-//      fourthBand.image = "stock_images\\Button" + buttonStrs[color] + "Normal.PNG";
-//      fourthBand.overImage = "stock_images\\Button" + buttonStrs[color] + "Over.PNG";
-//    }
+    else if (currentBandIndex == 1) {
+      secondBand.downImage = "stock_images\\Button" + buttonStrs[color] + "Down.PNG";
+      secondBand.image = "stock_images\\Button" + buttonStrs[color] + "Normal.PNG";
+      secondBand.overImage = "stock_images\\Button" + buttonStrs[color] + "Over.PNG";
+    }
+    else if (currentBandIndex == 2) {
+      thirdBand.downImage = "stock_images\\Button" + buttonStrs[color] + "Down.PNG";
+      thirdBand.image = "stock_images\\Button" + buttonStrs[color] + "Normal.PNG";
+      thirdBand.overImage = "stock_images\\Button" + buttonStrs[color] + "Over.PNG";
+    }
+    else if (currentBandIndex == 3) {
+      fourthBand.downImage = "stock_images\\Button" + buttonStrs[color] + "Down.PNG";
+      fourthBand.image = "stock_images\\Button" + buttonStrs[color] + "Normal.PNG";
+      fourthBand.overImage = "stock_images\\Button" + buttonStrs[color] + "Over.PNG";
+    }
 
     return;
 };

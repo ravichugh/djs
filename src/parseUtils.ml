@@ -30,12 +30,16 @@ let argSpecs = [
                "     eagerly flush to out/log.txt and stdout, helpful for debugging");
   ("-tryAllBoxes", Arg.Set S.tryAllBoxesHack,
                 "    try all boxes, in case typeTerms misses some");
+  ("-timeout", Arg.Int (fun i -> S.zzzTimeout := i),
+            "        <int> Z3 timeout in ms; 0 means none (default=0)");
   ("-doFalseChecks", Arg.Set S.doFalseChecks,
                   "  do false checks (de-optimization)");
   ("-noQuickTypes", Arg.Clear S.quickTypes,
                  "   do all subtyping with logical queries (de-optimization)");
   ("-booleanGuards", Arg.Set S.booleanGuards,
                   "  require boolean guards to conditionals");
+  ("-exactJoins", Arg.Set S.exactJoins,
+               "     compute exact joins even when a variable is annotated");
 ]
 
 

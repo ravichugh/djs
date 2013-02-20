@@ -1,7 +1,7 @@
 
 open Lang
 
-val emitPreamble : unit -> unit
+val init : unit -> unit
 
 val queryCount : int ref
 

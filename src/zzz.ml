@@ -7,15 +7,30 @@ open LangUtils
    newline after (push) *)
 let doingExtract = ref false
 
-let z3read, z3write =
-  (* let zin, zout = Unix.open_process "z3 -smt2 -in" in *)
-  (* let zin, zout = Unix.open_process "z3 -smtc SOFT_TIMEOUT=1000 -in" in *)
-  (* let zin, zout = Unix.open_process "z3 -smtc -in MBQI=false" in *)
-  let zin, zout = Unix.open_process "z3 -smt2 -in MBQI=false" in
-  let zlog      = open_out (Settings.out_dir ^ "queries.smt2") in
-  let reader () = input_line zin in
-  let writer s  = fpr zlog "%s" s; flush zlog; fpr zout "%s" s; flush zout in
-    (reader, writer)
+let z3read, z3write, initPipe =
+  let (ic, oc) = (ref None, ref None) in
+  let z3read () =
+    match !ic with
+      | Some(f) -> f ()
+      | None -> failwith "initPipe() wasn't called" in
+  let z3write s =
+    match !oc with
+      | Some(f) -> f s
+      | None -> failwith "initPipe() wasn't called" in
+  let initPipe () = (* thunk, since parsing sets mutable vars in Settings *)
+    let z3 =
+      "z3 -smt2 -in "
+        ^ spr "MBQI=%b " false
+        ^ spr "SOFT_TIMEOUT=%d " !Settings.zzzTimeout in
+    let zin, zout = Unix.open_process z3 in
+    let zlog      = open_out (Settings.out_dir ^ "queries.smt2") in
+    let reader () = input_line zin in
+    let writer s  = fpr zlog "%s" s; flush zlog; fpr zout "%s" s; flush zout in
+    ic := Some reader;
+    oc := Some writer;
+    ()
+  in
+  (z3read, z3write, initPipe)
 
 let emitPreamble () =
   let rec f ic =
@@ -30,6 +45,11 @@ let dump ?nl:(nl=true) ?tab:(tab=true) s =
   let pre = if tab then indent () else "" in
   let suf = if nl then "\n" else "" in
   z3write (spr "%s%s%s" pre s suf)
+
+let init () =
+  initPipe ();
+  emitPreamble ();
+  ()
 
 
 (***** Scoping ****************************************************************)
@@ -99,6 +119,7 @@ let checkSat cap =
       | "success" -> readSat ()
       | s         -> z3err (spr "Zzz.checkSat: read weird string [%s]" s)
   in
+  (* Log.log1 "query time %d : " !queryCount; *)
   let (time,(s,b)) = Utils.timeThunk (fun () ->
     (* always print \n after (check-sat), to make sure z3 reads from pipe *)
     dump ~tab:(not !doingExtract) ~nl:true "(check-sat)";
@@ -107,6 +128,7 @@ let checkSat cap =
     readSat ()
   ) in
   wallTime := !wallTime +. time;
+  (* Log.log2 "%.2f (%s)\n" time cap; *)
   (* Log.log3 "query time %d : %.2f (%s)\n" !queryCount time cap; *)
   dump (spr "; [%s] query %d (%s)" s !queryCount cap);
   b

@@ -18,6 +18,8 @@ let doFalseChecks = ref false
 let quickTypes = ref true
 let checkWfSynthesis = ref true
 let tryAllBoxesHack = ref false
+let exactJoins = ref false
+let zzzTimeout = ref 0
 
 (* DJS options *)
 let djsMode = ref false

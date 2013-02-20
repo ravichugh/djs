@@ -458,37 +458,6 @@ let pThen v =
 let pElse v =
   if !Settings.booleanGuards then pGuard v false else pFalsy (WVal v)
 
-(* TODO once i add existential locations, don't allow any locations to be
-   dropped *)
-(* TODO when joining values, would be nice to try to keep quick types
-   at top level *)
-let joinHeapEnvs v (hs1,cs1) (hs2,cs2) =
-  if hs1 <> hs2 then failwith "joinHeapEnvs: different heap variables";
-  let (l,cs) =
-    List.fold_left (fun (acc1,acc2) (loc,hc1) ->
-      match hc1, findCell loc ([],cs2) with
-        | HEWeak(ts1), Some(HEWeak(ts2)) when ts1 = ts2 ->
-            (acc1, (loc, HEWeak ts1) :: acc2)
-        | HEStrong(_,lo1,_), Some(HEStrong(_,lo2,_)) when lo1 <> lo2 ->
-            failwith "joinHeapEnvs: proto links differ"
-        | HEStrong(_,_,ci1), Some(HEStrong(_,_,ci2)) when ci1 <> ci2 ->
-            failwith (spr "joinHeapEnvs [%s]: different clo invariants \
-              for [%s]\n%s\n%s" (strVal v) (strLoc loc)
-                (strCloInv ci1) (strCloInv ci2));
-        | HEStrong(v1,lo1,ci1), Some(HEStrong(v2,_,_)) when v1 = v2 ->
-            (acc1, (loc, HEStrong (v1, lo1, ci1)) :: acc2)
-        | HEStrong(v1,lo1,ci1), Some(HEStrong(v2,_,_)) ->
-            let x = freshVar "join" in
-            let t = ty (pIte (pThen v)
-                             (eq theV (WVal v1))
-                             (eq theV (WVal v2))) in
-            ((x,t) :: acc1, (loc, HEStrong (vVar x, lo1, ci1)) :: acc2)
-        | _ ->
-            (acc1, acc2)
-    ) ([],[]) cs1
-  in
-  (l, (hs1,cs))
-
 let joinTypes v t1 t2 =
   let (l1,s1) = stripExists t1 in
   let (l2,s2) = stripExists t2 in
@@ -498,11 +467,9 @@ let joinTypes v t1 t2 =
   let p = pIte (pThen v) (applyTyp s1 (wVar x)) (applyTyp s2 (wVar x)) in
   (l1 @ l2, TRefinement(x,p))
 
-let joinWorlds v (t1,heap1) (t2,heap2) : prenextyp * heapenv =
-  let (l1,s) = joinTypes v t1 t2 in
-  let (l2,h) = joinHeapEnvs v heap1 heap2 in
-  (mkExists (l1 @ l2) (Typ s), h)
-
+(* 2/19/13: joinWorlds and joinHeapEnvs are now part of the recursively-defined
+   type checking functions, because the inexactJoin case needs to check the
+   final heap value on each branch. *)
 (*
 let joinWorlds v w1 w2 =
   let w = joinWorlds v w1 w2 in
@@ -1359,7 +1326,7 @@ and tsExp_ g h = function
         Zzz.inNewScope (fun () -> Zzz.assertFormula (pThen v); tsExp g h e1) in
       let (s2,h2) =
         Zzz.inNewScope (fun () -> Zzz.assertFormula (pElse v); tsExp g h e2) in
-      joinWorlds v (s1,h1) (s2,h2)
+      joinWorlds g v (s1,h1) (s2,h2)
     end
 
   | EExtern(x,s,e) -> begin
@@ -1857,8 +1824,11 @@ and tsAppQuick g h (poly,vFun,vArg) = match (poly,vFun,vArg) with
       let (v1,v2) = twoVals cap vs in
       match tsVal g h v1 with
         | TQuick(_,QBase(qb),_) ->
+(* TODO 2/19/13
             if checkInconsistent "quickWrapperBaseOps" then Some (Typ tyAny, h)
             else quickWrapperBaseOps g h qb v2
+*)
+            quickWrapperBaseOps g h qb v2
         | t1 -> begin
             match maybeGetNextMaybeRef g t1 with
               (* TODO pass l to avoid re-computing *)
@@ -1944,6 +1914,68 @@ and tsAppQuickTry g h fs vArg =
     | f::l -> (match tsAppQuick g h (([],[],[]), vVar f, vArg) with
                  | Some(s,h) -> Some (s, h)
                  | None      -> tsAppQuickTry g h l vArg)
+
+
+(***** Join for TS-If *********************************************************)
+
+and joinWorlds g v (t1,heap1) (t2,heap2) : prenextyp * heapenv =
+  let (l1,s) = joinTypes v t1 t2 in
+  let (l2,h) = joinHeapEnvs (g, fst (stripExists t1), fst (stripExists t2))
+                 v heap1 heap2 in
+  (mkExists (l1 @ l2) (Typ s), h)
+
+(* TODO once i add existential locations, don't allow any locations to be
+   dropped *)
+(* to check the inexactJoin case, passing in the type environment as
+   well as the existential binders for the types of the final values on
+   each branch, because these have existential bindings that may be referred
+   to by heap envs.
+*)
+and joinHeapEnvs (g,l1,l2) v (hs1,cs1) (hs2,cs2) =
+  if hs1 <> hs2 then failwith "joinHeapEnvs: different heap variables";
+  let (l,cs) =
+    List.fold_left (fun (acc1,acc2) (loc,hc1) ->
+      match hc1, findCell loc ([],cs2) with
+        | HEWeak(ts1), Some(HEWeak(ts2)) when ts1 = ts2 ->
+            (acc1, (loc, HEWeak ts1) :: acc2)
+        | HEStrong(_,lo1,_), Some(HEStrong(_,lo2,_)) when lo1 <> lo2 ->
+            failwith "joinHeapEnvs: proto links differ"
+        | HEStrong(_,_,ci1), Some(HEStrong(_,_,ci2)) when ci1 <> ci2 ->
+            failwith (spr "joinHeapEnvs [%s]: different clo invariants \
+              for [%s]\n%s\n%s" (strVal v) (strLoc loc)
+                (strCloInv ci1) (strCloInv ci2));
+        | HEStrong(v1,lo1,ci1), Some(HEStrong(v2,_,_)) when v1 = v2 ->
+            (acc1, (loc, HEStrong (v1, lo1, ci1)) :: acc2)
+        | HEStrong(v1,lo1,Some(t)), Some(HEStrong(v2,_,_))
+              when !Settings.exactJoins = false -> begin
+            (* 2/19/13: for each branch, need to assert the direction of the
+               guard and also slap all the existential binders onto the type
+               of the value being checked. would be much nicer to just tcVal
+               each heap val within the TS-If rule itself, to avoid doing
+               duplicate work, but would require some non-local changes
+               right now... *)
+            Zzz.inNewScope (fun () ->
+              Zzz.assertFormula (pThen v);
+              let tv1 = mkExists l1 (Typ (ty (eq theV (WVal v1)))) in
+              Sub.types (spr "joinHeapEnv %s" (strLoc loc)) g tv1 t
+            );
+            Zzz.inNewScope (fun () ->
+              Zzz.assertFormula (pElse v);
+              let tv2 = mkExists l2 (Typ (ty (eq theV (WVal v2)))) in
+              Sub.types (spr "joinHeapEnv %s" (strLoc loc)) g tv2 t
+            );
+            let x = freshVar "inexactJoin" in
+            ((x,t) :: acc1, (loc, HEStrong (vVar x, lo1, Some t)) :: acc2)
+          end
+        | HEStrong(v1,lo1,ci1), Some(HEStrong(v2,_,_)) ->
+            let x = freshVar "join" in
+            let t = ty (pIte (pThen v) (eq theV (WVal v1)) (eq theV (WVal v2))) in
+            ((x,t) :: acc1, (loc, HEStrong (vVar x, lo1, ci1)) :: acc2)
+        | _ ->
+            (acc1, acc2)
+    ) ([],[]) cs1
+  in
+  (l, (hs1,cs))
 
 
 (***** Entry point ************************************************************)

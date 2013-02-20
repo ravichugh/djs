@@ -154,7 +154,7 @@ let _ =
     pr "\n%s\n" (Utils.greenString "PARSE SUCCEEDED");
     exit 0
   end;
-  Zzz.emitPreamble ();
+  Zzz.init ();
   TcDref3.typecheck e;
   let oc = open_out (S.out_dir ^ "stats.txt") in
   BNstats.print oc "";
