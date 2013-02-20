@@ -1,6 +1,7 @@
-var foo = function(s, h) 
-  /*: (s:Str, h: Ref)
-    / (h: {Dict|(and (dom v {"f"})
+var h = { f: function() /*: () -> Top */ {} };
+
+var foo = function(s) 
+  /*: (s:Str) / (&h: Ref(lH), lH: {Dict|(and (dom v {"f"})
                      ((sel v "f") :: () / (lObjPro: {_ : Bot} > lROOT) -> Top / sameType)
                      (= (tag (sel v "f")) "function"))} > lObjPro,
        lObjPro: {_:Bot} > lROOT)
@@ -10,10 +11,11 @@ var foo = function(s, h)
 
   if (typeof func  === 'function') {
     assert (s == "f");
-    assert(/*: {(= (tag v) "function")}  */  (func));
-    assert(/*: () -> Top  */  (func));
-
-    func();
+//    assert(/*: {(= (tag v) "function")}  */  (func));
+//    assert(/*: () -> Top  */  (func));
+//
+//    func();
   }
 
 };
+
