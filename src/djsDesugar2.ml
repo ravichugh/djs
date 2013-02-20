@@ -14,7 +14,8 @@ module StrSet = Utils.StrSet
 
 
 (* these should match the ones in js_natives.dref *)
-let predefinedVars = ["undefined"; "Infinity"; "NaN"; "isArray"]
+let predefinedVars =
+  ["undefined"; "Infinity"; "NaN"; "isArray"; "hasOwnProperty"]
   (* TODO read these in directly from primitive files*)
   @ if not !Settings.bxMode then [] else
       [

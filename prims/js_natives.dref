@@ -14,18 +14,19 @@ val ____ObjPro :: Ref(lObjPro)
 val ____ArrPro :: Ref(lArrPro)
 val ____FunPro :: Ref(lFunPro)
 
-(* the Object.prototype dictionary *)
-val theObjPro :: { Dict | (and (dom v {"hasOwnProperty"})
-  ((sel v "hasOwnProperty") ::
-        (this:Ref, kk:Str) / (this: dd:Dict > this.pro)
+val __hasOwnProperty :: {(and
+  (v :: (this:Ref, kk:Str) / (this: dd:Dict > this.pro)
      -> {Bool|(iff (= v true) (has dd {kk}))} / same)
-  ((sel v "hasOwnProperty") ::
-        [A] (this:Ref, kk:Str) / (this: Arr(A) > this.pro)
+  (v :: [A] (this:Ref, kk:Str) / (this: Arr(A) > this.pro)
      -> {Bool|(iff (= v true) (= kk "length"))} / same)
-  ((sel v "hasOwnProperty") ::
-        [A] (this:Ref, i:Int) / (this: aa:Arr(A) > this.pro)
+  (v :: [A] (this:Ref, i:Int) / (this: aa:Arr(A) > this.pro)
      -> {Bool|(implies (and (packed aa) (>= i 0))
                        (iff (= v true) (< i (len aa))))} / same)
+)}
+
+(* the Object.prototype dictionary *)
+val theObjPro :: { Dict | (and (dom v {"hasOwnProperty"})
+  (= (sel v "hasOwnProperty") __hasOwnProperty)
 )}
 
 (* the Array.prototype dictionary *)
