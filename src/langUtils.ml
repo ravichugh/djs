@@ -862,6 +862,12 @@ and strForm = function
       else
         let i = registerBox u in
         spr "(and (hastyp %s %d) (not (hastyp %s %d)))" (strWal w) i sUndef i
+  (* 2/21/13: similar to previous cases *)
+  | PHasTyp(w,(UArrow _ as u)) ->
+      let sFun = strForm (eq (tag w) (wStr tagFun)) in
+      if !pretty
+        then spr "(and (%s :: %s) %s)" (strWal w) (strTT u) sFun
+        else spr "(and (hastyp %s %d) %s)" (strWal w) (registerBox u) sFun
   (* TODO make the call to registerBox somewhere more appropriate. *)
   | PHasTyp(w,u) ->
       if !pretty
