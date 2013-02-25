@@ -1,3 +1,5 @@
+
+var error = /*: {( and (v::(Str) -> { FLS }) (v:: () -> { FLS }))} */ "#extern";
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
 
 /*: tyArr {Arr(Ref(~lNode))|(packed v)} > lArrPro */ "#define";
@@ -50,8 +52,9 @@ var enable = function (enable)
     /*: b lNodes */ "#thaw";
     if (enable.length !== b.length) {
 //TODO      
-//      error('ADsafe: Array length: ' + b.length + '-' +
-//          enable.length);
+      error('ADsafe: Array length: ... ' );
+      //error('ADsafe: Array length: ' + b.length + '-' +
+      //    enable.length);
     }
     /*: (&b: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) | (packed v)} > lArrPro) -> sameType */
     for (i = 0; i < b.length; i += 1) {

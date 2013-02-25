@@ -19,7 +19,7 @@ files = [
  ("07-getStyleObject.js", 0),
  ("08-walkTheDOM.js", 0),
  ("09-purge_event_handlers.js", 0),
- ("10-parse_query.js", 10),
+ ("10-parse_query.js", 100),
  ("11-hunter.js", 0),
  ("12-pecker.js", 0),
  ("13-quest.js", 0),
@@ -28,7 +28,7 @@ files = [
  ("16-blur-check-class.js", 0),
  ("17-clone-empty.js", 0),
  ("18-enable-ephemeral-explode.js", 0),
- ("19-fire.js", 1),
+ ("19-fire.js", 0),
  ("20-focus-fragment.js", 500),
  ("21-get.js", 0),
  ("22-klass-mark-off-on.js", 0),
@@ -60,6 +60,9 @@ parser.add_option(  "-t", "--timeout",
                     dest="timeout", 
                     default="0",
                     help="maximum number of seconds to verify")
+parser.add_option("--no-color",
+                  action="store_false", dest="color", default=True,
+                  help="don't print color messages to stdout")
 
 (options, args) = parser.parse_args()
 
@@ -74,6 +77,7 @@ class bcolors:
   OKGREEN = '\033[32m'
   WARNING = '\033[33m'
   FAIL = '\033[31m'
+  BOLD = '\033[1m'
   ENDC = '\033[0m'
 
   def disable(self):
@@ -84,6 +88,10 @@ class bcolors:
     self.FAIL = ''
     self.ENDC = ''
 
+
+bc = bcolors()
+if not options.color:
+  bcolors.disable(bc)
 
 
 
@@ -104,33 +112,42 @@ reFail = re.compile(r'TC ERROR!')
 rePError = re.compile(r'PARSE ERROR!')
 reFError = re.compile(r'Fatal error')
 tot_queries = 0
+tot_todos = 0
 tot_time = 0
 
 
+def todoStr(todo):
+  global tot_todos
+  tot_todos = tot_todos + todo
+  if todo > 0:
+    return bc.WARNING + "#TODOS: %2d" % todo + bcolors.ENDC
+  else:
+    return "#TODOS: %2d" % todo
+
 def process(fname, output, elapsed_time):
   global tot_queries
-  todos = string.count(open(fname).read(), "var")
+  todos = string.count(open(fname).read(), "TODO")
   if output:
     matchOK = reOK.search(output)
     if matchOK:
       groupOK = matchOK.group
       q = int(groupOK(1))
       tot_queries = tot_queries + q
-      print  "%30s (ET: %7.3f sec, #TODOS: %2d) " % (f, elapsed_time, todos) + bcolors.OKGREEN + "OK! %s queries" % q + bcolors.ENDC
+      print  "%30s (ET: %7.3f sec, %s) " % (f, elapsed_time, todoStr(todos)) + bc.OKGREEN + "OK! %s queries" % q + bc.ENDC
     
     matchFail = reFail.search(output)
     if matchFail:
-      print "%30s (ET: %7.3f sec, #TODOS: %2d) " % (f, elapsed_time, todos) + bcolors.FAIL + "TC Fail" + bcolors.ENDC
+      print "%30s (ET: %7.3f sec, %s) " % (f, elapsed_time, todoStr(todos)) + bc.FAIL + "TC Fail" + bcolors.ENDC
 
     matchPError = rePError.search(output)
     if matchPError:
-      print "%30s (ET: %7.3f sec, #TODOS: %2d) " % (f, elapsed_time, todos) + bcolors.FAIL + "Parse Error" + bcolors.ENDC
+      print "%30s (ET: %7.3f sec, %s) " % (f, elapsed_time, todoStr(todos)) + bc.FAIL + "Parse Error" + bcolors.ENDC
     
     matchFError = reFError.search(output)
     if matchFError:
-      print "%30s (ET: %7.3f sec, #TODOS: %2d) " % (f, elapsed_time, todos) + bcolors.FAIL + "Fatal Error" + bcolors.ENDC
+      print "%30s (ET: %7.3f sec, %s) " % (f, elapsed_time, todoStr(todos)) + bc.FAIL + "Fatal Error" + bcolors.ENDC
   else:
-    print "%30s (ET: %7.3f sec, #TODOS: %2d) " % (f, elapsed_time, todos) + bcolors.WARNING + "Timed out" + bcolors.ENDC
+    print "%30s (ET: %7.3f sec, %s) " % (f, elapsed_time, todoStr(todos)) + bc.WARNING + "Timed out" + bcolors.ENDC
 
 
 for i in file_range:
@@ -157,4 +174,6 @@ for i in file_range:
   process(f, output, elapsed_time)
 
 print "-------------------------------------------------------------"
-print  bcolors.OKGREEN + "Total Time: %7.3f sec, Total queries: %d" % (tot_time, tot_queries) + bcolors.ENDC
+print bc.BOLD + "Total Time    : %.3f sec" % tot_time + bcolors.ENDC
+print bc.BOLD + "Total queries : %d" % tot_queries + bcolors.ENDC
+print bc.BOLD + "Total todos   : %d" % tot_todos + bcolors.ENDC

@@ -12,38 +12,38 @@ var banned = /*: lBanned */ {
     };
 
 
-var reject_name = /*: (name1: Str) -> { (implies  (falsy v)
+var reject_name = /*: (name_: Str) -> { (implies  (falsy v)
                           (and 
-                             (not (= name1 "arguments"))
-                             (not (= name1 "callee"))
-                             (not (= name1 "caller"))
-                             (not (= name1 "constructor"))
-                             (not (= name1 "prototype"))
-                             (not (= name1 "stack"))
-                             (not (= name1 "eval"))
-                             (not (= name1 "unwatch"))
-                             (not (= name1 "valueOf"))
-                             (not (= name1 "watch"))
+                             (not (= name_ "arguments"))
+                             (not (= name_ "callee"))
+                             (not (= name_ "caller"))
+                             (not (= name_ "constructor"))
+                             (not (= name_ "prototype"))
+                             (not (= name_ "stack"))
+                             (not (= name_ "eval"))
+                             (not (= name_ "unwatch"))
+                             (not (= name_ "valueOf"))
+                             (not (= name_ "watch"))
                              )) }  */ "#extern";
 
 
-var reject_property = function(object, name1) 
-  /*: (object: Top, name1: Str) -> 
+var reject_property = function(object, name_) 
+  /*: (object: Top, name_: Str) -> 
      { (implies  (falsy v)
      (and 
-       (not (= name1 "arguments"))
-       (not (= name1 "callee"))
-       (not (= name1 "caller"))
-       (not (= name1 "constructor"))
-       (not (= name1 "prototype"))
-       (not (= name1 "stack"))
-       (not (= name1 "eval"))
-       (not (= name1 "unwatch"))
-       (not (= name1 "valueOf"))
-       (not (= name1 "watch"))
+       (not (= name_ "arguments"))
+       (not (= name_ "callee"))
+       (not (= name_ "caller"))
+       (not (= name_ "constructor"))
+       (not (= name_ "prototype"))
+       (not (= name_ "stack"))
+       (not (= name_ "eval"))
+       (not (= name_ "unwatch"))
+       (not (= name_ "valueOf"))
+       (not (= name_ "watch"))
      )) } */
-  /* (object: Top, name1: Str) / (lBanned:Dict > lObjPro) -> Top / sameExact */
+  /* (object: Top, name_: Str) / (lBanned:Dict > lObjPro) -> Top / sameExact */
 {
-  return typeof object !== 'object' || reject_name(name1);
+  return typeof object !== 'object' || reject_name(name_);
 };
 

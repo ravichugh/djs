@@ -3,14 +3,31 @@ weak (~lChecked       : { Arr(Bool)         | (packed v)} > lArrPro)
 weak (~lClassNames    : { Arr(Str)          | (packed v)} > lArrPro)
 weak (~lADsafeMarks   : { Arr(Str)          | (packed v)} > lArrPro)
 weak (~lNames         : { Arr(Str)          | (packed v)} > lArrPro)
+weak (~lPackedValues  : { Arr(Str)          | (packed v)} > lArrPro)
 weak (~lValues        : Arr(Str)  > lArrPro)
 weak (~lOffsetHeights : { Arr(Num)          | (packed v)} > lArrPro)
 weak (~lOffsetWidths  : { Arr(Num)          | (packed v)} > lArrPro)
 weak (~lKeys          : { Arr(Str)          | (packed v)} > lArrPro)
 weak (~lStyles        : Arr(Str) > lArrPro)
 
-weak (~lEvent     : {
-  altKey          : Bool,
+weak (~lEvent     : { Dict | 
+  (and 
+    (implies (has v "altKey") (Bool (sel v "altKey")))
+    (implies (has v "bubble") (Bool (sel v "bubble")))
+    (* Needed to keep this type for the functions cause they are also objects *)
+    (implies (has v "cancelBubble")  ({(and (v:: (Ref(~lEvent)) -> Top) (= (tag v) "function"))} (sel v "cancelBubble")))
+    (implies (has v "ctrlKey") (Bool (sel v "ctrlKey")))
+    (implies (has v "key") (Bool (sel v "key")))
+    (implies (has v "preventDefault") (Str (sel v "preventDefault")))
+    (implies (has v "shiftKey")  ({(or (v:: (Ref(~lEvent)) -> Top) (v::Null))} (sel v "shiftKey")))
+    (implies (has v "srcElement") (Bool (sel v "srcElement")))
+    (implies (has v "stopPropagation")  ({(and (v::Ref(~lNode)) (= (tag v) "function"))} (sel v "stopPropagation")))
+    (implies (has v "target")  ({(and (v:: (Ref(~lEvent)) -> Top) (= (tag v) "function"))} (sel v "target")))
+    (implies (has v "that")  ({(or (v::Ref(~lNode)) (v::Null))} (sel v "that")))
+    (implies (has v "type_")  ({(or (v::Ref(~lBunch)) (v::Null))} (sel v "type_")))
+  )} > lObjPro)
+
+(*  altKey          : Bool,
   bubble          : (this: Ref(~lEvent))-> Top,
   cancelBubble    : Bool,
   ctrlKey         : Bool,
@@ -22,23 +39,28 @@ weak (~lEvent     : {
   target          : Ref(~lNode),    (* could also be Ref(~lEventTarget) *)
   that            : Ref(~lBunch),
   type_           : Str,
-  _               : Bot
-} > lObjPro)
+  _               : Bot                         
+} > lObjPro)*)
 
 weak (~lEventTarget: { } > lObjPro)
 
 weak (~lSelector : { Dict |
-  (*op             : Str*)
   (and 
+    (has v "op") (Str (sel v "op"))
+  (* Don't need this. In function quest. If the field of hunter is a function
+    * this should imply that we have one of the following cases. But this won't
+    * work for the population of selectors at parse_query. *)
+  (*(and 
     (has v "op") ({(or  (= v "empty_") 
-                        (= v "plus") 
+                        (= v "plus")
                         (= v "greater") 
                         (= v "pound") 
                         (= v "slash") 
                         (= v "star"))
-                  } (sel v "op"))
-    (implies (has v "name") (Str (sel v "name"))))
-} > lObjPro)
+                  } (sel v "op") )*)
+    (implies (has v "name") (Str (sel v "name"  )))
+    (implies (has v "value") (Str (sel v "value")))
+  )} > lObjPro)
  
 weak (~lRange : {
   text: Str,
@@ -93,6 +115,7 @@ weak (~lNode: {
     nodeValue            : Str,
     offsetHeight         : Num,
     offsetWidth          : Num,
+    onchange             : (this:Ref(~lEvent), Ref(~lEvent)) -> Top,
     parent               : Ref(~lNode),
     parentNode           : Ref(~lNode),
     removeChild          : (this: Ref(~lNode), Ref(~lNode)) -> Top,
@@ -131,6 +154,7 @@ weak (~lDom: {
 }  > lObjPro) 
 
 weak (~lF: { _: Bot } > lFProto)
+
 
 weak (~lId: { } > lObjPro)
 weak (~lLib: { } > lObjPro)

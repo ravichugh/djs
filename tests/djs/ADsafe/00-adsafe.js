@@ -216,9 +216,9 @@ var reject_name = /*: (name: Str) / (lBanned:Dict > lObjPro) -> Top / sameExact 
 var reject_property = 
 /*: (object: Top, name1: Str) / (lBanned:Dict > lObjPro) -> Top / sameExact */ "#extern";
 
-//TODO: TC reject_global
-//var reject_global(that) = /*: ... */ "#extern";
-
+var reject_global =
+/*: [;L1,L2;] (that: Ref(L1)) / (L1:d:Dict > L2, ~lBunch: thwd lBunch) 
+    -> {(implies (truthy (objsel d "window" cur L2)) FLS)} / sameExact */ "#extern";
 
 var getStyleObject = /*: (node: Ref(~lNode)) -> Ref(~lStyle) */ "#extern";
 

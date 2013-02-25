@@ -1,3 +1,5 @@
+var error = /*: {( and (v::(Str) -> { FLS }) (v:: () -> { FLS }))} */ "#extern";
+
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
 
 /*: tyArr {Arr(Ref(~lNode))|(packed v)} > lArrPro */ "#define";
@@ -34,7 +36,6 @@ var reject_global =
   } > lObjPro */ "#define";
 
 
-var error = /*: (message: Str)  -> {FLS}  */ "#extern";
 var star    /*: Bool */         = "#extern";
 var purge_event_handlers = /*: (node: Ref(~lNode)) -> Top */ "#extern";
 var int_to_string /*: (Int) -> Str */ = "#extern";
@@ -148,7 +149,7 @@ var each = function (func)
     }
     return this;
   }
-  error("default");
+  error();
 };
 
 var value = /*: lArr { Arr(Str) | (packed v)} */ [];
