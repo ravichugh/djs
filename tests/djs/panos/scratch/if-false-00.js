@@ -1,5 +1,5 @@
-/*: (~lO:  { } > lObjPro) */ "#weak";
 /*: (~lS:  Arr(Ref(~lO)) > lArrPro) */ "#weak";
+/*: (~lO:  { } > lObjPro) */ "#weak";
 
 var bar = function (b)
 /*: (b: Ref(~lS)) ->Top */

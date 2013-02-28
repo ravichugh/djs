@@ -1,36 +1,13 @@
 var error = /*: {( and (v::(Str) -> { FLS }) (v:: () -> { FLS }))} */ "#extern";
-
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
-
-/*: tyEvent {
-  type_           : Str,
-  target          : Ref(~lNode),
-  cancelBubble    : Bool,
-  stopPropagation : (this: Ref(~lEvent))-> Top,
-  bubble          : (this: Ref(~lEvent))-> Top,
-  preventDefault  : (this: Ref(~lEvent)) -> Top,
-  srcElement      : Ref(~lNode),
-  key             : Str, 
-  altKey          : Bool,
-  ctrlKey         : Bool,
-  shiftKey        : Bool,
-  that            : Ref(~lBunch),
-  _               : Bot
-} */ "#define";
-
-
-//var owns = 
-///*: (object: Ref, string: Str) / (object: d: tyEvent > lObjPro) -> 
-//    {Bool|(implies (= v true) (has d {string}))} / sameType */ "#extern";
 
 var owns = 
 /*: (object: Ref, string: Str) / (object: Dict > lObjPro) -> Bool / sameType */ "#extern";
 
-var reject_global = /*: {(and
-      (v:: [;L1,L2;] (that: Ref(L1)) / (L1: d: Dict > L2) -> 
-          { (implies (truthy (objsel d "window" cur L2)) FLS) } / sameExact)
-      (v:: (that: Ref(~lBunch)) ->  Top)
-    )} */ "#extern";
+
+var reject_global = 
+/*: [;L1,L2;] (that: Ref(L1)) / (L1:d:Dict > L2, ~lBunch: thwd lBunch) 
+    -> {(implies (truthy (objsel d "window" cur L2)) FLS)} / sameExact */ "#extern";
 
 
 // -----------------------------------------------------------------------------------
@@ -38,8 +15,8 @@ var reject_global = /*: {(and
 
 var fire = function (event) 
 /*: {(and
-    (v :: (this: Ref(~lBunch), event: Str) -> Ref(~lBunch))
-    (v :: (this: Ref(~lBunch), event: Ref(~lEvent)) -> Ref(~lBunch))
+    (v :: (this: Ref(~lBunch), event: {Str|(= v "__farray__")}) -> Ref(~lBunch)) 
+(*    (v :: (this: Ref(~lBunch), event: {(and (= (tag v) "object") (v::Ref(~lEvent)))}) -> Ref(~lBunch))  *)
     )} */
 
 {
@@ -49,7 +26,10 @@ var fire = function (event)
   // name of the event. Handlers registered by the 'on'
   // method that match the event name will be invoked.
 
+  /*: this lBunch */ "#thaw";
+  assume(this != null);
   reject_global(this);
+  /*: this (~lBunch, thwd lBunch) */ "#freeze";
   var array,
       b,      
       i /*: { Int | (>= v 0)} */ = 0,
@@ -57,34 +37,39 @@ var fire = function (event)
       n,
       node /*: Ref(~lNode) */ = null,
       on /*: Ref(~lEvent) */ = null,
-      type /*: Str */ = "";
+      type /*: {(or (Str v) (= v undefined ))} */ = "";
+
+//  assert(/*: {(implies (Str v) (= v "__farray__"))} */ (event));
 
   if (typeof event === 'string') {
-//    assert(/*: Str */ (event));
-//    type = event;
-//    event = {type_: type};
+    assert(/*: {(= v "__farray__")} */ (event));
+    type = event;
+    event = {type_: type};
   }
   else if (typeof event === 'object') {
     assert(/*: Ref(~lEvent) */ (event));
-//    /*: event lEvent */ "#thaw";
+    /*: event lEvent */ "#thaw";
+    assume(event != null);
+//    assume(event.type_ !== undefined);
 //    type = event.type_;
-//    /*: event (~lEvent, thwd lEvent) */ "#freeze";
-  } 
-  else {
-//    error();
+    /*: event (~lEvent, thwd lEvent) */ "#freeze";
   }
+  else {
+    error();
+  }
+//  assert(/*: {(= v "__farray__")} */ (type));
 
-  b = this.___nodes___;
-  /*: b lNodes */ "#thaw";
-  b.l;
-  /*: (lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro) -> sameType */
-  for (i = 0; i < b.length; i += 1) {
-    node = b[i];
-    on = node['___ on ___'];
-
-    // If an array of handlers exist for this event, then
-    // loop through it and execute the handlers in order.
-  
+//  b = this.___nodes___;
+//  /*: b lNodes */ "#thaw";
+//  assume(b!=null);
+//  /*: (lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro) -> sameType */
+//  for (i = 0; i < b.length; i += 1) {
+//    node = b[i];
+//    on = node['___ on ___'];
+//
+//    // If an array of handlers exist for this event, then
+//    // loop through it and execute the handlers in order.
+//  
 //TODO      
 //    /*: on lEvent */ "#thaw";
 //    if (owns(on, type)) {
@@ -97,7 +82,7 @@ var fire = function (event)
 //      }
 //    }
 //    /*: on (~lEvent, thwd lEvent) */ "#freeze";
-  }
-  /*: b (~lNodes, thwd lNodes) */ "#freeze";
+//  }
+//  /*: b (~lNodes, thwd lNodes) */ "#freeze";
   return this;
 };

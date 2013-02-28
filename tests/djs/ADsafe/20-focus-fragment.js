@@ -1,9 +1,10 @@
+var error = /*: {( and (v::(Str) -> { FLS }) (v:: () -> { FLS }))} */ "#extern";
+
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
 var document  = /*: Ref(~lDocument) */ "#extern";
 var allow_focus = /*: Bool */ "#extern";
 var has_focus /*: Top */ = "#extern";
 
-var error = /*: (message: Str)  -> { FLS } */ "#extern";
 
 var reject_global = 
 /*: {(and
@@ -46,7 +47,7 @@ var focus = function focus_rec()
   //PV: had to put else branch
   else {
     /*: b (~lNodes, thwd lNodes) */ "#freeze";
-    error("default");
+    error();
   }
 };
 

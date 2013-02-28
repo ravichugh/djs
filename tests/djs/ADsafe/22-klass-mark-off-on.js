@@ -4,10 +4,11 @@ var error = /*: {( and
               )} */ "#extern";
 var dom_event = /*: (this: Ref(~lEvent), Ref(~lEvent))-> Top */ "#extern";
 
+//TODO: Using an imprecise type for "owns"
 var owns = 
-/*: (object: Ref, string: Str) / (object: d: Dict (* {Dict|(not (has v "hasOwnProperty"))} *) > lObjPro) -> 
+/* (object: Ref, string: Str) / (object: d: Dict (* {Dict|(not (has v "hasOwnProperty"))} *) > lObjPro) -> 
     { (implies (= v true) (has d {string}))} / sameType */ 
-/* (object: Top, string: Str) -> Bool */ "#extern";
+/*: (object: Top, string: Str) -> Bool */ "#extern";
 
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
 
@@ -153,46 +154,45 @@ var on = function (type_, func)
   var i /*: {Int | (>= v 0)}*/ = 0;
 
   /*: b lNodes */ "#thaw";
-  b.l;
+  assume(b != null);
   /*: ( &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) | (packed v)} > lArrPro) -> 
       sameType */
   for (i = 0; i < b.length; i += 1) {
     node = b[i];
 
 //PV: slow-down
-    // The change event does not propogate, so we must put the handler on the
-    // instance.
-    if (type_ === 'change') {
-      ontype = 'on' + type_;
-      assume(ontype === 'onchange');
-      if (node[ontype] !== dom_event) {
-        node[ontype] = dom_event;
-      }
-    }
-
-    // Register an event. Put the function in a handler array, making one if it
-    // doesn't yet exist for this type_ on this node.
-
-    on = node['___ on ___'];
-    if (!on) {
-      var empty_ = /*: lEmpty Dict */ {};
-      /*: empty_ (~lEvent, frzn) */ "#freeze";
-      on = empty_;
-      node['___ on ___'] = on;
-    }
-    assert(/*: Ref(~lEvent) */ (on));
+//    // The change event does not propogate, so we must put the handler on the
+//    // instance.
+//    if (type_ === 'change') {
+//      ontype = 'on' + type_;
+//      assume(ontype === 'onchange');
+//      if (node[ontype] !== dom_event) {
+//        node[ontype] = dom_event;
+//      }
+//    }
+//
+//    // Register an event. Put the function in a handler array, making one if it
+//    // doesn't yet exist for this type_ on this node.
+//
+//    on = node['___ on ___'];
+//    if (!on) {
+//      var empty_ = /*: lEmpty Dict */ {};
+//      /*: empty_ (~lEvent, frzn) */ "#freeze";
+//      on = empty_;
+//      node['___ on ___'] = on;
+//    }
     
     /*: on lEvent */ "#thaw";
-    on.l;
+    assume(on != null);
 //TODO    
-//    if (owns(on, type_)) {
-//      assume(typeof on[type_] === 'object');
-//      assume(isArray(on[type_]));
-//      on[type_].push(func);
-//    }
-//    else {
-//      on[type_] = [func];
-//    }
+    if (owns(on, type_)) {
+      assume(typeof on === 'object');
+      assume(isArray(on[type_]));
+      on[type_].push(func);
+    }
+    else {
+      on[type_] = [func];
+    }
     /*: on (~lEvent, thwd lEvent) */ "#freeze";
   }
   /*: b (~lNodes, thwd lNodes) */ "#freeze";
