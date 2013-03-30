@@ -32,6 +32,9 @@ parser.add_option(  "--db",
 parser.add_option(  "-d", "--dir",
                     dest="root", default="./",
                     help="give the directory to look for js files (default is ./)")
+parser.add_option(  "--depth",
+                    dest="depth", default=1,
+                    help="give the directory depth to look for extracted .xpi files (default is 1)")
 (options, args) = parser.parse_args()
 
 
@@ -93,7 +96,7 @@ class Database:
     #print vals
     sql = 'INSERT INTO ' + tname + ' '\
           'VALUES (' + ', '.join(["?"] * len(keys)) + ');'
-    print sql
+    #print sql
     #executemany expects a list of tuples as its second argument
     self.c.execute(sql, vals)
     self.conn.commit()
@@ -113,8 +116,8 @@ class Database:
           'VALUES (' + ', '.join(["?"] * len(keys)) + ');'
     print sql
     #executemany expects a list of tuples as its second argument
-    #self.c.executemany(sql, map(tuple, lvals))
-    #self.conn.commit()
+    self.c.executemany(sql, map(tuple, lvals))
+    self.conn.commit()
 
   """
   Close the connection to the database
@@ -139,7 +142,7 @@ def get_addon_name_from_url(url):
 # Works for filenames of the form: ./<category>/<name>
 def get_name_and_cat(name):
   l = splitpath(name)
-  return (l[2], l[1])
+  return ("/".join(l[2:]), l[1])
    
 
 
@@ -161,8 +164,9 @@ class Stats:
             fl = len(open(fname).readlines())
             js_lines = js_lines + fl
             #print("\t" + "%5d" % fl + fname)
-      (n,c) = get_name_and_cat(addon_root) 
-      #print("%6d  %s %s"  % (js_lines,c,n))
+      #print(addon_root)
+      (n,c) = get_name_and_cat(addon_root)
+      print("%6d  %s %s"  % (js_lines,c,n))
       return (c,n,js_lines)
 
 
@@ -173,10 +177,13 @@ class Stats:
   #      if files.endswith(archive_ext):
   #        yield os.path.join(r,files)
 
-  ## TODO: fix this
   def gather_all(self):
-    return []
-    #filter_walk(options.root,depth=2,file_pattern=archive_pattern)
+    print(options.depth)
+    for r,d,f,de in filter_walk(options.root, \
+        file_pattern=archive_pattern, \
+        depth = int(options.depth)):
+      for files in f:
+        yield os.path.join(r,files)
 
 
   # Get stats from all addons
@@ -186,8 +193,8 @@ class Stats:
     return map(self.stats_addon, fs)
 
   def run(self):
-    self.stats_all()    
-    #self.db.insertMany('addons', ts)
+    ts = self.stats_all()    
+    self.db.insertMany('addons', ts)
 
 
 def main():
