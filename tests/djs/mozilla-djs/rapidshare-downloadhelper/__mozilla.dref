@@ -273,8 +273,10 @@ weak (~lWindow: {
                 frzn, ~lBunches: frzn, ~lBunch: frzn, ~lStyle: frzn,
                 ~lSelection: frzn, ~lNode: frzn, ~lDocument: frzn, ~lDom: frzn,
                 ~lF: frzn, ~lId: frzn, ~lLib: frzn, ~lURI: frzn) -> Top /
-                sameType, Num) -> Top,
-
+                sameType, Num) -> Int,
+ 
+    setInterval: (this: Top, Int) -> Top,
+               
     document:
       Ref(~lNode) 
   } > lObjPro)
