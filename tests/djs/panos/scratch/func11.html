@@ -1,0 +1,40 @@
+<CTYPE html>
+<html>
+<head>
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+<title>setInterval/clearInterval example</title>
+<script type="text/javascript">
+var nIntervId;
+ 
+ 
+function changeColor() {
+  var ina  = window.setInterval(
+      function() {
+        flashText();
+        var inaa = window.setTimeout(function() {
+          flashText();
+        }, 1000);
+
+        <!--window.clearInterval(ina);-->
+      }, 100);
+}
+  
+function flashText() {
+    var oElem = document.getElementById("my_box");
+      oElem.style.color = oElem.style.color == "red" ? "blue" : "red";
+}
+  
+function stopTextColor() {
+    clearInterval(nIntervId);
+}
+</script>
+</head>
+  
+<body onload="changeColor();">
+<div id="my_box">
+<p>Hello World</p>
+</div>
+<button onclick="stopTextColor();">Stop</button>
+</body>
+</html>
+
