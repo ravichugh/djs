@@ -25,6 +25,8 @@ weak (~lEvent     : { Dict |
     (implies (has v "target")           ({(and (v:: (Ref(~lEvent)) -> Top) (= (tag v) "function"))} (sel v "target")))
     (implies (has v "that")             ({(or (v::Ref(~lNode)) (v::Null))} (sel v "that")))
     (implies (has v "type_")            ({Str|(= v "__farray__")} (sel v "type_")))
+    (* XXX: it MUST have this field *)
+    (has v "originalTarget")  ((sel v "originalTarget") :: Ref(~lDocument))
     (* TODO: giving a restricted type here *)
     (implies (has v "__farray__")        ({(= (tag v) "function")} (sel v "__farray__")))
   )} > lObjPro)
@@ -80,9 +82,14 @@ weak (~lBunch    : {
 } > lBunchProto)
 
 weak (~lStyle : {
-    visibility   : Str,
-    cssFloat     : Str,
-    styleFloat   : Str
+    visibility      : Str,
+    cssFloat        : Str,
+    styleFloat      : Str,
+    backgroundColor : Str,
+    border          : Str,
+    display         : Str,
+    color           : Str,
+    innerHTML       : Str
 } > lObjPro)
 
 weak (~lSelection: { createRange: () -> Ref(~lRange) }  > lObjPro) 
@@ -92,7 +99,7 @@ weak (~lNode: {
     "___ on ___"         : Ref(~lEvent),
     "___adsafe root___"  : Str,
     "_adsafe mark_"      : Str,
-    addEventListener     : (this: Ref(~lNode), Str, (Ref(~lEvent)) -> Top, Bool) -> Top,
+    addEventListener     : (this: Ref(~lNode), Str, (this:Top) -> Top, Bool) -> Top,
     appendChild          : (this: Ref(~lNode), Ref(~lNode)) -> Top,
     autocomplete         : Str,
     blur                 : (this: Ref(~lNode)) -> Top,
@@ -108,6 +115,7 @@ weak (~lNode: {
     fire                 : (NotUndef) -> Top,
     firstChild           : Ref(~lNode),
     focus                : () -> Top,   
+    href                 : Str,
     getComputedStyle     : (this: Ref(~lNode), node : Ref(~lNode), str  : Str) -> Ref(~lStyle),
     getElementsByTagName : [;L;] (this: Ref(~lNode), name : Str) / () -> Ref(L) / (L: {Arr(Ref(~lNode))|(packed v)} > lArrPro),
     getParent            : (this: Ref(~lNode)) -> Ref(~lNode),
@@ -139,7 +147,9 @@ weak (~lDocument   : {
     createTextNode : (this: Ref(~lDocument), s: Str) -> Ref(~lNode),
     defaultView    : Ref(~lNode),
     getElementById : (this: Ref(~lDocument), s : Str) -> Ref(~lNode),
+    location       : Ref(~lURI),
     selection      : Ref(~lSelection)
+
   } > lObjPro)
 
 weak (~lDom: { 
@@ -161,3 +171,8 @@ weak (~lF: { _: Bot } > lFProto)
 
 weak (~lId: { } > lObjPro)
 weak (~lLib: { } > lObjPro)
+
+weak (~lURI: { 
+    href: Str,
+    toString: (this: Ref(~lURI)) -> Str
+  } > lObjPro)

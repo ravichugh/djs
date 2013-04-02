@@ -16,7 +16,7 @@ from optparse import OptionParser
 archive_ext = '.xpi'
 archive_pattern = '*.xpi'
 js_ext = '.js'
-js_pattern = '*.js'
+jsm_ext = '.jsm'
 
 
 home_url =  "https://addons.mozilla.org/"
@@ -160,7 +160,7 @@ class Stats:
       for r,d,fs in os.walk(addon_root):
         for f in fs:
           fname = os.path.join(r,f)
-          if fname.endswith(js_ext):
+          if fname.endswith(js_ext) or fname.endswith(jsm_ext):
             fl = len(open(fname).readlines())
             js_lines = js_lines + fl
             #print("\t" + "%5d" % fl + fname)

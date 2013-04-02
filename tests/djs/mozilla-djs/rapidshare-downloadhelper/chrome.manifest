@@ -1,0 +1,5 @@
+content     rsDownloadHelper    chrome/content/
+content     rsDownloadHelper    chrome/content/ contentaccessible=yes
+skin	    rsDownloadHelper  classic/1.0	chrome/skin/
+overlay     chrome://browser/content/browser.xul chrome://rsDownloadHelper/content/mainOverlay.xul
+

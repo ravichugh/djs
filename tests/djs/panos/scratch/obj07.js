@@ -15,7 +15,7 @@ a.f = function() /*: () / (l: tyd) -> Top / sameType */ {
   a.p = 1;
 };
 
-a.g = function() /*: () / (l: tyA1) -> Top / (l:tyd)  */ { 
+a.h = function() /*: () / (l: tyA1) -> Top / (l:tyd)  */ { 
   a.f();
   a.g();
 };

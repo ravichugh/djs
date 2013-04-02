@@ -2,9 +2,8 @@
 
 import os, re
 import urllib2
+from optparse import OptionParser
 
-# Limit the number of pages per category
-limit_pages = 1 
 
 sort_by ='users'
 #can also use:
@@ -17,6 +16,12 @@ sort_by ='users'
 home_url =  "https://addons.mozilla.org/"
 us_ff_url = home_url + "en-US/firefox/"
 
+# Option parsing definitions
+parser = OptionParser(usage='usage: %prog [options] ')
+parser.add_option(  "-p", "--pages",
+                    dest="pages", default=-1,
+                    help="give the number of pages to download per category (default is all of them)")
+(options, args) = parser.parse_args()
 
 
 # Get the links for every category
@@ -90,7 +95,13 @@ def get_all_from_category(url):
   response = urllib2.urlopen(init_list_url)
   html = response.read()
 
-  for i in range(1, min(limit_pages ,get_page_count(html)) + 1):
+  if (options.pages is None):
+    limit_pages = get_page_count(html)
+  else:
+    limit_pages = min(int(options.pages), get_page_count(html))
+
+
+  for i in range(1, limit_pages + 1):
     print(cat_name + " :: " + str(i))
 
     addon_url_list = get_all_from_single_category_page(init_list_url + "&page=" + str(i))
