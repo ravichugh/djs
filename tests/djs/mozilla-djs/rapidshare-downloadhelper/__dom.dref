@@ -146,6 +146,7 @@ weak (~lDocument   : {
     createElement  : (this: Ref(~lDocument), s: Str) -> Ref(~lNode),
     createTextNode : (this: Ref(~lDocument), s: Str) -> Ref(~lNode),
     defaultView    : Ref(~lNode),
+    forms          : Ref(~lHTMLCollection),
     getElementById : (this: Ref(~lDocument), s : Str) -> Ref(~lNode),
     location       : Ref(~lURI),
     selection      : Ref(~lSelection)
@@ -176,3 +177,12 @@ weak (~lURI: {
     href: Str,
     toString: (this: Ref(~lURI)) -> Str
   } > lObjPro)
+
+(* XXX: HTMLCollection here is treated as an Array - 
+ * this might not be entirely precise *)
+weak (~lHTMLCollection: { Arr(Ref(~lHTMLFormElement)) | (packed v) } > lArrPro)
+
+weak (~lHTMLFormElement: {
+    name: Str,
+    submit: () -> Top
+} > lObjPro)

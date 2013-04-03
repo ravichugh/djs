@@ -131,3 +131,9 @@ Comments:
 - function foo (...)     ==>  var foo = function(...)
   :%s/function\s*\(\w*\)/var \1 = function/g
 
+
+
+[Tue Apr  2 14:04:11 PDT 2013]
+
+scratch/func08.js: DJS cannot type-check object that recursively refers to
+itself in one of the functions mapped to one of its keys.

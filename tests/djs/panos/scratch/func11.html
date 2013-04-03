@@ -11,12 +11,13 @@ function changeColor() {
   var ina  = window.setInterval(
       function() {
         flashText();
-        var inaa = window.setTimeout(function() {
-          flashText();
-        }, 1000);
+        <!--var inaa = window.setTimeout(function() {-->
+        <!--  flashText();-->
 
-        <!--window.clearInterval(ina);-->
-      }, 100);
+        <!--}, 1500);-->
+
+        window.clearInterval(100);
+      }, 500);
 }
   
 function flashText() {

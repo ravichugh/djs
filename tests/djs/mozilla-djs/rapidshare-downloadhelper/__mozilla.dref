@@ -78,103 +78,103 @@ weak (~lRsDownloadHelper: {
     
     p: Ref(~lRsDownloadHelperP),
 
-    initExtensionPref: (this:Top) / ( ~lLib: frzn, ~lId: frzn, ~lF: frzn, ~lDom:
-      frzn, ~lDocument: frzn, ~lNode: frzn, ~lSelection: frzn, ~lStyle: frzn,
-      ~lBunch: frzn, ~lBunches: frzn, ~lQuery: frzn, ~lRange: frzn, ~lSelector:
-        frzn, ~lEventTarget: frzn, ~lEvent: frzn, ~lStyles: frzn, ~lKeys: frzn,
-        ~lOffsetWidths: frzn, ~lOffsetHeights: frzn, ~lValues: frzn,
-        ~lPackedValues: frzn, ~lNames: frzn, ~lADsafeMarks: frzn, ~lClassNames:
-          frzn, ~lChecked: frzn, ~lNodes: frzn, ~lWindow: frzn,
-          ~lRsDownloadHelperP: frzn, ~lRsDownloadHelper: frzn, ~lConsole: frzn,
-          ~lComponents: frzn, ~lComponents_interfaces: frzn,
-          ~lComponents_classes: frzn, ~lnsIExtensionManager: frzn,
-          ~lnsIUpdateItem: frzn, ~lMEManager: frzn, ~lMFApplication: frzn,
-          ~lNSIEMan: frzn, ~lFIApp: frzn, ~lApplication: frzn,
-            ~lURI: frzn,
-          ~lApplication_extensions: frzn, ~lExtensions: frzn, ~lPreferences:
-            frzn, &window: locinvar_000117:Ref(~lWindow) [Ref(~lWindow)],
-            &Components: locinvar_000119:Ref(~lComponents) [Ref(~lComponents)],
-            &Application: locinvar_000121:Ref(~lApplication)
-            [Ref(~lApplication)],
-            ~lBrowser: frzn, ~lTab: frzn
-          ,~lInput: frzn
-          , ~lnsIFilePicker: frzn
-          , ~lFilePicker: frzn, ~lMOFilePicker: frzn
-          , ~lFile: frzn
-      , ~lNSIPBranch: frzn, ~lnsIPrefBranch: frzn, ~lMOPService: frzn
-            ) -> Top / sameType,
-
-    setVer: (this:Top) / (&Application: locinvar_000167:Ref(~lApplication)
-    [Ref(~lApplication)], &Components: locinvar_000169:Ref(~lComponents)
-    [Ref(~lComponents)], &window: locinvar_000171:Ref(~lWindow) [Ref(~lWindow)],
+    initExtensionPref: (this:Top) / ( &browser: locinvar_000299:Ref(~lBrowser)
+    [Ref(~lBrowser)], &Application: locinvar_000301:Ref(~lApplication)
+    [Ref(~lApplication)], &Components: locinvar_000303:Ref(~lComponents)
+    [Ref(~lComponents)], &window: locinvar_000305:Ref(~lWindow) [Ref(~lWindow)],
     ~lPreferences: frzn, ~lExtensions: frzn, ~lApplication_extensions: frzn,
-    ~lApplication: frzn, ~lFIApp: frzn, ~lNSIEMan: frzn, ~lMFApplication: frzn,
-    ~lMEManager: frzn, ~lnsIUpdateItem: frzn, ~lnsIExtensionManager: frzn,
-    ~lComponents_classes: frzn, ~lComponents_interfaces: frzn, ~lComponents:
-      frzn, ~lConsole: frzn, ~lRsDownloadHelper: frzn, ~lRsDownloadHelperP:
-        frzn, ~lWindow: frzn, ~lNodes: frzn, ~lChecked: frzn, ~lClassNames:
-          frzn, ~lADsafeMarks: frzn, ~lNames: frzn, ~lPackedValues: frzn,
-          ~lValues: frzn, ~lOffsetHeights: frzn, ~lOffsetWidths: frzn, ~lKeys:
-            frzn, ~lStyles: frzn, ~lEvent: frzn, ~lEventTarget: frzn,
-            ~lSelector: frzn, ~lRange: frzn, ~lQuery: frzn, ~lBunches: frzn,
-            ~lBunch: frzn, ~lStyle: frzn, ~lSelection: frzn, ~lNode: frzn,
-            ~lDocument: frzn, ~lDom: frzn, ~lF: frzn, ~lId: frzn, ~lLib: frzn,
-            ~lURI: frzn,
-            ~lBrowser: frzn, ~lTab: frzn
-          ,~lInput: frzn
-      , ~lnsIFilePicker: frzn
-      , ~lFilePicker: frzn, ~lMOFilePicker: frzn
-      , ~lFile: frzn
-      , ~lNSIPBranch: frzn, ~lnsIPrefBranch: frzn, ~lMOPService: frzn
-    )
-    -> Top / sameType ,
+    ~lApplication: frzn, ~lFIApp: frzn, ~lNSIEMan: frzn, ~lNSIPBranch: frzn,
+    ~lMFApplication: frzn, ~lMEManager: frzn, ~lMOFilePicker: frzn,
+    ~lnsIPrefBranch: frzn, ~lMOPService: frzn, ~lnsIUpdateItem: frzn,
+    ~lnsIExtensionManager: frzn, ~lComponents_classes: frzn,
+    ~lComponents_interfaces: frzn, ~lComponents: frzn, ~lConsole: frzn,
+    ~lRsDownloadHelper: frzn, ~lRsDownloadHelperP: frzn, ~lWindow: frzn,
+    ~lnsIFilePicker: frzn, ~lFilePicker: frzn, ~lFile: frzn, ~lBrowser: frzn,
+    &doc: locinvar_000286:Ref(~lDocument) [Ref(~lDocument)],
+    ~lTab: frzn, ~lInput: frzn, ~lNodes: frzn, ~lChecked: frzn, ~lClassNames:
+      frzn, ~lADsafeMarks: frzn, ~lNames: frzn, ~lPackedValues: frzn, ~lValues:
+        frzn, ~lOffsetHeights: frzn, ~lOffsetWidths: frzn, ~lKeys: frzn,
+        ~lStyles: frzn, ~lEvent: frzn, ~lEventTarget: frzn, ~lSelector: frzn,
+        ~lRange: frzn, ~lQuery: frzn, ~lBunches: frzn, ~lBunch: frzn, ~lStyle:
+          frzn, ~lSelection: frzn, ~lNode: frzn, ~lDocument: frzn, ~lDom: frzn,
+          ~lF: frzn, ~lId: frzn, ~lLib: frzn, ~lURI: frzn, ~lHTMLCollection:
+            frzn, ~lHTMLFormElement: frzn) -> Top / sameType,
 
-    contentLoadedSuccess: (this:Top, Ref(~lEvent)) / (~lLib: frzn, ~lId: frzn,
-    ~lF: frzn, ~lDom: frzn, ~lDocument: frzn, ~lNode: frzn, ~lSelection: frzn,
-    ~lStyle: frzn, ~lBunch: frzn, ~lBunches: frzn, ~lQuery: frzn, ~lRange: frzn,
-    ~lSelector: frzn, ~lEventTarget: frzn, ~lEvent: frzn, ~lStyles: frzn,
-    ~lKeys: frzn, ~lOffsetWidths: frzn, ~lOffsetHeights: frzn, ~lValues: frzn,
-    ~lPackedValues: frzn, ~lNames: frzn, ~lADsafeMarks: frzn, ~lClassNames:
-      frzn, ~lChecked: frzn, ~lNodes: frzn, ~lInput: frzn, ~lTab: frzn,
-      ~lBrowser: frzn, ~lFile: frzn, ~lFilePicker: frzn, ~lnsIFilePicker: frzn,
-      ~lWindow: frzn, ~lRsDownloadHelperP: frzn, ~lRsDownloadHelper: frzn,
-      ~lConsole: frzn, ~lComponents: frzn, ~lComponents_interfaces: frzn,
-            ~lURI: frzn,
-      ~lComponents_classes: frzn, ~lnsIExtensionManager: frzn, ~lnsIUpdateItem:
-        frzn, ~lMOPService: frzn, ~lnsIPrefBranch: frzn, ~lMOFilePicker: frzn,
-        ~lMEManager: frzn, ~lMFApplication: frzn, ~lNSIPBranch: frzn, ~lNSIEMan:
-          frzn, ~lFIApp: frzn, ~lApplication: frzn, ~lApplication_extensions:
-            frzn, ~lExtensions: frzn, ~lPreferences: frzn, &window:
-              locinvar_000639:Ref(~lWindow) [Ref(~lWindow)], &Components:
-                locinvar_000641:Ref(~lComponents) [Ref(~lComponents)],
-                &Application: locinvar_000643:Ref(~lApplication)
-                [Ref(~lApplication)]) -> Top / sameType,
+    setVer: (this:Top) /  (~lHTMLFormElement:
+      frzn, ~lHTMLCollection: frzn, ~lURI: frzn, ~lLib: frzn, ~lId: frzn, ~lF:
+        frzn, ~lDom: frzn, ~lDocument: frzn, ~lNode: frzn, ~lSelection: frzn,
+        ~lStyle: frzn, ~lBunch: frzn, ~lBunches: frzn, ~lQuery: frzn, ~lRange:
+          frzn, ~lSelector: frzn, ~lEventTarget: frzn, ~lEvent: frzn, ~lStyles:
+            frzn, ~lKeys: frzn, ~lOffsetWidths: frzn, ~lOffsetHeights: frzn,
+            ~lValues: frzn, ~lPackedValues: frzn, ~lNames: frzn, ~lADsafeMarks:
+              frzn, ~lClassNames: frzn, ~lChecked: frzn, ~lNodes: frzn, ~lInput:
+                frzn, ~lTab: frzn, ~lBrowser: frzn, ~lFile: frzn, ~lFilePicker:
+                  frzn, ~lnsIFilePicker: frzn, ~lWindow: frzn,
+                  ~lRsDownloadHelperP: frzn, ~lRsDownloadHelper: frzn,
+    &doc: locinvar_000286:Ref(~lDocument) [Ref(~lDocument)],
+                  ~lConsole: frzn, ~lComponents: frzn, ~lComponents_interfaces:
+                    frzn, ~lComponents_classes: frzn, ~lnsIExtensionManager:
+                      frzn, ~lnsIUpdateItem: frzn, ~lMOPService: frzn,
+                      ~lnsIPrefBranch: frzn, ~lMOFilePicker: frzn, ~lMEManager:
+                        frzn, ~lMFApplication: frzn, ~lNSIPBranch: frzn,
+                        ~lNSIEMan: frzn, ~lFIApp: frzn, ~lApplication: frzn,
+                        ~lApplication_extensions: frzn, ~lExtensions: frzn,
+                        ~lPreferences: frzn, &window:
+                          locinvar_000462:Ref(~lWindow) [Ref(~lWindow)],
+                          &Components: locinvar_000464:Ref(~lComponents)
+                          [Ref(~lComponents)], &Application:
+                            locinvar_000466:Ref(~lApplication)
+                            [Ref(~lApplication)], &browser:
+                              locinvar_000468:Ref(~lBrowser) [Ref(~lBrowser)])
+    -> Top / sameType,
 
-    initialize: (this:Top) / ( ~lLib: frzn, ~lId: frzn, ~lF: frzn, ~lDom: frzn,
-    ~lDocument: frzn, ~lNode: frzn, ~lSelection: frzn, ~lStyle: frzn, ~lBunch:
-      frzn, ~lBunches: frzn, ~lQuery: frzn, ~lRange: frzn, ~lSelector: frzn,
+    contentLoadedSuccess: (this:Top, Ref(~lEvent)) / (~lHTMLFormElement: frzn,
+    ~lHTMLCollection: frzn, ~lURI: frzn, ~lLib: frzn, ~lId: frzn, ~lF: frzn,
+    ~lDom: frzn, ~lDocument: frzn, ~lNode: frzn, ~lSelection: frzn, ~lStyle:
+      frzn, ~lBunch: frzn, ~lBunches: frzn, ~lQuery: frzn, ~lRange: frzn,
+      ~lSelector: frzn, ~lEventTarget: frzn, ~lEvent: frzn, ~lStyles: frzn,
+      ~lKeys: frzn, ~lOffsetWidths: frzn, ~lOffsetHeights: frzn, ~lValues: frzn,
+      ~lPackedValues: frzn, ~lNames: frzn, ~lADsafeMarks: frzn, ~lClassNames:
+        frzn, ~lChecked: frzn, ~lNodes: frzn, ~lInput: frzn, ~lTab: frzn,
+        ~lBrowser: frzn, ~lFile: frzn, ~lFilePicker: frzn, ~lnsIFilePicker:
+          frzn, ~lWindow: frzn, ~lRsDownloadHelperP: frzn, ~lRsDownloadHelper:
+            frzn, ~lConsole: frzn, ~lComponents: frzn, ~lComponents_interfaces:
+              frzn, ~lComponents_classes: frzn, ~lnsIExtensionManager: frzn,
+              ~lnsIUpdateItem: frzn, ~lMOPService: frzn, ~lnsIPrefBranch: frzn,
+              ~lMOFilePicker: frzn, ~lMEManager: frzn, ~lMFApplication: frzn,
+    &doc: locinvar_000286:Ref(~lDocument) [Ref(~lDocument)],
+              ~lNSIPBranch: frzn, ~lNSIEMan: frzn, ~lFIApp: frzn, ~lApplication:
+                frzn, ~lApplication_extensions: frzn, ~lExtensions: frzn,
+                ~lPreferences: frzn, &window: locinvar_000314:Ref(~lWindow)
+                [Ref(~lWindow)], &Components: locinvar_000316:Ref(~lComponents)
+                [Ref(~lComponents)], &Application:
+                  locinvar_000318:Ref(~lApplication) [Ref(~lApplication)],
+                  &browser: locinvar_000320:Ref(~lBrowser) [Ref(~lBrowser)]) ->
+                    Top / sameType,
+
+    initialize: (this:Top) / (~lHTMLFormElement: frzn, ~lHTMLCollection: frzn,
+    ~lURI: frzn, ~lLib: frzn, ~lId: frzn, ~lF: frzn, ~lDom: frzn, ~lDocument:
+      frzn, ~lNode: frzn, ~lSelection: frzn, ~lStyle: frzn, ~lBunch: frzn,
+      ~lBunches: frzn, ~lQuery: frzn, ~lRange: frzn, ~lSelector: frzn,
       ~lEventTarget: frzn, ~lEvent: frzn, ~lStyles: frzn, ~lKeys: frzn,
       ~lOffsetWidths: frzn, ~lOffsetHeights: frzn, ~lValues: frzn,
       ~lPackedValues: frzn, ~lNames: frzn, ~lADsafeMarks: frzn, ~lClassNames:
-        frzn, ~lChecked: frzn, ~lNodes: frzn, ~lRsDownloadHelperP: frzn,
-        ~lRsDownloadHelper: frzn, ~lConsole: frzn, ~lComponents: frzn,
-        ~lComponents_interfaces: frzn, ~lComponents_classes: frzn,
-            ~lURI: frzn,
-        ~lnsIExtensionManager: frzn, ~lnsIUpdateItem: frzn, ~lMEManager: frzn,
-        ~lMFApplication: frzn, ~lNSIEMan: frzn, ~lFIApp: frzn, ~lApplication:
-          frzn, ~lApplication_extensions: frzn, ~lExtensions: frzn,
-          ~lPreferences: frzn, &window: locinvar_000095:Ref(~lNode)
-          [Ref(~lNode)], &Components: locinvar_000097:Ref(~lComponents)
-          [Ref(~lComponents)], &Application: locinvar_000099:Ref(~lApplication)
-          [Ref(~lApplication)],
-          ~lWindow: frzn,
-          ~lBrowser: frzn, ~lTab: frzn
-          ,~lInput: frzn
-      , ~lnsIFilePicker: frzn
-      , ~lFilePicker: frzn, ~lMOFilePicker: frzn
-      , ~lFile: frzn
-      , ~lNSIPBranch: frzn, ~lnsIPrefBranch: frzn, ~lMOPService: frzn
-          ) -> Top / sameType,
+        frzn, ~lChecked: frzn, ~lNodes: frzn, ~lInput: frzn, ~lTab: frzn,
+        ~lBrowser: frzn, ~lFile: frzn, ~lFilePicker: frzn, ~lnsIFilePicker:
+          frzn, ~lWindow: frzn, ~lRsDownloadHelperP: frzn, ~lRsDownloadHelper:
+            frzn, ~lConsole: frzn, ~lComponents: frzn, ~lComponents_interfaces:
+              frzn, ~lComponents_classes: frzn, ~lnsIExtensionManager: frzn,
+              ~lnsIUpdateItem: frzn, ~lMOPService: frzn, ~lnsIPrefBranch: frzn,
+    &doc: locinvar_000286:Ref(~lDocument) [Ref(~lDocument)],
+              ~lMOFilePicker: frzn, ~lMEManager: frzn, ~lMFApplication: frzn,
+              ~lNSIPBranch: frzn, ~lNSIEMan: frzn, ~lFIApp: frzn, ~lApplication:
+                frzn, ~lApplication_extensions: frzn, ~lExtensions: frzn,
+                ~lPreferences: frzn, &window: locinvar_000314:Ref(~lWindow)
+                [Ref(~lWindow)], &Components: locinvar_000316:Ref(~lComponents)
+                [Ref(~lComponents)], &Application:
+                  locinvar_000318:Ref(~lApplication) [Ref(~lApplication)],
+                  &browser: locinvar_000320:Ref(~lBrowser) [Ref(~lBrowser)])->
+                    Top / sameType,
 
     openFilePicker: (this: Top, Ref(~lInput), Str) / ( ~lLib: frzn, ~lId: frzn, ~lF: frzn,
     ~lDom: frzn, ~lDocument: frzn, ~lNode: frzn, ~lSelection: frzn, ~lStyle:
@@ -184,6 +184,7 @@ weak (~lRsDownloadHelper: {
       ~lPackedValues: frzn, ~lNames: frzn, ~lADsafeMarks: frzn, ~lClassNames:
         frzn, ~lChecked: frzn, ~lNodes: frzn, ~lInput: frzn, ~lTab: frzn,
         ~lBrowser: frzn, ~lWindow: frzn, ~lRsDownloadHelperP: frzn,
+    &doc: locinvar_000286:Ref(~lDocument) [Ref(~lDocument)],
         ~lRsDownloadHelper: frzn, ~lConsole: frzn, ~lComponents: frzn,
         ~lComponents_interfaces: frzn, ~lComponents_classes: frzn,
         ~lnsIExtensionManager: frzn, ~lnsIUpdateItem: frzn, ~lMEManager: frzn,
@@ -197,30 +198,35 @@ weak (~lRsDownloadHelper: {
       , ~lnsIFilePicker: frzn
       , ~lFilePicker: frzn, ~lMOFilePicker: frzn
       , ~lFile: frzn
+      ,  &browser: locinvar_000257:Ref(~lBrowser) [Ref(~lBrowser)]
+          , ~lHTMLFormElement: frzn , ~lHTMLCollection: frzn
       , ~lNSIPBranch: frzn, ~lnsIPrefBranch: frzn, ~lMOPService: frzn
           )-> Top / sameType,
 
-    getFileName: (this: Top, Ref(~lDocument)) / (&Application:
-      locinvar_000566:Ref(~lApplication) [Ref(~lApplication)], &Components:
-        locinvar_000568:Ref(~lComponents) [Ref(~lComponents)], &window:
-          locinvar_000570:Ref(~lWindow) [Ref(~lWindow)], ~lPreferences: frzn,
-          ~lExtensions: frzn, ~lApplication_extensions: frzn, ~lApplication:
-            frzn, ~lFIApp: frzn, ~lNSIEMan: frzn, ~lNSIPBranch: frzn,
-            ~lMFApplication: frzn, ~lMEManager: frzn, ~lMOFilePicker: frzn,
-            ~lnsIPrefBranch: frzn, ~lMOPService: frzn, ~lnsIUpdateItem: frzn,
-            ~lnsIExtensionManager: frzn, ~lComponents_classes: frzn,
-            ~lComponents_interfaces: frzn, ~lComponents: frzn, ~lConsole: frzn,
-            ~lRsDownloadHelper: frzn, ~lRsDownloadHelperP: frzn, ~lWindow: frzn,
-            ~lURI: frzn,
-            ~lnsIFilePicker: frzn, ~lFilePicker: frzn, ~lFile: frzn, ~lBrowser:
-              frzn, ~lTab: frzn, ~lInput: frzn, ~lNodes: frzn, ~lChecked: frzn,
-              ~lClassNames: frzn, ~lADsafeMarks: frzn, ~lNames: frzn,
-              ~lPackedValues: frzn, ~lValues: frzn, ~lOffsetHeights: frzn,
-              ~lOffsetWidths: frzn, ~lKeys: frzn, ~lStyles: frzn, ~lEvent: frzn,
-              ~lEventTarget: frzn, ~lSelector: frzn, ~lRange: frzn, ~lQuery:
-                frzn, ~lBunches: frzn, ~lBunch: frzn, ~lStyle: frzn,
-                ~lSelection: frzn, ~lNode: frzn, ~lDocument: frzn, ~lDom: frzn,
-                ~lF: frzn, ~lId: frzn, ~lLib: frzn) -> Str / sameType
+    getFileName: (this: Top, Ref(~lDocument)) / ( ~lHTMLFormElement: frzn,
+    ~lHTMLCollection: frzn, ~lURI: frzn, ~lLib: frzn, ~lId: frzn, ~lF: frzn,
+    ~lDom: frzn, ~lDocument: frzn, ~lNode: frzn, ~lSelection: frzn, ~lStyle:
+      frzn, ~lBunch: frzn, ~lBunches: frzn, ~lQuery: frzn, ~lRange: frzn,
+      ~lSelector: frzn, ~lEventTarget: frzn, ~lEvent: frzn, ~lStyles: frzn,
+      ~lKeys: frzn, ~lOffsetWidths: frzn, ~lOffsetHeights: frzn, ~lValues: frzn,
+      ~lPackedValues: frzn, ~lNames: frzn, ~lADsafeMarks: frzn, ~lClassNames:
+        frzn, ~lChecked: frzn, ~lNodes: frzn, ~lInput: frzn, ~lTab: frzn,
+    &doc: locinvar_000286:Ref(~lDocument) [Ref(~lDocument)],
+        ~lBrowser: frzn, ~lFile: frzn, ~lFilePicker: frzn, ~lnsIFilePicker:
+          frzn, ~lWindow: frzn, ~lRsDownloadHelperP: frzn, ~lRsDownloadHelper:
+            frzn, ~lConsole: frzn, ~lComponents: frzn, ~lComponents_interfaces:
+              frzn, ~lComponents_classes: frzn, ~lnsIExtensionManager: frzn,
+              ~lnsIUpdateItem: frzn, ~lMOPService: frzn, ~lnsIPrefBranch: frzn,
+              ~lMOFilePicker: frzn, ~lMEManager: frzn, ~lMFApplication: frzn,
+              ~lNSIPBranch: frzn, ~lNSIEMan: frzn, ~lFIApp: frzn, ~lApplication:
+                frzn, ~lApplication_extensions: frzn, ~lExtensions: frzn,
+                ~lPreferences: frzn, &window: locinvar_000382:Ref(~lWindow)
+                [Ref(~lWindow)], &Components: locinvar_000384:Ref(~lComponents)
+                [Ref(~lComponents)], &Application:
+                  locinvar_000386:Ref(~lApplication) [Ref(~lApplication)],
+                  &browser: locinvar_000388:Ref(~lBrowser) [Ref(~lBrowser)]) ->
+                    Str / sameType
+
 
     
   } > lObjPro)
@@ -229,56 +235,62 @@ weak (~lRsDownloadHelperP: Dict > lObjPro)
 
 weak (~lWindow: {
     setTimeout: 
-      (this:Ref(~lWindow), (this:Top) / (~lLib: frzn, ~lId: frzn, ~lF: frzn,
-      ~lDom: frzn, ~lDocument: frzn, ~lNode: frzn, ~lSelection: frzn, ~lStyle:
-      frzn, ~lBunch: frzn, ~lBunches: frzn, ~lQuery: frzn, ~lRange: frzn,
-      ~lSelector: frzn, ~lEventTarget: frzn, ~lEvent: frzn, ~lStyles: frzn,
-      ~lKeys: frzn, ~lOffsetWidths: frzn, ~lOffsetHeights: frzn, ~lValues: frzn,
-      ~lPackedValues: frzn, ~lNames: frzn, ~lADsafeMarks: frzn, ~lClassNames:
-      frzn, ~lChecked: frzn, ~lNodes: frzn, ~lWindow: frzn, ~lRsDownloadHelperP:
-      frzn, ~lRsDownloadHelper: frzn, ~lConsole: frzn, ~lComponents: frzn,
-            ~lURI: frzn,
-      ~lComponents_interfaces: frzn, ~lComponents_classes: frzn,
-      ~lnsIExtensionManager: frzn, ~lnsIUpdateItem: frzn, ~lMEManager: frzn,
-      ~lMFApplication: frzn, ~lNSIEMan: frzn, ~lFIApp: frzn, ~lApplication:
-      frzn, ~lApplication_extensions: frzn, ~lExtensions: frzn,
-      ~lPreferences: frzn, &window: locinvar_000212:Ref(~lWindow)
-      [Ref(~lWindow)], &Components: locinvar_000214:Ref(~lComponents)
-      [Ref(~lComponents)], &Application: locinvar_000216:Ref(~lApplication)
-      [Ref(~lApplication)],
-      ~lBrowser: frzn, ~lTab: frzn
-      , ~lnsIFilePicker: frzn
-      , ~lFilePicker: frzn, ~lMOFilePicker: frzn
-      , ~lFile: frzn
-      , ~lNSIPBranch: frzn, ~lnsIPrefBranch: frzn, ~lMOPService: frzn
-      ) -> Top / sameType, Num) -> Top , 
+      (this:Ref(~lWindow), (this:Top) / (  &browser:
+        locinvar_000520:Ref(~lBrowser) [Ref(~lBrowser)], &Application:
+          locinvar_000522:Ref(~lApplication) [Ref(~lApplication)], &Components:
+            locinvar_000524:Ref(~lComponents) [Ref(~lComponents)], &window:
+              locinvar_000526:Ref(~lWindow) [Ref(~lWindow)], ~lPreferences:
+                frzn, ~lExtensions: frzn, ~lApplication_extensions: frzn,
+                ~lApplication: frzn, ~lFIApp: frzn, ~lNSIEMan: frzn,
+                ~lNSIPBranch: frzn, ~lMFApplication: frzn, ~lMEManager: frzn,
+                ~lMOFilePicker: frzn, ~lnsIPrefBranch: frzn, ~lMOPService: frzn,
+                ~lnsIUpdateItem: frzn, ~lnsIExtensionManager: frzn,
+                ~lComponents_classes: frzn, ~lComponents_interfaces: frzn,
+                ~lComponents: frzn, ~lConsole: frzn, ~lRsDownloadHelper: frzn,
+                ~lRsDownloadHelperP: frzn, ~lWindow: frzn, ~lnsIFilePicker:
+                  frzn, ~lFilePicker: frzn, ~lFile: frzn, ~lBrowser: frzn,
+                  ~lTab: frzn, ~lInput: frzn, ~lNodes: frzn, ~lChecked: frzn,
+    &doc: locinvar_000286:Ref(~lDocument) [Ref(~lDocument)],
+                  ~lClassNames: frzn, ~lADsafeMarks: frzn, ~lNames: frzn,
+                  ~lPackedValues: frzn, ~lValues: frzn, ~lOffsetHeights: frzn,
+                  ~lOffsetWidths: frzn, ~lKeys: frzn, ~lStyles: frzn, ~lEvent:
+                    frzn, ~lEventTarget: frzn, ~lSelector: frzn, ~lRange: frzn,
+                    ~lQuery: frzn, ~lBunches: frzn, ~lBunch: frzn, ~lStyle:
+                      frzn, ~lSelection: frzn, ~lNode: frzn, ~lDocument: frzn,
+                      ~lDom: frzn, ~lF: frzn, ~lId: frzn, ~lLib: frzn, ~lURI:
+                        frzn, ~lHTMLCollection: frzn, ~lHTMLFormElement: frzn
+                        ) -> Top / sameType, Num) -> Top , 
       
-    setInterval: (this: Top, (this: Top) / (&Application:
-      locinvar_000768:Ref(~lApplication) [Ref(~lApplication)], &Components:
-        locinvar_000770:Ref(~lComponents) [Ref(~lComponents)], &window:
-          locinvar_000772:Ref(~lWindow) [Ref(~lWindow)], ~lPreferences: frzn,
-          ~lExtensions: frzn, ~lApplication_extensions: frzn, ~lApplication:
-            frzn, ~lFIApp: frzn, ~lNSIEMan: frzn, ~lNSIPBranch: frzn,
-            ~lMFApplication: frzn, ~lMEManager: frzn, ~lMOFilePicker: frzn,
-            ~lnsIPrefBranch: frzn, ~lMOPService: frzn, ~lnsIUpdateItem: frzn,
-            ~lnsIExtensionManager: frzn, ~lComponents_classes: frzn,
-            ~lComponents_interfaces: frzn, ~lComponents: frzn, ~lConsole: frzn,
-            ~lRsDownloadHelper: frzn, ~lRsDownloadHelperP: frzn, ~lWindow: frzn,
-            ~lnsIFilePicker: frzn, ~lFilePicker: frzn, ~lFile: frzn, ~lBrowser:
-              frzn, ~lTab: frzn, ~lInput: frzn, ~lNodes: frzn, ~lChecked: frzn,
-              ~lClassNames: frzn, ~lADsafeMarks: frzn, ~lNames: frzn,
-              ~lPackedValues: frzn, ~lValues: frzn, ~lOffsetHeights: frzn,
-              ~lOffsetWidths: frzn, ~lKeys: frzn, ~lStyles: frzn, ~lEvent: frzn,
-              ~lEventTarget: frzn, ~lSelector: frzn, ~lRange: frzn, ~lQuery:
-                frzn, ~lBunches: frzn, ~lBunch: frzn, ~lStyle: frzn,
-                ~lSelection: frzn, ~lNode: frzn, ~lDocument: frzn, ~lDom: frzn,
-                ~lF: frzn, ~lId: frzn, ~lLib: frzn, ~lURI: frzn) -> Top /
-                sameType, Num) -> Int,
+    setInterval: (this: Top, (this: Top) / (&browser:
+      locinvar_000352:Ref(~lBrowser) [Ref(~lBrowser)], &Application:
+        locinvar_000354:Ref(~lApplication) [Ref(~lApplication)], &Components:
+          locinvar_000356:Ref(~lComponents) [Ref(~lComponents)], &window:
+            locinvar_000358:Ref(~lWindow) [Ref(~lWindow)], ~lPreferences: frzn,
+            ~lExtensions: frzn, ~lApplication_extensions: frzn, ~lApplication:
+              frzn, ~lFIApp: frzn, ~lNSIEMan: frzn, ~lNSIPBranch: frzn,
+              ~lMFApplication: frzn, ~lMEManager: frzn, ~lMOFilePicker: frzn,
+              ~lnsIPrefBranch: frzn, ~lMOPService: frzn, ~lnsIUpdateItem: frzn,
+              ~lnsIExtensionManager: frzn, ~lComponents_classes: frzn,
+              ~lComponents_interfaces: frzn, ~lComponents: frzn, ~lConsole:
+                frzn, ~lRsDownloadHelper: frzn, ~lRsDownloadHelperP: frzn,
+                ~lWindow: frzn, ~lnsIFilePicker: frzn, ~lFilePicker: frzn,
+                ~lFile: frzn, ~lBrowser: frzn, ~lTab: frzn, ~lInput: frzn,
+                ~lNodes: frzn, ~lChecked: frzn, ~lClassNames: frzn,
+                ~lADsafeMarks: frzn, ~lNames: frzn, ~lPackedValues: frzn,
+                ~lValues: frzn, ~lOffsetHeights: frzn, ~lOffsetWidths: frzn,
+                ~lKeys: frzn, ~lStyles: frzn, ~lEvent: frzn, ~lEventTarget:
+                  frzn, ~lSelector: frzn, ~lRange: frzn, ~lQuery: frzn,
+                  ~lBunches: frzn, ~lBunch: frzn, ~lStyle: frzn, ~lSelection:
+                    frzn, ~lNode: frzn, ~lDocument: frzn, ~lDom: frzn, ~lF:
+                      frzn, ~lId: frzn, ~lLib: frzn, ~lURI: frzn,
+                      ~lHTMLCollection: frzn, ~lHTMLFormElement: frzn, &doc:
+                        locinvar_000360:Ref(~lDocument) [Ref(~lDocument)]) ->
+                          Top / sameType
+                      , Num) -> Int,
+
+    clearInterval: (this:Top, Num) -> Top,
  
-    setInterval: (this: Top, Int) -> Top,
-               
-    document:
-      Ref(~lNode) 
+    document: Ref(~lNode) 
   } > lObjPro)
 
 (* https://developer.mozilla.org/en-US/docs/XPCOM_Interface_Reference/nsIFilePicker *)
@@ -303,7 +315,7 @@ weak (~lFile: {
 
 weak (~lBrowser: {
     selectedTab: Ref(~lTab),
-    addTab: (this:Ref(~lBrowser), Str) -> Top,
+    addTab: (this:Top, Str) -> Ref(~lTab),
     show: (this:Ref(~lBrowser)) -> Int
   } > lObjPro)
 
