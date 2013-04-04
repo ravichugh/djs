@@ -1,0 +1,2 @@
+1.  Some addons have files and resources compressed in jar files. Need to extract
+    those.
