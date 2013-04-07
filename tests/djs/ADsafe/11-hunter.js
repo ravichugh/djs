@@ -1,3 +1,6 @@
+
+var walkTheDOM = /*: ( node: Ref(~lNode), func:(Ref(~lNode)) -> Top, skip: Bool)
+                   -> Top */ "#extern";
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
 
 var document  = /*: Ref(~lDocument) */ "#extern";
@@ -5,8 +8,6 @@ var name /*: Str */ = "#extern";
 var result /*: Ref(~lNodes) */ = "#extern";
 var star    /*: Bool */         = "#extern";
 
-var walkTheDOM = /*: ( node: Ref(~lNode), func:(Ref(~lNode)) -> Top, skip: Bool)
-                   -> Top */ "#extern";
 
 var hunter = {
 

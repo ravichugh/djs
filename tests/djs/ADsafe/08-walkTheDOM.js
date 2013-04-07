@@ -13,7 +13,7 @@ var walkTheDOM = function walkTheDOM_rec(node, func, skip)
   node = node.firstChild;
   /*: (&node: Ref(~lNode)) -> (&node: sameType) */
   while (node) {
-    walkTheDOM_rec(node, func, true);   //XXX: PV added third argument to match definition
+    walkTheDOM_rec(node, func, true);   //PV added third argument to match definition
     node = node.nextSibling;
   }
 };

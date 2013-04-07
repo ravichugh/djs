@@ -4,9 +4,10 @@ var error = /*: ()  -> { FLS } */ "#extern";
 
 var reject_global = 
 /*: {(and
-      (v:: [;L1,L2;] (that: Ref(L1)) / (L1: d: Dict > L2) -> 
+(*      (v:: [;L1,L2;] (that: Ref(L1)) / (L1: d: Dict > L2) -> 
           { (implies (truthy (objsel d "window" cur L2)) FLS) } / sameExact)
-      (v:: (that: Ref(~lBunch)) ->  Top)
+      (v:: (that: Ref(~lBunch)) ->  Top)  *)
+      (v::(that:Ref(~lO)) -> Top)
     )} */ "#extern";
 
 function F() /*: (this:Ref) / (this: Empty > this.pro) -> Ref(this) / same */ {
@@ -29,7 +30,7 @@ function F() /*: (this:Ref) / (this: Empty > this.pro) -> Ref(this) / same */ {
 
 
 var create = function (o, object)   //PV: adding 2nd argument
-/*: (o:Ref, object: Ref) / (o: Dict > lObjPro, object: tyObject) -> Top / () */
+/*: (o:Ref(~lO), object: Ref) / (object: tyObject) -> Top / () */
 {
   reject_global(o);
 //  if (Object.hasOwnProperty('create')) {    //PV: original
@@ -44,7 +45,7 @@ var create = function (o, object)   //PV: adding 2nd argument
 //  ADSAFE.get retrieves a value from an object.
 
 var get = function (object, name) 
-/*: (object: Ref, name: Str) / (object: Dict > lObjPro) -> Top / sameType */ 
+/*: (object: Ref(~lO), name: Str) -> Top / sameType */ 
 {
   reject_global(object);
 //  if (arguments.length === 2 && !reject_property(object, name)) {

@@ -1899,8 +1899,11 @@ and quickWrapperBaseOps g h qb v2 =
       | BStr, VBase(Str "charAt") -> tySimpleArrow [tyAny; tyInt] tyStr
       | BStr, VBase(Str "slice") -> tySimpleArrow [tyAny; tyInt; tyInt] tyStr
       | BStr, VBase(Str "indexOf") -> tySimpleArrow [tyAny; tyStr] tyInt
+      | BStr, VBase(Str "lastIndexOf") -> tySimpleArrow [tyAny; tyStr] tyInt
+      | BStr, VBase(Str "substring") -> tySimpleArrow [tyAny; tyInt] tyStr
       | BStr, VBase(Str "toLowerCase") -> tySimpleArrow [tyAny] tyStr
       | BStr, VBase(Str "toUpperCase") -> tySimpleArrow [tyAny] tyStr
+      | BStr, VBase(Str "replace") -> tySimpleArrow [tyAny; tyStr; tyStr] tyStr
       | BInt, VBase(Str "toString")
       | BNum, VBase(Str "toString") -> tySimpleArrow [tyAny] tyStr
       | _ -> failwith (spr "quickWrapperBaseOps: [%s] [%s]"

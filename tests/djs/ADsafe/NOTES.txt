@@ -51,6 +51,7 @@ From trying to typecheck the code:
 - Model the window object 
   * Add fields like: console
 
+- Add concatenation ('+') for strings in logic
 
 
 ====================================================

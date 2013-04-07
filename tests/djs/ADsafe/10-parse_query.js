@@ -2,9 +2,15 @@
 
 /*: tyQueryLoc {Arr(Ref(~lSelector))|(packed v)} > lArrPro */ "#define";
 
-var error = /*: (message: Str)  -> { FLS } */ "#extern";
+var error /*: (message: Str)  -> { FLS } */ = "#extern";
 
-var parse_query = function (text, id) /*: (text: Str, id: Str) -> Ref(~lQuery) */
+//PV: adding this to simulate the regex parsing
+var regex_parse = function() /*: () / () -> Ref(lM) / (lM: {Arr(Str)|(and (packed v) (= (len v) 9))} > lArrPro) */ {
+  return /*: lM {Arr(Str)|(and (packed v) (= (len v) 9))} */ ["0", "1", "2", "3", "4", "5", "6", "7", "8"];
+};
+
+
+var parse_query = function (textarg, id) /*: (Str, Str) -> Ref(~lQuery) */
 {
 
   // Convert a query string into an array of op/name/value selectors.
@@ -18,9 +24,11 @@ var parse_query = function (text, id) /*: (text: Str, id: Str) -> Ref(~lQuery) *
 
   // A name must be all lower case and may contain digits, -, or _.
 
-  var match = /*: lA0 { Arr(Str) | (packed v) }*/ [] ,   // A match array  //XXX: PV: added "null"
-      query = /*: lQ  { Arr(Ref(~lSelector))|(packed v)} */  [],       // The resulting query array
-      selector  /*: Ref(~lSelector) */ = null;       //PV: added "null"
+  var match /*: {(or (= v null) (v::Ref(lM)))} */ = null,           // A match array 
+      query /*: Ref  { Arr(Ref(~lSelector))|(packed v)} */ =  [],   // The resulting query array
+      selector  /*: Ref(~lSelector) */ = null;                     //PV: added "null"
+
+  var text /*: Str */ = "a";
 
   //TODO: RegEx
   //,qx = id
@@ -29,8 +37,8 @@ var parse_query = function (text, id) /*: (text: Str, id: Str) -> Ref(~lQuery) *
 
   // Loop over all of the selectors in the text.
 
-  /*: ( &text: Str, &query: Ref(lQ), lQ: tyQueryLoc, 
-        &match: {(or (v::Ref(lA0)) (v::Ref(lA1)))} ) -> sameType */ 
+  /*: ( &text: Str, 
+        &match:{(or (= v null) (v::Ref(lM)))}) -> sameType */ 
   do {
 
     // The qx teases the components of one selector out of the text, ignoring
@@ -46,15 +54,15 @@ var parse_query = function (text, id) /*: (text: Str, id: Str) -> Ref(~lQuery) *
     //          match[7]  . & _ > +
     //          match[8]      name
 
+    //TODO: RegEx
     //match = qx.exec(string_check(text));
-    match =  /*: lA1 {Arr(Str) | (packed v)} */ ["0", "1", "2", "3", "4", "5", "6", "7", "8"];    //PV: using this temporarily
-    //TODO: Encode regex info...
+    match = regex_parse();
 
     if (!match) {
       error("ADsafe: Bad query:" + text);
     }
 
-    // Make a selector object and stuff it in the query.
+     // Make a selector object and stuff it in the query.
 
 
     if (match[1]) {
@@ -88,52 +96,52 @@ var parse_query = function (text, id) /*: (text: Str, id: Str) -> Ref(~lQuery) *
         /*: selector (~lSelector, thwd lSelector) */ "#freeze";
       }
     } 
+    else if (match[5]) {
 
-//    else if (match[5]) {
-//
-//      // The selector is an id.
-//
-//      if (query.length > 0 || match[5].length <= id.length ||
-//          match[5].slice(0, id.length) !== id) {
-//        error("ADsafe: Bad query: " + text);
-//      }
-//      /*: selector lSelector */ "#thaw";
-//      selector = {
-//        op: '#',
-//        name: match[5]
-//      };
-//      /*: selector (~lSelector, thwd lSelector) */ "#freeze";
-//
-//      // The selector is a colon.
-//
-//    } 
-//    else if (match[6]) {
-//      /*: selector lSelector */ "#thaw";
-//      selector = {
-//        op: ':' + match[6]
-//      };
-//      /*: selector (~lSelector, thwd lSelector) */ "#freeze";
-//
-//      // The selector is one of > + . & _ or a naked tag name
-//
-//    }
-//    else {
-//      /*: selector lSelector */ "#thaw";
-//      selector = {
-//        op: match[7],
-//        name: match[8]
-//      };
-//      /*: selector (~lSelector, thwd lSelector) */ "#freeze";
-//    }
+      // The selector is an id.
 
-    // Add the selector to the query.
+      if (query.length > 0 || match[5].length <= id.length ||
+          match[5].slice(0, id.length) !== id) {
+        error("ADsafe: Bad query: " + text);
+      }
+      /*: selector lSelector */ "#thaw";
+      selector = {
+        op: '#',
+        name: match[5]
+      };
+      /*: selector (~lSelector, thwd lSelector) */ "#freeze";
 
-//XXX: SLOW DOWN !!! 
+      // The selector is a colon.
+
+    } 
+    else if (match[6]) {
+      /*: selector lSelector */ "#thaw";
+      selector = {
+        op: ':' + match[6]
+      };
+      /*: selector (~lSelector, thwd lSelector) */ "#freeze";
+      // The selector is one of > + . & _ or a naked tag name
+    }
+    else {
+      /*: selector lSelector */ "#thaw";
+      assume((typeof match[7] === 'string'));     //PV
+      selector = {
+        op: match[7],
+        name: match[8]
+      };
+      /*: selector (~lSelector, thwd lSelector) */ "#freeze";
+    }
+
+//TODO    
+//    // Add the selector to the query.
 //    query.push(selector);
 //
 //    // Remove the selector from the text. If there is more text, have another go.
-//
-//    text = text.slice(match[0].length, 0);    //PV: added 2nd argument to slice              
+    assume(match != null);
+    assume(typeof match[0] == 'string');
+// TODO
+//    assert(/*: Int */  (match[0].length));
+//      text = text.slice(match[0].length, 0);    //PV: added 2nd argument to slice 
 
   } while (text);
   

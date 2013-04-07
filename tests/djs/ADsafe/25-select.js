@@ -37,7 +37,13 @@ var selection = function (string)
 {
   reject_global(this);
   string_check(string);
-  var b = this.___nodes___, end, node, old, start, range;
+  var b     /*: Ref(~lNodes) */ = this.___nodes___, 
+      end   /*: Int */ = 0, 
+      node  /*: Ref(~lNode) */ = null,
+      old   /*: Str */ = "" ,
+      start /*: Int */ = 0,
+      range /*: Ref(~lRange) */ = null;
+
   /*: b lNodes */ "#thaw";
   if (b.length === 1 && allow_focus) {
     node = b[0];
@@ -46,7 +52,7 @@ var selection = function (string)
       start = node.selectionStart;
       end = node.selectionEnd;
       old = node.value;
-//PV: this slows it down a lot
+//TODO: this slows it down a lot
 //      node.value = old.slice(0, start) + string + old.slice(end, 0);  //PV added second argument
 //      node.selectionStart = node.selectionEnd = start +
 //        string.length;

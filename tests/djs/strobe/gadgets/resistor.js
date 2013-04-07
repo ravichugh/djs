@@ -61,15 +61,16 @@ var addCommas = function(inputStr) /*: (inputStr: Str) / ( ) -> Str / sameType *
 
 
 //PV : adding var def
-var ohms = /*: lOhms */ { };
+var ohms = /*: {value:Str} */ { };
 
 
 //PV : rearranged this
 var doCalculateResistance = function()
-/*: () / (  
+/* () / (  
    lBandNumberValues: {(and (v::Arr({Int | (and (< v 16) (>= v 0))})) (packed v) (= (len v) 5))} > lArrPro ,
    lOhms: { Dict | (and (has v "value") (Str (sel v "value")))} > lObjPro) 
     -> Top / (lOhms: sameType, lBandNumberValues: sameType) */ 
+  /*: () -> Top */
 {
 
     var currentBandValue /*: Int */ =0;
@@ -117,11 +118,12 @@ var doCalculateResistance = function()
          ) -> Top / sameType 
 */ "#define";
 
-var view_onOpen = function() /*: tyView_onOpen */ {
+var view_onOpen = function() 
+  /* tyView_onOpen */ 
+  /*: () -> Top */ 
+{
     // Initialize the resistor's color bands to match the bandNumberValues array above.
 
-//XXX: PV: commenting the following out to speed it up a bit 
-/*
     firstBand.downImage = "stock_images\\Button" + buttonStrs[bandNumberValues[0]] + "Down.PNG";
     firstBand.image = "stock_images\\Button" + buttonStrs[bandNumberValues[0]] + "Normal.PNG";
     firstBand.overImage = "stock_images\\Button" + buttonStrs[bandNumberValues[0]] + "Over.PNG";
@@ -141,8 +143,6 @@ var view_onOpen = function() /*: tyView_onOpen */ {
     fifthBand.downImage = "stock_images\\Button" + buttonStrs[bandNumberValues[4]] + "Down.PNG";
     fifthBand.image = "stock_images\\Button" + buttonStrs[bandNumberValues[4]] + "Normal.PNG";
     fifthBand.overImage = "stock_images\\Button" + buttonStrs[bandNumberValues[4]] + "Over.PNG";
-*/
-//XXX: PV: End of slow down comments
     //// Initialize the resistor value.
     doCalculateResistance();
 
@@ -169,9 +169,13 @@ var view_onOpen = function() /*: tyView_onOpen */ {
 
 
 //PV: rearranged this
-var drawNewColorBand = function(color) /*: (color: {Int | (and (>= v 0) (< v 16))}) / (  
-            lBandNumberValues: {(and (v::Arr({Int | (and (< v 16) (>= v 0))})) (packed v) (= (len v) 5))} > lArrPro ,
-            lFirstBand: tyDict, lSecondBand: tyDict, lThirdBand: tyDict, lFourthBand: tyDict)  -> Top / sameType */ {
+var drawNewColorBand = function(color)
+/* (color: {Int | (and (>= v 0) (< v 16))}) / (  
+  lBandNumberValues: {(and (v::Arr({Int | (and (< v 16) (>= v 0))})) (packed v) (= (len v) 5))} > lArrPro ,
+  lFirstBand: tyDict, lSecondBand: tyDict, lThirdBand: tyDict, lFourthBand: tyDict)  -> Top / sameType */
+
+/*: ({Int|(and (>= v 0) (< v 16))}) -> Top */ 
+{
     //TODO: PV: replaced the original switch statement with if.
     //switch (currentBandIndex) {
     //case 0:
@@ -231,7 +235,7 @@ var drawNewColorBand = function(color) /*: (color: {Int | (and (>= v 0) (< v 16)
     return;
 };
 
-/*: tyButton () / (
+/* tyButton () / (
      lFirstBand: tyDict,
             lSecondBand: tyDict,
             lThirdBand:  tyDict,
@@ -242,6 +246,8 @@ var drawNewColorBand = function(color) /*: (color: {Int | (and (>= v 0) (< v 16)
             lBandNumberValues: {(and (v::Arr({Int | (and (< v 16) (>= v 0))})) (packed v) (= (len v) 5))} > lArrPro) 
 
            -> Top /  sameType */ "#define";
+
+/*: tyButton () -> Top */ "#define";
 
 var doBlackButton = function() /*: tyButton */ {
     drawNewColorBand(0);
@@ -333,7 +339,8 @@ var doEraseButton = function()  /*: tyButton */ {
 
 
 var doFirstToleranceButton = function() 
-/*: () / (lFourthBand: tyDict, lFifthBand: tyDict, lFirstToleranceButton: Dict > lObjPro) -> Top / sameType */ {
+/* () / (lFourthBand: tyDict, lFifthBand: tyDict, lFirstToleranceButton: Dict > lObjPro) -> Top / sameType */ {
+ /*: () -> Top */
     if (numberOfColorBands == 4) {
         fourthBand.downImage = firstToleranceButton.image;
         fourthBand.image = firstToleranceButton.image;
@@ -348,7 +355,10 @@ var doFirstToleranceButton = function()
 };
 
 var doSecondToleranceButton = function()
-/*: () / (lFourthBand: tyDict, lFifthBand: tyDict, lSecondToleranceButton: Dict > lObjPro)  -> Top / sameType */ {
+/* () / (lFourthBand: tyDict, lFifthBand: tyDict, lSecondToleranceButton: Dict > lObjPro)  -> Top / sameType */
+ /*: () -> Top */
+{
+
     if (numberOfColorBands == 4) {
         fourthBand.downImage = secondToleranceButton.image;
         fourthBand.image = secondToleranceButton.image;
@@ -363,7 +373,9 @@ var doSecondToleranceButton = function()
 };
 
 var doNoneButton = function()  
-/*: () / (lFourthBand: tyDict, lFifthBand: tyDict)  -> Top / sameType*/ {
+/* () / (lFourthBand: tyDict, lFifthBand: tyDict)  -> Top / sameType*/ 
+/*: () -> Top */
+{
     if (numberOfColorBands == 4) {
         fourthBand.downImage = "stock_images\\ButtonBlankNormal.PNG";
         fourthBand.image = "stock_images\\ButtonBlankNormal.PNG";
@@ -381,7 +393,8 @@ var doNoneButton = function()
 var currentColorBandArrow = /*: lCurrentColorBandArrow */ {};
 
 var doFirstBand = function() 
-/*: () / (lCurrentColorBandArrow: Dict > lObjPro )  -> Top / sameType */ 
+/* () / (lCurrentColorBandArrow: Dict > lObjPro )  -> Top / sameType */ 
+/*: () -> Top */
 {
     // Move the arrow pointer.
     currentColorBandArrow.y = 79;
@@ -391,7 +404,8 @@ var doFirstBand = function()
 };
 
 var doSecondBand = function() 
-/*: () / (lCurrentColorBandArrow: Dict > lObjPro )  -> Top / sameType */ 
+/* () / (lCurrentColorBandArrow: Dict > lObjPro )  -> Top / sameType */ 
+/*: () -> Top */
 {
     // Move the arrow pointer.
     currentColorBandArrow.y = 105;
@@ -401,7 +415,8 @@ var doSecondBand = function()
 };
 
 var doThirdBand = function() 
-/*: () / (lCurrentColorBandArrow: Dict > lObjPro )  -> Top / sameType */ 
+/* () / (lCurrentColorBandArrow: Dict > lObjPro )  -> Top / sameType */ 
+/*: () -> Top */
 {
     // Move the arrow pointer.
     currentColorBandArrow.y = 131;
@@ -411,7 +426,8 @@ var doThirdBand = function()
 };
 
 var doFourthBand = function()
-/*: () / (lCurrentColorBandArrow: Dict > lObjPro )  -> Top / sameType */ 
+/* () / (lCurrentColorBandArrow: Dict > lObjPro )  -> Top / sameType */ 
+/*: () -> Top */
 {
     // This var does = function not need to do anything for a four band resistor.
     if (numberOfColorBands == 5) {

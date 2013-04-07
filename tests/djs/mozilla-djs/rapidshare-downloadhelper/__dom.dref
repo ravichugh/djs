@@ -1,0 +1,189 @@
+weak (~lNodes         : { Arr(Ref(~lNode)) | (packed v)} > lArrPro)
+weak (~lChecked       : { Arr(Bool)         | (packed v)} > lArrPro)
+weak (~lClassNames    : { Arr(Str)          | (packed v)} > lArrPro)
+weak (~lADsafeMarks   : { Arr(Str)          | (packed v)} > lArrPro)
+weak (~lNames         : { Arr(Str)          | (packed v)} > lArrPro)
+weak (~lPackedValues  : { Arr(Str)          | (packed v)} > lArrPro)
+weak (~lValues        : Arr(Str)  > lArrPro)
+weak (~lOffsetHeights : { Arr(Num)          | (packed v)} > lArrPro)
+weak (~lOffsetWidths  : { Arr(Num)          | (packed v)} > lArrPro)
+weak (~lKeys          : { Arr(Str)          | (packed v)} > lArrPro)
+weak (~lStyles        : Arr(Str) > lArrPro)
+
+weak (~lEvent     : { Dict | 
+  (and 
+    (* Needed to keep this type for the functions cause they are also objects *)
+    (implies (has v "altKey")           (Bool (sel v "altKey")))
+    (implies (has v "bubble")           (Bool (sel v "bubble")))
+    (implies (has v "cancelBubble")     ({(and (v:: (Ref(~lEvent)) -> Top) (= (tag v) "function"))} (sel v "cancelBubble")))
+    (implies (has v "ctrlKey")          (Bool (sel v "ctrlKey")))
+    (implies (has v "key")              (Bool (sel v "key")))
+    (implies (has v "preventDefault")   (Str (sel v "preventDefault")))
+    (implies (has v "shiftKey")         ({(or (v:: (Ref(~lEvent)) -> Top) (v::Null))} (sel v "shiftKey")))
+    (implies (has v "srcElement")       (Bool (sel v "srcElement")))
+    (implies (has v "stopPropagation")  ({(and (v::Ref(~lNode)) (= (tag v) "function"))} (sel v "stopPropagation")))
+    (implies (has v "target")           ({(and (v:: (Ref(~lEvent)) -> Top) (= (tag v) "function"))} (sel v "target")))
+    (implies (has v "that")             ({(or (v::Ref(~lNode)) (v::Null))} (sel v "that")))
+    (implies (has v "type_")            ({Str|(= v "__farray__")} (sel v "type_")))
+    (* XXX: it MUST have this field *)
+    (has v "originalTarget")  ((sel v "originalTarget") :: Ref(~lDocument))
+    (* TODO: giving a restricted type here *)
+    (implies (has v "__farray__")        ({(= (tag v) "function")} (sel v "__farray__")))
+  )} > lObjPro)
+
+(*  altKey          : Bool,
+  bubble          : (this: Ref(~lEvent))-> Top,
+  cancelBubble    : Bool,
+  ctrlKey         : Bool,
+  key             : Str, 
+  preventDefault  : (this: Ref(~lEvent)) -> Top,
+  shiftKey        : Bool,
+  srcElement      : Ref(~lNode),
+  stopPropagation : (this: Ref(~lEvent))-> Top,
+  target          : Ref(~lNode),    (* could also be Ref(~lEventTarget) *)
+  that            : Ref(~lBunch),
+  type_           : Str,
+  _               : Bot                         
+} > lObjPro)*)
+
+weak (~lEventTarget: { } > lObjPro)
+
+weak (~lSelector : { Dict |
+  (and 
+    (has v "op") (Str (sel v "op"))
+  (* Don't need this. In function quest. If the field of hunter is a function
+    * this should imply that we have one of the following cases. But this won't
+    * work for the population of selectors at parse_query. *)
+  (*(and 
+    (has v "op") ({(or  (= v "empty_") 
+                        (= v "plus")
+                        (= v "greater") 
+                        (= v "pound") 
+                        (= v "slash") 
+                        (= v "star"))
+                  } (sel v "op") )*)
+    (implies (has v "name") (Str (sel v "name"  )))
+    (implies (has v "value") (Str (sel v "value")))
+  )} > lObjPro)
+ 
+weak (~lRange : {
+  text: Str,
+  expand: (this:Ref(~lRange), Str) -> Bool
+} > lObjPro)
+  
+weak (~lQuery: { Arr(Ref(~lSelector)) | (packed v) } > lArrPro)
+
+weak (~lBunches: {Arr(Ref(~lBunch))|(packed v)} > lArrPro)
+
+weak (~lBunch    : {
+  "___nodes___"  : Ref(~lNodes),
+  "___star___"   : Bool,
+  _              : Bot    (* Needed to inherit fields from prototype *)
+} > lBunchProto)
+
+weak (~lStyle : {
+    visibility      : Str,
+    cssFloat        : Str,
+    styleFloat      : Str,
+    backgroundColor : Str,
+    border          : Str,
+    display         : Str,
+    color           : Str,
+    innerHTML       : Str
+} > lObjPro)
+
+weak (~lSelection: { createRange: () -> Ref(~lRange) }  > lObjPro) 
+
+
+weak (~lNode: {
+    "___ on ___"         : Ref(~lEvent),
+    "___adsafe root___"  : Str,
+    "_adsafe mark_"      : Str,
+    addEventListener     : (this: Ref(~lNode), Str, 
+                             (this:Top, Ref(~lEvent)) / (~lHTMLFormElement: frzn, ~lHTMLCollection: frzn, ~lURI: frzn, ~lLib: frzn, ~lId: frzn, ~lF: frzn, ~lDom: frzn, ~lDocument: frzn, ~lNode: frzn, ~lSelection: frzn, ~lStyle: frzn, ~lBunch: frzn, ~lBunches: frzn, ~lQuery: frzn, ~lRange: frzn, ~lSelector: frzn, ~lEventTarget: frzn, ~lEvent: frzn, ~lStyles: frzn, ~lKeys: frzn, ~lOffsetWidths: frzn, ~lOffsetHeights: frzn, ~lValues: frzn, ~lPackedValues: frzn, ~lNames: frzn, ~lADsafeMarks: frzn, ~lClassNames: frzn, ~lChecked: frzn, ~lNodes: frzn, ~lInput: frzn, ~lTab: frzn, ~lBrowser: frzn, ~lFile: frzn, ~lFilePicker: frzn, ~lnsIFilePicker: frzn, ~lWindow: frzn, ~lRsDownloadHelperP: frzn, ~lRsDownloadHelper: frzn, ~lConsole: frzn, ~lComponents: frzn, ~lComponents_interfaces: frzn, ~lComponents_classes: frzn, ~lnsIExtensionManager: frzn, ~lnsIUpdateItem: frzn, ~lMOPService: frzn, ~lnsIPrefBranch: frzn, ~lMOFilePicker: frzn, ~lMEManager: frzn, ~lMFApplication: frzn, &cond: locinvar_000304:Bool [Bool], &doc: locinvar_000286:Ref(~lDocument) [Ref(~lDocument)], &elt: locinvar_000319:Ref(~lHTMLFormElement) [Ref(~lHTMLFormElement)], ~lNSIPBranch: frzn, ~lNSIEMan: frzn, ~lFIApp: frzn, ~lApplication: frzn, ~lApplication_extensions: frzn, ~lExtensions: frzn, ~lPreferences: frzn, &window: locinvar_000314:Ref(~lWindow) [Ref(~lWindow)], &Components: locinvar_000316:Ref(~lComponents) [Ref(~lComponents)], &Application: locinvar_000318:Ref(~lApplication) [Ref(~lApplication)], &browser: locinvar_000320:Ref(~lBrowser) [Ref(~lBrowser)]) -> Top / sameType, Bool) -> Top,
+    appendChild          : (this: Ref(~lNode), Ref(~lNode)) -> Top,
+    autocomplete         : Str,
+    blur                 : (this: Ref(~lNode)) -> Top,
+    change               : Ref(~lEvent),
+    checked              : Bool,
+    childNodes           : Ref(~lNodes),
+    className            : Str,
+    cloneNode            : (this: Ref(~lNode), deep:Bool) -> Ref(~lNode),
+    createTextRange      : () -> Ref(~lRange), 
+    currentStyle         : Ref(~lStyle),
+    disabled             : Bool,
+    document             : Ref(~lNode),
+    fire                 : (NotUndef) -> Top,
+    firstChild           : Ref(~lNode),
+    focus                : () -> Top,   
+    href                 : Str,
+    getComputedStyle     : (this: Ref(~lNode), node : Ref(~lNode), str  : Str) -> Ref(~lStyle),
+    getElementsByTagName : [;L;] (this: Ref(~lNode), name : Str) / () -> Ref(L) / (L: {Arr(Ref(~lNode))|(packed v)} > lArrPro),
+    getParent            : (this: Ref(~lNode)) -> Ref(~lNode),
+    insertBefore         : (this: Ref(~lNode), Ref(~lNode), Ref(~lNode)) -> Top,
+    name                 : Str,
+    nextSibling          : Ref(~lNode),
+    nodeName             : Str,
+    nodeValue            : Str,
+    offsetHeight         : Num,
+    offsetWidth          : Num,
+    onchange             : (this:Ref(~lEvent), Ref(~lEvent)) -> Top,
+    parent               : Ref(~lNode),
+    parentNode           : Ref(~lNode),
+    removeChild          : (this: Ref(~lNode), Ref(~lNode)) -> Top,
+    removeElement        : (this: Ref(~lNode), Ref(~lNode)) -> Top,
+    replaceChild         : (this: Ref(~lNode), Ref(~lNode), Ref(~lNode)) -> Top,
+    select               : (this: Ref(~lNode)) -> Top,   
+    selectionEnd         : Int,
+    selectionStart       : Int,
+    style                : Ref(~lStyle),
+    tagName              : Str,
+    title                : Str,
+    value                : Str     (*XXX: This might break stuff *)
+  } > lObjPro)
+
+weak (~lDocument   : {
+    createDocumentFragment : (this:Ref(~lDocument)) -> Ref(~lNode),
+    createElement  : (this: Ref(~lDocument), s: Str) -> Ref(~lNode),
+    createTextNode : (this: Ref(~lDocument), s: Str) -> Ref(~lNode),
+    defaultView    : Ref(~lNode),
+    forms          : Ref(~lHTMLCollection),
+    getElementById : (this: Ref(~lDocument), s : Str) -> Ref(~lNode),
+    location       : Ref(~lURI),
+    selection      : Ref(~lSelection)
+
+  } > lObjPro)
+
+weak (~lDom: { 
+    append: (Ref(~lBunch)) -> Ref(~lDom),
+    combine: (Ref(~lBunches)) -> Ref(~lBunch),
+    count: () -> Int,
+    ephemeral: (Ref(~lBunch)) -> Ref(~lDom),
+    fragment: (Ref(~lBunch)) -> Ref(~lBunch),
+    prepend: (Ref(~lBunch)) -> Ref(~lDom), 
+    q: (Ref(text)) -> Ref(~lBunch),
+    remove: () -> Top,
+    row: (Top) -> Ref(~lBunch),
+    tag_: (tag_: Str, type_: Str, name: Str) -> Ref(~lBunch),
+    text:{( and (v:: (text: Str) / (lT: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType) (v:: (text: Ref(lT)) / (lT: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType) )}
+}  > lObjPro) 
+
+weak (~lF: { _: Bot } > lFProto)
+
+
+weak (~lId: { } > lObjPro)
+weak (~lLib: { } > lObjPro)
+
+weak (~lURI: { 
+    href: Str,
+    toString: (this: Ref(~lURI)) -> Str
+  } > lObjPro)
+
+(* XXX: HTMLCollection here is treated as an Array - 
+ * this might not be entirely precise *)
+weak (~lHTMLCollection: { Arr(Ref(~lHTMLFormElement)) | (packed v) } > lArrPro)
+
+weak (~lHTMLFormElement: {
+    name: Str,
+    submit: () -> Top
+} > lObjPro)

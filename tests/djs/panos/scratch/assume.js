@@ -10,8 +10,9 @@ var bar = function(a) /*: (a:Ref) / (a: {Arr(Str)|(packed v)} > lArrPro) -> Top 
 var foo = function(a) 
 /*: (a:Ref) / (a: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType */
 {  
-  assume(typeof a[1] == "string");
+  assume( a[1] !== undefined);
   assert(/*: Str */ (a[1]));
-  assert(/*: Int */ (a[1].length));   //FAILS
+  assert(/*: Int */ (a[1].length));
+  
 };
 

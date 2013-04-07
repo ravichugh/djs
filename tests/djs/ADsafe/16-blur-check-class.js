@@ -1,12 +1,19 @@
+var error = /*: {( and (v::(Str) -> { FLS }) (v:: () -> { FLS }))} */ "#extern";
+
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
 
-var error = /*: (message: Str)  / () -> Top / sameType */ "#extern";
-var star  /*: Bool */               = "#extern";
+var reject_global = 
+/*: [;L1,L2;] (that: Ref(L1)) / (L1:d:Dict > L2, ~lBunch: thwd lBunch) 
+    -> {(implies (truthy (objsel d "window" cur L2)) FLS)} / sameExact */ "#extern";
+
+var star /*: Bool */ = "#extern";
 
 var blur = function () /*: (this: Ref(~lBunch)) -> Ref(~lBunch) */
 {
-  //TODO: TC reject_global
-  //reject_global(this);
+  /*: this lBunch */ "#thaw";
+  assume(this != null);
+  reject_global(this);
+  /*: this (~lBunch, thwd lBunch) */ "#freeze";
   
   /*: this lBunch */ "#thaw";
   var b = this.___nodes___;
@@ -46,7 +53,8 @@ var check  = function (value)
   if (isArray(value)) {
     /*: b lNodes */ "#thaw";
     if (value.length !== b.length) {
-      //TODO: expect frozen states
+      error('ADsafe: Array length: ... ');
+      //TODO
       //error('ADsafe: Array length: ' + b.length + '-' +
       //    value.length);
     }

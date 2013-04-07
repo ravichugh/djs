@@ -1,18 +1,33 @@
+var error = /*: {( and 
+              (v:: (message: Str)  -> { FLS })
+              (v:: ()  -> { FLS })              
+              )} */ "#extern";
+var dom_event = /*: (this: Ref(~lEvent), Ref(~lEvent))-> Top */ "#extern";
+
+//TODO: Using an imprecise type for "owns"
+var owns = 
+/* (object: Ref, string: Str) / (object: d: Dict (* {Dict|(not (has v "hasOwnProperty"))} *) > lObjPro) -> 
+    { (implies (= v true) (has d {string}))} / sameType */ 
+/*: (object: Top, string: Str) -> Bool */ "#extern";
+
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
 
 /*: tyEvent {
-  type_           : Str,
-  target          : Ref(~lNode),    (* could also be Ref(~lEventTarget) *)
-  cancelBubble    : Bool,
-  stopPropagation : () -> Top,
-  bubble          : () -> Top,
-  srcElement      : Ref(~lNode),
   altKey          : Bool,
+  bubble          : (this: Ref(~lEvent))-> Top,
+  cancelBubble    : Bool,
   ctrlKey         : Bool,
-  shiftKey        : Bool
-} > lObjPr */ "#define";
+  key             : Str, 
+  preventDefault  : (this: Ref(~lEvent)) -> Top,
+  shiftKey        : Bool,
+  srcElement      : Ref(~lNode),
+  stopPropagation : (this: Ref(~lEvent))-> Top,
+  target          : Ref(~lNode),    (* could also be Ref(~lEventTarget) *)
+  that            : Ref(~lBunch),
+  type_           : Str,
+  _               : Bot
+} */ "#define";
 
-var error = /*: (message: Str)  -> { FLS } */ "#extern";
 
 var String =  /*: (Top) -> Str */ "#extern";
 
@@ -51,7 +66,6 @@ var reject_global =
 
 var int_to_string /*: (Int) -> Str */ = "#extern";
 
-var dom_event = /*: (Ref(~lEvent)) -> Top */ "#extern";
 // -----------------------------------------------------------------------------------
 
 var klass = function (value) /*: (this: Ref(~lBunch), value: Str) -> Ref(~lBunch) */ {
@@ -70,9 +84,8 @@ var mark = function (value)
   if (isArray(value)) {
     /*: b lNodes */ "#thaw";
     if (value.length !== b.length) {
-//TODO
-//      error('ADsafe: Array length: ' + int_to_string(b.length) + '-' +
-//          int_to_string(value.length));
+      error('ADsafe: Array length: ' /*+ int_to_string(b.length) + '-' +
+         int_to_string(value.length)*/);
     }
     /*: (&b: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) | (packed v)} > lArrPro) -> sameType */
     for (i = 0; i < b.length; i += 1) {
@@ -104,7 +117,8 @@ var mark = function (value)
 
 var off = function (type_) /*: (this: Ref(~lBunch), type_:Top) -> Ref(~lBunch) */ {
   reject_global(this);
-  var b = this.___nodes___, node /*: Ref(~lNode) */ = null;
+  var b = this.___nodes___, 
+      node /*: Ref(~lNode) */ = null;
   var i /*: {Int | (>= v 0)}*/ = 0;
   /*: b lNodes */ "#thaw";
   b.l;
@@ -112,12 +126,10 @@ var off = function (type_) /*: (this: Ref(~lBunch), type_:Top) -> Ref(~lBunch) *
   for (i = 0; i < b.length; i += 1) {
     node = b[i];
     if (typeof type_ === 'string') {
-      if (typeof node['___ on ___']) {
-        var e = node['___ on ___'];
-//        /*: e lEvent */ "#thaw";
-//TODO: Cannot assign null unless this is a ref field !!!
-//        e[type_] = null;
-//        /*: e (~lEvent, thwd lEvent) */ "#freeze";
+      var e = node['___ on ___'];
+      if (typeof e) {
+        assume(typeof e[type_] === 'object');
+        e[type_] = null;
       }
     } else {
       node['___ on ___'] = null;
@@ -128,11 +140,12 @@ var off = function (type_) /*: (this: Ref(~lBunch), type_:Top) -> Ref(~lBunch) *
 };
 
 var on = function (type_, func) 
-/*: (this: Ref(~lBunch), type_:Top, func: (Top) -> Top) -> Ref(~lBunch) */ {
+/*: (this: Ref(~lBunch), type_:Top, func: Top) -> Ref(~lBunch) */ {
   reject_global(this);
   if (typeof type_ !== 'string' || typeof func !== 'function') {
-    error("default");
+    error();
   }
+  assert(/*: {(= (tag v) "function")} */ (func));
 
   var b = this.___nodes___, 
       node /*: Ref(~lNode) */ = null, 
@@ -141,39 +154,46 @@ var on = function (type_, func)
   var i /*: {Int | (>= v 0)}*/ = 0;
 
   /*: b lNodes */ "#thaw";
-  b.l;
+  assume(b != null);
   /*: ( &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) | (packed v)} > lArrPro) -> 
       sameType */
   for (i = 0; i < b.length; i += 1) {
     node = b[i];
 
-    // The change event does not propogate, so we must put the handler on the
-    // instance.
-//TODO: Add primitive addition for strings
-    if (type_ === 'change') {
-      ontype = 'on' + type_;
+//PV: slow-down
+//    // The change event does not propogate, so we must put the handler on the
+//    // instance.
+//    if (type_ === 'change') {
+//      ontype = 'on' + type_;
+//      assume(ontype === 'onchange');
 //      if (node[ontype] !== dom_event) {
 //        node[ontype] = dom_event;
 //      }
-    }
-
-    // Register an event. Put the function in a handler array, making one if it
-    // doesn't yet exist for this type_ on this node.
-
-    on = node['___ on ___'];
-    if (!on) {
-//TODO 
-//      /*: on lEvent */ "#thaw";
-//      on = {};
-//      /*: on (~lEvent, thwd lEvent) */ "#freeze";
-//      node['___ on ___'] = on;
-    }
-//TODO: This is going to be hard to TC: it assumes that selecting type_ from on returns an array
-//    if (owns(on, type_)) {
-//      on[type_].push(func);
-//    } else {
-//      on[type_] = [func];
 //    }
+//
+//    // Register an event. Put the function in a handler array, making one if it
+//    // doesn't yet exist for this type_ on this node.
+//
+//    on = node['___ on ___'];
+//    if (!on) {
+//      var empty_ = /*: lEmpty Dict */ {};
+//      /*: empty_ (~lEvent, frzn) */ "#freeze";
+//      on = empty_;
+//      node['___ on ___'] = on;
+//    }
+    
+    /*: on lEvent */ "#thaw";
+    assume(on != null);
+//TODO    
+    if (owns(on, type_)) {
+      assume(typeof on === 'object');
+      assume(isArray(on[type_]));
+      on[type_].push(func);
+    }
+    else {
+      on[type_] = [func];
+    }
+    /*: on (~lEvent, thwd lEvent) */ "#freeze";
   }
   /*: b (~lNodes, thwd lNodes) */ "#freeze";
   return this;
