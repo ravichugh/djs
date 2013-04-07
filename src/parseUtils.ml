@@ -40,6 +40,8 @@ let argSpecs = [
                   "  require boolean guards to conditionals");
   ("-exactJoins", Arg.Set S.exactJoins,
                "     compute exact joins even when a variable is annotated");
+  ("-hackSubArrows", Arg.Set S.hackSubArrows,
+                  "");
 ]
 
 

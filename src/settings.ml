@@ -20,6 +20,7 @@ let checkWfSynthesis = ref true
 let tryAllBoxesHack = ref false
 let exactJoins = ref false
 let zzzTimeout = ref 0
+let hackSubArrows = ref false
 
 (* DJS options *)
 let djsMode = ref false

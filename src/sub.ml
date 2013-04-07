@@ -438,6 +438,13 @@ and checkArrows errList usedBoxes g
 
   if simpleCheckArrows arr1 arr2 then true
   else if simpleCheckArrows arr1 (hackBinders arr1 arr2) then true
+  (* TODO *)
+  else if !Settings.hackSubArrows then begin
+    Log.log0 "hackSubArrows\n\n";
+    Log.log1 "%s\n\n" (strTT (UArrow arr1));
+    Log.log1 "%s\n\n" (strTT (UArrow arr2));
+    true
+  end
   else die errList "need to restore Sub.checkArrows"
 
 (*
