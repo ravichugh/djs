@@ -1,38 +1,69 @@
 //PV -- Definitions begin
 /*: "tests/djs/mozilla-djs/flashblock/chrome/content/flashblock/__mozilla.dref" */ "#use";
-/*: "tests/djs/mozilla-djs/rapidshare-downloadhelper/__dom.dref" */ "#use";
+/*: "tests/djs/mozilla-djs/flashblock/chrome/content/flashblock/__dom.dref" */ "#use";
 
 var Components /*: Ref(~lComponents) */   = "#extern";
+
+function RegExp(a,b)
+/*: new (this:Ref, Str, Str) / (this: Empty > lRegExpProto) -> Ref(~lRegExp) / () */
+{
+  this.test = function(m) 
+    /*: (this: Ref(~lRegExp), Str) -> Bool */ { return true; } ;
+  var self = this;
+  /*: self (~lRegExp,frzn) */ "#freeze";
+  return self;
+};
+
+var Flashblock = /*: Ref(~lFlashblock) */ "#extern";
+
+/*: annoyingHeap (lRegExpProto: _underscore_94:Dict >
+    lObjPro, ~lHTMLFormElement: frzn, ~lHTMLCollection: frzn, ~lURI: frzn, ~lLib:
+    frzn, ~lId: frzn, ~lF: frzn, ~lDom: frzn, ~lDocument: frzn, ~lNode: frzn,
+    ~lSelection: frzn, ~lStyle: frzn, ~lBunch: frzn, ~lBunches: frzn, ~lQuery:
+    frzn, ~lRange: frzn, ~lSelector: frzn, ~lEventTarget: frzn, ~lEvent: frzn,
+    ~lStyles: frzn, ~lKeys: frzn, ~lOffsetWidths: frzn, ~lOffsetHeights: frzn,
+    ~lValues: frzn, ~lPackedValues: frzn, ~lNames: frzn, ~lADsafeMarks: frzn,
+    ~lClassNames: frzn, ~lChecked: frzn, ~lNodes: frzn, ~lFlashblock: frzn,
+    ~lRegExp: frzn, ~lInput: frzn, ~lTab: frzn, ~lBrowser: frzn,
+    ~nsIScriptableInputStream: frzn, ~nsIFileOutputStream: frzn,
+    ~nsIFileInputStream: frzn, ~nsIProperties: frzn, ~nsIFile: frzn,
+    ~nsIFilePicker: frzn, ~nsIFilePicker: frzn, ~lWindow: frzn, ~lConsole: frzn,
+    ~lComponents: frzn, ~lComponents_interfaces: frzn, ~lComponents_classes: frzn,
+    ~lnsIExtensionManager: frzn, ~lnsIUpdateItem: frzn, ~lMOPService: frzn,
+    ~lnsIPrefBranch: frzn, ~lMFilePicker: frzn, ~lMEManager: frzn, ~lMFApplication:
+    frzn, ~lMScriptableInputStream: frzn, ~lMNFileOutputStream: frzn,
+    ~lMNFileInputStream: frzn, ~lMFileLocal: frzn, ~lMFDirService: frzn,
+    ~lNSIPBranch: frzn, ~nsIExtensionManager: frzn, ~fuelIApplication: frzn,
+    ~lDirLocator: frzn, ~lApplication: frzn, ~lApplication_extensions: frzn,
+    ~lExtensions: frzn, ~lPreferences: frzn, &Components:
+    locinvar_000236:Ref(~lComponents) [Ref(~lComponents)]
+)  */ "#define";
+
 //PV -- Definitions end
 
 
+// File mode flags
+
+//Flashblock.MODE_RDONLY   =  0x01;
+//Flashblock.MODE_WRONLY   =  0x02;
+//Flashblock.MODE_RDWR     =  0x04;
+//Flashblock.MODE_CREATE   =  0x08;
+//Flashblock.MODE_APPEND   =  0x10;
+//Flashblock.MODE_TRUNCATE =  0x20;
+//Flashblock.MODE_SYNC     =  0x40;
+//Flashblock.MODE_EXCL     =  0x80;
 
 
-
-
-var Flashblock = {
-
-    // File mode flags
-
-    MODE_RDONLY   : 0x01,
-    MODE_WRONLY   : 0x02,
-    MODE_RDWR     : 0x04,
-    MODE_CREATE   : 0x08,
-    MODE_APPEND   : 0x10,
-    MODE_TRUNCATE : 0x20,
-    MODE_SYNC     : 0x40,
-    MODE_EXCL     : 0x80
-};
-
-    /// USER STYLESHEET FUNCTIONS
+/// USER STYLESHEET FUNCTIONS
 
 //XXX: PV: Defining the rest of the fields like this to allow reference to other 
-//fields defined earlier. Obviously mutually recursive functions will not
-//work...
+//fields defined earlier.
 
-    // Returns a nsIFile for the specified file in the profile chrome directory
+//TODO: How do we treat lRegExpProto ???
+
+// Returns a nsIFile for the specified file in the profile chrome directory
 Flashblock.getUserChromeFile = function(fileName) 
-  /*: (this:Top, Str) -> Ref(~nsIFile) */
+  /*: (this: Ref(~lFlashblock), Str) / annoyingHeap -> Ref(~nsIFile) / sameType */
 {
     var NSIFILE = Components.interfaces.nsIFile;
     
@@ -48,10 +79,11 @@ Flashblock.getUserChromeFile = function(fileName)
 
     return file;
 };
+
   
-    // Returns the contents of the specified file in the profile chrome directory
+// Returns the contents of the specified file in the profile chrome directory
 Flashblock.readUserChromeFile = function (fileName) 
-  /*: (this:Top, Str) -> Str */
+  /*: (this: Ref(~lFlashblock), Str) / annoyingHeap -> Str / sameType*/
 {
     var fileContents /*: Str */ = "";
     var file = Flashblock.getUserChromeFile(fileName);
@@ -82,10 +114,9 @@ Flashblock.readUserChromeFile = function (fileName)
 };
 
 
-
-    // Writes the specified contents into the specified file in the profile chrome directory
+// Writes the specified contents into the specified file in the profile chrome directory
 Flashblock.writeUserChromeFile = function (fileName, fileContents) 
-/*: (this:Top, Str, Str) -> Int */
+  /*: (this: Ref(~lFlashblock), Str, Str) /  annoyingHeap -> Int / sameType*/
 {
         var file = Flashblock.getUserChromeFile(fileName);
         var ioFlags = Flashblock.MODE_WRONLY; //| Flashblock.MODE_CREATE | Flashblock.MODE_TRUNCATE;
@@ -103,79 +134,109 @@ Flashblock.writeUserChromeFile = function (fileName, fileContents)
         return result;
 };
 
-     // Checks the if the user stylesheet already contains the import statement
-Flashblock.userStyleSheetHasImport = function () 
-/*: () -> Top */ 
-{
-//    var fileContents = Flashblock.readUserChromeFile('userContent.css'); 
 
-//TODO: RegEx    
+// Checks the if the user stylesheet already contains the import statement
+Flashblock.userStyleSheetHasImport = function () 
+  /*: (this: Ref(~lFlashblock)) / annoyingHeap -> Bool / sameType */ 
+{
+    var fileContents = Flashblock.readUserChromeFile('userContent.css'); 
+    //TODO
+    //var re = new RegExp("^[ \t]*@import.*chrome://flashblock/content/flashblock.css", "m");
+    //return re.test(fileContents);
+    return true; 
+};
+
+//Flashblock.userStyleSheetHasImport = userStyleSheetHasImport;
+
+
+// Adds a CSS import statement for the flashblock stylesheet
+Flashblock.addImportToUserStylesheet = function (fileName)
+  /*: (Str) / annoyingHeap -> Bool / sameType */ 
+{
+    var importStr = "@import url(chrome://flashblock/content/flashblock.css);";
+
+    var fileContents = Flashblock.readUserChromeFile('userContent.css');
+    //TODO
 //    var re = new RegExp("^[ \t]*@import.*chrome://flashblock/content/flashblock.css", "m");
 //
-//    return re.test(fileContents);
+//    if(re.test(fileContents))
+//        return true;
+//
+//    fileContents = importStr + "\n" + fileContents;
+//
+//    var ret = Flashblock.writeUserChromeFile(fileName, fileContents);
+//    return (ret == fileContents.length);
+    return true;
 };
+
+
+
+// Removes the CSS import statement for the flashblock stylesheet
+Flashblock.removeImportFromUserStylesheet = function (fileName) 
+  /*: (Str) / annoyingHeap -> Bool / sameType */
+{
+    var fileContents = Flashblock.readUserChromeFile(fileName);
+    //TODO
+//    var re = new RegExp("^[ \t]*@import.*chrome://flashblock/content/flashblock.css.*(\n)?$", "mg");
 //
-//    // Adds a CSS import statement for the flashblock stylesheet
-//    addImportToUserStylesheet : function (fileName) {
-//        var importStr = "@import url(chrome://flashblock/content/flashblock.css);"
-//
-//        var fileContents = Flashblock.readUserChromeFile('userContent.css');
-//        var re = new RegExp("^[ \t]*@import.*chrome://flashblock/content/flashblock.css", "m");
-//
-//        if(re.test(fileContents))
-//            return true;
-//
-//        fileContents = importStr + "\n" + fileContents;
-//
-//        var ret = Flashblock.writeUserChromeFile(fileName, fileContents);
+//    if(re.test(fileContents)) {
+//        //TODO
+//        //fileContents = fileContents.replace(re, '');
+//        var ret = /* Flashblock.*/ writeUserChromeFile(fileName, fileContents);
 //        return (ret == fileContents.length);
+//    } else {
+//        return true;
+//    }
+    return true;
+};
+
+
+Flashblock._whitelistTargetEnabled = true;
+
+
+///// WHITELIST FUNCTIONS
+//PV: rearranged this
+
+  // Loads the whitelist into the global array
+var loadWhitelist = function () {
+  //PV: defined in flashblock-prefs.js
+    var flashblockPref = FBlockUtils.getWhitelist();
+    gFlashblockWhitelist = new Array();
+    if (flashblockPref)
+        gFlashblockWhitelist = flashblockPref.split(",");
+  };
+
+
+
+/// PREF FUNCTIONS
+  // was flashblockPrefObserver
+//Flashblock.prefObserver = {
+//    observe: function(subject, topic, data) {
+//      if(data == "flashblock.whitelist")
+//        Flashblock.loadWhitelist();
+//      else if(data == "flashblock.enabled") {
+//        gFlashblockEnabled = Flashblock.isEnabled();
+//        Flashblock.setButtonState(gFlashblockEnabled);
+//      }
+//      else if(data == "javascript.enabled") {
+//        Flashblock.setButtonState(gFlashblockEnabled);
+//      }
+//      else if(data == "flashblock.silverlight.blocked") {
+//        gSilverblockEnabled = Flashblock.isSilverlightEnabled();
+//      }
+//      else if(data == "flashblock.whitelist.includeTarget") {
+//        Flashblock._whitelistTargetEnabled = Flashblock.isTargetEnabled();
+//      }
 //    },
 //
-//    // Removes the CSS import statement for the flashblock stylesheet
-//    removeImportFromUserStylesheet : function (fileName) {
-//        var fileContents = Flashblock.readUserChromeFile(fileName);
-//        var re = new RegExp("^[ \t]*@import.*chrome://flashblock/content/flashblock.css.*(\n)?$", "mg");
-//
-//        if(re.test(fileContents)) {
-//            fileContents = fileContents.replace(re, '');
-//            var ret = Flashblock.writeUserChromeFile(fileName, fileContents);
-//            return (ret == fileContents.length)
-//        } else {
-//            return true;
-//        }
-//    },
-//
-//    _whitelistTargetEnabled: true,
-//
-///// PREF FUNCTIONS
-//	// was flashblockPrefObserver
-//	prefObserver : {
-//		observe: function(subject, topic, data) {
-//			if(data == "flashblock.whitelist")
-//				Flashblock.loadWhitelist();
-//			else if(data == "flashblock.enabled") {
-//				gFlashblockEnabled = Flashblock.isEnabled();
-//				Flashblock.setButtonState(gFlashblockEnabled);
-//			}
-//			else if(data == "javascript.enabled") {
-//				Flashblock.setButtonState(gFlashblockEnabled);
-//			}
-//			else if(data == "flashblock.silverlight.blocked") {
-//				gSilverblockEnabled = Flashblock.isSilverlightEnabled();
-//			}
-//			else if(data == "flashblock.whitelist.includeTarget") {
-//				Flashblock._whitelistTargetEnabled = Flashblock.isTargetEnabled();
-//			}
-//		},
-//
-//		QueryInterface : function (aIID) {
-//			if (aIID.equals(Components.interfaces.nsIObserver) || 
-//				aIID.equals(Components.interfaces.nsISupports) ||
-//				aIID.equals(Components.interfaces.nsISupportsWeakReference))
-//				return this;
-//			throw Components.results.NS_NOINTERFACE;
-//		}
-//	},
+//    QueryInterface : function (aIID) {
+//      if (aIID.equals(Components.interfaces.nsIObserver) || 
+//        aIID.equals(Components.interfaces.nsISupports) ||
+//        aIID.equals(Components.interfaces.nsISupportsWeakReference))
+//        return this;
+//      throw Components.results.NS_NOINTERFACE;
+//    }
+//  };
 //
 //	// was addFlashblockPrefObserver
 //	addPrefObserver : function () {
@@ -188,15 +249,6 @@ Flashblock.userStyleSheetHasImport = function ()
 //	},
 //
 //
-///// WHITELIST FUNCTIONS
-//
-//	// Loads the whitelist into the global array
-//	loadWhitelist : function () {
-//		var flashblockPref = FBlockUtils.getWhitelist();
-//		gFlashblockWhitelist = new Array();
-//		if (flashblockPref)
-//		    gFlashblockWhitelist = flashblockPref.split(",");
-//	},
 //
 //	checkHostInWhitelist : function (host) {
 //		if (!host)

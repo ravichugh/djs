@@ -17,40 +17,29 @@ weak (~lApplication: {
     extensions: Ref(~lApplication_extensions)
   } > lObjPro)
 
-weak (~lDirLocator: {
-    get: (this:Ref(~lDirLocator), Str, Ref(~nsIFile)) -> Ref(~nsIFile)
-  } > lObjPro)
-
-weak (~fuelIApplication: { } > lObjPro)
-weak (~nsIExtensionManager: { } > lObjPro)
-weak (~nsIPrefBranch: { } > lObjPro)
-
-weak (~lMFDirService: {
-    getService: (this: Ref(~lMFDirService), Ref(~nsIProperties)) -> Ref(~lDirLocator)
-  }  > lObjPro)
-
-weak (~lMFFileLocal: {
-    createInstance: (this: Ref(~lMFFileLocal), Ref(~nsILocalFile)) -> Ref(~nsIFile)
-  }  > lObjPro)
+weak (~lFIApp: { } > lObjPro)
+weak (~lNSIEMan: { } > lObjPro)
+weak (~lNSIPBranch: { } > lObjPro)
 
 weak (~lMFApplication: {
-    getService: (this: Ref(~lMFApplication), Ref(~fuelIApplication)) -> Ref(~lApplication)
+    getService: (this: Ref(~lMFApplication), Ref(~lFIApp)) -> Ref(~lApplication)
   }  > lObjPro)
 
 weak (~lMEManager: {
-    getService: (this: Ref(~lMEManager), Ref(~nsIExtensionManager)) -> Ref(~lnsIExtensionManager)
+    getService: (this: Ref(~lMEManager), Ref(~lNSIEMan)) -> Ref(~lnsIExtensionManager)
   }  > lObjPro)
 
-weak (~lMFilePicker: {
-    createInstance: (this: Ref(~lMFilePicker), Ref(~nsIFilePicker)) -> Ref(~nsIFilePicker) 
+weak (~lMOFilePicker: {
+    createInstance: (this: Ref(~lMOFilePicker), Ref(~lnsIFilePicker)) -> Ref(~lFilePicker) 
   } >lObjPro)
 
 weak (~lnsIPrefBranch: {
     setCharPref: (this: Ref(~lnsIPrefBranch), Str, Str) -> Top
   } > lObjPro)
 
+
 weak (~lMOPService: {
-    getService: (this: Ref(~lMOPService), Ref(~nsIPrefBranch)) -> Ref(~lnsIPrefBranch)
+    getService: (this: Ref(~lMOPService), Ref(~lNSIPBranch)) -> Ref(~lnsIPrefBranch)
   } > lObjPro)
 
 weak (~lnsIUpdateItem: {
@@ -62,22 +51,17 @@ weak (~lnsIExtensionManager: {
   } > lObjPro)
 
 weak (~lComponents_classes: {
-    mozilla_org__file__directory_service_1 : Ref(~lMFDirService),
-    mozilla_org__file__local_1             : Ref(~lMFFileLocal),
-    mozilla_org__fuel__application_1       : Ref(~lMFApplication),
-    mozilla_org__extensions__manager_1     : Ref(~lMEManager),
-    mozilla_org__filepicker_1              : Ref(~lMFilePicker),
-    mozilla_org__preferences_service_1     : Ref(~lMOPService)
+    mozilla_org__fuel__application_1: Ref(~lMFApplication),
+    mozilla_org__extensions__manager_1: Ref(~lMEManager),
+    mozilla_org__filepicker_1: Ref(~lMOFilePicker),
+    mozilla_org__preferences_service_1: Ref(~lMOPService)
   } > lObjPro)
 
 weak (~lComponents_interfaces: {
-    fuelIApplication    : Ref(~fuelIApplication),
-    nsIExtensionManager : Ref(~nsIExtensionManager),
-    nsIFilePicker       : Ref(~nsIFilePicker),
-    nsIPrefBranch       : Ref(~nsIPrefBranch),
-    nsIFile             : Ref(~nsIFile),
-    nsIProperties       : Ref(~nsIProperties),
-    nsILocalFile        : Ref(~nsILocalFile)
+    fuelIApplication: Ref(~lFIApp),
+    nsIExtensionManager: Ref(~lNSIEMan),
+    nsIFilePicker: Ref(~lnsIFilePicker),
+    nsIPrefBranch: Ref(~lNSIPBranch)
   } > lObjPro)
 
 weak (~lComponents: {
@@ -100,12 +84,12 @@ weak (~lRsDownloadHelper: {
       &Components: locinvar_000303:Ref(~lComponents) [Ref(~lComponents)], &window:
       locinvar_000305:Ref(~lWindow) [Ref(~lWindow)], ~lPreferences: frzn,
       ~lExtensions: frzn, ~lApplication_extensions: frzn, ~lApplication: frzn,
-      ~fuelIApplication: frzn, ~nsIExtensionManager: frzn, ~nsIPrefBranch: frzn, ~lMFApplication: frzn,
-      ~lMEManager: frzn, ~lMFilePicker: frzn, ~lnsIPrefBranch: frzn, ~lMOPService:
+      ~lFIApp: frzn, ~lNSIEMan: frzn, ~lNSIPBranch: frzn, ~lMFApplication: frzn,
+      ~lMEManager: frzn, ~lMOFilePicker: frzn, ~lnsIPrefBranch: frzn, ~lMOPService:
       frzn, ~lnsIUpdateItem: frzn, ~lnsIExtensionManager: frzn, ~lComponents_classes:
       frzn, ~lComponents_interfaces: frzn, ~lComponents: frzn, ~lConsole: frzn,
       ~lRsDownloadHelper: frzn, ~lRsDownloadHelperP: frzn, ~lWindow: frzn,
-      ~nsIFilePicker: frzn, ~nsIFilePicker: frzn, ~nsIFile: frzn, ~lBrowser: frzn, &doc:
+      ~lnsIFilePicker: frzn, ~lFilePicker: frzn, ~lFile: frzn, ~lBrowser: frzn, &doc:
       locinvar_000286:Ref(~lDocument) [Ref(~lDocument)], &cond: locinvar_000304:Bool
       [Bool], &elt: locinvar_000319:Ref(~lHTMLFormElement) [Ref(~lHTMLFormElement)],
       ~lTab: frzn, ~lInput: frzn, ~lNodes: frzn, ~lChecked: frzn, ~lClassNames: frzn,
@@ -124,15 +108,15 @@ weak (~lRsDownloadHelper: {
       frzn, ~lStyles: frzn, ~lKeys: frzn, ~lOffsetWidths: frzn, ~lOffsetHeights:
       frzn, ~lValues: frzn, ~lPackedValues: frzn, ~lNames: frzn, ~lADsafeMarks: frzn,
       ~lClassNames: frzn, ~lChecked: frzn, ~lNodes: frzn, ~lInput: frzn, ~lTab: frzn,
-      ~lBrowser: frzn, ~nsIFile: frzn, ~nsIFilePicker: frzn, ~nsIFilePicker: frzn,
+      ~lBrowser: frzn, ~lFile: frzn, ~lFilePicker: frzn, ~lnsIFilePicker: frzn,
       ~lWindow: frzn, &elt: locinvar_000319:Ref(~lHTMLFormElement)
       [Ref(~lHTMLFormElement)], ~lRsDownloadHelperP: frzn, ~lRsDownloadHelper: frzn,
       &cond: locinvar_000304:Bool [Bool], &doc: locinvar_000286:Ref(~lDocument)
       [Ref(~lDocument)], ~lConsole: frzn, ~lComponents: frzn,
       ~lComponents_interfaces: frzn, ~lComponents_classes: frzn,
       ~lnsIExtensionManager: frzn, ~lnsIUpdateItem: frzn, ~lMOPService: frzn,
-      ~lnsIPrefBranch: frzn, ~lMFilePicker: frzn, ~lMEManager: frzn,
-      ~lMFApplication: frzn, ~nsIPrefBranch: frzn, ~nsIExtensionManager: frzn, ~fuelIApplication: frzn,
+      ~lnsIPrefBranch: frzn, ~lMOFilePicker: frzn, ~lMEManager: frzn,
+      ~lMFApplication: frzn, ~lNSIPBranch: frzn, ~lNSIEMan: frzn, ~lFIApp: frzn,
       ~lApplication: frzn, ~lApplication_extensions: frzn, ~lExtensions: frzn,
       ~lPreferences: frzn, &window: locinvar_000462:Ref(~lWindow) [Ref(~lWindow)],
       &Components: locinvar_000464:Ref(~lComponents) [Ref(~lComponents)],
@@ -147,16 +131,16 @@ weak (~lRsDownloadHelper: {
       ~lEvent: frzn, ~lStyles: frzn, ~lKeys: frzn, ~lOffsetWidths: frzn,
       ~lOffsetHeights: frzn, ~lValues: frzn, ~lPackedValues: frzn, ~lNames: frzn,
       ~lADsafeMarks: frzn, ~lClassNames: frzn, ~lChecked: frzn, ~lNodes: frzn,
-      ~lInput: frzn, ~lTab: frzn, ~lBrowser: frzn, ~nsIFile: frzn, ~nsIFilePicker: frzn,
-      ~nsIFilePicker: frzn, ~lWindow: frzn, ~lRsDownloadHelperP: frzn,
+      ~lInput: frzn, ~lTab: frzn, ~lBrowser: frzn, ~lFile: frzn, ~lFilePicker: frzn,
+      ~lnsIFilePicker: frzn, ~lWindow: frzn, ~lRsDownloadHelperP: frzn,
       ~lRsDownloadHelper: frzn, ~lConsole: frzn, ~lComponents: frzn,
       ~lComponents_interfaces: frzn, ~lComponents_classes: frzn,
       ~lnsIExtensionManager: frzn, ~lnsIUpdateItem: frzn, ~lMOPService: frzn,
-      ~lnsIPrefBranch: frzn, ~lMFilePicker: frzn, ~lMEManager: frzn,
+      ~lnsIPrefBranch: frzn, ~lMOFilePicker: frzn, ~lMEManager: frzn,
       ~lMFApplication: frzn, &cond: locinvar_000304:Bool [Bool], &doc:
       locinvar_000286:Ref(~lDocument) [Ref(~lDocument)], &elt:
-      locinvar_000319:Ref(~lHTMLFormElement) [Ref(~lHTMLFormElement)], ~nsIPrefBranch:
-      frzn, ~nsIExtensionManager: frzn, ~fuelIApplication: frzn, ~lApplication: frzn,
+      locinvar_000319:Ref(~lHTMLFormElement) [Ref(~lHTMLFormElement)], ~lNSIPBranch:
+      frzn, ~lNSIEMan: frzn, ~lFIApp: frzn, ~lApplication: frzn,
       ~lApplication_extensions: frzn, ~lExtensions: frzn, ~lPreferences: frzn,
       &window: locinvar_000314:Ref(~lWindow) [Ref(~lWindow)], &Components:
       locinvar_000316:Ref(~lComponents) [Ref(~lComponents)], &Application:
@@ -171,14 +155,14 @@ weak (~lRsDownloadHelper: {
       frzn, ~lStyles: frzn, ~lKeys: frzn, ~lOffsetWidths: frzn, ~lOffsetHeights:
       frzn, ~lValues: frzn, ~lPackedValues: frzn, ~lNames: frzn, ~lADsafeMarks: frzn,
       ~lClassNames: frzn, ~lChecked: frzn, ~lNodes: frzn, ~lInput: frzn, ~lTab: frzn,
-      ~lBrowser: frzn, ~nsIFile: frzn, ~nsIFilePicker: frzn, ~nsIFilePicker: frzn,
+      ~lBrowser: frzn, ~lFile: frzn, ~lFilePicker: frzn, ~lnsIFilePicker: frzn,
       ~lWindow: frzn, ~lRsDownloadHelperP: frzn, ~lRsDownloadHelper: frzn, ~lConsole:
       frzn, ~lComponents: frzn, ~lComponents_interfaces: frzn, ~lComponents_classes:
       frzn, ~lnsIExtensionManager: frzn, ~lnsIUpdateItem: frzn, ~lMOPService: frzn,
       ~lnsIPrefBranch: frzn, &doc: locinvar_000286:Ref(~lDocument) [Ref(~lDocument)],
       &elt: locinvar_000319:Ref(~lHTMLFormElement) [Ref(~lHTMLFormElement)],
-      ~lMFilePicker: frzn, ~lMEManager: frzn, ~lMFApplication: frzn, &cond:
-      locinvar_000304:Bool [Bool], ~nsIPrefBranch: frzn, ~nsIExtensionManager: frzn, ~fuelIApplication:
+      ~lMOFilePicker: frzn, ~lMEManager: frzn, ~lMFApplication: frzn, &cond:
+      locinvar_000304:Bool [Bool], ~lNSIPBranch: frzn, ~lNSIEMan: frzn, ~lFIApp:
       frzn, ~lApplication: frzn, ~lApplication_extensions: frzn, ~lExtensions: frzn,
       ~lPreferences: frzn, &window: locinvar_000314:Ref(~lWindow) [Ref(~lWindow)],
       &Components: locinvar_000316:Ref(~lComponents) [Ref(~lComponents)],
@@ -198,15 +182,15 @@ weak (~lRsDownloadHelper: {
       [Ref(~lHTMLFormElement)], ~lRsDownloadHelper: frzn, ~lConsole: frzn,
       ~lComponents: frzn, ~lComponents_interfaces: frzn, ~lComponents_classes: frzn,
       ~lnsIExtensionManager: frzn, ~lnsIUpdateItem: frzn, ~lMEManager: frzn, ~lURI:
-      frzn, &cond: locinvar_000304:Bool [Bool], ~lMFApplication: frzn, ~nsIExtensionManager:
-      frzn, ~fuelIApplication: frzn, ~lApplication: frzn, ~lApplication_extensions: frzn,
+      frzn, &cond: locinvar_000304:Bool [Bool], ~lMFApplication: frzn, ~lNSIEMan:
+      frzn, ~lFIApp: frzn, ~lApplication: frzn, ~lApplication_extensions: frzn,
       ~lExtensions: frzn, ~lPreferences: frzn, &window: locinvar_000365:Ref(~lWindow)
       [Ref(~lWindow)], &Components: locinvar_000367:Ref(~lComponents)
       [Ref(~lComponents)], &Application: locinvar_000369:Ref(~lApplication)
-      [Ref(~lApplication)] , ~nsIFilePicker: frzn , ~nsIFilePicker: frzn,
-      ~lMFilePicker: frzn , ~nsIFile: frzn ,  &browser: locinvar_000257:Ref(~lBrowser)
+      [Ref(~lApplication)] , ~lnsIFilePicker: frzn , ~lFilePicker: frzn,
+      ~lMOFilePicker: frzn , ~lFile: frzn ,  &browser: locinvar_000257:Ref(~lBrowser)
       [Ref(~lBrowser)] , ~lHTMLFormElement: frzn , ~lHTMLCollection: frzn ,
-      ~nsIPrefBranch: frzn, ~lnsIPrefBranch: frzn, ~lMOPService: frzn)-> Top /
+      ~lNSIPBranch: frzn, ~lnsIPrefBranch: frzn, ~lMOPService: frzn)-> Top /
 sameType,
 
     getFileName: 
@@ -220,13 +204,13 @@ sameType,
       ~lNodes: frzn, ~lInput: frzn, ~lTab: frzn, &doc:
       locinvar_000286:Ref(~lDocument) [Ref(~lDocument)], &elt:
       locinvar_000319:Ref(~lHTMLFormElement) [Ref(~lHTMLFormElement)], ~lBrowser:
-      frzn, ~nsIFile: frzn, ~nsIFilePicker: frzn, ~nsIFilePicker: frzn, ~lWindow: frzn,
+      frzn, ~lFile: frzn, ~lFilePicker: frzn, ~lnsIFilePicker: frzn, ~lWindow: frzn,
       ~lRsDownloadHelperP: frzn, ~lRsDownloadHelper: frzn, ~lConsole: frzn,
       ~lComponents: frzn, ~lComponents_interfaces: frzn, ~lComponents_classes: frzn,
       ~lnsIExtensionManager: frzn, ~lnsIUpdateItem: frzn, ~lMOPService: frzn,
-      ~lnsIPrefBranch: frzn, ~lMFilePicker: frzn, ~lMEManager: frzn,
-      ~lMFApplication: frzn, &cond: locinvar_000304:Bool [Bool], ~nsIPrefBranch: frzn,
-      ~nsIExtensionManager: frzn, ~fuelIApplication: frzn, ~lApplication: frzn, ~lApplication_extensions:
+      ~lnsIPrefBranch: frzn, ~lMOFilePicker: frzn, ~lMEManager: frzn,
+      ~lMFApplication: frzn, &cond: locinvar_000304:Bool [Bool], ~lNSIPBranch: frzn,
+      ~lNSIEMan: frzn, ~lFIApp: frzn, ~lApplication: frzn, ~lApplication_extensions:
       frzn, ~lExtensions: frzn, ~lPreferences: frzn, &window:
       locinvar_000382:Ref(~lWindow) [Ref(~lWindow)], &Components:
       locinvar_000384:Ref(~lComponents) [Ref(~lComponents)], &Application:
@@ -247,12 +231,12 @@ weak (~lWindow: {
       locinvar_000524:Ref(~lComponents) [Ref(~lComponents)], &window:
       locinvar_000526:Ref(~lWindow) [Ref(~lWindow)], ~lPreferences: frzn,
       ~lExtensions: frzn, ~lApplication_extensions: frzn, ~lApplication: frzn,
-      ~fuelIApplication: frzn, ~nsIExtensionManager: frzn, ~nsIPrefBranch: frzn, ~lMFApplication: frzn,
-      ~lMEManager: frzn, ~lMFilePicker: frzn, ~lnsIPrefBranch: frzn, ~lMOPService:
+      ~lFIApp: frzn, ~lNSIEMan: frzn, ~lNSIPBranch: frzn, ~lMFApplication: frzn,
+      ~lMEManager: frzn, ~lMOFilePicker: frzn, ~lnsIPrefBranch: frzn, ~lMOPService:
       frzn, ~lnsIUpdateItem: frzn, ~lnsIExtensionManager: frzn, ~lComponents_classes:
       frzn, ~lComponents_interfaces: frzn, ~lComponents: frzn, ~lConsole: frzn,
       ~lRsDownloadHelper: frzn, ~lRsDownloadHelperP: frzn, ~lWindow: frzn,
-      ~nsIFilePicker: frzn, ~nsIFilePicker: frzn, ~nsIFile: frzn, ~lBrowser: frzn,
+      ~lnsIFilePicker: frzn, ~lFilePicker: frzn, ~lFile: frzn, ~lBrowser: frzn,
       ~lTab: frzn, ~lInput: frzn, ~lNodes: frzn, ~lChecked: frzn, &doc:
       locinvar_000286:Ref(~lDocument) [Ref(~lDocument)], &elt:
       locinvar_000319:Ref(~lHTMLFormElement) [Ref(~lHTMLFormElement)], ~lClassNames:
@@ -270,13 +254,13 @@ weak (~lWindow: {
       [Ref(~lApplication)], &Components: locinvar_000356:Ref(~lComponents)
       [Ref(~lComponents)], &window: locinvar_000358:Ref(~lWindow) [Ref(~lWindow)],
       ~lPreferences: frzn, ~lExtensions: frzn, ~lApplication_extensions: frzn,
-      ~lApplication: frzn, ~fuelIApplication: frzn, ~nsIExtensionManager: frzn, ~nsIPrefBranch: frzn,
-      ~lMFApplication: frzn, ~lMEManager: frzn, ~lMFilePicker: frzn,
+      ~lApplication: frzn, ~lFIApp: frzn, ~lNSIEMan: frzn, ~lNSIPBranch: frzn,
+      ~lMFApplication: frzn, ~lMEManager: frzn, ~lMOFilePicker: frzn,
       ~lnsIPrefBranch: frzn, ~lMOPService: frzn, ~lnsIUpdateItem: frzn,
       ~lnsIExtensionManager: frzn, ~lComponents_classes: frzn, &cond:
       locinvar_000304:Bool [Bool], ~lComponents_interfaces: frzn, ~lComponents: frzn,
       ~lConsole: frzn, ~lRsDownloadHelper: frzn, ~lRsDownloadHelperP: frzn, ~lWindow:
-      frzn, ~nsIFilePicker: frzn, ~nsIFilePicker: frzn, ~nsIFile: frzn, ~lBrowser: frzn,
+      frzn, ~lnsIFilePicker: frzn, ~lFilePicker: frzn, ~lFile: frzn, ~lBrowser: frzn,
       ~lTab: frzn, ~lInput: frzn, ~lNodes: frzn, ~lChecked: frzn, ~lClassNames: frzn,
       ~lADsafeMarks: frzn, ~lNames: frzn, ~lPackedValues: frzn, ~lValues: frzn,
       ~lOffsetHeights: frzn, ~lOffsetWidths: frzn, ~lKeys: frzn, ~lStyles: frzn,
@@ -298,12 +282,12 @@ weak (~lWindow: {
       frzn, ~lStyles: frzn, ~lKeys: frzn, ~lOffsetWidths: frzn, ~lOffsetHeights:
       frzn, ~lValues: frzn, ~lPackedValues: frzn, ~lNames: frzn, ~lADsafeMarks: frzn,
       ~lClassNames: frzn, ~lChecked: frzn, ~lNodes: frzn, ~lInput: frzn, ~lTab: frzn,
-      ~lBrowser: frzn, ~nsIFile: frzn, ~nsIFilePicker: frzn, ~nsIFilePicker: frzn,
+      ~lBrowser: frzn, ~lFile: frzn, ~lFilePicker: frzn, ~lnsIFilePicker: frzn,
       ~lWindow: frzn, ~lRsDownloadHelperP: frzn, ~lRsDownloadHelper: frzn, ~lConsole:
       frzn, ~lComponents: frzn, ~lComponents_interfaces: frzn, ~lComponents_classes:
       frzn, ~lnsIExtensionManager: frzn, ~lnsIUpdateItem: frzn, ~lMOPService: frzn,
-      ~lnsIPrefBranch: frzn, ~lMFilePicker: frzn, ~lMEManager: frzn,
-      ~lMFApplication: frzn, ~nsIPrefBranch: frzn, ~nsIExtensionManager: frzn, ~fuelIApplication: frzn,
+      ~lnsIPrefBranch: frzn, ~lMOFilePicker: frzn, ~lMEManager: frzn,
+      ~lMFApplication: frzn, ~lNSIPBranch: frzn, ~lNSIEMan: frzn, ~lFIApp: frzn,
       ~lApplication: frzn, ~lApplication_extensions: frzn, ~lExtensions: frzn,
       ~lPreferences: frzn, &window: locinvar_000263:Ref(~lWindow) [Ref(~lWindow)],
       &Components: locinvar_000265:Ref(~lComponents) [Ref(~lComponents)],
@@ -318,45 +302,35 @@ weak (~lWindow: {
 } > lObjPro)
 
 (* https://developer.mozilla.org/en-US/docs/XPCOM_Interface_Reference/nsIFilePicker *)
-weak (~nsIFilePicker: {
-    modeSave      : Top,
-    returnOK      : {(= v 0)},
-    returnCancel  : {(= v 1)},
-    returnReplace : {(= v 2)}
+weak (~lnsIFilePicker: {
+  modeSave: Top,
+  returnOK: {(= v 0)},
+  returnCancel: {(= v 1)},
+  returnReplace: {(= v 2)}
   } > lObjPro)
 
-weak (~nsIFilePicker: {
-    init             : (this: Ref(~nsIFilePicker), Ref(~lWindow), Str, Top) -> Top,
-    defaultString    : Str,
-    appendFilter     : (this: Ref(~nsIFilePicker), Str, Str) -> Top,
-    displayDirectory : Ref(~nsIFile),
-    file             : Ref(~nsIFile)
-  } > lObjPro)
+weak (~lFilePicker: {
+  init: (this:Ref(~lFilePicker), Ref(~lWindow), Str, Top) -> Top,
+    defaultString: Str,
+    appendFilter: (this: Ref(~lFilePicker), Str, Str) -> Top,
+    displayDirectory: Ref(~lFile),
+    file: Ref(~lFile)
+} > lObjPro)
 
-weak (~nsIFile: {
-    path: Str,
-    initWithPath: (this:Top, Ref(~nsIFile)) -> Top,
-    append: (this:Top, Str) -> Ref(~nsIFile)
-  } > lObjPro)
-
-weak (~nsIProperties: {
-    
-  } > lObjPro)
-
-weak (~nsILocalFile: {
-
-  } > lObjPro)
+weak (~lFile: {
+  path: Str
+} > lObjPro)
 
 weak (~lBrowser: {
   selectedTab: Ref(~lTab),
     addTab: (this:Top, Str) -> Ref(~lTab),
     show: (this:Ref(~lBrowser)) -> Int
-  } > lObjPro)
+} > lObjPro)
 
 weak (~lTab: {
 
-  } > lObjPro)
-  
+} > lObjPro)
+
 weak (~lInput: {
-    value: Str 
-  } > lObjPro)
+  value: Str 
+} > lObjPro)

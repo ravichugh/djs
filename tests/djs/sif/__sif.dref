@@ -1,0 +1,12 @@
+
+weak (~window: { Dict | (and 
+  (implies (has v "p") (isSecret (sel v "p")))
+  )} > lWinPro)
+
+(*val theWinPro :: { Dict | (and *)
+(*  (implies (has v "p") (isSecret (sel v "p")))*)
+(*  )}*)
+
+heap (
+  lWinPro : theWinPro > lROOT
+)
