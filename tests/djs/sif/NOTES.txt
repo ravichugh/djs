@@ -1,0 +1,18 @@
+The Same-Origin Policy: 
+  prevents scripts loaded from one Web site from getting or setting properties of
+  a document loaded from a different site.
+
+
+The Same-Origin Check:
+  When a script attempts to access properties or methods in a different
+  window—for example, using the handle returned by window.open() - the browser
+  performs a same-origin check on the URLs of the documents in question. If the
+  URLs of the documents pass this check, the property can be accessed. If they
+  don‘t, an error is thrown. The same-origin check consists of verifying that
+  the URL of the document in the target window has the same - origin as the
+  document containing the calling script. 
+
+
+Jetpack Extension Framework - capability leaks:
+  Happens when a module requests access to a specific XPCOM interface and
+  inadvertently exports.
