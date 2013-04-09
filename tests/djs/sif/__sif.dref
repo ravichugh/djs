@@ -1,7 +1,7 @@
 
 weak (~window: { Dict | (and 
-  (implies (has v "secret") (isSecret (sel v "secret")))
-  (implies (has v "public") (isPublic (sel v "public")))
+  (implies (has v "secret") (NotUndef (sel v "secret")))
+  (implies (has v "public") (not (isSecret (sel v "public"))))
   )} > lWinPro)
 
 (*val theWinPro :: { Dict | (and *)

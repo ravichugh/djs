@@ -1,14 +1,14 @@
 /**************************************************
  *                                                *
  *      Explicit flow through prototype link      *
- *          Assigning a public variable 
- *              to a "secret" field*
+ *           Assigning public data to             * 
+ *            to a secret field -- OK             *
  *                                                *
  * ***********************************************/
 
 /*: "tests/djs/sif/__sif.dref" */ "#use";
 
-///*: (forall (s) (implies (isPublic s) (isSecret s))) */ "#assume";
+/*: (forall (s) (implies (isPublic s) (isSecret s))) */ "#assume";
 
 /*: beget :: [;LL1,LL2,LL3;]
     (Ref(LL2)) / (LL2: Top > LL3) -> Ref(LL1) / (LL1: Empty > LL2, LL2: same) */ '#type';

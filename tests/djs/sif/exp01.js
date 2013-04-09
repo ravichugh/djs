@@ -1,8 +1,7 @@
 /**************************************************
  *                                                *
  *      Explicit flow through prototype link      *
- *           Assigning public data to 
- *            to a secret field -- OK
+ *      Assinging secret data to secret field     *
  *                                                *
  * ***********************************************/
 
@@ -19,14 +18,18 @@ var beget = function (o) {
   return new /*: LL1 > LL2 */ ctor();
 };
 
-
-/*: bar :: [;L;] (Ref(~window), Ref(L), {(isPublic v)})
-    / (L: { } > lObjPro) -> Top / sameType */ "#type";
-
-var bar = function(window, x, pub) {
+var bar = function(window, x, secret) 
+/*: [;L;] (Ref(~window), Ref(L), {(isSecret v)})
+    / (L: { } > lObjPro) -> Top / sameType */ 
+{
+  
   var obj = /*: [;lObj, L, lObjPro;] */ beget(x);
-  x.foo = pub;
-  assert(/*: {(isPublic v)} */ (obj.foo));
+
+  assert(/*: {(isSecret v)} */ (secret));
+  x.foo = secret;
+  
+  assert(/*: {(isSecret v)} */ (obj.foo));
+  
   window.secret = obj.foo;
 };
 
