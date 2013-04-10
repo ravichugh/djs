@@ -1,0 +1,394 @@
+
+
+weak (~lPreferences: {
+  getValue: (this: Ref(~lPreferences),Top, Top) -> Int,
+  setValue: (this: Ref(~lPreferences), Str,Top) -> Top
+  } > lObjPro)
+
+weak (~lExtensions: {
+    prefs: Ref(~lPreferences)
+  } > lObjPro)
+
+weak (~lApplication_extensions: {
+    get: (this: Ref(~lApplication_extensions), Str) -> Ref(~lExtensions)
+  } > lObjPro)
+
+
+weak (~fuelIApplication: {
+    console: Ref(~lConsole),
+    extensions: Ref(~lApplication_extensions)
+  } > lObjPro)
+
+weak (~lDirLocator: {
+    get: (this:Top, Str, Ref(~nsIFile)) -> Ref(~nsIFile)
+  } > lObjPro)
+
+weak (~lMFDirService: {
+    getService: (this: Ref(~lMFDirService), Ref(~nsIProperties)) -> Ref(~lDirLocator)
+  }  > lObjPro)
+
+weak (~lMFileLocal: {
+    createInstance: (this: Ref(~lMFileLocal), Ref(~nsIFile)) -> Ref(~nsIFile)
+  }  > lObjPro)
+
+weak (~lMNFileInputStream: {
+    createInstance: (this: Ref(~lMNFileInputStream), Ref(~nsIFileInputStream)) 
+        -> Ref(~nsIFileInputStream)
+  }  > lObjPro)
+
+weak (~lMNFileOutputStream: {
+    createInstance: (this: Ref(~lMNFileOutputStream), Ref(~nsIFileOutputStream)) 
+        -> Ref(~nsIFileOutputStream)
+  }  > lObjPro)
+
+weak (~lMScriptableInputStream: {
+    createInstance: (this: Ref(~lMScriptableInputStream), Ref(~nsIScriptableInputStream)) 
+        -> Ref(~nsIScriptableInputStream)
+  }  > lObjPro)
+
+weak (~lMFApplication: {
+    getService: (this: Ref(~lMFApplication), Ref(~fuelIApplication)) -> Ref(~fuelIApplication)
+  }  > lObjPro)
+
+weak (~lMEManager: {
+    getService: (this: Ref(~lMEManager), Ref(~nsIExtensionManager)) -> Ref(~nsIExtensionManager)
+  }  > lObjPro)
+
+weak (~lMFilePicker: {
+    createInstance: (this: Ref(~lMFilePicker), Ref(~nsIFilePicker)) -> Ref(~nsIFilePicker) 
+  } >lObjPro)
+
+weak (~nsIPrefBranch: {
+    setCharPref: (this: Ref(~nsIPrefBranch), Str, Str) -> Top
+  } > lObjPro)
+
+weak (~nsIPrefService: {
+    getBranch: (this: Ref(~nsIPrefService), Str) -> Ref(~nsIPrefBranch)
+  } > lObjPro)
+
+
+weak (~lMOPService: {
+    getService: {(and 
+      (v :: (this: Ref(~lMOPService), Ref(~nsIPrefBranch)) -> Ref(~nsIPrefBranch))
+      (v :: (this: Ref(~lMOPService), Ref(~nsIPrefService)) -> Ref(~nsIPrefService))
+    )}
+  } > lObjPro)
+
+weak (~lnsIUpdateItem: {
+    version: Str
+  } > lObjPro)
+
+weak (~nsIExtensionManager: {
+    getItemForID: (this: Ref(~nsIExtensionManager), Str) -> Ref(~lnsIUpdateItem) 
+  } > lObjPro)
+
+weak (~lComponents_classes: {
+    mozilla_org__file__directory_service_1    : Ref(~lMFDirService),
+    mozilla_org__file__local_1                : Ref(~lMFileLocal),
+    mozilla_org__fuel__application_1          : Ref(~lMFApplication),
+    mozilla_org__extensions__manager_1        : Ref(~lMEManager),
+    mozilla_org__filepicker_1                 : Ref(~lMFilePicker),
+    mozilla_org__preferences_service_1        : Ref(~lMOPService),
+    mozilla_org__network__file_input_stream_1 : Ref(~lMNFileInputStream),
+    mozilla_org__network__file_output_stream_1: Ref(~lMNFileOutputStream),
+    mozilla_org__scriptableinputstream_1      : Ref(~lMScriptableInputStream)
+  } > lObjPro)
+
+weak (~lComponents_interfaces: {
+    fuelIApplication         : Ref(~fuelIApplication),
+    nsIExtensionManager      : Ref(~nsIExtensionManager),
+    nsIFilePicker            : Ref(~nsIFilePicker),
+    nsIPrefBranch            : Ref(~nsIPrefBranch),
+    nsIFile                  : Ref(~nsIFile),
+    nsILocalFile             : Ref(~nsIFile),    (* PV        : Simplifying stuff here *)
+    nsIProperties            : Ref(~nsIProperties),
+    nsIFileInputStream       : Ref(~nsIFileInputStream),
+    nsIFileOutputStream      : Ref(~nsIFileOutputStream),
+    nsIScriptableInputStream : Ref(~nsIScriptableInputStream),
+    nsIPrefService           : Ref(~nsIPrefService)
+  } > lObjPro)
+
+weak (~lComponents: {
+    classes: Ref(~lComponents_classes),
+    interfaces: Ref(~lComponents_interfaces)
+  } > lObjPro)
+
+weak (~lConsole: {
+    log: (Str) -> Top,
+    open: ( ) -> Top
+  } > lObjPro)
+
+
+weak (~lWindow: {
+    setTimeout:
+      (this:Ref(~lWindow), (this:Top) / (  &browser:
+      locinvar_000520:Ref(~lBrowser) [Ref(~lBrowser)], &Application:
+      locinvar_000522:Ref(~fuelIApplication) [Ref(~fuelIApplication)], &Components:
+      locinvar_000524:Ref(~lComponents) [Ref(~lComponents)], &window:
+      locinvar_000526:Ref(~lWindow) [Ref(~lWindow)], ~lPreferences: frzn,
+      ~lExtensions: frzn, ~lApplication_extensions: frzn, 
+      ~fuelIApplication: frzn, ~nsIExtensionManager: frzn, ~nsIPrefBranch: frzn, ~lMFApplication: frzn,
+      ~lMEManager: frzn, ~lMFilePicker: frzn, ~lMOPService:
+      frzn, ~lnsIUpdateItem: frzn, ~lComponents_classes:
+      frzn, ~lComponents_interfaces: frzn, ~lComponents: frzn, ~lConsole: frzn,
+      ~lRsDownloadHelper: frzn, ~lRsDownloadHelperP: frzn, ~lWindow: frzn,
+      ~nsIFilePicker: frzn, ~nsIFilePicker: frzn, ~nsIFile: frzn, ~lBrowser: frzn,
+      ~lTab: frzn, ~lInput: frzn, ~lNodes: frzn, ~lChecked: frzn, &doc:
+      locinvar_000286:Ref(~lDocument) [Ref(~lDocument)], &elt:
+      locinvar_000319:Ref(~lHTMLFormElement) [Ref(~lHTMLFormElement)], ~lClassNames:
+      frzn, ~lADsafeMarks: frzn, ~lNames: frzn, &cond: locinvar_000304:Bool [Bool],
+      ~lPackedValues: frzn, ~lValues: frzn, ~lOffsetHeights: frzn, ~lOffsetWidths:
+      frzn, ~lKeys: frzn, ~lStyles: frzn, ~lEvent: frzn, ~lEventTarget: frzn,
+      ~lSelector: frzn, ~lRange: frzn, ~lQuery: frzn, ~lBunches: frzn, ~lBunch: frzn,
+      ~lStyle: frzn, ~lSelection: frzn, ~lNode: frzn, ~lDocument: frzn, ~lDom: frzn,
+      ~lF: frzn, ~lId: frzn, ~lLib: frzn, ~lURI: frzn, ~lHTMLCollection: frzn,
+      ~lHTMLFormElement: frzn) -> Top / sameType, Num) -> Top , 
+
+    setInterval: 
+      (this: Top, (this: Top) / (&browser: locinvar_000352:Ref(~lBrowser)
+      [Ref(~lBrowser)], &Application: locinvar_000354:Ref(~fuelIApplication)
+      [Ref(~fuelIApplication)], &Components: locinvar_000356:Ref(~lComponents)
+      [Ref(~lComponents)], &window: locinvar_000358:Ref(~lWindow) [Ref(~lWindow)],
+      ~lPreferences: frzn, ~lExtensions: frzn, ~lApplication_extensions: frzn,
+      ~fuelIApplication: frzn, ~nsIExtensionManager: frzn, 
+      ~lMFApplication: frzn, ~lMEManager: frzn, ~lMFilePicker: frzn,
+      ~nsIPrefBranch: frzn, ~lMOPService: frzn, ~lnsIUpdateItem: frzn,
+      ~lComponents_classes: frzn, &cond:
+      locinvar_000304:Bool [Bool], ~lComponents_interfaces: frzn, ~lComponents: frzn,
+      ~lConsole: frzn, ~lRsDownloadHelper: frzn, ~lRsDownloadHelperP: frzn, ~lWindow:
+      frzn, ~nsIFilePicker: frzn, ~nsIFilePicker: frzn, ~nsIFile: frzn, ~lBrowser: frzn,
+      ~lTab: frzn, ~lInput: frzn, ~lNodes: frzn, ~lChecked: frzn, ~lClassNames: frzn,
+      ~lADsafeMarks: frzn, ~lNames: frzn, ~lPackedValues: frzn, ~lValues: frzn,
+      ~lOffsetHeights: frzn, ~lOffsetWidths: frzn, ~lKeys: frzn, ~lStyles: frzn,
+      ~lEvent: frzn, ~lEventTarget: frzn, ~lSelector: frzn, ~lRange: frzn, ~lQuery:
+      frzn, ~lBunches: frzn, ~lBunch: frzn, ~lStyle: frzn, ~lSelection: frzn, ~lNode:
+      frzn, ~lDocument: frzn, ~lDom: frzn, ~lF: frzn, ~lId: frzn, ~lLib: frzn, ~lURI:
+      frzn, ~lHTMLCollection: frzn, ~lHTMLFormElement: frzn, &elt:
+      locinvar_000319:Ref(~lHTMLFormElement) [Ref(~lHTMLFormElement)], &doc:
+      locinvar_000360:Ref(~lDocument) [Ref(~lDocument)]) -> Top / sameType , Num) ->
+      Int,
+
+    clearInterval: (this:Top, Num) -> Top,
+
+    addEventListener: 
+      (this: Top, Str, (this: Top) / (~lHTMLFormElement: frzn, ~lHTMLCollection: frzn,
+      ~lURI: frzn, ~lLib: frzn, ~lId: frzn, ~lF: frzn, ~lDom: frzn, ~lDocument: frzn,
+      ~lNode: frzn, ~lSelection: frzn, ~lStyle: frzn, ~lBunch: frzn, ~lBunches: frzn,
+      ~lQuery: frzn, ~lRange: frzn, ~lSelector: frzn, ~lEventTarget: frzn, ~lEvent:
+      frzn, ~lStyles: frzn, ~lKeys: frzn, ~lOffsetWidths: frzn, ~lOffsetHeights:
+      frzn, ~lValues: frzn, ~lPackedValues: frzn, ~lNames: frzn, ~lADsafeMarks: frzn,
+      ~lClassNames: frzn, ~lChecked: frzn, ~lNodes: frzn, ~lInput: frzn, ~lTab: frzn,
+      ~lBrowser: frzn, ~nsIFile: frzn, ~nsIFilePicker: frzn, ~nsIFilePicker: frzn,
+      ~lWindow: frzn, ~lRsDownloadHelperP: frzn, ~lRsDownloadHelper: frzn, ~lConsole:
+      frzn, ~lComponents: frzn, ~lComponents_interfaces: frzn, ~lComponents_classes:
+      frzn, ~nsIExtensionManager: frzn, ~lnsIUpdateItem: frzn, ~lMOPService: frzn,
+      ~nsIPrefBranch: frzn, ~lMFilePicker: frzn, ~lMEManager: frzn,
+      ~lMFApplication: frzn, ~fuelIApplication: frzn,
+      ~lApplication_extensions: frzn, ~lExtensions: frzn,
+      ~lPreferences: frzn, &window: locinvar_000263:Ref(~lWindow) [Ref(~lWindow)],
+      &Components: locinvar_000265:Ref(~lComponents) [Ref(~lComponents)],
+      &Application: locinvar_000267:Ref(~fuelIApplication) [Ref(~fuelIApplication)],
+      &browser: locinvar_000269:Ref(~lBrowser) [Ref(~lBrowser)], &doc:
+      locinvar_000271:Ref(~lDocument) [Ref(~lDocument)], &elt:
+      locinvar_000273:Ref(~lHTMLFormElement) [Ref(~lHTMLFormElement)], &cond:
+      locinvar_000275:Bool [Bool]) -> Top / sameType, Bool) -> Top,
+
+    document: Ref(~lNode) 
+
+} > lObjPro)
+
+(* https://developer.mozilla.org/en-US/docs/XPCOM_Interface_Reference/nsIFilePicker *)
+weak (~nsIFilePicker: {
+    modeSave      : Top,
+    returnOK      : {(= v 0)},
+    returnCancel  : {(= v 1)},
+    returnReplace : {(= v 2)}
+  } > lObjPro)
+
+weak (~nsIFilePicker: {
+    init             : (this: Ref(~nsIFilePicker), Ref(~lWindow), Str, Top) -> Top,
+    defaultString    : Str,
+    appendFilter     : (this: Ref(~nsIFilePicker), Str, Str) -> Top,
+    displayDirectory : Ref(~nsIFile),
+    file             : Ref(~nsIFile)
+  } > lObjPro)
+
+weak (~nsIFile: {
+    path             : Ref(~nsIFile),
+    initWithPath     : (this: Ref(~nsIFile), Ref(~nsIFile)) -> Top,
+    append           : (this: Top, Str) -> Top,
+    exists           : (this: Top) -> Bool
+} > lObjPro)
+
+weak (~nsIProperties: {
+
+  } > lObjPro)
+
+weak (~nsIFileInputStream: {
+    init: (this: Top, Ref(~nsIFile), Int, Int, Int) -> Top,
+    close: (this: Top) -> Top,
+    CLOSE_ON_EOF: {Int | (= v 4)}
+  } > lObjPro)
+
+weak (~nsIFileOutputStream: {
+    init: (this: Top, Ref(~nsIFile), Int, Int, Int) -> Top,
+    close: (this: Top) -> Top,
+    write: (this: Top, Str, Int) -> Int
+  } > lObjPro)
+
+weak (~nsIScriptableInputStream: {
+    init      : (this : Top, Ref(~nsIFileInputStream)) -> Top,
+    close: (this: Top) -> Top,
+    available : (this : Top) -> Int,
+    read      : (this : Top, Int) -> Str
+
+  } > lObjPro)
+
+weak (~lBrowser: {
+    selectedTab      : Ref(~lTab),
+    addTab           : (this:Top, Str) -> Ref(~lTab),
+    show             : (this:Ref(~lBrowser)) -> Int
+  } > lObjPro)
+
+weak (~lTab: {
+
+  } > lObjPro)
+  
+weak (~lInput: {
+    value: Str 
+  } > lObjPro)
+
+
+
+weak (~lRegExp: {
+  
+  test: (this: Ref(~lRegExp), Str) / ( &Components:
+    locinvar_000136:Ref(~lComponents) [Ref(~lComponents)], ~lPreferences: frzn,
+    ~lExtensions: frzn, ~lApplication_extensions: frzn, ~fuelIApplication: frzn,
+    ~lDirLocator: frzn, ~nsIExtensionManager: frzn,
+    ~nsIPrefBranch: frzn, ~lMFDirService: frzn, ~lMFileLocal: frzn,
+    ~lMNFileInputStream: frzn, ~lMNFileOutputStream: frzn,
+    ~lMScriptableInputStream: frzn, ~lMFApplication: frzn, ~lMEManager: frzn,
+    ~lMFilePicker: frzn, ~lMOPService: frzn,
+    ~lnsIUpdateItem: frzn, ~lComponents_classes: frzn,
+    ~lComponents_interfaces: frzn, ~lComponents: frzn, ~lConsole: frzn, ~lWindow:
+    frzn, ~nsIFilePicker: frzn, ~nsIFilePicker: frzn, ~nsIFile: frzn,
+    ~nsIProperties: frzn, ~nsIFileInputStream: frzn, ~nsIFileOutputStream: frzn,
+    ~nsIScriptableInputStream: frzn, ~lBrowser: frzn, ~lTab: frzn, ~lInput: frzn,
+    ~lRegExp: frzn, ~lFlashblock: frzn, ~lNodes: frzn, ~lChecked: frzn,
+    ~lClassNames: frzn, ~lADsafeMarks: frzn, ~lNames: frzn, ~lPackedValues: frzn,
+    ~lValues: frzn, ~lOffsetHeights: frzn, ~lOffsetWidths: frzn, ~lKeys: frzn,
+    ~lStyles: frzn, ~lEvent: frzn, ~lEventTarget: frzn, ~lSelector: frzn, ~lRange:
+    frzn, ~lQuery: frzn, ~lBunches: frzn, ~lBunch: frzn, ~lStyle: frzn,
+    ~lSelection: frzn, ~lNode: frzn, ~lDocument: frzn, ~lDom: frzn, ~lF: frzn,
+    ~lId: frzn, ~lLib: frzn, ~lURI: frzn, ~lHTMLCollection: frzn,
+    ~lHTMLFormElement: frzn) -> Bool / sameType,
+    
+    _: Bot } > lRegExpProto)
+
+
+
+weak (~lFlashblock: {
+  MODE_RDONLY: Int,
+  MODE_WRONLY: Int,
+  MODE_RDWR : Int,
+  MODE_CREATE   : Int, 
+  MODE_APPEND   : Int, 
+  MODE_TRUNCATE : Int, 
+  MODE_SYNC     : Int, 
+  MODE_EXCL     : Int,
+  _whitelistTargetEnabled : Bool,
+
+  getUserChromeFile:
+    (this: Ref(~lFlashblock), Str) / (&Components:
+    locinvar_000172:Ref(~lComponents) [Ref(~lComponents)], ~lPreferences: frzn,
+    ~lExtensions: frzn, ~lApplication_extensions: frzn, ~fuelIApplication: frzn,
+    ~lDirLocator: frzn, ~nsIExtensionManager: frzn,
+    ~nsIPrefBranch: frzn, ~lMFDirService: frzn, ~lMFileLocal: frzn,
+    ~lMNFileInputStream: frzn, ~lMNFileOutputStream: frzn,
+    ~lMScriptableInputStream: frzn, ~lMFApplication: frzn, ~lMEManager: frzn,
+    ~lMFilePicker: frzn, ~lMOPService: frzn,
+    ~lnsIUpdateItem: frzn, ~lComponents_classes: frzn,
+    ~lComponents_interfaces: frzn, ~lComponents: frzn, ~lConsole: frzn, ~lWindow:
+    frzn, ~nsIFilePicker: frzn, ~nsIFilePicker: frzn, ~nsIFile: frzn,
+    ~nsIProperties: frzn, ~nsIFileInputStream: frzn, ~nsIFileOutputStream: frzn,
+    ~nsIScriptableInputStream: frzn, ~lBrowser: frzn, ~lTab: frzn, ~lInput: frzn,
+    ~lRegExp: frzn, ~lFlashblock: frzn, ~lNodes: frzn, ~lChecked: frzn,
+    ~lClassNames: frzn, ~lADsafeMarks: frzn, ~lNames: frzn, ~lPackedValues: frzn,
+    ~lValues: frzn, ~lOffsetHeights: frzn, ~lOffsetWidths: frzn, ~lKeys: frzn,
+    ~lStyles: frzn, ~lEvent: frzn, ~lEventTarget: frzn, ~lSelector: frzn, ~lRange:
+    frzn, ~lQuery: frzn, ~lBunches: frzn, ~lBunch: frzn, ~lStyle: frzn,
+    ~lSelection: frzn, ~lNode: frzn, ~lDocument: frzn, ~lDom: frzn, ~lF: frzn,
+    ~lId: frzn, ~lLib: frzn, ~lURI: frzn, ~lHTMLCollection: frzn,
+    ~lHTMLFormElement: frzn, lRegExpProto: Dict > lObjPro) ->
+    Ref(~nsIFile) / sameType,
+
+  readUserChromeFile: 
+    (this: Ref(~lFlashblock), Str)  / (lRegExpProto: Dict >
+    lObjPro, ~lHTMLFormElement: frzn, ~lHTMLCollection: frzn, ~lURI: frzn, ~lLib:
+    frzn, ~lId: frzn, ~lF: frzn, ~lDom: frzn, ~lDocument: frzn, ~lNode: frzn,
+    ~lSelection: frzn, ~lStyle: frzn, ~lBunch: frzn, ~lBunches: frzn, ~lQuery:
+    frzn, ~lRange: frzn, ~lSelector: frzn, ~lEventTarget: frzn, ~lEvent: frzn,
+    ~lStyles: frzn, ~lKeys: frzn, ~lOffsetWidths: frzn, ~lOffsetHeights: frzn,
+    ~lValues: frzn, ~lPackedValues: frzn, ~lNames: frzn, ~lADsafeMarks: frzn,
+    ~lClassNames: frzn, ~lChecked: frzn, ~lNodes: frzn, ~lFlashblock: frzn,
+    ~lRegExp: frzn, ~lInput: frzn, ~lTab: frzn, ~lBrowser: frzn,
+    ~nsIScriptableInputStream: frzn, ~nsIFileOutputStream: frzn,
+    ~nsIFileInputStream: frzn, ~nsIProperties: frzn, ~nsIFile: frzn,
+    ~nsIFilePicker: frzn, ~nsIFilePicker: frzn, ~lWindow: frzn, ~lConsole: frzn,
+    ~lComponents: frzn, ~lComponents_interfaces: frzn, ~lComponents_classes: frzn,
+    ~nsIExtensionManager: frzn, ~lnsIUpdateItem: frzn, ~lMOPService: frzn,
+    ~nsIPrefBranch: frzn, ~lMFilePicker: frzn, ~lMEManager: frzn, ~lMFApplication:
+    frzn, ~lMScriptableInputStream: frzn, ~lMNFileOutputStream: frzn,
+    ~lMNFileInputStream: frzn, ~lMFileLocal: frzn, ~lMFDirService: frzn,
+    ~fuelIApplication: frzn,
+    ~lDirLocator: frzn, ~lApplication_extensions: frzn,
+    ~lExtensions: frzn, ~lPreferences: frzn, &Components:
+    locinvar_000236:Ref(~lComponents) [Ref(~lComponents)]) -> Str / sameType,
+          
+  writeUserChromeFile: (this: Ref(~lFlashblock), Str, Str) / (lRegExpProto:
+    _underscore_94:Dict > lObjPro, ~lHTMLFormElement: frzn, ~lHTMLCollection: frzn,
+    ~lURI: frzn, ~lLib: frzn, ~lId: frzn, ~lF: frzn, ~lDom: frzn, ~lDocument: frzn,
+    ~lNode: frzn, ~lSelection: frzn, ~lStyle: frzn, ~lBunch: frzn, ~lBunches: frzn,
+    ~lQuery: frzn, ~lRange: frzn, ~lSelector: frzn, ~lEventTarget: frzn, ~lEvent:
+    frzn, ~lStyles: frzn, ~lKeys: frzn, ~lOffsetWidths: frzn, ~lOffsetHeights:
+    frzn, ~lValues: frzn, ~lPackedValues: frzn, ~lNames: frzn, ~lADsafeMarks: frzn,
+    ~lClassNames: frzn, ~lChecked: frzn, ~lNodes: frzn, ~lFlashblock: frzn,
+    ~lRegExp: frzn, ~lInput: frzn, ~lTab: frzn, ~lBrowser: frzn,
+    ~nsIScriptableInputStream: frzn, ~nsIFileOutputStream: frzn,
+    ~nsIFileInputStream: frzn, ~nsIProperties: frzn, ~nsIFile: frzn,
+    ~nsIFilePicker: frzn, ~nsIFilePicker: frzn, ~lWindow: frzn, ~lConsole: frzn,
+    ~lComponents: frzn, ~lComponents_interfaces: frzn, ~lComponents_classes: frzn,
+    ~nsIExtensionManager: frzn, ~lnsIUpdateItem: frzn, ~lMOPService: frzn,
+    ~nsIPrefBranch: frzn, ~lMFilePicker: frzn, ~lMEManager: frzn, ~lMFApplication:
+    frzn, ~lMScriptableInputStream: frzn, ~lMNFileOutputStream: frzn,
+    ~lMNFileInputStream: frzn, ~lMFileLocal: frzn, ~lMFDirService: frzn,
+    ~fuelIApplication: frzn,
+    ~lDirLocator: frzn, ~lApplication_extensions: frzn,
+    ~lExtensions: frzn, ~lPreferences: frzn, &Components:
+    locinvar_000236:Ref(~lComponents) [Ref(~lComponents)])  -> Int / sameType,
+
+  userStyleSheetHasImport: 
+    (this: Ref(~lFlashblock)) / (lRegExpProto: _underscore_94:Dict > lObjPro, 
+    ~lHTMLFormElement: frzn,
+    ~lHTMLCollection: frzn, ~lURI: frzn, ~lLib: frzn, ~lId: frzn, ~lF: frzn, ~lDom:
+    frzn, ~lDocument: frzn, ~lNode: frzn, ~lSelection: frzn, ~lStyle: frzn,
+    ~lBunch: frzn, ~lBunches: frzn, ~lQuery: frzn, ~lRange: frzn, ~lSelector: frzn,
+    ~lEventTarget: frzn, ~lEvent: frzn, ~lStyles: frzn, ~lKeys: frzn,
+    ~lOffsetWidths: frzn, ~lOffsetHeights: frzn, ~lValues: frzn, ~lPackedValues:
+    frzn, ~lNames: frzn, ~lADsafeMarks: frzn, ~lClassNames: frzn, ~lChecked: frzn,
+    ~lNodes: frzn, ~lFlashblock: frzn, ~lRegExp: frzn, ~lInput: frzn, ~lTab: frzn,
+    ~lBrowser: frzn, ~nsIScriptableInputStream: frzn, ~nsIFileOutputStream: frzn,
+    ~nsIFileInputStream: frzn, ~nsIProperties: frzn, ~nsIFile: frzn,
+    ~nsIFilePicker: frzn, ~nsIFilePicker: frzn, ~lWindow: frzn, ~lConsole: frzn,
+    ~lComponents: frzn, ~lComponents_interfaces: frzn, ~lComponents_classes: frzn,
+    ~nsIExtensionManager: frzn, ~lnsIUpdateItem: frzn, ~lMOPService: frzn,
+    ~nsIPrefBranch: frzn, ~lMFilePicker: frzn, ~lMEManager: frzn, ~lMFApplication:
+    frzn, ~lMScriptableInputStream: frzn, ~lMNFileOutputStream: frzn,
+    ~lMNFileInputStream: frzn, ~lMFileLocal: frzn, ~lMFDirService: frzn,
+    ~fuelIApplication: frzn,
+    ~lDirLocator: frzn, ~lApplication_extensions: frzn,
+    ~lExtensions: frzn, ~lPreferences: frzn, &Components:
+    locinvar_000236:Ref(~lComponents) [Ref(~lComponents)]) -> Bool / sameType
+
+  } > lObjPro)

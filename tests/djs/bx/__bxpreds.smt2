@@ -48,6 +48,7 @@
 
 (declare-fun isSecret (DVal) Bool)
 (declare-fun isPublic (DVal) Bool)
+(declare-fun isTainted (DVal) Bool)
 
 ;;;;; End SIF Predicates
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
