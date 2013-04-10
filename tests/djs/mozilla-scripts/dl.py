@@ -21,12 +21,20 @@ parser = OptionParser(usage='usage: %prog [options] ')
 parser.add_option(  "-p", "--pages",
                     dest="pages", default=-1,
                     help="give the number of pages to download per category (default is all of them)")
+
+#parser.add_option(  "-t", "--tag",
+#                    dest="tag",
+#                    help="search for specific tag (still keeps the category structure)")
+
 (options, args) = parser.parse_args()
 
 
 # Get the links for every category
 def get_categories():
-  response = urllib2.urlopen(us_ff_url)
+  dl_link = us_ff_url
+  #if options.tag != None:
+  #  dl_link = us_ff_url + "tag/" + options.tag + "/"
+  response = urllib2.urlopen(dl_link)
   html = response.read()
   m0 = re.search(r'<ul id=\"side-categories\">(.*?)<\/ul>', html, re.DOTALL)
   if m0:
@@ -85,8 +93,6 @@ def get_all_from_single_category_page(url):
 
 # Arguments:
 # - url: the url of the category to scrape
-# 
-# TODO: limit the number of pages
 def get_all_from_category(url):
   cat_name = get_category_name_from_url(url)
   if not os.path.exists(cat_name):

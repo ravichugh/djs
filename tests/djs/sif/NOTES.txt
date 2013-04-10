@@ -16,3 +16,4 @@ The Same-Origin Check:
 Jetpack Extension Framework - capability leaks:
   Happens when a module requests access to a specific XPCOM interface and
   inadvertently exports.
+  TODO: get example(s) that manifest the leak vs example(s) that do not.

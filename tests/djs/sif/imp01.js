@@ -8,7 +8,7 @@
 
 /*: (forall (s) (implies (isPublic s) (isSecret s))) */ "#assume";
 
-/* In a public object, disallow the assignment of secret fields */
+// Taint propagates upwards in the object hierarchy
 
 /*: (forall (d f)
       (implies 
@@ -16,6 +16,8 @@
         (implies (has d f) (isSecret d))
       )
     )*/ "#assume";
+
+// Taint propagates downward in the object hierarchy
 
 /*: (forall (d f)
       (implies 
