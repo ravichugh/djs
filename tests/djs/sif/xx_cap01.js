@@ -6,6 +6,10 @@ var require =
   (L: { Cc: Ref(~lComponents_classes), 
         Ci: Ref(~lComponents_interfaces)} > lObjPro) */ "#extern";
 
+
+var exports = /*: Ref(~extern) */ "#extern";
+
+
 // DJS DEFINITIONS END
 
 
@@ -31,8 +35,11 @@ var Ci = a.Ci;
 
 var Preferences = /*: lP */ { };
 Preferences._branches = 
-/*: lB { s: Ref(~nsIPrefBranch), _:Bot } */ { };
+/* lB { s: Ref(~nsIPrefBranch), _:Bot } */ { };
+/*: lB { Dict | (forall (s) (implies (has v s) ((sel v s) :: Ref(~nsIPrefBranch)))) } */ { };
+
 Preferences._caches = { };
+
 
 Preferences.getBranch = function (name) 
 /*: (Str) / ( &Preferences: Ref(lP), 
@@ -43,13 +50,25 @@ Preferences.getBranch = function (name)
 
 ///  if (name in this.branches) return this._branches[name];
 
-  if (name in Preferences._branches) { 
-    assert(name in Preferences._branches);
-    assert(/*: Ref(~nsIPrefBranch) */ (Preferences._branches[name]));
-    //return Preferences._branches[name];
-  };
-  var branch = Cc["mozilla_org__preferences_service_1"]
-    .getService(Ci.nsIPrefService).getBranch(name);
+  if (name in Preferences._branches && name != "hasOwnProperty") {
+  /*
+   *
+   * Original code was the following commented line. 
+   *
+   *  if (name in Preferences._branches)
+   *
+   * "hasOwnProperty" is hard-coded in every prototype object so the "in" check
+   * will always succeed for this field. If you want to impose a type for all
+   * fields present in the object you need to check that the field is not
+   * "hasOwnProperty".
+   *
+   */
+    return Preferences._branches[name]; 
+  }; 
+  
+  var branch =
+      Cc["mozilla_org__preferences_service_1"]
+      .getService(Ci.nsIPrefService).getBranch(name);
 
   assert(/*: Ref(~nsIPrefBranch) */ (branch));
 
@@ -59,6 +78,6 @@ Preferences.getBranch = function (name)
   
 };
 
-//  /* other properties */
+/* other properties */
 
-//exports.Preferences = Preferences;
+exports.Preferences = Preferences;

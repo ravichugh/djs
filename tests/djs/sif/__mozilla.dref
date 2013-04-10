@@ -392,3 +392,11 @@ weak (~lFlashblock: {
     locinvar_000236:Ref(~lComponents) [Ref(~lComponents)]) -> Bool / sameType
 
   } > lObjPro)
+
+
+
+
+weak (~extern: { 
+
+  } > lObjPro)
+
