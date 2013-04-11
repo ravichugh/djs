@@ -65,7 +65,8 @@ Preferences._caches = { };
 Preferences.getBranch = function (name) 
 /*: (Str) / ( &Preferences: Ref(lP), 
               lP: {_branches: Ref(lB)} > lObjPro, 
-              (*lB: { Dict | (forall (s) (implies (has v s) ({Ref(~nsIPrefBranch)|(isPrivileged v)} (sel v s))))} > lObjPro)*)
+              (*lB: { Dict | (forall (s) (implies (has v s) 
+              ({Ref(~nsIPrefBranch)|(isPrivileged v)} (sel v s))))} > lObjPro)*)
               lB: { s: {Ref(~nsIPrefBranch)|(isPrivileged v)}, _: Bot} > lObjPro)
     -> { Ref(~nsIPrefBranch) | (isPrivileged v) } / 
       (&Preferences: Ref(lP), lP: Dict > lObjPro, lB: Dict > lObjPro) */  

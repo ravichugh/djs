@@ -26,4 +26,7 @@ Jetpack Extension Framework - capability leaks [ECOOP'12]:
   An object is marked as tainted if it transitively acquires capabilities. Both
   propagate the acquired capability.
 
+  In the leaking example in [ECOOP'12], the leak is propagated through a
+  closure. 
+
 
