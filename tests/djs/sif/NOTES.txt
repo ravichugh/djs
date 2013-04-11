@@ -13,7 +13,17 @@ The Same-Origin Check:
   document containing the calling script. 
 
 
-Jetpack Extension Framework - capability leaks:
+Jetpack Extension Framework - capability leaks [ECOOP'12]:
   Happens when a module requests access to a specific XPCOM interface and
   inadvertently exports.
   TODO: get example(s) that manifest the leak vs example(s) that do not.
+
+  [Wed Apr 10 14:19:05 PDT 2013]
+
+  The check that [ECOOP'12] does is whether "exports" is tainted or not.
+
+  An object is marked as privileged if it directly acquires capabilities. 
+  An object is marked as tainted if it transitively acquires capabilities. Both
+  propagate the acquired capability.
+
+

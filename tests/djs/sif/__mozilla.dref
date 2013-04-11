@@ -19,12 +19,12 @@ weak (~fuelIApplication: {
     extensions: Ref(~lApplication_extensions)
   } > lObjPro)
 
-weak (~lDirLocator: {
+weak (~dirLocator: {
     get: (this:Top, Str, Ref(~nsIFile)) -> Ref(~nsIFile)
   } > lObjPro)
 
 weak (~lMFDirService: {
-    getService: (this: Ref(~lMFDirService), Ref(~nsIProperties)) -> Ref(~lDirLocator)
+    getService: (this: Ref(~lMFDirService), Ref(~nsIProperties)) -> Ref(~dirLocator)
   }  > lObjPro)
 
 weak (~lMFileLocal: {
@@ -58,13 +58,18 @@ weak (~lMFilePicker: {
     createInstance: (this: Ref(~lMFilePicker), Ref(~nsIFilePicker)) -> Ref(~nsIFilePicker) 
   } >lObjPro)
 
-weak (~nsIPrefBranch: {
-    setCharPref: (this: Ref(~nsIPrefBranch), Str, Str) -> Top
-  } > lObjPro)
+weak (~nsIPrefBranch: { Dict | (and 
+    (isPrivileged v)
+    (dom v {"setCharPref"})
+    ((sel v "setCharPref") :: (this: Ref(~nsIPrefBranch), Str, Str) -> Top)
+  )} > lObjPro)
 
-weak (~nsIPrefService: {
-    getBranch: (this: Ref(~nsIPrefService), Str) -> Ref(~nsIPrefBranch)
-  } > lObjPro)
+weak (~nsIPrefService: { Dict | (and 
+    (isPrivileged v)
+    (dom v {"getBranch"})
+    ((sel v "getBranch") :: (this: Ref(~nsIPrefService), Str) ->
+      {Ref(~nsIPrefBranch) | (isPrivileged v)})
+  )} > lObjPro)
 
 
 weak (~lMOPService: {
@@ -265,7 +270,7 @@ weak (~lRegExp: {
   test: (this: Ref(~lRegExp), Str) / ( &Components:
     locinvar_000136:Ref(~lComponents) [Ref(~lComponents)], ~lPreferences: frzn,
     ~lExtensions: frzn, ~lApplication_extensions: frzn, ~fuelIApplication: frzn,
-    ~lDirLocator: frzn, ~nsIExtensionManager: frzn,
+    ~dirLocator: frzn, ~nsIExtensionManager: frzn,
     ~nsIPrefBranch: frzn, ~lMFDirService: frzn, ~lMFileLocal: frzn,
     ~lMNFileInputStream: frzn, ~lMNFileOutputStream: frzn,
     ~lMScriptableInputStream: frzn, ~lMFApplication: frzn, ~lMEManager: frzn,
@@ -303,7 +308,7 @@ weak (~lFlashblock: {
     (this: Ref(~lFlashblock), Str) / (&Components:
     locinvar_000172:Ref(~lComponents) [Ref(~lComponents)], ~lPreferences: frzn,
     ~lExtensions: frzn, ~lApplication_extensions: frzn, ~fuelIApplication: frzn,
-    ~lDirLocator: frzn, ~nsIExtensionManager: frzn,
+    ~dirLocator: frzn, ~nsIExtensionManager: frzn,
     ~nsIPrefBranch: frzn, ~lMFDirService: frzn, ~lMFileLocal: frzn,
     ~lMNFileInputStream: frzn, ~lMNFileOutputStream: frzn,
     ~lMScriptableInputStream: frzn, ~lMFApplication: frzn, ~lMEManager: frzn,
@@ -342,7 +347,7 @@ weak (~lFlashblock: {
     frzn, ~lMScriptableInputStream: frzn, ~lMNFileOutputStream: frzn,
     ~lMNFileInputStream: frzn, ~lMFileLocal: frzn, ~lMFDirService: frzn,
     ~fuelIApplication: frzn,
-    ~lDirLocator: frzn, ~lApplication_extensions: frzn,
+    ~dirLocator: frzn, ~lApplication_extensions: frzn,
     ~lExtensions: frzn, ~lPreferences: frzn, &Components:
     locinvar_000236:Ref(~lComponents) [Ref(~lComponents)]) -> Str / sameType,
           
@@ -364,7 +369,7 @@ weak (~lFlashblock: {
     frzn, ~lMScriptableInputStream: frzn, ~lMNFileOutputStream: frzn,
     ~lMNFileInputStream: frzn, ~lMFileLocal: frzn, ~lMFDirService: frzn,
     ~fuelIApplication: frzn,
-    ~lDirLocator: frzn, ~lApplication_extensions: frzn,
+    ~dirLocator: frzn, ~lApplication_extensions: frzn,
     ~lExtensions: frzn, ~lPreferences: frzn, &Components:
     locinvar_000236:Ref(~lComponents) [Ref(~lComponents)])  -> Int / sameType,
 
@@ -387,7 +392,7 @@ weak (~lFlashblock: {
     frzn, ~lMScriptableInputStream: frzn, ~lMNFileOutputStream: frzn,
     ~lMNFileInputStream: frzn, ~lMFileLocal: frzn, ~lMFDirService: frzn,
     ~fuelIApplication: frzn,
-    ~lDirLocator: frzn, ~lApplication_extensions: frzn,
+    ~dirLocator: frzn, ~lApplication_extensions: frzn,
     ~lExtensions: frzn, ~lPreferences: frzn, &Components:
     locinvar_000236:Ref(~lComponents) [Ref(~lComponents)]) -> Bool / sameType
 
@@ -396,7 +401,7 @@ weak (~lFlashblock: {
 
 
 
-weak (~extern: { 
+weak (~extern: {
 
   } > lObjPro)
 
