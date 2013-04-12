@@ -1,8 +1,19 @@
-/**
+/*****************************************************
  *
+ * 
  * Simplified version of the [ECOOP'12] leak example.
  *
- */
+ *
+ *****************************************************/
+
+
+/*****************************************************
+ *
+ *
+ * DJS definitions
+ *
+ *
+ *****************************************************/
 
 /*: "tests/djs/sif/__mozilla.dref" */ "#use";
 
@@ -16,19 +27,26 @@ var require =
 
 var exports = /*: Ref(~extern) */ "#extern";
 
+var testPriv = function(o) /*: [;L;] (Ref(L)) / (L: {Dict|(isPrivileged v)} > lObjPro) -> Top / sameType */ {};
 
-// DJS DEFINITIONS END
 
 
-// SECURITY PROPERTIES BEGIN
 
-// /*: (implies (isPrivileged v) (isTainted v)) */ "#assume";
+/*****************************************************
+ *
+ *
+ * Information flow properties
+ *
+ *
+ *****************************************************/
 
-//If all fields in a dictionary are public then the dictionary is public itself
+//For every dictionary d:
+//  All fields in d are public ==> d is public
+
 /*: (forall (d) 
       (implies 
         (forall (f) (and (has d f) (public (sel d f))))
-        (isPrivileged d)
+        (public d)
       )
     ) */ "#assume";
 
@@ -46,11 +64,8 @@ var exports = /*: Ref(~extern) */ "#extern";
 //      )
 //    ) */ "#assume";
 
-
-var testPriv = function(o) /*: [;L;] (Ref(L)) / (L: {Dict|(isPrivileged v)} > lObjPro) -> Top / sameType */ {};
-
-// SECURITY PROPERTIES END
-
+//XXX: will need something like this:
+// /*: (forall (d) (implies (public d) (public (Ref(d)))) */ "#assume";
 
 
 /*****************************************************
@@ -79,104 +94,103 @@ var Ci = a.Ci;
  * **************************************************/
 
 /*: prefFields 
-        (dom v {"_branches", "_caches"})
-        ((sel v "_branches"):: Ref(~branches))
-        ((sel v "_caches"):: Ref(~caches))
+        (has v "_branches") ((sel v "_branches"):: Ref(~branches))
+        (has v "_caches")   ((sel v "_caches"):: Ref(~caches))
         (implies (has v "getBranch") ((sel v "getBranch"):: (Str) -> Top))
         */ "#define";
 
-/*: privPrefFields 
-        (implies (has v "_branches")   ((sel v "_branches"):: Ref(~privbranches)))
-        (implies (has v "_caches")   ((sel v "_caches"):: Ref(~caches)))
+/*: publicPrefFields 
+        (has v "_branches") ((sel v "_branches"):: Ref(~publicBranches))
+        (has v "_caches")   ((sel v "_caches"):: Ref(~publicCaches))
         (implies (has v "getBranch") ((sel v "getBranch"):: (Str) -> Top))
         */ "#define";
 
 /*: (~dict: { } > lObjPro) */ "#weak";
 
-
 var makePublicEmpty = /*: [;L;] () / () -> Ref(L) / (L: {Dict|(public v)} > lObjPro) */ "#extern";
+
+
 
 /*****************************************************
  * Branches
  * **************************************************/
 
-/*: (~branches: {Dict|(public v)} > lObjPro) */ "#weak";
+/*: (~publicBranches: {Dict|(public v)} > lObjPro) */ "#weak";
 
-/*: (~secret_branches: { } > lObjPro) */ "#weak";
+/*: (~branches: { } > lObjPro) */ "#weak";
 
 var branches = /*: [;lB;] */ makePublicEmpty();
-/*: branches (~branches, frzn) */ "#freeze";
+/*: branches (~publicBranches, frzn) */ "#freeze";
 
 
 /*****************************************************
  * Caches
  * **************************************************/
 
-/*: (~caches: {Dict|(public v)} > lObjPro) */ "#weak";
+/*: (~publicCaches: {Dict|(public v)} > lObjPro) */ "#weak";
 
-/*: (~secret_caches: { } > lObjPro) */ "#weak";
+/*: (~caches: { } > lObjPro) */ "#weak";
 
 var caches = /*: [;lB;] */ makePublicEmpty();
-/*: caches (~caches, frzn) */ "#freeze";
+/*: caches (~publicCaches, frzn) */ "#freeze";
 
 
 /*****************************************************
  * Preferences
  * **************************************************/
-/*: (~pref:     { Dict | (and prefFields)     } > lObjPro) */ "#weak";
 
-/*: (~privpref: { Dict | (and privPrefFields) } > lObjPro) */ "#weak";
+/*: (~pref:       { Dict | (and prefFields)    } > lObjPro) */ "#weak";
 
-//var preferences = {
-//    _branches: branches,
-//    _caches: caches
-//  };
-//
-///*: preferences (~pref, frzn) */ "#freeze";
-//
-//
-//
-///**
-// *
-// * XXX: capability leaks only through assignment of secret valeus to global 
-// * variable "Preferences". So we need the side effect - output heap annotations 
-// * to denote that.
-// * E.g. to prove the absense of capability leaks, for every location in output heap 
-// * we should be able to prove: safe v
-// *
-// */
-////var func = function (name) /*: (Str) / (&preferences: Ref(~pref))-> Top / (&preferences: Ref(~privpref)) */ {
-//  var name = /*: {Str|(safe v)} */ "#extern";
-//
-//  var branch = Cc["mozilla_org__preferences_service_1"].getService(Ci.nsIPrefService).getBranch(name);
-//
-//  assert(/*: Ref(~pref) */ (preferences));
-//
-//  assert(/*: {Ref(~nsIPrefBranch)|TRU} */ (branch));
-//  assert(/*: {(isPrivileged v)} */ (branch));
-//  
-//  /*: preferences lPreferences */ "#thaw";
-//
-//  assert(/*: Ref(~branches) */ (preferences._branches));
-//
-//  var pb = preferences._branches;
-//  /*: pb lPrefBranches */ "#thaw";
-//
-//  pb[name] = branch;
-//
-//  assert(/*: Ref(~nsIPrefBranch) */ (pb[name]));
-//  assert(/*: {(isPrivileged v)} */ (pb[name]));
-//
-//  /*: pb (~privbranches, frzn) */ "#freeze";
-//
-////  /*: pb (~branches, thwd lPrefBranches) */ "#freeze";
-//    
+/*: (~publicPref: { Dict | (and publicPrefFields) } > lObjPro) */ "#weak";
+
+var preferences = {
+    _branches: branches,
+    _caches: caches
+  };
+
+/*: preferences (~publicPref, frzn) */ "#freeze";
+
+//assert(/*: {(public v)} */ (preferences));
+
+
+/**
+ *
+ * XXX: capability leaks only through assignment of secret valeus to global 
+ * variable "Preferences". So we need the side effect - output heap annotations 
+ * to denote that.
+ * E.g. to prove the absense of capability leaks, for every location in output heap 
+ * we should be able to prove: public v
+ *
+ */
+//var func = function (name) /*: (Str) / (&preferences: Ref(~pref))-> Top / (&preferences: Ref(~public_pref)) */ {
+  var name = /*: {Str|(public v)} */ "#extern";
+
+  var branch = Cc["mozilla_org__preferences_service_1"].getService(Ci.nsIPrefService).getBranch(name);
+
+
+  assert(/*: { Ref(~nsIPrefBranch) | TRU } */ (branch));
+  
+  /*: preferences lPreferences */ "#thaw";
+
+  assert(/*: Ref(~publicBranches) */ (preferences._branches));
+
+  var pb = preferences._branches;
+  /*: pb lPrefBranches */ "#thaw";
+
+  pb[name] = branch;
+
+  assert(/*: Ref(~nsIPrefBranch) */ (pb[name]));
+
+  /*: pb (~branches, frzn) */ "#freeze";
+
+//  /*: pb (~branches, thwd lPrefBranches) */ "#freeze";
+    
 //  assert(/*: Ref(~privbranches) */ (pb));
 //  //XXX: had to add this...
 //  preferences._branches = pb;
 //  assert(/*: Ref(~privbranches) */ (preferences._branches));
 //
-//  /*: preferences (~privpref, frzn) */ "#freeze";
+//  /*: preferences (~public_pref, frzn) */ "#freeze";
 //
 //
 ////  assert(/*: {(isPrivileged v)} */ (preferences._branches));
