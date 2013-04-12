@@ -24,17 +24,13 @@ var exports = /*: Ref(~extern) */ "#extern";
 
 // /*: (implies (isPrivileged v) (isTainted v)) */ "#assume";
 
-/*: (forall (d f) 
+//If all fields in a dictionary are public then the dictionary is public itself
+/*: (forall (d) 
       (implies 
-        (and (has v f) (isPrivileged (sel v f))) 
+        (forall (f) (and (has d f) (public (sel d f))))
         (isPrivileged d)
       )
     ) */ "#assume";
-
-//NOT WORKING:
-// /*: (implies (v :: Ref(~nsIPrefBranch)) ({Ref(~nsIPrefBranch)|(isPrivileged v)} v)) */ "#assume";
-//
-// /*: (implies (v :: (Top) -> {(isPrivileged v)}) (isPrivileged v)) */ "#assume";
 
 
 /// If a dictionary contains a privilieged binding then it's privileged itself
@@ -54,8 +50,6 @@ var exports = /*: Ref(~extern) */ "#extern";
 var testPriv = function(o) /*: [;L;] (Ref(L)) / (L: {Dict|(isPrivileged v)} > lObjPro) -> Top / sameType */ {};
 
 // SECURITY PROPERTIES END
-
-
 
 
 
@@ -100,24 +94,17 @@ var Ci = a.Ci;
 /*: (~dict: { } > lObjPro) */ "#weak";
 
 
+var makePublicEmpty = /*: [;L;] () / () -> Ref(L) / (L: {Dict|(public v)} > lObjPro) */ "#extern";
+
 /*****************************************************
  * Branches
  * **************************************************/
 
-/*: (~branches: { } > lObjPro) */ "#weak";
+/*: (~branches: {Dict|(public v)} > lObjPro) */ "#weak";
 
-/*: (~privbranches: { Dict | (isPrivileged v)} > lObjPro) */ "#weak";
+/*: (~secret_branches: { } > lObjPro) */ "#weak";
 
-//XXX: This does not help much - very specific
-// /*: (~privbranches: { Dict | (implies (has v "s") ({Ref(~nsIPrefBranch)|(isPrivileged v)} (sel v "s"))) } > lObjPro) */ "#weak";
-
-//XXX: Cannot have forall in formulas inside types
-// /*: (~privbranches: { Dict | (forall (s) (implies (has v s) ({Ref(~nsIPrefBranch)|(isPrivileged v)} (sel v s))))} > lObjPro) */ "#weak";
-
-///*: (~branches: { Dict | (implies (has v "s") ((sel v "s") :: Ref(~nsIPrefBranch))) } > lObjPro) */ "#weak";
-///*: (~branches: Dict > lObjPro) */ "#weak";
-
-var branches = {  }; 
+var branches = /*: [;lB;] */ makePublicEmpty();
 /*: branches (~branches, frzn) */ "#freeze";
 
 
@@ -125,9 +112,11 @@ var branches = {  };
  * Caches
  * **************************************************/
 
-/*: (~caches: { } > lObjPro) */ "#weak";
+/*: (~caches: {Dict|(public v)} > lObjPro) */ "#weak";
 
-var caches = { }; 
+/*: (~secret_caches: { } > lObjPro) */ "#weak";
+
+var caches = /*: [;lB;] */ makePublicEmpty();
 /*: caches (~caches, frzn) */ "#freeze";
 
 
@@ -138,65 +127,64 @@ var caches = { };
 
 /*: (~privpref: { Dict | (and privPrefFields) } > lObjPro) */ "#weak";
 
-var preferences = {
-    _branches: branches,
-    _caches: caches
-  };
-
-/*: preferences (~pref, frzn) */ "#freeze";
-
-
-
-/**
- *
- * XXX: capability leaks only through assignment to global var preferences. So
- * we need the side effect - output heap annotations to denote that.
- *
- * E.g. to prove the absense of capability leaks, for every location in output heap 
- * we should be able to prove: "not (isPrivileged v)"
- *
- */
-//var func = function (name) /*: (Str) / (&preferences: Ref(~pref))-> Top / (&preferences: Ref(~privpref)) */ {
-  var name = /*: Str */ "#extern";
-
-  var branch = Cc["mozilla_org__preferences_service_1"].getService(Ci.nsIPrefService).getBranch(name);
-
-  assert(/*: Ref(~pref) */ (preferences));
-
-  assert(/*: {Ref(~nsIPrefBranch)|TRU} */ (branch));
-  assert(/*: {(isPrivileged v)} */ (branch));
-  
-  /*: preferences lPreferences */ "#thaw";
-
-  assert(/*: Ref(~branches) */ (preferences._branches));
-
-  var pb = preferences._branches;
-  /*: pb lPrefBranches */ "#thaw";
-
-  pb[name] = branch;
-
-  assert(/*: Ref(~nsIPrefBranch) */ (pb[name]));
-  assert(/*: {(isPrivileged v)} */ (pb[name]));
-
-
-  /*: pb (~privbranches, frzn) */ "#freeze";
-
-//  /*: pb (~branches, thwd lPrefBranches) */ "#freeze";
-    
-  assert(/*: Ref(~privbranches) */ (pb));
-  //XXX: had to add this...
-  preferences._branches = pb;
-  assert(/*: Ref(~privbranches) */ (preferences._branches));
-
-  /*: preferences (~privpref, frzn) */ "#freeze";
-
-
-//  assert(/*: {(isPrivileged v)} */ (preferences._branches));
-//  assert(/*: {(isPrivileged v)} */ (preferences));
-
-//};
-
-//preferences.getBranch = func;
-/* other properties */
-
-//exports.preferences = preferences;
+//var preferences = {
+//    _branches: branches,
+//    _caches: caches
+//  };
+//
+///*: preferences (~pref, frzn) */ "#freeze";
+//
+//
+//
+///**
+// *
+// * XXX: capability leaks only through assignment of secret valeus to global 
+// * variable "Preferences". So we need the side effect - output heap annotations 
+// * to denote that.
+// * E.g. to prove the absense of capability leaks, for every location in output heap 
+// * we should be able to prove: safe v
+// *
+// */
+////var func = function (name) /*: (Str) / (&preferences: Ref(~pref))-> Top / (&preferences: Ref(~privpref)) */ {
+//  var name = /*: {Str|(safe v)} */ "#extern";
+//
+//  var branch = Cc["mozilla_org__preferences_service_1"].getService(Ci.nsIPrefService).getBranch(name);
+//
+//  assert(/*: Ref(~pref) */ (preferences));
+//
+//  assert(/*: {Ref(~nsIPrefBranch)|TRU} */ (branch));
+//  assert(/*: {(isPrivileged v)} */ (branch));
+//  
+//  /*: preferences lPreferences */ "#thaw";
+//
+//  assert(/*: Ref(~branches) */ (preferences._branches));
+//
+//  var pb = preferences._branches;
+//  /*: pb lPrefBranches */ "#thaw";
+//
+//  pb[name] = branch;
+//
+//  assert(/*: Ref(~nsIPrefBranch) */ (pb[name]));
+//  assert(/*: {(isPrivileged v)} */ (pb[name]));
+//
+//  /*: pb (~privbranches, frzn) */ "#freeze";
+//
+////  /*: pb (~branches, thwd lPrefBranches) */ "#freeze";
+//    
+//  assert(/*: Ref(~privbranches) */ (pb));
+//  //XXX: had to add this...
+//  preferences._branches = pb;
+//  assert(/*: Ref(~privbranches) */ (preferences._branches));
+//
+//  /*: preferences (~privpref, frzn) */ "#freeze";
+//
+//
+////  assert(/*: {(isPrivileged v)} */ (preferences._branches));
+////  assert(/*: {(isPrivileged v)} */ (preferences));
+//
+////};
+//
+////preferences.getBranch = func;
+///* other properties */
+//
+////exports.preferences = preferences;

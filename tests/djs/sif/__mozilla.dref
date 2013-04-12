@@ -59,16 +59,13 @@ weak (~lMFilePicker: {
   } >lObjPro)
 
 weak (~nsIPrefBranch: { Dict | (and 
-    (isPrivileged v)
     (dom v {"setCharPref"})
     ((sel v "setCharPref") :: (this: Ref(~nsIPrefBranch), Str, Str) -> Top)
   )} > lObjPro)
 
 weak (~nsIPrefService: { Dict | (and 
-    (isPrivileged v)
     (dom v {"getBranch"})
-    ((sel v "getBranch") :: (this: Ref(~nsIPrefService), Str) ->
-      {Ref(~nsIPrefBranch) | (isPrivileged v)})
+    ((sel v "getBranch") :: (this: Ref(~nsIPrefService), Str) -> Ref(~nsIPrefBranch))
   )} > lObjPro)
 
 
