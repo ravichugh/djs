@@ -62,6 +62,12 @@ Preferences._branches =
 Preferences._caches = { };
 
 
+/**
+ *
+ * XXX: capability leaks both through assignment to global var Preferences and
+ * through the return type of the closure
+ *
+ */
 Preferences.getBranch = function (name) 
 /*: (Str) / ( &Preferences: Ref(lP), 
               lP: {_branches: Ref(lB)} > lObjPro, 
