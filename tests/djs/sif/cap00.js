@@ -73,11 +73,17 @@
 
 
 // Public values:
-/*: (public undefined) */ "#assume";
-/*: (public true) */ "#assume";
-
-// The result of testing equality between public values is public 
-/*: (forall (x y) (implies (and (iff (= v true) (= x y)) (public x) (public y)) (public v))) */ "#assume";
+/*: (public undefined)   */ "#assume";
+/*: (public true)        */ "#assume";
+/*: (public null)        */ "#assume";
+/*: (public "string")    */ "#assume";
+/*: (public "undefined") */ "#assume";
+/*: (public "boolean")   */ "#assume";
+/*: (public "number")    */ "#assume";
+/*: (public "null")      */ "#assume";
+/*: (public "function")  */ "#assume";
+/*: (public "array")     */ "#assume";
+/*: (public "object")    */ "#assume";
 
 
 /*****************************************************
@@ -93,6 +99,9 @@
 
 var exports = /*: Ref(~extern) */ "#extern";
 
+var Object_ = /*: { getPrototypeOf: [;L,LP;] (o:Ref(L)) / (L: Dict > lObjPro)->
+      { Ref(LP) | (implies (public o) (public v)) } / sameExact } */ "#extern";
+
 
 /*****************************************************
  *
@@ -101,7 +110,6 @@ var exports = /*: Ref(~extern) */ "#extern";
  *
  *
  *****************************************************/
-
 
 "use strict";
 
@@ -114,44 +122,51 @@ var exports = /*: Ref(~extern) */ "#extern";
 var isUndefined = function(value) 
 /*: ({(public v)}) -> {Bool|(public v)} */ 
 {
-  assert(/*: {(public v)} */ (undefined));
   return value === undefined;
 };
 exports.isUndefined = isUndefined;
 
 
+/**
+ * Returns `true` if value is `null`.
+ * @examples
+ *    isNull(null); // true
+ *    isNull(undefined); // false
+ */
+var isNull = function(value) 
+/*: ({(public v)}) -> {Bool|(public v)} */ 
+{
+  return value === null;
+};
+exports.isNull = isNull;
 
-///**
-// * Returns `true` if value is `null`.
-// * @examples
-// *    isNull(null); // true
-// *    isNull(undefined); // false
-// */
-//function isNull(value) {
-//  return value === null;
-//}
-//exports.isNull = isNull;
-//
-///**
-// * Returns `true` if value is a string.
-// * @examples
-// *    isString("moe"); // true
-// */
-//function isString(value) {
-//  return typeof value === "string";
-//}
-//exports.isString = isString;
-//
-///**
-// * Returns `true` if `value` is a number.
-// * @examples
-// *    isNumber(8.4 * 5); // true
-// */
-//function isNumber(value) {
-//  return typeof value === "number";
-//}
-//exports.isNumber = isNumber;
-//
+/**
+ * Returns `true` if value is a string.
+ * @examples
+ *    isString("moe"); // true
+ */
+var isString = function(value) 
+/*: (value: {(public v)}) -> {Bool|(and (iff (= v true) (Str value)) (public v))} */ 
+{
+  assert(/*: {(public v)} */ (typeof value));
+  return typeof value === "string";
+};
+exports.isString = isString;
+
+/**
+ * Returns `true` if `value` is a number.
+ * @examples
+ *    isNumber(8.4 * 5); // true
+ */
+var isNumber = function(value) 
+/*: (value: {(public v)}) -> {Bool|(and (iff (= v true) (Num value)) (public v))} */ 
+{
+  return typeof value === "number";
+};
+exports.isNumber = isNumber;
+
+//TODO
+//Does instanceof work?
 ///**
 // * Returns `true` if `value` is a `RegExp`.
 // * @examples
@@ -161,39 +176,46 @@ exports.isUndefined = isUndefined;
 //  return isObject(value) && instanceOf(value, RegExp);
 //}
 //exports.isRegExp = isRegExp;
-//
+
 ///**
 // * Returns true if `value` is a `Date`.
 // * @examples
 // *    isDate(new Date()); // true
 // */
-//function isDate(value) {
+//var isDate = function(value) 
+//
+//{
 //  return isObject(value) && instanceOf(value, Date);
 //}
 //exports.isDate = isDate;
-//
-///**
-// * Returns true if object is a Function.
-// * @examples
-// *    isFunction(function foo(){}) // true
-// */
-//function isFunction(value) {
-//    return typeof value === "function";
-//}
-//exports.isFunction = isFunction;
-//
-///**
-// * Returns `true` if `value` is an object (please note that `null` is considered
-// * to be an atom and not an object).
-// * @examples
-// *    isObject({}) // true
-// *    isObject(null) // false
-// */
-//function isObject(value) {
-//    return typeof value === "object" && value !== null;
-//}
-//exports.isObject = isObject;
-//
+
+/**
+ * Returns true if object is a Function.
+ * @examples
+ *    isFunction(function foo(){}) // true
+ */
+var isFunction = function(value) 
+/*: (value: {(public v)}) -> {Bool|(and (iff (= v true) (= (tag value) "function")) (public v))} */
+{
+    return typeof value === "function";
+};
+exports.isFunction = isFunction;
+
+/**
+ * Returns `true` if `value` is an object (please note that `null` is considered
+ * to be an atom and not an object).
+ * @examples
+ *    isObject({}) // true
+ *    isObject(null) // false
+ */
+var isObject = function(value) 
+/*: (value: {(public v)}) -> {Bool|(and (iff (= v true) (and (not (= value null)) (= (tag value) "object"))) (public v))} */
+{
+    return typeof value === "object" && value !== null;
+};
+exports.isObject = isObject;
+
+//TODO
 ///**
 // * Returns true if `value` is an Array.
 // * @examples
@@ -204,7 +226,7 @@ exports.isUndefined = isUndefined;
 //  Object.prototype.toString.call(value) === "[object Array]";
 //}
 //exports.isArray = isArray;
-//
+
 ///**
 // * Returns `true` if `value` is an Arguments object.
 // * @examples
@@ -215,20 +237,23 @@ exports.isUndefined = isUndefined;
 //  Object.prototype.toString.call(value) === "[object Arguments]";
 //}
 //exports.isArguments = isArguments;
-//
-///**
-// * Returns true if it is a primitive `value`. (null, undefined, number,
-// * boolean, string)
-// * @examples
-// *    isPrimitive(3) // true
-// *    isPrimitive('foo') // true
-// *    isPrimitive({ bar: 3 }) // false
-// */
-//function isPrimitive(value) {
-//  return !isFunction(value) && !isObject(value);
-//}
-//exports.isPrimitive = isPrimitive;
-//
+
+/**
+ * Returns true if it is a primitive `value`. (null, undefined, number,
+ * boolean, string)
+ * @examples
+ *    isPrimitive(3) // true
+ *    isPrimitive('foo') // true
+ *    isPrimitive({ bar: 3 }) // false
+ */
+var isPrimitive = function isPrimitive(value) 
+/*: (value: {(public v)}) -> {Bool|(public v)} */
+{
+  return !isFunction(value) && !isObject(value);
+};
+exports.isPrimitive = isPrimitive;
+
+//TODO
 ///**
 // * Returns `true` if given `object` is flat (it is direct decedent of
 // * `Object.prototype` or `null`).
@@ -236,26 +261,32 @@ exports.isUndefined = isUndefined;
 // *    isFlat({}) // true
 // *    isFlat(new Type()) // false
 // */
-//function isFlat(object) {
-//  return isObject(object) && (isNull(Object.getPrototypeOf(object)) ||
-//                              isNull(Object.getPrototypeOf(
-//                                     Object.getPrototypeOf(object))));
-//}
+//var isFlat = function(object) 
+///*: (object: {Ref(l)|(public v)}) / (l: { Dict|(public v)} > lObjPro) -> {Bool|(public v)} / sameExact */
+//{
+//  var f = Object_.getPrototypeOf;
+//  assert(/*: {(public v)} */ ((/*: [;l,lObjPro;] */ f)(object)));
+//  return isObject(object) ;// && (isNull((/*: [;l,lObjPro;] */ f)(object))  ||
+//                              //isNull(Object_.getPrototypeOf(
+//                                //     Object_.getPrototypeOf(object))));
+//};
 //exports.isFlat = isFlat;
-//
-///**
-// * Returns `true` if object contains no values.
-// */
-//function isEmpty(object) {
-//  if (isObject(object)) {
+
+/**
+ * Returns `true` if object contains no values.
+ */
+var isEmpty = function(object)
+/*: (object: {(public v)}) -> {Bool|(public v)} */
+{
+  if (isObject(object)) {
 //    for (var key in object)
 //      return false;
 //    return true;
-//  }
-//  return false;
-//}
-//exports.isEmpty = isEmpty;
-//
+  }
+  return false;
+};
+exports.isEmpty = isEmpty;
+
 ///**
 // * Returns `true` if `value` is an array / flat object containing only atomic
 // * values and other flat objects.

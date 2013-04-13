@@ -20,7 +20,7 @@ val del :: (dd:Dict, kk:Str) -> {(= v (upd dd kk bot))}
 
 (***** JS primitives **********************************************************)
 
-val js_typeof :: xx:Top -> {(= v (tag xx))}
+val js_typeof :: xx:Top -> {(and (implies (public xx) (public v)) (= v (tag xx)))}
 
 val js_plus :: (xx:{(= (tag v) {"number","string"})}, yy:{(= (tag v) (tag xx))})
             -> {(and (= (tag v) (tag xx))
@@ -39,18 +39,27 @@ val js_mult :: (xx:Num, yy:Num) -> {Num|(implies (and (integer xx) (integer yy))
 
 val js_div :: (Num, Num) -> Num
 
-val js_or :: (xx:Top, yy:Top) -> {(ite (falsy xx) (= v yy) (= v xx))}
+val js_or :: (xx:Top, yy:Top) -> {(and 
+  (ite (falsy xx) (= v yy) (= v xx))
+  (implies (and (public xx) (public xx)) (public v)))}
 
-val js_and :: (xx:Top, yy:Top) -> {(ite (truthy xx) (= v yy) (= v xx))}
+val js_and :: (xx:Top, yy:Top) -> {(and
+  (ite (truthy xx) (= v yy) (= v xx))
+  (implies (and (public xx) (public xx)) (public v)))}
 
-val js_not :: xx:Top -> {Bool|(iff (= v true) (falsy xx))}
+val js_not :: xx:Top -> {Bool|(and 
+  (iff (= v true) (falsy xx))
+  (implies (public xx) (public v)))}
 
 val js_eek :: (* == *)
-  (xx:Top, yy:Top) -> {Bool|(implies (= (tag xx) (tag yy))
-                                     (iff (= v true) (= xx yy)))}
+  (xx:Top, yy:Top) -> {Bool|(and 
+    (implies (= (tag xx) (tag yy)) (iff (= v true) (= xx yy)))
+    (implies (and (public xx) (public yy)) (public v)))}
 
 val js_threek :: (* === *)
-  (xx:Top, yy:Top) -> {Bool|(iff (= v true) (= xx yy))}
+  (xx:Top, yy:Top) -> {Bool|(and 
+    (iff (= v true) (= xx yy)) 
+    (implies (and (public xx) (public yy)) (public v)))}
 
 val js_lt :: (xx:NumOrStr, yy:{(= (tag v) (tag xx))})
           -> {Bool|(implies (and (Num xx) (integer xx) (integer yy))
