@@ -10,5 +10,5 @@ var foo = function(s, h)
 //  assert(/*: () -> Top */ (h[s]));
   assert(/*: {(= (tag v) "function")} */ (h[s]));
 //rkc TODO fix
-//  assert(/*: () / (lObjPro: {_ : Bot} > lROOT) -> Top / sameType */ (h[s]));
+  assert(/*: () / (lObjPro: {_ : Bot} > lROOT) -> Top / sameType */ (h[s]));
 };

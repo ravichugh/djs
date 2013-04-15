@@ -18,15 +18,6 @@ var quest = function(query) /*: (Ref(~lQuery)) -> Top */
 
   /*: (&query: Ref(~lQuery)) -> sameType  */
   for (i = 0; i < len; i += 1) {
-
     func = function() /*: () -> Top */ {};
-//    
-//    /*: query lQuery */ "#thaw";
-//    if (i < query.length)   //PV: added this check
-//      selector = query[i];
-//    /*: query (~lQuery, thwd lQuery) */ "#freeze";
-//
-//    if (selector.op == '') 
-//      func = hunter[selector.op];
   }
 };
