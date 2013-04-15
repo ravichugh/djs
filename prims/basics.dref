@@ -25,7 +25,10 @@ val js_typeof :: xx:Top -> {(and (implies (public xx) (public v)) (= v (tag xx))
 val js_plus :: (xx:{(= (tag v) {"number","string"})}, yy:{(= (tag v) (tag xx))})
             -> {(and (= (tag v) (tag xx))
                      (implies (and (= (tag xx) "number") (integer xx) (integer yy))
-                              (and (= v (+ xx yy)) (integer v))))}
+                              (and (= v (+ xx yy)) (integer v)))
+                     (implies (and (public xx) (public yy))
+                              (public v))
+                     )}
 
 val js_minus ::
   (xx:Num, yy:Num) -> {Num|(implies (and (integer xx) (integer yy))

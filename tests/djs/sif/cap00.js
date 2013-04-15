@@ -85,6 +85,11 @@
 /*: (public "array")     */ "#assume";
 /*: (public "object")    */ "#assume";
 
+/*: (public "dummy")     */ "#assume";
+/*: (public "")          */ "#assume";
+/*: (public "#")         */ "#assume";
+/*: (public 1)           */ "#assume";
+
 
 /*****************************************************
  *
@@ -94,13 +99,53 @@
  *
  *****************************************************/
 
-
 /*: "tests/djs/sif/__mozilla.dref" */ "#use";
+
+/*: allFrozenLocations 
+    ~extern: frzn, ~lFlashblock: frzn, ~lRegExp: frzn, ~lInput: frzn, ~lTab:
+    frzn, ~lBrowser: frzn, ~nsIScriptableInputStream: frzn, ~nsIFileOutputStream:
+    frzn, ~nsIFileInputStream: frzn, ~nsIProperties: frzn, ~nsIFile: frzn,
+    ~nsIFilePicker: frzn, ~nsIFilePicker: frzn, ~lWindow: frzn, ~lConsole: frzn,
+    ~lComponents: frzn, ~lComponents_interfaces: frzn, ~lComponents_classes:
+    frzn, ~nsIExtensionManager: frzn, ~lnsIUpdateItem: frzn, ~lMOPService: frzn,
+    ~nsIPrefService: frzn, ~nsIPrefBranch: frzn, ~lMFilePicker: frzn,
+    ~lMEManager: frzn, ~lMFApplication: frzn, ~lMScriptableInputStream: frzn,
+    ~lMNFileOutputStream: frzn, ~lMNFileInputStream: frzn, ~lMFileLocal: frzn,
+    ~lMFDirService: frzn, ~dirLocator: frzn, ~fuelIApplication: frzn,
+    ~lApplication_extensions: frzn, ~lExtensions: frzn, ~lPreferences: frzn */ "#define";
+
+/*: PStr {Str |(public v)} */ "#define";
+/*: Pub {(public v)} */ "#define";
+
+/*: (~pubArr: {Arr(Pub)|(packed v)} > lArrPro) */ "#weak";
+/*: (~pstrArr: {Arr(PStr)|(packed v)} > lArrPro) */ "#weak";
 
 var exports = /*: Ref(~extern) */ "#extern";
 
 var Object_ = /*: { getPrototypeOf: [;L,LP;] (o:Ref(L)) / (L: Dict > lObjPro)->
       { Ref(LP) | (implies (public o) (public v)) } / sameExact } */ "#extern";
+
+var String = /*: (Top) -> Str */ "#extern";
+
+var arrayIndexOf = /*: [;L1,L2;] (Ref(L1), Ref(L2)) 
+                     / (L1: {Arr({(public v)})|(packed v)} > lArrPro, 
+                        L2: {Arr({(public v)})|(packed v)} > lArrPro) 
+                     -> {Int|(public v)} / sameExact */ "#extern";
+
+var intToString = /*: ({Int|(public v)}) -> PStr */ "#extern";
+
+var arraySlice = /*: [;L;] (Ref(L), Int, Int) 
+                   / (L: {Arr({(public v)})|(packed v)} > lArrPro) 
+                   -> Ref(L) / sameType */ "#extern";
+
+//var arrayMap = /*: [;L;] (Ref(L), (Top) / (allFrozenLocations) -> PStr / sameType) 
+//                     / (L: {Arr(Pub)|(packed v)} > lArrPro)
+//                   -> Ref(L) / (L: {Arr(PStr)|(packed v)} > lArrPro) */ "#extern";
+
+var arrayMap = /*: (Ref(~pubArr)) -> Ref(~pstrArr) */ "#extern";
+
+var arrayJoin = /*: [;L;] (Ref(L), PStr) / (L: {Arr(PStr)|(packed v)} > lArrPro) -> PStr / sameExact */ "#extern";
+
 
 
 /*****************************************************
@@ -119,8 +164,10 @@ var Object_ = /*: { getPrototypeOf: [;L,LP;] (o:Ref(L)) / (L: Dict > lObjPro)->
  *    var foo; isUndefined(foo); // true
  *    isUndefined(0); // false
  */
+//TODO: changed this cause the arrays would not TC
 var isUndefined = function(value) 
-/*: ({(public v)}) -> {Bool|(public v)} */ 
+/* (Pub) -> {Bool|(public v)} */ 
+/*: (Top) -> Bool */ 
 {
   return value === undefined;
 };
@@ -275,26 +322,51 @@ exports.isPrimitive = isPrimitive;
 /**
  * Returns `true` if object contains no values.
  */
+/*
+ *
+ * I don't think we can prove anything more than the fact that the result is a
+ * boolean. the key in the for...in statement is picked randomly and checked
+ * against the contents of the object.
+ *
+ */
 var isEmpty = function(object)
-/*: (object: {(public v)}) -> {Bool|(public v)} */
+/*: (object: { Ref(lObj) | (public v)}) / 
+    (lObj: Dict > lObjPro) -> Bool / sameType */
 {
   if (isObject(object)) {
-//    for (var key in object)
-//      return false;
-//    return true;
+    var key /*: Str */ = "";
+    var cnt /*: Bool */ = true;
+    /*: ( lObj: Dict > lObjPro) -> sameType */
+    for (key in object)
+      cnt = false;
+    return cnt;
+
+    ////PV: original code
+    //for (key in object) 
+    //  return false;
+    //return true;
   }
   return false;
 };
 exports.isEmpty = isEmpty;
 
-///**
-// * Returns `true` if `value` is an array / flat object containing only atomic
-// * values and other flat objects.
-// */
-//function isJSON(value, visited) {
-//    // Adding value to array of visited values.
-//    (visited || (visited = [])).push(value);
-//            // If `value` is an atom return `true` cause it's valid JSON.
+/**
+ * Returns `true` if `value` is an array / flat object containing only atomic
+ * values and other flat objects.
+ */
+var isJSON = function(value, visited) 
+/*: (value: {(public v)}, visited: Ref(lArr)) 
+    / ( lArr: {Arr({(public v)})|(packed v)} > lArrPro)
+    -> Top / sameType */ 
+{
+    // Adding value to array of visited values.
+    var tmp = visited;
+//    if (!tmp)
+//      tmp = /*: lEmpty */ [];
+    //Original code:
+    //var tmp = visited || (visited = []);
+    tmp.push(value);
+            // If `value` is an atom return `true` cause it's valid JSON.
 //    return  isPrimitive(value) ||
 //            // If `value` is an array of JSON values that has not been visited
 //            // yet.
@@ -312,11 +384,11 @@ exports.isEmpty = isEmpty;
 //                        !('get' in $) && !('set' in $) &&
 //                        isJSON($.value, visited));
 //            }));
-//}
+};
 //exports.isJSON = function (value) {
 //  return isJSON(value);
 //};
-//
+
 ///**
 // * Returns if `value` is an instance of a given `Type`. This is exactly same as
 // * `value instanceof Type` with a difference that `Type` can be from a scope
@@ -343,29 +415,38 @@ exports.isEmpty = isEmpty;
 //  return isInstanceOf;
 //}
 //exports.instanceOf = instanceOf;
-//
-///**
-// * Function returns textual representation of a value passed to it. Function
-// * takes additional `indent` argument that is used for indentation. Also
-// * optional `limit` argument may be passed to limit amount of detail returned.
-// * @param {Object} value
-// * @param {String} [indent="    "]
-// * @param {Number} [limit]
-// */
-//function source(value, indent, limit, offset, visited) {
-//  var result;
-//  var names;
-//  var nestingIndex;
-//  var isCompact = !isUndefined(limit);
-//
-//  indent = indent || "    ";
-//  offset = (offset || "");
-//  result = "";
-//  visited = visited || [];
-//
-//  if (isUndefined(value)) {
-//    result += "undefined";
-//  }
+
+/**
+ * Function returns textual representation of a value passed to it. Function
+ * takes additional `indent` argument that is used for indentation. Also
+ * optional `limit` argument may be passed to limit amount of detail returned.
+ * @param {Object} value
+ * @param {String} [indent="    "]
+ * @param {Number} [limit]
+ */
+var source = function source_(value, indent, limit, offset, visited) 
+/*: {(and 
+ 
+      (* (v:: (value: {(public v)}, Str, {Int|(public v)}, Str, Ref(lVis)) / (lVis: {Arr({(public v)})|(packed v)}) -> Top / sameType) *)
+
+      (v:: (value: Ref(~pubArr), Str, {Int|(public v)}, Str, Ref(lVis)) 
+        / (lVis: {Arr(Pub)|(packed v)} > lArrPro) -> Top / sameType)
+        
+    )} */
+{
+  var result;
+  var names;
+  var nestingIndex;
+  var isCompact = !isUndefined(limit);
+
+  indent = indent || "    ";
+  offset = (offset || "");
+  result = "";
+  //visited = visited || [];
+
+  if (isUndefined(value)) {
+    result += "undefined";
+  }
 //  else if (isNull(value)) {
 //    result += "null";
 //  }
@@ -373,32 +454,61 @@ exports.isEmpty = isEmpty;
 //    result += '"' + value + '"';
 //  }
 //  else if (isFunction(value)) {
-//    value = String(value).split("\n");
+//    //TODO
+//    //value = String(value).split("\n");
+//    value = ["a", "b", "c"];
 //    if (isCompact && value.length > 2) {
-//      value = value.splice(0, 2);
+//      //TODO
+//      //value = value.splice(0, 2);
+//      value = ["a", "b"];
 //      value.push("...}");
 //    }
-//    result += value.join("\n" + offset);
+//    //TODO
+//    //result += value.join("\n" + offset);
+//    result += ("a\nb" + offset);
 //  }
-//  else if (isArray(value)) {
-//    if ((nestingIndex = (visited.indexOf(value) + 1))) {
-//      result = "#" + nestingIndex + "#";
+  else {
+
+    /*: value lVal */ "#thaw";
+    var cnd = isArray(value);
+    /*: value (~pubArr, thwd lVal) */ "#freeze";
+//    if (cnd) {
+//    //PV: original code
+//    //if ((nestingIndex = (visited.indexOf(value) + 1))) {
+//    nestingIndex = /*: [;lVis, lVal;] */arrayIndexOf(visited, value) + 1;
+//    if (nestingIndex) {
+//      result = "#" + intToString(nestingIndex) + "#";
+//      assert(/*: {(public v)} */ (result));
 //    }
 //    else {
 //      visited.push(value);
 //
 //      if (isCompact)
-//        value = value.slice(0, limit);
+//        value = /*: [;lVal;] */ arraySlice(value, 0, limit);
 //
 //      result += "[\n";
-//      result += value.map(function(value) {
-//        return offset + indent + source(value, indent, limit, offset + indent,
-//                                        visited);
-//      }).join(",\n");
+      //PV: original code:
+      //result += value.map(function(value) {
+      //  return offset + indent + 
+      //    source_(value, indent, limit, offset + indent, visited);
+      //}).join(",\n");
+      
+      var tmp1 = arrayMap(value
+//          , 
+//            function(value_) 
+//            /*: (Top) -> PStr */ 
+//            {
+//              return "dummy";
+//              //return offset + indent + 
+//              //  source_(value_, indent, limit, offset + indent, visited);
+//            }
+          ) ; 
+//      result += /*: [;lVal;] */ arrayJoin(tmp1, ",\n");
 //      result += isCompact && value.length > limit ?
 //                ",\n" + offset + "...]" : "\n" + offset + "]";
 //    }
-//  }
+//    }
+  }
 //  else if (isObject(value)) {
 //    if ((nestingIndex = (visited.indexOf(value) + 1))) {
 //      result = "#" + nestingIndex + "#"
@@ -469,8 +579,8 @@ exports.isEmpty = isEmpty;
 //  else {
 //    result += String(value);
 //  }
-//  return result;
-//}
+  return result;
+};
 //exports.source = function (value, indentation, limit) {
 //  return source(value, indentation, limit);
 //};
