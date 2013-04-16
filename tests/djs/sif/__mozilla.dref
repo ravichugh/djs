@@ -402,3 +402,12 @@ weak (~extern: {
 
   } > lObjPro)
 
+weak (~descriptor: {
+    configurable: Bool,
+    enumerable: Bool,
+    writable: Bool,
+    value: Ref(~pubObj),
+    get: () -> Top,
+    set: (Top) -> Top
+  } > lObjPro)
+

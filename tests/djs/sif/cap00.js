@@ -88,7 +88,16 @@
 /*: (public "dummy")     */ "#assume";
 /*: (public "")          */ "#assume";
 /*: (public "#")         */ "#assume";
+/*: (public "qq")        */ "#assume";
+/*: (public ",n")        */ "#assume";
+/*: (public "n")         */ "#assume";
+/*: (public ": ")        */ "#assume";
+
 /*: (public 1)           */ "#assume";
+
+
+//DJS cannot use: 
+// /*: (public ",\n")         */ "#assume";
 
 
 /*****************************************************
@@ -101,10 +110,10 @@
 
 /*: "tests/djs/sif/__mozilla.dref" */ "#use";
 
-/*: allFrozenLocations 
-    ~extern: frzn, ~lFlashblock: frzn, ~lRegExp: frzn, ~lInput: frzn, ~lTab:
-    frzn, ~lBrowser: frzn, ~nsIScriptableInputStream: frzn, ~nsIFileOutputStream:
-    frzn, ~nsIFileInputStream: frzn, ~nsIProperties: frzn, ~nsIFile: frzn,
+/*: allFrozenLocations ~pubArr: frzn, ~pstrArr: frzn, ~extern: frzn,
+    ~lFlashblock: frzn, ~lRegExp: frzn, ~lInput: frzn, ~lTab: frzn, ~lBrowser:
+    frzn, ~nsIScriptableInputStream: frzn, ~nsIFileOutputStream: frzn,
+    ~nsIFileInputStream: frzn, ~nsIProperties: frzn, ~nsIFile: frzn,
     ~nsIFilePicker: frzn, ~nsIFilePicker: frzn, ~lWindow: frzn, ~lConsole: frzn,
     ~lComponents: frzn, ~lComponents_interfaces: frzn, ~lComponents_classes:
     frzn, ~nsIExtensionManager: frzn, ~lnsIUpdateItem: frzn, ~lMOPService: frzn,
@@ -112,13 +121,21 @@
     ~lMEManager: frzn, ~lMFApplication: frzn, ~lMScriptableInputStream: frzn,
     ~lMNFileOutputStream: frzn, ~lMNFileInputStream: frzn, ~lMFileLocal: frzn,
     ~lMFDirService: frzn, ~dirLocator: frzn, ~fuelIApplication: frzn,
-    ~lApplication_extensions: frzn, ~lExtensions: frzn, ~lPreferences: frzn */ "#define";
+    ~lApplication_extensions: frzn, ~lExtensions: frzn, ~lPreferences: frzn
+*/ "#define";
 
 /*: PStr {Str |(public v)} */ "#define";
+/*: PInt {Int |(public v)} */ "#define";
 /*: Pub {(public v)} */ "#define";
 
 /*: (~pubArr: {Arr(Pub)|(packed v)} > lArrPro) */ "#weak";
 /*: (~pstrArr: {Arr(PStr)|(packed v)} > lArrPro) */ "#weak";
+
+/*: (~strArr: {Arr(Str)|(packed v)} > lArrPro) */ "#weak";
+
+/*: (~pubObj: {Dict|(public v)} > lObjPro) */ "#weak";
+
+/*: (~obj: { } > lObjPro) */ "#weak";
 
 var exports = /*: Ref(~extern) */ "#extern";
 
@@ -127,25 +144,31 @@ var Object_ = /*: { getPrototypeOf: [;L,LP;] (o:Ref(L)) / (L: Dict > lObjPro)->
 
 var String = /*: (Top) -> Str */ "#extern";
 
-var arrayIndexOf = /*: [;L1,L2;] (Ref(L1), Ref(L2)) 
-                     / (L1: {Arr({(public v)})|(packed v)} > lArrPro, 
-                        L2: {Arr({(public v)})|(packed v)} > lArrPro) 
-                     -> {Int|(public v)} / sameExact */ "#extern";
+//var arrayIndexOf = /*: [;L1,L2;] (Ref(L1), Ref(L2)) 
+//                     / (L1: {Arr({(public v)})|(packed v)} > lArrPro, 
+//                        L2: {Arr({(public v)})|(packed v)} > lArrPro) 
+//                     -> {Int|(public v)} / sameExact */ "#extern";
+
+//TODO: more precise ...
+var arrayIndexOf = /*: (Top, Top) -> {Int|(public v)} */ "#extern";
 
 var intToString = /*: ({Int|(public v)}) -> PStr */ "#extern";
 
-var arraySlice = /*: [;L;] (Ref(L), Int, Int) 
-                   / (L: {Arr({(public v)})|(packed v)} > lArrPro) 
-                   -> Ref(L) / sameType */ "#extern";
+var boolToString = /*: ({Bool|(public v)}) -> PStr */ "#extern";
 
-//var arrayMap = /*: [;L;] (Ref(L), (Top) / (allFrozenLocations) -> PStr / sameType) 
-//                     / (L: {Arr(Pub)|(packed v)} > lArrPro)
-//                   -> Ref(L) / (L: {Arr(PStr)|(packed v)} > lArrPro) */ "#extern";
+var objToString = /*: (Top) -> PStr */ "#extern";
 
-var arrayMap = /*: (Ref(~pubArr)) -> Ref(~pstrArr) */ "#extern";
+var arraySlice = /*: (Ref(~pubArr), Int, Int) -> Ref(~pubArr) */ "#extern";
 
-var arrayJoin = /*: [;L;] (Ref(L), PStr) / (L: {Arr(PStr)|(packed v)} > lArrPro) -> PStr / sameExact */ "#extern";
+var arrayMap = /*: (Ref(~pubArr), (Pub) / (allFrozenLocations) -> PStr / sameType) -> Ref(~pstrArr) */ "#extern";
 
+//var arrayMap = /*: (Ref(~pubArr)) -> Ref(~pstrArr) */ "#extern";
+
+var arrayJoin = /*: (Ref(~pstrArr), PStr) -> PStr */ "#extern";
+
+var objectKeys = /*: (Top) -> Ref(~pubArr) */ "#extern";
+
+var objectGetOwnPropertyDescriptor = /*: (Ref(~pubObj), Str) -> Ref(~descriptor) */ "#extern";
 
 
 /*****************************************************
@@ -181,7 +204,8 @@ exports.isUndefined = isUndefined;
  *    isNull(undefined); // false
  */
 var isNull = function(value) 
-/*: ({(public v)}) -> {Bool|(public v)} */ 
+/* ({(public v)}) -> {Bool|(public v)} */ 
+/*: (Top) -> Bool */ 
 {
   return value === null;
 };
@@ -256,7 +280,8 @@ exports.isFunction = isFunction;
  *    isObject(null) // false
  */
 var isObject = function(value) 
-/*: (value: {(public v)}) -> {Bool|(and (iff (= v true) (and (not (= value null)) (= (tag value) "object"))) (public v))} */
+/* (value: {(public v)}) -> {Bool|(and (iff (= v true) (and (not (= value null)) (= (tag value) "object"))) (public v))} */
+/*: (value: Top) -> {Bool|(and (iff (= v true) (and (not (= value null)) (= (tag value) "object"))))} */
 {
     return typeof value === "object" && value !== null;
 };
@@ -427,10 +452,11 @@ var isJSON = function(value, visited)
 var source = function source_(value, indent, limit, offset, visited) 
 /*: {(and 
  
-      (* (v:: (value: {(public v)}, Str, {Int|(public v)}, Str, Ref(lVis)) / (lVis: {Arr({(public v)})|(packed v)}) -> Top / sameType) *)
+      (* (v:: (value: {(public v)}, PStr, PInt, PStr, Ref(lVis)) / (lVis: {Arr({(public v)})|(packed v)}) -> Top / sameType) *)
 
-      (v:: (value: Ref(~pubArr), Str, {Int|(public v)}, Str, Ref(lVis)) 
-        / (lVis: {Arr(Pub)|(packed v)} > lArrPro) -> Top / sameType)
+      (* (v:: (value: {Ref(~pubArr)|(public v)}, PStr, PInt, PStr, visited: Ref(~pubArr)) -> PStr) *)
+      
+      (v:: (value: {Ref(~pubObj)|(public v)}, PStr, PInt, PStr, visited: Ref(~pubArr)) -> PStr)
         
     )} */
 {
@@ -442,16 +468,25 @@ var source = function source_(value, indent, limit, offset, visited)
   indent = indent || "    ";
   offset = (offset || "");
   result = "";
+  //PV: you can't assign a strong location to a weak reference
+  //Original code:
   //visited = visited || [];
+  if (!visited) {
+    var tmp2 = /*: lArr {Arr(Pub)|(packed v)} */ [];
+    /*: tmp2 (~pubArr, frzn) */ "#freeze";
+    visited = tmp2;
+  }
 
   if (isUndefined(value)) {
-    result += "undefined";
-  }
+//    result += "undefined";
+//  }
 //  else if (isNull(value)) {
 //    result += "null";
 //  }
 //  else if (isString(value)) {
-//    result += '"' + value + '"';
+//    //PV: Original code: 
+//    //result += '"' + value + '"';
+//    result += "qq" + "qq";
 //  }
 //  else if (isFunction(value)) {
 //    //TODO
@@ -466,119 +501,157 @@ var source = function source_(value, indent, limit, offset, visited)
 //    //TODO
 //    //result += value.join("\n" + offset);
 //    result += ("a\nb" + offset);
-//  }
-  else {
-
-    /*: value lVal */ "#thaw";
-    var cnd = isArray(value);
-    /*: value (~pubArr, thwd lVal) */ "#freeze";
-//    if (cnd) {
-//    //PV: original code
-//    //if ((nestingIndex = (visited.indexOf(value) + 1))) {
-//    nestingIndex = /*: [;lVis, lVal;] */arrayIndexOf(visited, value) + 1;
-//    if (nestingIndex) {
-//      result = "#" + intToString(nestingIndex) + "#";
-//      assert(/*: {(public v)} */ (result));
-//    }
-//    else {
-//      visited.push(value);
-//
-//      if (isCompact)
-//        value = /*: [;lVal;] */ arraySlice(value, 0, limit);
-//
-//      result += "[\n";
-      //PV: original code:
-      //result += value.map(function(value) {
-      //  return offset + indent + 
-      //    source_(value, indent, limit, offset + indent, visited);
-      //}).join(",\n");
-      
-      var tmp1 = arrayMap(value
-//          , 
-//            function(value_) 
-//            /*: (Top) -> PStr */ 
-//            {
-//              return "dummy";
-//              //return offset + indent + 
-//              //  source_(value_, indent, limit, offset + indent, visited);
-//            }
-          ) ; 
-//      result += /*: [;lVal;] */ arrayJoin(tmp1, ",\n");
-//      result += isCompact && value.length > limit ?
-//                ",\n" + offset + "...]" : "\n" + offset + "]";
-//    }
-//    }
   }
-//  else if (isObject(value)) {
-//    if ((nestingIndex = (visited.indexOf(value) + 1))) {
-//      result = "#" + nestingIndex + "#"
-//    }
-//    else {
-//      visited.push(value)
+  else {
 //
-//      names = Object.keys(value);
-//
-//      result += "{ // " + value + "\n";
-//      result += (isCompact ? names.slice(0, limit) : names).map(function(name) {
-//        var _limit = isCompact ? limit - 1 : limit;
-//        var descriptor = Object.getOwnPropertyDescriptor(value, name);
-//        var result = offset + indent + "// ";
-//        var accessor;
-//        if (0 <= name.indexOf(" "))
-//          name = '"' + name + '"';
-//
-//        if (descriptor.writable)
-//          result += "writable ";
-//        if (descriptor.configurable)
-//          result += "configurable ";
-//        if (descriptor.enumerable)
-//          result += "enumerable ";
-//
-//        result += "\n";
-//        if ("value" in descriptor) {
-//          result += offset + indent + name + ": ";
-//          result += source(descriptor.value, indent, _limit, indent + offset,
-//                           visited);
-//        }
-//        else {
-//
-//          if (descriptor.get) {
-//            result += offset + indent + "get " + name + " ";
-//            accessor = source(descriptor.get, indent, _limit, indent + offset,
-//                              visited);
-//            result += accessor.substr(accessor.indexOf("{"));
-//          }
-//
-//          if (descriptor.set) {
-//            result += offset + indent + "set " + name + " ";
-//            accessor = source(descriptor.set, indent, _limit, indent + offset,
-//                              visited);
-//            result += accessor.substr(accessor.indexOf("{"));
-//          }
-//        }
-//        return result;
-//      }).join(",\n");
-//
-//      if (isCompact) {
-//        if (names.length > limit && limit > 0) {
-//          result += ",\n" + offset  + indent + "//...";
-//        }
+//    /*: value lVal */ "#thaw";
+//    assume(value != null);
+//    if (isArray(value)) {
+//      /*: value (~pubArr, thwd lVal) */ "#freeze";
+////    //PV: original code
+////    //if ((nestingIndex = (visited.indexOf(value) + 1))) {
+////    nestingIndex = /*: [;lVis, lVal;] */arrayIndexOf(visited, value) + 1;
+//      if (nestingIndex) {
+//        result = "#" + intToString(nestingIndex) + "#";
 //      }
 //      else {
-//        if (names.length)
-//          result += ",";
+////        visited.push(value);
+//        if (isCompact)
+//          value = arraySlice(value, 0, limit);
+//        //PV: Original code
+//        //result += "[\n";
+//        result += "n";
+//        //PV: original code:
+//        //result += value.map(function(value) {
+//        //  return offset + indent + 
+//        //    source_(value, indent, limit, offset + indent, visited);
+//        //}).join(",\n");
+//        var f1 = function(value_) /*: (Pub) -> PStr */ {
+//                //TODO
+//                return offset + indent /*+ source_(value, indent, limit, offset + indent, visited)*/;
+//              };
+//        var tmp1 = arrayMap(value, f1); 
+//        //PV: orignial code
+//        //result += arrayJoin(tmp1, ",\n");
+//        result += arrayJoin(tmp1, ",n");
+//        //PV: orignial code
+//        //result += isCompact && value.length > limit ?
+//        //          ",\n" + offset + "...]" : "\n" + offset + "]";
+//        /*: value lVal */ "#thaw";
+//        assume(value != null);
+//        result += (isCompact && value.length > limit) ? "dummy" : "dummy";
+//        /*: value (~pubArr, thwd lVal) */ "#freeze";
 //
-//        result += "\n" + offset + indent + '"__proto__": ';
-//        result += source(Object.getPrototypeOf(value), indent, 0,
-//                         offset + indent);
 //      }
-//
-//      result += "\n" + offset + "}";
 //    }
-//  }
-//  else {
+//    else {
+//      /*: value (~pubArr, thwd lVal) */ "#freeze";
+//    }
+
+  
+//    /*: value lVal */ "#thaw";
+//    assume(value != null);
+//    /*: value (~pubObj, thwd lVal) */ "#freeze";
+    if (isObject(value)) {
+//      /*: value (~pubObj, thwd lVal) */ "#freeze";
+//    //PV: Original code:
+      //nestingIndex = (visited.indexOf(value) + 1);
+      nestingIndex = arrayIndexOf(visited, value) + 1;
+      if (nestingIndex) {
+        result = "#" + intToString(nestingIndex) + "#";
+      }
+      else {
+//        /*: visited lVis */ "#thaw";
+//        assume(visited != null);
+//        visited.push(value);
+//        /*: visited (~pubArr, thwd lVis) */ "#freeze";
+
+        //PV: Original code:
+        //names = Object.keys(value);
+        names = objectKeys(value);
+       
+        //PV: Implicit coersion
+        //result += "{ // " + value + "\n";
+        result += objToString(value);        
+        
+        //PV: Original code: 
+        //result += (isCompact ? names.slice(0, limit) : names).map(function(name) {
+        var tmp3 = isCompact ? arraySlice(names, 0, limit) : names;
+        var f2 = function(name_)
+        /*: (PStr) -> Str */ 
+        {
+          var _limit = isCompact ? limit - 1 : limit;
+          var descriptor = objectGetOwnPropertyDescriptor(value, name_);
+          //PV: Original code
+          //var result = offset + indent + "// ";
+          var result_ = offset + indent;
+          var accessor;
+          if (0 <= arrayIndexOf(name_, " "))
+            name_ = '"' + name_ + '"';
+
+          assume(descriptor != null);
+          if (descriptor.writable)
+            result_ += "writable ";
+          if (descriptor.configurable)
+            result_ += "configurable ";
+          if (descriptor.enumerable)
+            result_ += "enumerable ";
+
+          result_ += "\n";
+          
+          /*: descriptor ldscr */ "#thaw";
+          assume(descriptor != null);
+          //XXX: SLOW DOWN:
+          //"value" in descriptor;
+          /*: descriptor (~descriptor, thwd ldscr) */ "#freeze";
+
+//          if ("value" in descriptor) {
+            result_ += offset + indent + name_ + ": ";
+//            result += source_(descriptor.value, indent, _limit, indent + offset,
+//                             visited);
+//          }
+//          else {
+//
+//            if (descriptor.get) {
+//              result += offset + indent + "get " + name + " ";
+//              accessor = source(descriptor.get, indent, _limit, indent + offset,
+//                                visited);
+//              result += accessor.substr(accessor.indexOf("{"));
+//            }
+//
+//            if (descriptor.set) {
+//              result += offset + indent + "set " + name + " ";
+//              accessor = source(descriptor.set, indent, _limit, indent + offset,
+//                                visited);
+//              result += accessor.substr(accessor.indexOf("{"));
+//            }
+     //     }
+          return result_;
+        };
+//        result += tmp3.map(f2).join(",\n");
+//
+//        if (isCompact) {
+//          if (names.length > limit && limit > 0) {
+//            result += ",\n" + offset  + indent + "//...";
+//          }
+//        }
+//        else {
+//          if (names.length)
+//            result += ",";
+//
+//          result += "\n" + offset + indent + '"__proto__": ';
+//          result += source(Object.getPrototypeOf(value), indent, 0,
+//                           offset + indent);
+//        }
+//
+//        result += "\n" + offset + "}";
+      }
+    } 
+    else {
+//      /*: value (~pubObj, thwd lVal) */ "#freeze";
 //    result += String(value);
-//  }
+    }
+  }
   return result;
 };
 //exports.source = function (value, indentation, limit) {

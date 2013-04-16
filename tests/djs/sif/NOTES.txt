@@ -29,4 +29,5 @@ Jetpack Extension Framework - capability leaks [ECOOP'12]:
   In the leaking example in [ECOOP'12], the leak is propagated through a
   closure. 
 
+  Cannot freeze a location to a {Ref(~w)|(public v)}
 
