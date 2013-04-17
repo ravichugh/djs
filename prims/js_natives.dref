@@ -51,12 +51,24 @@ val theArrPro :: { Dict | (and (dom v {"push","pop"})
                               (> (len aa) 0))))} > this.pro))
 )}
 
+
+
 (* Array.isArray *)
 val __isArray ::
   {(and (v :: [A] (this:Top, xx:Ref?) / (xx: Arr(A) > xx.pro)
            -> {(= v true)} / same)
         (v :: (this:Top, xx:Ref?) / (xx: Dict > xx.pro)
            -> {(= v false)} / same)
+        
+        (* PV: adding this so that I don't have to thaw before using 
+         * isArray on strong locations. (Thawing will fail for 
+         * values that are not references to weak locations) *) 
+        (*(v :: (this:Top, xx:Top) -> Bool)*)
+        (*(v :: (this:Top, xx:Ref?) -> Bool)*)
+        (*(v :: (this:Top, xx:Ref) / (l: Arr(Top) > xx.pro)*)
+        (*   -> {(ite (xx :: Ref(l)) (= v true) (Bool v))} / same)*)
+        (*(v :: (this:Top, xx:Ref) -> {(Bool v)})*)
+        
         (v :: (this:Top, {(or (= (tag v) "number") (= (tag v) "boolean")
                               (= (tag v) "string") (= (tag v) "undefined")
                               (= v null))})

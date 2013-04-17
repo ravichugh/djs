@@ -1,8 +1,11 @@
-var foo = function() /*: () -> Top */ { };
+var foo  = function() /*: () / () -> Top / sameType */ { };
 
-var bar = function bar_ () /*: () -> Top */ {
+var bar = function bar_()
+/*: () / (&foo: ()  / () -> Top / sameType) -> Top / sameType */ 
+{
     foo();
-    function () /*: () -> Top */ {
+
+    function () /*: ()  -> Top */ {
       bar_();
     };
 };

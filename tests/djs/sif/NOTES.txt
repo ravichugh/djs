@@ -30,4 +30,10 @@ Jetpack Extension Framework - capability leaks [ECOOP'12]:
   closure. 
 
   Cannot freeze a location to a {Ref(~w)|(public v)}
+  
+  
+  [Tue Apr 16 11:02:10 PDT 2013]
+
+  Do not define functions like this: 
+  var foo = function foo( ... ) { ... };
 
