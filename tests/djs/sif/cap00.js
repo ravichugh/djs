@@ -144,7 +144,7 @@
 var exports = /*: Ref(~extern) */ "#extern";
 
 var Object_getPrototypeOf = 
-  /*: [;L1,L2;] (o:Ref(L1)) / (L1: Top > L2)-> Ref(L2) / sameExact */ "#extern";
+  /*: (o:Ref) / (o: Top > o.pro) -> Ref(o.pro) / sameExact */ "#extern";
 
 var String = /*: (Top) -> Str */ "#extern";
 
@@ -170,9 +170,14 @@ var arrayMap = /*: (Ref(~pubArr), (Pub) / (allFrozenLocations) -> PStr / sameTyp
 
 var arrayJoin = /*: (Ref(~pstrArr), PStr) -> PStr */ "#extern";
 
-var arrayEvery = /*: [;L;] (Ref(L), (Top) / (allFrozenLocations) -> Bool / sameType) / (L: Arr(Pub) > lArrPro) -> Bool / sameType */ "#extern";
+var arrayEvery = /*: (a:Ref, (Top) / (allFrozenLocations) -> Bool / sameType) / (a: Arr(Top) > lArrPro) -> Bool / sameType */ "#extern";
 
-var objectKeys = /*: (Top) -> Ref(~pubArr) */ "#extern";
+var objectKeys = 
+/* (o:Ref) / (o: d:Dict > lObjPro) -> Ref(lArr) / (lArr: {Arr({Str|(has d v)})|(packed v)} > lArrPro) */
+/*: {( and 
+      (*(v:: (o:Ref) / (o: Dict > lObjPro) -> Ref(lArr) / (lArr: {Arr(Str)|(packed v)} > lArrPro))*)
+      (v:: [;L;] (a:Ref) / (a: Arr(NotUndef) > lArrPro) -> Ref(L) / (L: {Arr(Str)|(packed v)} > lArrPro))
+    )}*/ "#extern";
 
 var objectGetOwnPropertyDescriptor = /*: (Ref(~pubObj), Str) -> Ref(~descriptor) */ "#extern";
 
@@ -333,7 +338,6 @@ var isPrimitive = function(value)
 };
 exports.isPrimitive = isPrimitive;
 
-//TODO
 /**
  * Returns `true` if given `object` is flat (it is direct decedent of
  * `Object.prototype` or `null`).
@@ -342,15 +346,22 @@ exports.isPrimitive = isPrimitive;
  *    isFlat(new Type()) // false
  */
 var isFlat = function(object) 
-/*: [;L1,L2,L3;] (object: Ref(L1)) / (L1: Top > L2) -> Bool / sameExact */
+/* [;L1,L2,L3;] (object: Ref(L1)) / (L1: Top > L2, L2: Top > L3) -> Bool / (L1: sameExact, L2: sameExact) */
+/*: (object: Ref) / (object: Top > object.pro, object.pro: Top > oo.pro) -> Bool / sameExact */
 {
-  var t2 = (/*: [;L1,L2;] */ Object_getPrototypeOf)(object);
-  assert(/*: Ref(L2) */ (t2));
-  //var t3 = (/*: [;L2,L3;] */ Object_getPrototypeOf)(t2);
-  //return isObject(object) && (isNull(t2) || isNull(t3));
-  return true;
+  //PV: Original code:
+  //return isObject(object) && (isNull(Object.getPrototypeOf(object)) ||
+  //                            isNull(Object.getPrototypeOf(
+  //                                   Object.getPrototypeOf(object))));
+
+  var t0 = (Object_getPrototypeOf)(object);
+  //assert(/*: Ref(L2) */ (t0));
+  var t1 = (Object_getPrototypeOf)(t0);
+  //assert(/*: Ref(L3) */ (t1));
+  return isObject(object) && (isNull(t0) || isNull(t1));
 };
 exports.isFlat = isFlat;
+
 
 /**
  * Returns `true` if object contains no values.
@@ -366,6 +377,14 @@ var isEmpty = function(object)
 /*: (object: { Ref(lObj) | (public v)}) / 
     (lObj: Dict > lObjPro) -> Bool / sameType */
 {
+  //PV: Original code:
+  //if (isObject(object)) {
+  //  for (var key in object)
+  //    return false;
+  //  return true;
+  //}
+  //return false;
+
   if (isObject(object)) {
     var key /*: Str */ = "";
     var cnt /*: Bool */ = true;
@@ -374,76 +393,80 @@ var isEmpty = function(object)
       cnt = false;
     return cnt;
 
-    ////PV: original code
-    //for (key in object) 
-    //  return false;
-    //return true;
   }
   return false;
 };
 exports.isEmpty = isEmpty;
 
-///**
-// * Returns `true` if `value` is an array / flat object containing only atomic
-// * values and other flat objects.
-// */
-//var isJSON = function isJSON_(value, visited) 
-///*: {(and 
-//      (*(v:: (value: {(public v)}, visited: Ref(~pubArr)) -> Top)*)
-//      (*(v:: (value: {Str|(public v)}, visited: Ref(~pubArr)) -> Top)*)
-//      (*(v:: (value: Ref(~pubArr), visited: Ref(~pubArr)) -> {Bool|(implies (public value) (public v))})*)
-//      (*(v:: (value: {Ref(~pubArr)|(public v)}, visited: Ref(~pubArr)) -> Top)*)
-//      
-//      (v:: (value: {Ref(lValue)|(public v)}, visited: Ref(lVisited)) 
-//        / (lValue: Arr(Pub) > lArrPro, lVisited: Arr(Ref(lValue)) > lArrPro) 
-//        -> {Bool|(implies (public value) (public v))}        / sameType)
-//
-//    )} */ 
-//{
-//
-//    // Adding value to array of visited values.
-//    //PV: Original code:
-//    //(visited || (visited = [])).push(value);
-//    if (!visited) {
-//      visited = /*: lEmpty tyPubArr */ [value];
-//    }
-//    else {
-//      visited.push(value);
-//    }
-//  
+/**
+ * Returns `true` if `value` is an array / flat object containing only atomic
+ * values and other flat objects.
+ */
+var isJSON = function isJSON_(value, visited) 
+/*: {(and 
+      (*(v:: (value: {(public v)}, visited: Ref(~pubArr)) -> Top)*)
+      (*(v:: (value: {Str|(public v)}, visited: Ref(~pubArr)) -> Top)*)
+      (*(v:: (value: Ref(~pubArr), visited: Ref(~pubArr)) -> {Bool|(implies (public value) (public v))})*)
+      (*(v:: (value: {Ref(~pubArr)|(public v)}, visited: Ref(~pubArr)) -> Top)*)
+      
+      (v:: (value: Ref, visited: Ref) 
+        / (value: Arr(Top) > lArrPro, visited: Arr(Top) > lArrPro)
+        -> {Bool|(implies (public value) (public v))} / sameType)
+
+    )} */ 
+{
+
+    // Adding value to array of visited values.
+    //PV: Original code:
+    //(visited || (visited = [])).push(value);
+
+    if (!visited) {
+      visited = /*: lEmpty {Arr(Top)|(packed v)} */ [value];
+    }
+    else {
+      visited.push(value);
+    }
+  
 //    var f1 = function(element) /*: (Top) -> Bool */ {
 //      //TODO
 //      //return isJSON_(element, visited);
 //      return true;
 //    }; 
-//
-//    // If `value` is an atom return `true` cause it's valid JSON.
-//    var result = isPrimitive(value) ||
-//            // If `value` is an array of JSON values that has not been visited
-//            /// yet.
-//            //PV: replacing the original isArray check with the result that was
-//            //computed earlier.
-//            ( isArray(value)  &&
-//              /*: [;lValue;] */ arrayEvery(value, f1) ); // ||
+
+    // If `value` is an atom return `true` cause it's valid JSON.
+    var result = 
+      isPrimitive(value) 
+//      ||
+//         // If `value` is an array of JSON values that has not been visited
+//         // yet.
+//      ( isArray(value) && arrayEvery(value, f1) )
+//      ||
 //            // If `value` is a plain object containing properties with a JSON
 //            // values it's a valid JSON.
-////            (isFlat(value) && Object.keys(value).every(function(key) {
-////                var $ = Object.getOwnPropertyDescriptor(value, key);
-////                // Check every proprety of a plain object to verify that
-////                // it's neither getter nor setter, but a JSON value, that
-////                // has not been visited yet.
-////                return  ((!isObject($.value) || !~visited.indexOf($.value)) &&
-////                        !('get' in $) && !('set' in $) &&
-////                        isJSON_($.value, visited));
-////            }));
-//    
-//    
-//    return result;
+//        ( 
+//         isFlat(value)
+//              && 
+//              /*: [;lok;] */ objectKeys(value)
+//              .every(function(key) {
+//                var $ = Object.getOwnPropertyDescriptor(value, key);
+//                // Check every proprety of a plain object to verify that
+//                // it's neither getter nor setter, but a JSON value, that
+//                // has not been visited yet.
+//                return  ((!isObject($.value) || !~visited.indexOf($.value)) &&
+//                        !('get' in $) && !('set' in $) &&
+//                        isJSON_($.value, visited));
+//              })
+//        )
+    ;
+    
+    //objectKeys(value);
+    
+    return result;
+};
+//exports.isJSON = function (value) {
+//  return isJSON(value);
 //};
-////exports.isJSON = function (value) {
-////  return isJSON(value);
-////};
-//
+
 ///**
 // * Returns if `value` is an instance of a given `Type`. This is exactly same as
 // * `value instanceof Type` with a difference that `Type` can be from a scope
