@@ -18,6 +18,7 @@ Jetpack Extension Framework - capability leaks [ECOOP'12]:
   inadvertently exports.
   TODO: get example(s) that manifest the leak vs example(s) that do not.
 
+
   [Wed Apr 10 14:19:05 PDT 2013]
 
   The check that [ECOOP'12] does is whether "exports" is tainted or not.
@@ -30,10 +31,27 @@ Jetpack Extension Framework - capability leaks [ECOOP'12]:
   closure. 
 
   Cannot freeze a location to a {Ref(~w)|(public v)}
-  
+
+
   
   [Tue Apr 16 11:02:10 PDT 2013]
 
   Do not define functions like this: 
   var foo = function foo( ... ) { ... };
 
+
+  
+  [Wed Apr 17 23:26:21 PDT 2013]
+
+  With intersection types in functions, a location defined in a type A for a
+  variable v, could/should not be available after a runtime check for the type
+  of v. Eg. 
+
+  function(a) 
+  /*: (a: Ref(la)) / (la: Arr(...) > lArrPro) [...] || 
+      (a: Ref(lo) / ((lo: {} > lObjPro) */ 
+  {
+    if (isArray(a)) {
+      assert(/*: Ref(la) */ (a));
+    }
+  }

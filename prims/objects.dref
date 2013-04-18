@@ -9,10 +9,11 @@ val getPropStr ::
       (ite (= kk "slice") (v :: (this:Str, Int, Int) -> Str)
       (ite (= kk "indexOf") (v :: (this:Str, Str) -> Int)
       (ite (= kk "substring") (v :: (this:Str, Int) -> Str)
+      (ite (= kk "substr") (v :: (this:Str, Int) -> Str)
       (ite (= kk "lastIndexOf") (v :: (this:Str, Str) -> Int)
       (ite (= kk "toLowerCase") (v :: (this:Str) -> Str) 
       (ite (= kk "replace") (v :: (this:Str, Str, Str) -> Str) 
-      (ite (= kk "toUpperCase") (v :: (this:Str) -> Str) TRU)))))))))}
+      (ite (= kk "toUpperCase") (v :: (this:Str) -> Str) TRU))))))))))}
 
 val getPropNum ::
      (xx:Num, kk:{Str|(= v {"toString"})})

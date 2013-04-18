@@ -1901,6 +1901,7 @@ and quickWrapperBaseOps g h qb v2 =
       | BStr, VBase(Str "indexOf") -> tySimpleArrow [tyAny; tyStr] tyInt
       | BStr, VBase(Str "lastIndexOf") -> tySimpleArrow [tyAny; tyStr] tyInt
       | BStr, VBase(Str "substring") -> tySimpleArrow [tyAny; tyInt] tyStr
+      | BStr, VBase(Str "substr") -> tySimpleArrow [tyAny; tyInt] tyStr
       | BStr, VBase(Str "toLowerCase") -> tySimpleArrow [tyAny] tyStr
       | BStr, VBase(Str "toUpperCase") -> tySimpleArrow [tyAny] tyStr
       | BStr, VBase(Str "replace") -> tySimpleArrow [tyAny; tyStr; tyStr] tyStr
