@@ -179,7 +179,7 @@ var arraySlice =
   /* [A;La,Lr] (Ref(La), Int, Int) / (La: Arr(A) > lArrPro) 
       -> Ref(Lr) / (La: sameExact, Lr: Arr(A) > lArrPro) */
   /*: [A;La,Lapro,Lr] (Ref(La), Int, Int) / (La: Arr(A) > Lapro) 
-      -> Ref(Lr) / (La: sameExact, Lr: Arr(A) > lArrPro) */
+      -> Ref(Lr) / (La: sameExact, Lr: Arr(A) > Lapro) */
   /* [A;La] (Ref(La), Int, Int) / (La: Arr(A) > lArrPro) 
       -> Ref(La) / (La: sameExact) */ "#extern";
 
@@ -322,8 +322,9 @@ exports.isNumber = isNumber;
  *    isFunction(function foo(){}) // true
  */
 var isFunction = function(value) 
-/*: (value: Top) -> {Bool|(and (iff (= v true) (= (tag value) "function")) (implies (public value) (public v)))} */
+/* (value: Top) -> {Bool|(and (iff (= v true) (= (tag value) "function")) (implies (public value) (public v)))} */
 /* (value: Top) -> {Bool|(implies (public value) (public v))} */
+/*: (value: Top) -> {Bool|(iff (= v true) (and (= (tag value) "function") (not (= (tag value) "object"))   (not (= (tag value) "array")) ))} */
 {
     return typeof value === "function";
 };
@@ -565,12 +566,12 @@ exports.isEmpty = isEmpty;
  * @param {Number} [limit]
  */
 var source = function source_(value, indent, limit, offset, visited) 
-  //BOTH WORK!!!
-/* [;Lv,L1,Lvis0] (value:Ref(Lv), Str, Int, Str, Ref(Lvis0))
-    / (Lv: Arr(Top) > L1, Lvis0: Arr(Top) > lArrPro) -> Top / (Lv: sameExact) */
+  //BOTH SHOULD WORK!!!
+/*: [;Lv,L1,Lvis0] (value:Ref(Lv), Str, Int, Str, Ref(Lvis0))
+    / (Lv: Arr(Top) > L1, Lvis0: Arr(Top) > lArrPro) -> Top / (Lv: sameType) */
 
-/*: [;Lv,L1,Lvis0] (value:Ref(Lv), PStr, PInt, PStr, visited: Ref(Lvis0)) 
-    / (Lv: {      } > L1, Lvis0: Arr(Top) > lArrPro) -> Top / (Lv: sameExact) */
+/* [;Lv,L1,Lvis0] (value:Ref(Lv), PStr, PInt, PStr, visited: Ref(Lvis0)) 
+    / (Lv: {      } > L1, Lvis0: Arr(Top) > lArrPro) -> Top / (Lv: sameType) */
 {
 
   var result;
@@ -609,6 +610,11 @@ var source = function source_(value, indent, limit, offset, visited)
     result += "qq" + "qq";
   }
   else if (isFunction(value)) {
+
+    assert(typeof value === "function");
+    //assert(false);
+    
+
     //PV: Original code begin
     //value = String(value).split("\n");
     //PV: Original code end
@@ -654,9 +660,26 @@ var source = function source_(value, indent, limit, offset, visited)
       //visited.push(value);
       ///*: visited (~topArr, thwd lvis) */ "#freeze";    
 
-      //TODO (commented because it adds exrtra location
+      //PV: original code begin
       //if (isCompact)
       //  value = /*: [Top; Lv,L1,lsl1] */ arraySlice(value, 0, limit);
+      //PV: original code end
+      
+
+      var tmp2;
+      /*: (~locTopArr: Arr(Top) > L1) */ "#weak";
+
+      if(isCompact) {
+        tmp2 = /*: [Top;Lv,L1,lsl1] */ arraySlice(value, 0, limit);
+        /*: value (~locTopArr, frzn) */ "#freeze";    
+        /*: tmp2 (~locTopArr, frzn) */ "#freeze"; 
+      }
+      else {
+        /*: value (~locTopArr, frzn) */ "#freeze";    
+        tmp2 = value;
+      }
+      
+      /*: value Lv */ "#thaw";
 
       //PV: Original code
       //result += "[\n";
@@ -721,11 +744,12 @@ var source = function source_(value, indent, limit, offset, visited)
       var tmp3;
       if(isCompact) {
         tmp3 = /*: [Str;lnames,lArrPro,lsl2] */ arraySlice(names, 0, limit);
+        /*: names (~strArr, frzn) */ "#freeze";    
         /*: tmp3 (~strArr, frzn) */ "#freeze"; 
       }
       else {
+        /*: names (~strArr, frzn) */ "#freeze";    
         tmp3 = names;
-        /*: tmp3 (~strArr, frzn) */ "#freeze";    
       }     
       
 
@@ -788,24 +812,26 @@ var source = function source_(value, indent, limit, offset, visited)
       //result += tmp3.map(f2).join(",\n");
       //PV: Original code end
       
+      //PV: the definition of tmp4 needs to be here (before the thawing)
+      var tmp4;
       /*: tmp3 ltmp3 */ "#thaw";
-      var tmp4 = /*: [Str,Str; ltmp3,lArrPro, lr] */ arrayMap(tmp3,f2);
-      /*: tmp3 (~strArr, thwd ltmp3) */ "#freeze";    
+      tmp4 = /*: [Str,Str; ltmp3,lArrPro, lr] */ arrayMap(tmp3,f2);
       result += arrayJoin(tmp4, ",n");
+      /*: tmp3 (~strArr, thwd ltmp3) */ "#freeze";    
       
 
       if (isCompact) {
-//TODO        
-//        if (names.length > limit && limit > 0) {
-//          result += ",\n" + offset  + indent + "//...";
-//        }
+        /*: names lnewnames */ "#thaw";
+        if (names.length > limit && limit > 0) {
+          result += ",\n" + offset  + indent + "//...";
+        }
+        /*: names (~strArr, thwd lnewnames) */ "#freeze";
       }
       else {
-//TODO        
-//        /*: tmp3 ltmp3 */ "#thaw";
-//        if (names.length)
-//          result += ",";
-//        /*: tmp3 (~strArr, thwd ltmp3) */ "#freeze";    
+        /*: names lnewnames */ "#thaw";
+        if (names.length)
+          result += ",";
+        /*: names (~strArr, thwd lnewnames) */ "#freeze";
 
         result += "\n" + offset + indent + '"__proto__": ';
         
