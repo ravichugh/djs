@@ -123,12 +123,13 @@
  ~lMScriptableInputStream: frzn, ~lMNFileOutputStream: frzn,
  ~lMNFileInputStream: frzn, ~lMFileLocal: frzn, ~lMFDirService: frzn,
  ~dirLocator: frzn, ~fuelIApplication: frzn, ~lApplication_extensions: frzn,
- ~lExtensions: frzn, ~lPreferences: frzn, ~lTopArr: frzn
+ ~lExtensions: frzn, ~lPreferences: frzn, ~topArr: frzn
 */ "#define";
 
 /*: PStr {Str |(public v)} */ "#define";
 /*: PBool {Bool |(public v)} */ "#define";
 /*: PInt {Int |(public v)} */ "#define";
+/*: NonNegInt {Int |(>= v 0)} */ "#define";
 /*: Pub {(public v)} */ "#define";
 
 /*: tyPubArr Arr(Pub) */ "#define";
@@ -141,7 +142,7 @@
 
 /*: (~obj: { } > lObjPro) */ "#weak";
 
-/*: (~lTopArr: Arr(Top) > lArrPro) */ "#weak";
+/*: (~topArr: Arr(Top) > lArrPro) */ "#weak";
 
 /*: tyDescriptor {
     configurable: Bool,
@@ -155,72 +156,77 @@
 
 var exports = /*: Ref(~extern) */ "#extern";
 
-var Object_getPrototypeOf = 
-/* (o:Ref) / (o: Top > o.pro) -> Ref(o.pro) / sameExact */
-/*: [;L;] (Top) -> Ref(L) */
-/* [;Lo,L;] (o:Ref(Lo)) / (Lo: Top > lObjPro) 
-    -> Ref(L) / (Lo: sameExact) */ "#extern";
+var objectGetPrototypeOf = 
+/*: (o:Ref) / (o: Top > o.pro) -> Ref(o.pro) / (o: sameExact) */
+"#extern";
 
 var String = /*: (Top) -> Str */ "#extern";
 
-//TODO: more precise ...
-var arrayIndexOf = /*: (Top, Top) -> {Int|(public v)} */ "#extern";
+var arrayIndexOf = 
+/*: (a:Ref, e:Top) / (a: Top > a.pro) 
+      -> {Int|(>= v (- 0 1))} / (a: sameExact) */ "#extern";
 
-var intToString = /*: ({Int|(public v)}) -> PStr */ "#extern";
+var intToString = /*: (Int) -> PStr */ "#extern";
 
 var boolToString = /*: ({Bool|(public v)}) -> PStr */ "#extern";
 
-var objToString = /*: (Top) -> PStr */ "#extern";
+var objToString = 
+/*: (o:Ref) / (o: Top > o.pro) -> Str / (o:sameExact) */ "#extern";
 
 //PV: Should return a new location like the first commented version but gets
 //complicated later, when the `value` referes to two prossible locations. 
-var arraySlice = /* [A;La,Lr] (Ref(La), Int, Int) / (La: Arr(A) > lArrPro) 
-                   -> Ref(Lr) / (La: sameExact, Lr: Arr(A) > lArrPro) */
-                 /*: [A;La] (Ref(La), Int, Int) / (La: Arr(A) > lArrPro) 
-                   -> Ref(La) / (La: sameType) */ "#extern";
+var arraySlice =
+  /* [A;La,Lr] (Ref(La), Int, Int) / (La: Arr(A) > lArrPro) 
+      -> Ref(Lr) / (La: sameExact, Lr: Arr(A) > lArrPro) */
+  /*: [A;La,Lapro,Lr] (Ref(La), Int, Int) / (La: Arr(A) > Lapro) 
+      -> Ref(Lr) / (La: sameExact, Lr: Arr(A) > lArrPro) */
+  /* [A;La] (Ref(La), Int, Int) / (La: Arr(A) > lArrPro) 
+      -> Ref(La) / (La: sameExact) */ "#extern";
 
 var arrayMap = 
-/*: [A,B; La, Lr] (Ref(La), (A) / (allFrozenLocations) -> B / sameExact) 
-      / (La: Arr(A) > lArrPro) 
+/*: [A,B; La, Lapro, Lr] (Ref(La), (A) / (allFrozenLocations) -> B / sameExact) 
+      / (La: Arr(A) > Lapro) 
       -> Ref(Lr) / (La: sameExact, Lr: Arr(B) > lArrPro) */ "#extern";
 
 var arrayJoin = 
-/*: [A;L] (Ref(L), PStr) / (L: Arr(A) > lArrPro) 
-    -> PStr / (L:sameExact) */ "#extern";
+/*: [A;L] (Ref(L), Str) / (L: Arr(A) > lArrPro) -> Str / (L:sameExact) */ "#extern";
 
 var arrayEvery = 
 /*: [A;L] (Ref(L), (Top) / (allFrozenLocations) -> Bool / sameType) 
       / (L: Arr(A) > lArrPro) -> Bool / sameType */ "#extern";
 
 var objectKeys = 
-/*: {( and 
-      (* (v:: (o:Ref) / (o: Dict > lObjPro) 
-        -> Ref(lArr) / (lArr: Arr(Str) > lArrPro)) *)
-      (* (v:: [;L;] (a:Ref) / (a: Arr(NotUndef) > lArrPro) 
-        -> Ref(L) / (L: Arr(Str) > lArrPro, a: sameExact)) *)
-      
-      (v:: [;L] (Top) / () -> Ref(L) / (L: Arr(Str) > lArrPro))
-    )}*/ "#extern";
+/*: [;L,L1,Lr] (Ref(L)) / (L:Top > L1) 
+      -> Ref(Lr) / (L:sameExact, Lr: Arr(Str) > lArrPro) */ 
+
+/* (o:Ref) / (o: Dict > lObjPro) -> Ref(lArr) / (lArr: Arr(Str) > lArrPro) */
+/* [;L;] (a:Ref) / (a: Arr(NotUndef) > lArrPro) 
+    -> Ref(L) / (L: Arr(Str) > lArrPro, a: sameExact) */ 
+/* [;L] (Top) / () -> Ref(L) / (L: Arr(Str) > lArrPro) */
+"#extern";
 
 var objectGetOwnPropertyDescriptor = 
-/*: {( and 
-      (*(v:: (Ref(~pubObj), Str) -> Ref(~descriptor))*)
+/* [;Ld,Lo] (Ref(Lo)) / (Lo: { } > lObjPro) 
+        -> Ref(~descriptor) / (Lo: sameExact)) */
+/* (Top) -> Ref(~descriptor) */
 
-     (* (v:: [;Ld,La] (Ref(La)) / (La: Arr(NotUndef) > lArrPro) 
-        -> Ref(Ld) / (La: sameExact, Ld: tyDescriptor)) *)
-
-    (* (v:: [;Ld,Lo] (Ref(Lo)) / (Lo: { } > lObjPro) 
-        -> Ref(~descriptor) / (Lo: sameExact)) *)
-
-    (v:: (Top) -> Ref(~descriptor))
-
-    )} */ "#extern";
+/*: [;L,Lp,Ld] (a:Ref(L)) / (L: Top > Lp) 
+        -> Ref(Ld) / (L: sameExact, Ld: tyDescriptor) */
+"#extern";
 
 var norToBool = /*: (Int) -> Bool */ "#extern";
 
 var randomBool = /*: () -> Bool */ "#extern";
 
 var toString = /*: (Top) -> Str */ "#extern";
+
+var stringSplit = 
+/*: [;L] (Str) / () -> Ref(L) / (L: Arr(Str) > lArrPro) */ "#extern";
+
+var arraySplice = 
+/*: [A;L,Lr] (Ref(L), Int, Int) / (L: Arr(A) > lArrPro) 
+      -> Ref(Lr) / (L:sameExact, Lr: Arr(A) > lArrPro) */ "#extern";
+
 
 /*****************************************************
  *
@@ -316,8 +322,8 @@ exports.isNumber = isNumber;
  *    isFunction(function foo(){}) // true
  */
 var isFunction = function(value) 
-/* (value: Top) -> {Bool|(and (iff (= v true) (= (tag value) "function")) (implies (public value) (public v)))} */
-/*: (value: Top) -> {Bool|(implies (public value) (public v))} */
+/*: (value: Top) -> {Bool|(and (iff (= v true) (= (tag value) "function")) (implies (public value) (public v)))} */
+/* (value: Top) -> {Bool|(implies (public value) (public v))} */
 {
     return typeof value === "function";
 };
@@ -384,11 +390,8 @@ exports.isPrimitive = isPrimitive;
  *    isFlat({}) // true
  *    isFlat(new Type()) // false
  */
-//TODO: gave up trying to enforce a stricter type...
 var isFlat = function(object) 
-/* [;L1,L2;] (object: Ref(L1)) / (L1: Top > lObjPro, L2: Top > lObjPro) -> Bool / (L1: sameExact, L2: sameExact) */
-/* (object: Ref) / (object: Top > lObjPro) -> Bool / sameExact */
-/*: (Top) -> Bool */
+/*:  [;L1,L2,L3] (Ref(L1)) / (L1: Top > L2, L2 : Top > L3) -> Bool / (L1: sameExact) */
 {
   //PV: Original code begin
   //return isObject(object) && (isNull(Object.getPrototypeOf(object)) ||
@@ -396,11 +399,13 @@ var isFlat = function(object)
   //                                   Object.getPrototypeOf(object))));
   //PV: Original code end
 
-  var t0 = (/*: [;l0;] */ Object_getPrototypeOf)(object);
-  var t1 = (/*: [;l1;] */ Object_getPrototypeOf)(t0);
+  var t0 = (/*: [;L1,L2] */ objectGetPrototypeOf)(object);
+  var t1 = (/*: [;L2,L3] */ objectGetPrototypeOf)(t0);
   return isObject(object) && (isNull(t0) || isNull(t1));
 };
+
 exports.isFlat = isFlat;
+
 
 
 /**
@@ -444,81 +449,84 @@ exports.isEmpty = isEmpty;
  * Returns `true` if `value` is an array / flat object containing only atomic
  * values and other flat objects.
  */
-//var isJSON = function(value, visited) {
-//
-////    // Adding value to array of visited values.
-////    //PV: Original code begin
-////    //(visited || (visited = [])).push(value);
-////    //PV: Original code end
-////
-////    //XXX: SLOW DOWN !!!
-////    if (!visited) {
-////      visited = /*: lEmpty Arr(Top) */ [value];
-////    }
-////    else {
-////      visited.push(value);
-////    }
-//  
+var isJSON = function(value, visited) {
+
+//    // Adding value to array of visited values.
 //    //PV: Original code begin
-//    //        // If `value` is an atom return `true` cause it's valid JSON.
-//    //return  isPrimitive(value) ||
-//    //        // If `value` is an array of JSON values that has not been visited
-//    //        // yet.
-//    //        (isArray(value) &&  value.every(function(element) {
-//    //                              return isJSON(element, visited);
-//    //                            })) ||
-//    //        // If `value` is a plain object containing properties with a JSON
-//    //        // values it's a valid JSON.
-//    //        (isFlat(value) && Object.keys(value).every(function(key) {
-//    //            var $ = Object.getOwnPropertyDescriptor(value, key);
-//    //            // Check every proprety of a plain object to verify that
-//    //            // it's neither getter nor setter, but a JSON value, that
-//    //            // has not been visited yet.
-//    //            return  ((!isObject($.value) || !~visited.indexOf($.value)) &&
-//    //                    !('get' in $) && !('set' in $) &&
-//    //                    isJSON($.value, visited));
-//    //        }));
+//    //(visited || (visited = [])).push(value);
 //    //PV: Original code end
 //
-//
-//    var f1 = function(element) /*: (Top) -> Bool */ {
-//      //TODO
-//      //return isJSON_(element, visited);
-//      return true;
-//    }; 
-//
-//    var f2 = function(key) /*: (Str) -> Bool */ {
-//      var $ = objectGetOwnPropertyDescriptor(value, key);
-//      // Check every proprety of a plain object to verify that
-//      // it's neither getter nor setter, but a JSON value, that
-//      // has not been visited yet.
-//      return  ((!isObject($.value) || norToBool(arrayIndexOf(visited,$.value)))
-//          //TODO
-//          //&& !('get' in $) && !('set' in $) && isJSON_($.value, visited)
-//          );
-//    };
-//
-//
-//    var keys = /*: [;lk1;] */ objectKeys(value);
-//
-//    // If `value` is an atom return `true` cause it's valid JSON.
-//    var result = 
-//      isPrimitive(value) 
-//         // If `value` is an array of JSON values that has not been visited
-//         // yet.
-//    ||  ( isArray(value) && arrayEvery(value, f1) )
-//         // If `value` is a plain object containing properties with a JSON
-//         // values it's a valid JSON.
-//    ||  ( isFlat(value) && (/*: [Str;lk1] */ arrayEvery)(keys,f2) ) ;
-//    
-//    return result;
-//};
+//    //XXX: TODO + SLOW DOWN !!!
+//    if (!visited) {
+//      visited = /*: lEmpty Arr(Top) */ [value];
+//    }
+//    else {
+//      visited.push(value);
+//    }
+  
+    //PV: Original code begin
+    //        // If `value` is an atom return `true` cause it's valid JSON.
+    //return  isPrimitive(value) ||
+    //        // If `value` is an array of JSON values that has not been visited
+    //        // yet.
+    //        (isArray(value) &&  value.every(function(element) {
+    //                              return isJSON(element, visited);
+    //                            })) ||
+    //        // If `value` is a plain object containing properties with a JSON
+    //        // values it's a valid JSON.
+    //        (isFlat(value) && Object.keys(value).every(function(key) {
+    //            var $ = Object.getOwnPropertyDescriptor(value, key);
+    //            // Check every proprety of a plain object to verify that
+    //            // it's neither getter nor setter, but a JSON value, that
+    //            // has not been visited yet.
+    //            return  ((!isObject($.value) || !~visited.indexOf($.value)) &&
+    //                    !('get' in $) && !('set' in $) &&
+    //                    isJSON($.value, visited));
+    //        }));
+    //PV: Original code end
+
+
+    var f1 = function(element) /*: (Top) -> Bool */ {
+      //TODO
+      //return isJSON_(element, visited);
+      return true;
+    }; 
+
+    var f2 = function(key) /*: (Str) -> Bool */ {
+      var $ = /*: [;l1,lArrPro,ld] */ objectGetOwnPropertyDescriptor(value, key);
+      // Check every proprety of a plain object to verify that
+      // it's neither getter nor setter, but a JSON value, that
+      // has not been visited yet.
+      return  ((!isObject($.value) || norToBool(arrayIndexOf(visited,$.value)))
+          //TODO
+          //&& !('get' in $) && !('set' in $) && isJSON_($.value, visited)
+          );
+    };
+
+
+    var keys = /*: [;l1,lArrPro,lk1] */ objectKeys(value);
+
+    // If `value` is an atom return `true` cause it's valid JSON.
+    var result = 
+      isPrimitive(value) 
+         // If `value` is an array of JSON values that has not been visited
+         // yet.
+    ||  ( isArray(value) && arrayEvery(value, f1) )
+         // If `value` is a plain object containing properties with a JSON
+         // values it's a valid JSON.
+    //TODO
+    //||  ( /*: [;l1,lArrPro,lROOT] */ isFlat(value) && (/*: [Str;lk1] */ arrayEvery)(keys,f2) ) 
+    ;
+    
+    return result;
+};
 
 //exports.isJSON = function (value) {
 //  return isJSON(value);
 //};
 
 
+//TODO
 ///**
 // * Returns if `value` is an instance of a given `Type`. This is exactly same as
 // * `value instanceof Type` with a difference that `Type` can be from a scope
@@ -557,15 +565,12 @@ exports.isEmpty = isEmpty;
  * @param {Number} [limit]
  */
 var source = function source_(value, indent, limit, offset, visited) 
-/*: {(and 
+  //BOTH WORK!!!
+/*: [;Lv,L1,Lvis] (value:Ref(Lv), Str, Int, Str, Ref(Lvis))
+    / (Lv: Arr(Top) > L1, Lvis: Arr(Top) > lArrPro) -> Top / (Lv: sameExact) */
 
-      (* (v:: (value:Ref, PStr, PInt, PStr, Ref(~lTopArr)) 
-            / (value: Arr(Top) > lArrPro) -> Top / sameType) *)
-
-      (v:: (value:Ref, PStr, PInt, PStr, Ref(~lTopArr)) 
-            / (value: { } > lObjPro) -> Top / sameType)
-        
-    )} */
+/* [;Lv,L1,Lvis] (value:Ref(Lv), PStr, PInt, PStr, visited: Ref(Lvis)) 
+    / (Lv: {      } > L1, Lvis: Arr(Top) > lArrPro) -> Top / (Lv: sameExact) */
 {
 
   var result;
@@ -581,174 +586,186 @@ var source = function source_(value, indent, limit, offset, visited)
   //visited = visited || /*: lArr Arr(Top) */ [];
   //PV: Original code end
 
-  var tmp = /*: lArr Arr(Top) */ [];
-  /*: tmp (~lTopArr, frzn) */ "#freeze";
-  visited = visited || tmp;
-  /*: visited lVis */ "#thaw";
-  assume(visited != null);
-
-  /*: visited (~lTopArr, thwd lVis) */ "#freeze";
-
-
+  //TODO
+  //var tmp = /*: lArr Arr(Top) */ [];
+  ///*: tmp (~topArr, frzn) */ "#freeze";
+  //visited = visited || tmp;
+  ///*: visited lVis */ "#thaw";
+  //assume(visited != null);
+  ///*: visited (~topArr, thwd lVis) */ "#freeze";
 
   if (isUndefined(value)) {
     result += "undefined";
   }
-//  else if (isNull(value)) {
-//    result += "null";
-//  }
-//  else if (isString(value)) {
-//    //PV: Original code begin
-//    //result += '"' + value + '"';
-//    //PV: Original code end
-//
-//    result += "qq" + "qq";
-//  }
-//  else if (isFunction(value)) {
-//    //TODO
-//    //value = String(value).split("\n");
-//    //XXX: SLOW DOWN !!!
-//    value = ["a", "b", "c"];
-//    if (isCompact && value.length > 2) {
-//      //TODO
-//      //value = value.splice(0, 2);
-//      value = ["a", "b"];
-//      value.push("...}");
-//    }
-//    //TODO
-//    //result += value.join("\n" + offset);
-//    result += ("a\nb" + offset);
-//  }
-//  else if (isArray(value)) {
-//    //PV: original code begin
-//    //if ((nestingIndex = (visited.indexOf(value) + 1))) {
-//    //  result = "#" + nestingIndex + "#";
-//    //}
-//    //PV: original code end
-//
-//    nestingIndex = arrayIndexOf(visited, value) + 1;
-//    if (nestingIndex) {
-//      result = "#" + intToString(nestingIndex) + "#";
-//    }
-//    else {
-//      //XXX: SLOW DOWN !!!
-//      /*: visited lVis */ "#thaw";
-//      assume(visited != null);
-//      visited.push(value);
-//      /*: visited (~lTopArr, thwd lVis) */ "#freeze";
-//
-//      if (isCompact)
-//        value = /*: [Top; Lvalue] */ arraySlice(value, 0, limit);
-//
-//      //PV: Original code
-//      //result += "[\n";
-//      //result += value.map(function(value) {
-//      //  return offset + indent + 
-//      //    source_(value, indent, limit, offset + indent, visited);
-//      //}).join(",\n");
-//      //PV: orignial code end
-//
-//      result += "n";
-//      var f1 = function(value_) /*: (Top) -> PStr */ {
-//              //TODO
-//              return offset + indent /*+ source_(value, indent, limit, offset + indent, visited)*/;
-//            };
-//      var tmp1 = /*: [Top,PStr; Lvalue,lm] */ arrayMap(value, f1); 
-//
-//      //PV: orignial code begin
-//      //result += arrayJoin(tmp1, ",\n");
-//      //result += isCompact && value.length > limit ?
-//      //          ",\n" + offset + "...]" : "\n" + offset + "]";
-//      //PV: orignial code end
-//      
-//      //XXX: SLOW DOWN !!!
-//      //result += /*: [PStr;lm] */ arrayJoin(tmp1, ",n");
-//      //result += (isCompact && value.length > limit) ? "dummy" : "dummy";
-//
-//    }
-//
-//  }
+  else if (isNull(value)) {
+    result += "null";
+  }
+  else if (isString(value)) {
+    //PV: Original code begin
+    //result += '"' + value + '"';
+    //PV: Original code end
+
+    result += "qq" + "qq";
+  }
+  else if (isFunction(value)) {
+    //PV: Original code begin
+    //value = String(value).split("\n");
+    //PV: Original code end
+
+    value = /*: [;lvs] */ stringSplit(toString(value));
+
+    if (isCompact && value.length > 2) {
+      //PV: Original code begin
+      //value = value.splice(0, 2);
+      //PV: Original code end
+
+      value = /*: [Str;lvs,lvs1] */ arraySplice(value, 0, 2);
+    
+      //XXX: SLOW DOWN !!! + 17 sec
+      //value.push("...}");
+    }
+
+    //PV: Original code begin
+    //result += value.join("\n" + offset);
+    //PV: Original code end
+    
+    //TODO
+    //result += /*: [Str; lvs] */ arrayJoin(value, "\n" + offset);
+    result += ("a\nb" + offset);
+  }
+  else if (isArray(value)) {
+    //PV: original code begin
+    //if ((nestingIndex = (visited.indexOf(value) + 1))) {
+    //  result = "#" + nestingIndex + "#";
+    //}
+    //PV: original code end
+
+    nestingIndex = arrayIndexOf(visited, value) + 1;
+    if (nestingIndex) {
+      result = "#" + intToString(nestingIndex) + "#";
+    }
+    else {
+      //XXX: SLOW DOWN !!! + 25 sec
+      //visited.push(value);
+
+      //TODO (commented because it adds exrtra location
+      //if (isCompact)
+      //  value = /*: [Top; Lv,L1,lsl1] */ arraySlice(value, 0, limit);
+
+      //PV: Original code
+      //result += "[\n";
+      //result += value.map(function(value) {
+      //  return offset + indent + 
+      //    source_(value, indent, limit, offset + indent, visited);
+      //}).join(",\n");
+      //PV: orignial code end
+
+      result += "n";
+      var f1 = function(value_) /*: (Top) -> Str */ {
+        //TODO
+        return offset + indent /*+ source_(value, indent, limit, offset + indent, visited)*/;
+      };
+      var tmp1 = /*: [Top,Str; Lv,L1,lm] */ arrayMap(value, f1); 
+
+      //PV: orignial code begin
+      //result += arrayJoin(tmp1, ",\n");
+      //result += isCompact && value.length > limit ?
+      //          ",\n" + offset + "...]" : "\n" + offset + "]";
+      //PV: orignial code end
+      
+      result += /*: [Str;lm] */ arrayJoin(tmp1, ",n");
+      result += (isCompact && value.length > limit) ? "dummy" : "dummy";
+
+    }
+
+  }
   else if (isObject(value)) {
     //PV: Original code begin
     //nestingIndex = (visited.indexOf(value) + 1);
     //PV: Original code end
 
     nestingIndex = arrayIndexOf(visited, value) + 1;
-    
+
     if (nestingIndex) {
       result = "#" + intToString(nestingIndex) + "#";
     }
     else {
-//      //XXX: SLOW DOWN !!! + 67 sec
-//      /*: visited lVis */ "#thaw";
-//      assume(visited != null);
-//      visited.push(value);
-//      /*: visited (~lTopArr, thwd lVis) */ "#freeze";
+      //XXX: SLOW DOWN !!!
+      //visited.push(value);
 
-      //PV: Original code:
+      //PV: Original code begin
       //names = Object.keys(value);
-      names = /*: [;lk2;] */ objectKeys(value);
+      //PV: Original code end
+
+      names = /*: [;Lv,L1,lnames] */ objectKeys(value);
      
-      //PV: Implicit coersion
+      //PV: Original code begin (Implicit coersion)
       //result += "{ // " + value + "\n";
-      result += objToString(value);        
+      //PV: Original code end
+      result += objToString(value);
       
       //PV: Original code begin
       //result += (isCompact ? names.slice(0, limit) : names).map(function(name) {
       //PV: Original code end
       
-//      var tmp3 = (isCompact ? arraySlice(names, 0, limit) : names);
-      var tmp3 = names;    
+      //TODO
+      ///*: [Str; lnames,lsl2] */ arraySlice(names, 0, limit);
+      var tmp3 = isCompact ? /*: [Str;lnames,lArrPro,lsl2] */ arraySlice(names, 0, limit) : names;
+      //XXX: Adding this to ensure that there is a single location for tmp3, as
+      //it will be used later for the array map function.
+      tmp3 = names;
 
       var f2 = function(name_) /*: (PStr) -> Str */ 
       {
         var _limit = isCompact ? limit - 1 : limit;
-        var descriptor = objectGetOwnPropertyDescriptor(value, name_);
-        //PV: Original code
+        var descriptor = /*: [;Lv,L1,ld] */ objectGetOwnPropertyDescriptor(value, name_);
+        //PV: Original code begin
         //var result = offset + indent + "// ";
+        //PV: Original code end
+        
         var result_ = offset + indent;
-//        var accessor = "";
-//        if (0 <= arrayIndexOf(name_, " "))
-//          name_ = '"' + name_ + '"';
-//
-//        if (descriptor.writable)
-//          result_ += "writable ";
-//        if (descriptor.configurable)
-//          result_ += "configurable ";
-//        if (descriptor.enumerable)
-//          result_ += "enumerable ";
-//
-//        result_ += "\n";
-//        
-//        //PV: original code begin
-//        //XXX: SLOW DOWN:
-//        //if ("value" in descriptor) {
-//        //PV: original code end
-//
-//        if (randomBool()) {
-//          result_ += offset + indent + name_ + ": ";
-//          //TODO
-//          //result += source_(descriptor.value, indent, _limit, indent + offset, visited);
-//        }
-//        else {
-//          if (descriptor.get) {
-//            result_ += offset + indent + "get " + name_ + " ";
-//            //TODO
-//            //accessor = source_(descriptor.get, indent, _limit, indent + offset,
-//            //                  visited);
-//            assert(/*: Str */ (accessor));
-//            //XXX: SLOW DOWN !!!
-//            //result += accessor.substr(accessor.indexOf("{"));
-//          }
-//
-//          if (descriptor.set) {
-//            result_ += offset + indent + "set " + name_ + " ";
-//            //TODO
-//            //accessor = source_(descriptor.set, indent, _limit, indent + offset,
-//            //                  visited);
-//            result += accessor.substr(accessor.indexOf("{"));
-//          }
-//        }
+
+        var accessor = "";
+        if (0 <= name_.indexOf(" "))
+          name_ = '"' + name_ + '"';
+
+        if (descriptor.writable)
+          result_ += "writable ";
+        if (descriptor.configurable)
+          result_ += "configurable ";
+        if (descriptor.enumerable)
+          result_ += "enumerable ";
+
+        result_ += "\n";
+        
+        //PV: original code begin
+        //XXX: SLOW DOWN:
+        //if ("value" in descriptor) {
+        //PV: original code end
+
+        if (randomBool()) {
+          result_ += offset + indent + name_ + ": ";
+          //TODO
+          //result += source_(descriptor.value, indent, _limit, indent + offset, visited);
+        }
+        else {
+          if (descriptor.get) {
+            result_ += offset + indent + "get " + name_ + " ";
+            //TODO
+            //accessor = source_(descriptor.get, indent, _limit, indent + offset,
+            //                  visited);
+            result_ += accessor.substr(accessor.indexOf("{"));
+          }
+
+          if (descriptor.set) {
+            result_ += offset + indent + "set " + name_ + " ";
+            //TODO
+            //accessor = source_(descriptor.set, indent, _limit, indent + offset,
+            //                  visited);
+            result_ += accessor.substr(accessor.indexOf("{"));
+          }
+        }
+        
 
         return result_;
       };
@@ -757,7 +774,7 @@ var source = function source_(value, indent, limit, offset, visited)
       //result += tmp3.map(f2).join(",\n");
       //PV: Original code end
       
-      var tmp4 = /*: [Str,Str; lk2,lr] */ arrayMap(tmp3,f2);
+      var tmp4 = /*: [Str,Str; lnames,lArrPro, lr] */ arrayMap(tmp3,f2);
       result += arrayJoin(tmp4, ",n");
       
 
@@ -771,11 +788,16 @@ var source = function source_(value, indent, limit, offset, visited)
           result += ",";
 
         result += "\n" + offset + indent + '"__proto__": ';
-        //TODO
+        
+        //PV: Original code begin
         //result += source(Object.getPrototypeOf(value), indent, 0,
         //                   offset + indent);
+        //PV: Original code end
+        
+        var tmp5 = /*: [;Lv, L1] */ objectGetPrototypeOf(value);
+        //TODO
+        //result +=  /*: [;L1,lObjPro,Lvis] */ source_(tmp5, indent, 0, offset + indent, visited);
       }
-
       result += "\n" + offset + "}";
     }
   } 
