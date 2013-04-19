@@ -221,7 +221,7 @@ var randomBool = /*: () -> Bool */ "#extern";
 var toString = /*: (Top) -> Str */ "#extern";
 
 var stringSplit = 
-/*: [;L] (Str) / () -> Ref(L) / (L: Arr(Str) > lArrPro) */ "#extern";
+/*: [;L] (Str, Str) / () -> Ref(L) / (L: Arr(Str) > lArrPro) */ "#extern";
 
 var arraySplice = 
 /*: [A;L,Lr] (Ref(L), Int, Int) / (L: Arr(A) > lArrPro) 
@@ -450,77 +450,77 @@ exports.isEmpty = isEmpty;
  * Returns `true` if `value` is an array / flat object containing only atomic
  * values and other flat objects.
  */
-//var isJSON = function(value, visited) {
-//
-////    // Adding value to array of visited values.
-////    //PV: Original code begin
-////    //(visited || (visited = [])).push(value);
-////    //PV: Original code end
-////
-////    //XXX: TODO + SLOW DOWN !!!
-////    if (!visited) {
-////      visited = /*: lEmpty Arr(Top) */ [value];
-////    }
-////    else {
-////      visited.push(value);
-////    }
-//  
+var isJSON = function(value, visited) {
+
+//    // Adding value to array of visited values.
 //    //PV: Original code begin
-//    //        // If `value` is an atom return `true` cause it's valid JSON.
-//    //return  isPrimitive(value) ||
-//    //        // If `value` is an array of JSON values that has not been visited
-//    //        // yet.
-//    //        (isArray(value) &&  value.every(function(element) {
-//    //                              return isJSON(element, visited);
-//    //                            })) ||
-//    //        // If `value` is a plain object containing properties with a JSON
-//    //        // values it's a valid JSON.
-//    //        (isFlat(value) && Object.keys(value).every(function(key) {
-//    //            var $ = Object.getOwnPropertyDescriptor(value, key);
-//    //            // Check every proprety of a plain object to verify that
-//    //            // it's neither getter nor setter, but a JSON value, that
-//    //            // has not been visited yet.
-//    //            return  ((!isObject($.value) || !~visited.indexOf($.value)) &&
-//    //                    !('get' in $) && !('set' in $) &&
-//    //                    isJSON($.value, visited));
-//    //        }));
+//    //(visited || (visited = [])).push(value);
 //    //PV: Original code end
 //
-//
-//    var f1 = function(element) /*: (Top) -> Bool */ {
-//      //TODO
-//      //return isJSON_(element, visited);
-//      return true;
-//    }; 
-//
-//    var f2 = function(key) /*: (Str) -> Bool */ {
-//      var $ = /*: [;l1,lArrPro,ld] */ objectGetOwnPropertyDescriptor(value, key);
-//      // Check every proprety of a plain object to verify that
-//      // it's neither getter nor setter, but a JSON value, that
-//      // has not been visited yet.
-//      return  ((!isObject($.value) || norToBool(arrayIndexOf(visited,$.value)))
-//          //TODO
-//          //&& !('get' in $) && !('set' in $) && isJSON_($.value, visited)
-//          );
-//    };
-//
-//
-//    var keys = /*: [;l1,lArrPro,lk1] */ objectKeys(value);
-//
-//    // If `value` is an atom return `true` cause it's valid JSON.
-//    var result = 
-//      isPrimitive(value) 
-//         // If `value` is an array of JSON values that has not been visited
-//         // yet.
-//    ||  ( isArray(value) && arrayEvery(value, f1) )
-//         // If `value` is a plain object containing properties with a JSON
-//         // values it's a valid JSON.
-//    //TODO
-//    //||  ( /*: [;l1,lArrPro,lROOT] */ isFlat(value) && (/*: [Str;lk1] */ arrayEvery)(keys,f2) ) 
-//    ;
-//    
-//    return result;
-//};
+//    //XXX: TODO + SLOW DOWN !!!
+//    if (!visited) {
+//      visited = /*: lEmpty Arr(Top) */ [value];
+//    }
+//    else {
+//      visited.push(value);
+//    }
+  
+    //PV: Original code begin
+    //        // If `value` is an atom return `true` cause it's valid JSON.
+    //return  isPrimitive(value) ||
+    //        // If `value` is an array of JSON values that has not been visited
+    //        // yet.
+    //        (isArray(value) &&  value.every(function(element) {
+    //                              return isJSON(element, visited);
+    //                            })) ||
+    //        // If `value` is a plain object containing properties with a JSON
+    //        // values it's a valid JSON.
+    //        (isFlat(value) && Object.keys(value).every(function(key) {
+    //            var $ = Object.getOwnPropertyDescriptor(value, key);
+    //            // Check every proprety of a plain object to verify that
+    //            // it's neither getter nor setter, but a JSON value, that
+    //            // has not been visited yet.
+    //            return  ((!isObject($.value) || !~visited.indexOf($.value)) &&
+    //                    !('get' in $) && !('set' in $) &&
+    //                    isJSON($.value, visited));
+    //        }));
+    //PV: Original code end
+
+
+    var f1 = function(element) /*: (Top) -> Bool */ {
+      //TODO
+      //return isJSON_(element, visited);
+      return true;
+    }; 
+
+    var f2 = function(key) /*: (Str) -> Bool */ {
+      var $ = /*: [;l1,lArrPro,ld] */ objectGetOwnPropertyDescriptor(value, key);
+      // Check every proprety of a plain object to verify that
+      // it's neither getter nor setter, but a JSON value, that
+      // has not been visited yet.
+      return  ((!isObject($.value) || norToBool(arrayIndexOf(visited,$.value)))
+          //TODO
+          //&& !('get' in $) && !('set' in $) && isJSON_($.value, visited)
+          );
+    };
+
+
+    var keys = /*: [;l1,lArrPro,lk1] */ objectKeys(value);
+
+    // If `value` is an atom return `true` cause it's valid JSON.
+    var result = 
+      isPrimitive(value) 
+         // If `value` is an array of JSON values that has not been visited
+         // yet.
+    ||  ( isArray(value) && arrayEvery(value, f1) )
+         // If `value` is a plain object containing properties with a JSON
+         // values it's a valid JSON.
+    //TODO
+    //||  ( /*: [;l1,lArrPro,lROOT] */ isFlat(value) && (/*: [Str;lk1] */ arrayEvery)(keys,f2) ) 
+    ;
+    
+    return result;
+};
 
 //exports.isJSON = function (value) {
 //  return isJSON(value);
@@ -566,7 +566,7 @@ exports.isEmpty = isEmpty;
  * @param {Number} [limit]
  */
 var source = function source_(value, indent, limit, offset, visited) 
-  //BOTH SHOULD WORK!!!
+//BOTH WORK!!!
 /*: [;Lv,L1,Lvis0] (value:Ref(Lv), Str, Int, Str, Ref(Lvis0))
     / (Lv: Arr(Top) > L1, Lvis0: Arr(Top) > lArrPro) -> Top / (Lv: sameType) */
 
@@ -595,7 +595,6 @@ var source = function source_(value, indent, limit, offset, visited)
     /*: visited (~topArr, frzn) */ "#freeze";    
   }
 
-
   if (isUndefined(value)) {
     result += "undefined";
   }
@@ -607,37 +606,37 @@ var source = function source_(value, indent, limit, offset, visited)
     //result += '"' + value + '"';
     //PV: Original code end
 
-    result += "qq" + "qq";
+    result += "qq" + value + "qq";
   }
   else if (isFunction(value)) {
-
-    assert(typeof value === "function");
-    //assert(false);
-    
-
     //PV: Original code begin
     //value = String(value).split("\n");
     //PV: Original code end
 
-    value = /*: [;lvs] */ stringSplit(toString(value));
-
-    if (isCompact && value.length > 2) {
+    var tmp0 = /*: [;lvs] */ stringSplit(toString(value), "\n");
+    if (isCompact && tmp0.length > 2) {
       //PV: Original code begin
       //value = value.splice(0, 2);
       //PV: Original code end
 
-      value = /*: [Str;lvs,lvs1] */ arraySplice(value, 0, 2);
-    
+      tmp0 = /*: [Str;lvs,lvs1] */ arraySplice(tmp0, 0, 2);
       //XXX: SLOW DOWN !!! + 17 sec
-      //value.push("...}");
+      //tmp0.push("...}");
+      /*: tmp0 (~strArr, frzn) */ "#freeze";
+      value = tmp0;
+    }
+    else {
+      /*: tmp0 (~strArr, frzn) */ "#freeze";
+      value = tmp0;
     }
 
     //PV: Original code begin
     //result += value.join("\n" + offset);
     //PV: Original code end
     
-    //TODO
-    //result += /*: [Str; lvs] */ arrayJoin(value, "\n" + offset);
+    /*: value lval0 */ "#thaw";
+    result += /*: [Str; lval0] */ arrayJoin(value, "\n" + offset);
+    /*: value (~strArr, thwd lval0) */ "#freeze";
     result += ("a\nb" + offset);
   }
   else if (isArray(value)) {
