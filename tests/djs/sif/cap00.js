@@ -449,77 +449,77 @@ exports.isEmpty = isEmpty;
  * Returns `true` if `value` is an array / flat object containing only atomic
  * values and other flat objects.
  */
-var isJSON = function(value, visited) {
-
-//    // Adding value to array of visited values.
+//var isJSON = function(value, visited) {
+//
+////    // Adding value to array of visited values.
+////    //PV: Original code begin
+////    //(visited || (visited = [])).push(value);
+////    //PV: Original code end
+////
+////    //XXX: TODO + SLOW DOWN !!!
+////    if (!visited) {
+////      visited = /*: lEmpty Arr(Top) */ [value];
+////    }
+////    else {
+////      visited.push(value);
+////    }
+//  
 //    //PV: Original code begin
-//    //(visited || (visited = [])).push(value);
+//    //        // If `value` is an atom return `true` cause it's valid JSON.
+//    //return  isPrimitive(value) ||
+//    //        // If `value` is an array of JSON values that has not been visited
+//    //        // yet.
+//    //        (isArray(value) &&  value.every(function(element) {
+//    //                              return isJSON(element, visited);
+//    //                            })) ||
+//    //        // If `value` is a plain object containing properties with a JSON
+//    //        // values it's a valid JSON.
+//    //        (isFlat(value) && Object.keys(value).every(function(key) {
+//    //            var $ = Object.getOwnPropertyDescriptor(value, key);
+//    //            // Check every proprety of a plain object to verify that
+//    //            // it's neither getter nor setter, but a JSON value, that
+//    //            // has not been visited yet.
+//    //            return  ((!isObject($.value) || !~visited.indexOf($.value)) &&
+//    //                    !('get' in $) && !('set' in $) &&
+//    //                    isJSON($.value, visited));
+//    //        }));
 //    //PV: Original code end
 //
-//    //XXX: TODO + SLOW DOWN !!!
-//    if (!visited) {
-//      visited = /*: lEmpty Arr(Top) */ [value];
-//    }
-//    else {
-//      visited.push(value);
-//    }
-  
-    //PV: Original code begin
-    //        // If `value` is an atom return `true` cause it's valid JSON.
-    //return  isPrimitive(value) ||
-    //        // If `value` is an array of JSON values that has not been visited
-    //        // yet.
-    //        (isArray(value) &&  value.every(function(element) {
-    //                              return isJSON(element, visited);
-    //                            })) ||
-    //        // If `value` is a plain object containing properties with a JSON
-    //        // values it's a valid JSON.
-    //        (isFlat(value) && Object.keys(value).every(function(key) {
-    //            var $ = Object.getOwnPropertyDescriptor(value, key);
-    //            // Check every proprety of a plain object to verify that
-    //            // it's neither getter nor setter, but a JSON value, that
-    //            // has not been visited yet.
-    //            return  ((!isObject($.value) || !~visited.indexOf($.value)) &&
-    //                    !('get' in $) && !('set' in $) &&
-    //                    isJSON($.value, visited));
-    //        }));
-    //PV: Original code end
-
-
-    var f1 = function(element) /*: (Top) -> Bool */ {
-      //TODO
-      //return isJSON_(element, visited);
-      return true;
-    }; 
-
-    var f2 = function(key) /*: (Str) -> Bool */ {
-      var $ = /*: [;l1,lArrPro,ld] */ objectGetOwnPropertyDescriptor(value, key);
-      // Check every proprety of a plain object to verify that
-      // it's neither getter nor setter, but a JSON value, that
-      // has not been visited yet.
-      return  ((!isObject($.value) || norToBool(arrayIndexOf(visited,$.value)))
-          //TODO
-          //&& !('get' in $) && !('set' in $) && isJSON_($.value, visited)
-          );
-    };
-
-
-    var keys = /*: [;l1,lArrPro,lk1] */ objectKeys(value);
-
-    // If `value` is an atom return `true` cause it's valid JSON.
-    var result = 
-      isPrimitive(value) 
-         // If `value` is an array of JSON values that has not been visited
-         // yet.
-    ||  ( isArray(value) && arrayEvery(value, f1) )
-         // If `value` is a plain object containing properties with a JSON
-         // values it's a valid JSON.
-    //TODO
-    //||  ( /*: [;l1,lArrPro,lROOT] */ isFlat(value) && (/*: [Str;lk1] */ arrayEvery)(keys,f2) ) 
-    ;
-    
-    return result;
-};
+//
+//    var f1 = function(element) /*: (Top) -> Bool */ {
+//      //TODO
+//      //return isJSON_(element, visited);
+//      return true;
+//    }; 
+//
+//    var f2 = function(key) /*: (Str) -> Bool */ {
+//      var $ = /*: [;l1,lArrPro,ld] */ objectGetOwnPropertyDescriptor(value, key);
+//      // Check every proprety of a plain object to verify that
+//      // it's neither getter nor setter, but a JSON value, that
+//      // has not been visited yet.
+//      return  ((!isObject($.value) || norToBool(arrayIndexOf(visited,$.value)))
+//          //TODO
+//          //&& !('get' in $) && !('set' in $) && isJSON_($.value, visited)
+//          );
+//    };
+//
+//
+//    var keys = /*: [;l1,lArrPro,lk1] */ objectKeys(value);
+//
+//    // If `value` is an atom return `true` cause it's valid JSON.
+//    var result = 
+//      isPrimitive(value) 
+//         // If `value` is an array of JSON values that has not been visited
+//         // yet.
+//    ||  ( isArray(value) && arrayEvery(value, f1) )
+//         // If `value` is a plain object containing properties with a JSON
+//         // values it's a valid JSON.
+//    //TODO
+//    //||  ( /*: [;l1,lArrPro,lROOT] */ isFlat(value) && (/*: [Str;lk1] */ arrayEvery)(keys,f2) ) 
+//    ;
+//    
+//    return result;
+//};
 
 //exports.isJSON = function (value) {
 //  return isJSON(value);
@@ -566,11 +566,11 @@ var isJSON = function(value, visited) {
  */
 var source = function source_(value, indent, limit, offset, visited) 
   //BOTH WORK!!!
-/*: [;Lv,L1,Lvis] (value:Ref(Lv), Str, Int, Str, Ref(Lvis))
-    / (Lv: Arr(Top) > L1, Lvis: Arr(Top) > lArrPro) -> Top / (Lv: sameExact) */
+/* [;Lv,L1,Lvis0] (value:Ref(Lv), Str, Int, Str, Ref(Lvis0))
+    / (Lv: Arr(Top) > L1, Lvis0: Arr(Top) > lArrPro) -> Top / (Lv: sameExact) */
 
-/* [;Lv,L1,Lvis] (value:Ref(Lv), PStr, PInt, PStr, visited: Ref(Lvis)) 
-    / (Lv: {      } > L1, Lvis: Arr(Top) > lArrPro) -> Top / (Lv: sameExact) */
+/*: [;Lv,L1,Lvis0] (value:Ref(Lv), PStr, PInt, PStr, visited: Ref(Lvis0)) 
+    / (Lv: {      } > L1, Lvis0: Arr(Top) > lArrPro) -> Top / (Lv: sameExact) */
 {
 
   var result;
@@ -586,13 +586,14 @@ var source = function source_(value, indent, limit, offset, visited)
   //visited = visited || /*: lArr Arr(Top) */ [];
   //PV: Original code end
 
-  //TODO
-  //var tmp = /*: lArr Arr(Top) */ [];
-  ///*: tmp (~topArr, frzn) */ "#freeze";
-  //visited = visited || tmp;
-  ///*: visited lVis */ "#thaw";
-  //assume(visited != null);
-  ///*: visited (~topArr, thwd lVis) */ "#freeze";
+  if (visited) {
+    /*: visited (~topArr, frzn) */ "#freeze";    
+  }
+  else {
+    visited = /*: lArr Arr(Top) */ []; 
+    /*: visited (~topArr, frzn) */ "#freeze";    
+  }
+
 
   if (isUndefined(value)) {
     result += "undefined";
@@ -640,13 +641,18 @@ var source = function source_(value, indent, limit, offset, visited)
     //}
     //PV: original code end
 
+    /*: visited lvis */ "#thaw";
     nestingIndex = arrayIndexOf(visited, value) + 1;
+    /*: visited (~topArr, thwd lvis) */ "#freeze";    
+
     if (nestingIndex) {
       result = "#" + intToString(nestingIndex) + "#";
     }
     else {
       //XXX: SLOW DOWN !!! + 25 sec
+      ///*: visited lvis */ "#thaw";
       //visited.push(value);
+      ///*: visited (~topArr, thwd lvis) */ "#freeze";    
 
       //TODO (commented because it adds exrtra location
       //if (isCompact)
@@ -684,14 +690,18 @@ var source = function source_(value, indent, limit, offset, visited)
     //nestingIndex = (visited.indexOf(value) + 1);
     //PV: Original code end
 
+    /*: visited lvis */ "#thaw";
     nestingIndex = arrayIndexOf(visited, value) + 1;
+    /*: visited (~topArr, thwd lvis) */ "#freeze";    
 
     if (nestingIndex) {
       result = "#" + intToString(nestingIndex) + "#";
     }
     else {
       //XXX: SLOW DOWN !!!
+      ///*: visited lvis */ "#thaw";
       //visited.push(value);
+      ///*: visited (~topArr, thwd lvis) */ "#freeze";    
 
       //PV: Original code begin
       //names = Object.keys(value);
@@ -708,12 +718,16 @@ var source = function source_(value, indent, limit, offset, visited)
       //result += (isCompact ? names.slice(0, limit) : names).map(function(name) {
       //PV: Original code end
       
-      //TODO
-      ///*: [Str; lnames,lsl2] */ arraySlice(names, 0, limit);
-      var tmp3 = isCompact ? /*: [Str;lnames,lArrPro,lsl2] */ arraySlice(names, 0, limit) : names;
-      //XXX: Adding this to ensure that there is a single location for tmp3, as
-      //it will be used later for the array map function.
-      tmp3 = names;
+      var tmp3;
+      if(isCompact) {
+        tmp3 = /*: [Str;lnames,lArrPro,lsl2] */ arraySlice(names, 0, limit);
+        /*: tmp3 (~strArr, frzn) */ "#freeze"; 
+      }
+      else {
+        tmp3 = names;
+        /*: tmp3 (~strArr, frzn) */ "#freeze";    
+      }     
+      
 
       var f2 = function(name_) /*: (PStr) -> Str */ 
       {
@@ -739,7 +753,7 @@ var source = function source_(value, indent, limit, offset, visited)
         result_ += "\n";
         
         //PV: original code begin
-        //XXX: SLOW DOWN:
+        //XXX: TODO: SLOW DOWN
         //if ("value" in descriptor) {
         //PV: original code end
 
@@ -774,18 +788,24 @@ var source = function source_(value, indent, limit, offset, visited)
       //result += tmp3.map(f2).join(",\n");
       //PV: Original code end
       
-      var tmp4 = /*: [Str,Str; lnames,lArrPro, lr] */ arrayMap(tmp3,f2);
+      /*: tmp3 ltmp3 */ "#thaw";
+      var tmp4 = /*: [Str,Str; ltmp3,lArrPro, lr] */ arrayMap(tmp3,f2);
+      /*: tmp3 (~strArr, thwd ltmp3) */ "#freeze";    
       result += arrayJoin(tmp4, ",n");
       
 
       if (isCompact) {
-        if (names.length > limit && limit > 0) {
-          result += ",\n" + offset  + indent + "//...";
-        }
+//TODO        
+//        if (names.length > limit && limit > 0) {
+//          result += ",\n" + offset  + indent + "//...";
+//        }
       }
       else {
-        if (names.length)
-          result += ",";
+//TODO        
+//        /*: tmp3 ltmp3 */ "#thaw";
+//        if (names.length)
+//          result += ",";
+//        /*: tmp3 (~strArr, thwd ltmp3) */ "#freeze";    
 
         result += "\n" + offset + indent + '"__proto__": ';
         
@@ -796,7 +816,7 @@ var source = function source_(value, indent, limit, offset, visited)
         
         var tmp5 = /*: [;Lv, L1] */ objectGetPrototypeOf(value);
         //TODO
-        //result +=  /*: [;L1,lObjPro,Lvis] */ source_(tmp5, indent, 0, offset + indent, visited);
+        //result +=  /*: [;L1,lObjPro,lvis] */ source_(tmp5, indent, 0, offset + indent, visited);
       }
       result += "\n" + offset + "}";
     }
@@ -808,7 +828,6 @@ var source = function source_(value, indent, limit, offset, visited)
     
     result += toString(value);
   }
-
 
   return result;
 
