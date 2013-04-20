@@ -156,6 +156,9 @@
 
 var exports = /*: Ref(~extern) */ "#extern";
 
+//PV: 
+//Throws a TypeError exception if the object parameter isn't an Object. So we
+//can restrict the type we assign accordingly.
 var objectGetPrototypeOf = 
 /*: (o:Ref) / (o: Top > o.pro) -> Ref(o.pro) / (o: sameExact) */
 "#extern";
@@ -176,16 +179,12 @@ var objToString =
 //PV: Should return a new location like the first commented version but gets
 //complicated later, when the `value` referes to two prossible locations. 
 var arraySlice =
-  /* [A;La,Lr] (Ref(La), Int, Int) / (La: Arr(A) > lArrPro) 
-      -> Ref(Lr) / (La: sameExact, Lr: Arr(A) > lArrPro) */
-  /*: [A;La,Lapro,Lr] (Ref(La), Int, Int) / (La: Arr(A) > Lapro) 
-      -> Ref(Lr) / (La: sameExact, Lr: Arr(A) > Lapro) */
-  /* [A;La] (Ref(La), Int, Int) / (La: Arr(A) > lArrPro) 
-      -> Ref(La) / (La: sameExact) */ "#extern";
+/*: [A;La,Lapro,Lr] (Ref(La), Int, Int) / (La: Arr(A) > Lapro) 
+    -> Ref(Lr) / (La: sameExact, Lr: Arr(A) > Lapro) */ "#extern";
 
 var arrayMap = 
 /*: [A,B; La, Lapro, Lr] (Ref(La), (A) / (allFrozenLocations) -> B / sameExact) 
-      / (La: Arr(A) > Lapro) 
+    / (La: Arr(A) > Lapro) 
       -> Ref(Lr) / (La: sameExact, Lr: Arr(B) > lArrPro) */ "#extern";
 
 var arrayJoin = 
@@ -197,22 +196,11 @@ var arrayEvery =
 
 var objectKeys = 
 /*: [;L,L1,Lr] (Ref(L)) / (L:Top > L1) 
-      -> Ref(Lr) / (L:sameExact, Lr: Arr(Str) > lArrPro) */ 
-
-/* (o:Ref) / (o: Dict > lObjPro) -> Ref(lArr) / (lArr: Arr(Str) > lArrPro) */
-/* [;L;] (a:Ref) / (a: Arr(NotUndef) > lArrPro) 
-    -> Ref(L) / (L: Arr(Str) > lArrPro, a: sameExact) */ 
-/* [;L] (Top) / () -> Ref(L) / (L: Arr(Str) > lArrPro) */
-"#extern";
+      -> Ref(Lr) / (L:sameExact, Lr: Arr(Str) > lArrPro) */ "#extern";
 
 var objectGetOwnPropertyDescriptor = 
-/* [;Ld,Lo] (Ref(Lo)) / (Lo: { } > lObjPro) 
-        -> Ref(~descriptor) / (Lo: sameExact)) */
-/* (Top) -> Ref(~descriptor) */
-
 /*: [;L,Lp,Ld] (a:Ref(L)) / (L: Top > Lp) 
-        -> Ref(Ld) / (L: sameExact, Ld: tyDescriptor) */
-"#extern";
+    -> Ref(Ld) / (L: sameExact, Ld: tyDescriptor) */ "#extern";
 
 var norToBool = /*: (Int) -> Bool */ "#extern";
 
@@ -226,6 +214,8 @@ var stringSplit =
 var arraySplice = 
 /*: [A;L,Lr] (Ref(L), Int, Int) / (L: Arr(A) > lArrPro) 
       -> Ref(Lr) / (L:sameExact, Lr: Arr(A) > lArrPro) */ "#extern";
+
+
 
 
 /*****************************************************
@@ -244,10 +234,8 @@ var arraySplice =
  *    var foo; isUndefined(foo); // true
  *    isUndefined(0); // false
  */
-//TODO: changed this cause the arrays would not TC
 var isUndefined = function(value) 
-/* (Pub) -> {Bool|(public v)} */ 
-/*: (Top) -> Bool */ 
+/*: (value: Top) -> {Bool|(implies (public value) (public v))} */ 
 {
   return value === undefined;
 };
@@ -261,8 +249,7 @@ exports.isUndefined = isUndefined;
  *    isNull(undefined); // false
  */
 var isNull = function(value) 
-/* ({(public v)}) -> {Bool|(public v)} */ 
-/*: (Top) -> Bool */ 
+/*: (value: Top) -> {Bool|(implies (public value) (public v))} */ 
 {
   return value === null;
 };
@@ -286,7 +273,7 @@ exports.isString = isString;
  *    isNumber(8.4 * 5); // true
  */
 var isNumber = function(value) 
-/*: (value: {(public v)}) -> {Bool|(and (iff (= v true) (Num value)) (public v))} */ 
+/*: (value: Top) -> {Bool|(and (iff (= v true) (Num value)) (implies (public value) (public v)))} */ 
 {
   return typeof value === "number";
 };
@@ -299,9 +286,9 @@ exports.isNumber = isNumber;
 // * @examples
 // *    isRegExp(/moe/); // true
 // */
-//function isRegExp(value) {
+//function isRegExp(value) /*: (Top) -> Top */  {
 //  return isObject(value) && instanceOf(value, RegExp);
-//}
+//};
 //exports.isRegExp = isRegExp;
 
 ///**
@@ -322,9 +309,7 @@ exports.isNumber = isNumber;
  *    isFunction(function foo(){}) // true
  */
 var isFunction = function(value) 
-/* (value: Top) -> {Bool|(and (iff (= v true) (= (tag value) "function")) (implies (public value) (public v)))} */
-/* (value: Top) -> {Bool|(implies (public value) (public v))} */
-/*: (value: Top) -> {Bool|(iff (= v true) (and (= (tag value) "function") (not (= (tag value) "object"))   (not (= (tag value) "array")) ))} */
+/*: (value: Top) -> {Bool|(and (iff (= v true) (= (tag value) "function")) (implies (public value) (public v)))} */
 {
     return typeof value === "function";
 };
@@ -338,13 +323,14 @@ exports.isFunction = isFunction;
  *    isObject(null) // false
  */
 var isObject = function(value) 
-/* (value: {(public v)}) -> {Bool|(and (iff (= v true) (and (not (= value null)) (= (tag value) "object"))) (public v))} */
-/* (value: Top) -> {Bool|(and (iff (= v true) (and (not (= value null)) (= (tag value) "object"))))} */
-/*: (value: Top) -> {Bool|(implies (public value) (public v))} */
+/*: (value: Top) -> {Bool|(and 
+      (iff (= v true) (and (not (= value null)) (= (tag value) "object"))) 
+      (implies (public value) (public v)))} */
 { 
     return typeof value === "object" && value !== null;
 };
 exports.isObject = isObject;
+
 
 //TODO
 ///**
@@ -353,11 +339,15 @@ exports.isObject = isObject;
 // *    isArray([1, 2, 3])  // true
 // *    isArray({ 0: 'foo', length: 1 }) // false
 // */
-//var isArray = Array.isArray || function isArray(value) {
-//  Object.prototype.toString.call(value) === "[object Array]";
-//}
+//var isArray = Array.isArray 
+////PV: if the default isArray is not there, define it this way.
+//  ||  function isArray(value) {
+//        Object.prototype.toString.call(value) === "[object Array]";
+//      }
 //exports.isArray = isArray;
 
+
+//TODO
 ///**
 // * Returns `true` if `value` is an Arguments object.
 // * @examples
@@ -368,6 +358,8 @@ exports.isObject = isObject;
 //  Object.prototype.toString.call(value) === "[object Arguments]";
 //}
 //exports.isArguments = isArguments;
+
+
 
 /**
  * Returns true if it is a primitive `value`. (null, undefined, number,
@@ -383,6 +375,7 @@ var isPrimitive = function(value)
   return !isFunction(value) && !isObject(value);
 };
 exports.isPrimitive = isPrimitive;
+
 
 /**
  * Returns `true` if given `object` is flat (it is direct decedent of
@@ -441,87 +434,87 @@ exports.isEmpty = isEmpty;
 
 
 
-/*: isJSON :: 
-  (value: Ref(l1), visited: Ref(l2)) / (l1: Arr(NotUndef) > lArrPro, l2: Arr(Top) > lArrPro)
-        -> {Bool|(implies (public value) (public v))} / sameType */ "#type";
-
-
-/**
- * Returns `true` if `value` is an array / flat object containing only atomic
- * values and other flat objects.
- */
-var isJSON = function(value, visited) {
-
-//    // Adding value to array of visited values.
+///*: isJSON :: 
+//  (value: Ref(l1), visited: Ref(l2)) / (l1: Arr(NotUndef) > lArrPro, l2: Arr(Top) > lArrPro)
+//        -> {Bool|(implies (public value) (public v))} / sameType */ "#type";
+//
+//
+///**
+// * Returns `true` if `value` is an array / flat object containing only atomic
+// * values and other flat objects.
+// */
+//var isJSON = function(value, visited) {
+//
+////    // Adding value to array of visited values.
+////    //PV: Original code begin
+////    //(visited || (visited = [])).push(value);
+////    //PV: Original code end
+////
+////    //XXX: TODO + SLOW DOWN !!!
+////    if (!visited) {
+////      visited = /*: lEmpty Arr(Top) */ [value];
+////    }
+////    else {
+////      visited.push(value);
+////    }
+//  
 //    //PV: Original code begin
-//    //(visited || (visited = [])).push(value);
+//    //        // If `value` is an atom return `true` cause it's valid JSON.
+//    //return  isPrimitive(value) ||
+//    //        // If `value` is an array of JSON values that has not been visited
+//    //        // yet.
+//    //        (isArray(value) &&  value.every(function(element) {
+//    //                              return isJSON(element, visited);
+//    //                            })) ||
+//    //        // If `value` is a plain object containing properties with a JSON
+//    //        // values it's a valid JSON.
+//    //        (isFlat(value) && Object.keys(value).every(function(key) {
+//    //            var $ = Object.getOwnPropertyDescriptor(value, key);
+//    //            // Check every proprety of a plain object to verify that
+//    //            // it's neither getter nor setter, but a JSON value, that
+//    //            // has not been visited yet.
+//    //            return  ((!isObject($.value) || !~visited.indexOf($.value)) &&
+//    //                    !('get' in $) && !('set' in $) &&
+//    //                    isJSON($.value, visited));
+//    //        }));
 //    //PV: Original code end
 //
-//    //XXX: TODO + SLOW DOWN !!!
-//    if (!visited) {
-//      visited = /*: lEmpty Arr(Top) */ [value];
-//    }
-//    else {
-//      visited.push(value);
-//    }
-  
-    //PV: Original code begin
-    //        // If `value` is an atom return `true` cause it's valid JSON.
-    //return  isPrimitive(value) ||
-    //        // If `value` is an array of JSON values that has not been visited
-    //        // yet.
-    //        (isArray(value) &&  value.every(function(element) {
-    //                              return isJSON(element, visited);
-    //                            })) ||
-    //        // If `value` is a plain object containing properties with a JSON
-    //        // values it's a valid JSON.
-    //        (isFlat(value) && Object.keys(value).every(function(key) {
-    //            var $ = Object.getOwnPropertyDescriptor(value, key);
-    //            // Check every proprety of a plain object to verify that
-    //            // it's neither getter nor setter, but a JSON value, that
-    //            // has not been visited yet.
-    //            return  ((!isObject($.value) || !~visited.indexOf($.value)) &&
-    //                    !('get' in $) && !('set' in $) &&
-    //                    isJSON($.value, visited));
-    //        }));
-    //PV: Original code end
-
-
-    var f1 = function(element) /*: (Top) -> Bool */ {
-      //TODO
-      //return isJSON_(element, visited);
-      return true;
-    }; 
-
-    var f2 = function(key) /*: (Str) -> Bool */ {
-      var $ = /*: [;l1,lArrPro,ld] */ objectGetOwnPropertyDescriptor(value, key);
-      // Check every proprety of a plain object to verify that
-      // it's neither getter nor setter, but a JSON value, that
-      // has not been visited yet.
-      return  ((!isObject($.value) || norToBool(arrayIndexOf(visited,$.value)))
-          //TODO
-          //&& !('get' in $) && !('set' in $) && isJSON_($.value, visited)
-          );
-    };
-
-
-    var keys = /*: [;l1,lArrPro,lk1] */ objectKeys(value);
-
-    // If `value` is an atom return `true` cause it's valid JSON.
-    var result = 
-      isPrimitive(value) 
-         // If `value` is an array of JSON values that has not been visited
-         // yet.
-    ||  ( isArray(value) && arrayEvery(value, f1) )
-         // If `value` is a plain object containing properties with a JSON
-         // values it's a valid JSON.
-    //TODO
-    //||  ( /*: [;l1,lArrPro,lROOT] */ isFlat(value) && (/*: [Str;lk1] */ arrayEvery)(keys,f2) ) 
-    ;
-    
-    return result;
-};
-
+//
+//    var f1 = function(element) /*: (Top) -> Bool */ {
+//      //TODO
+//      //return isJSON_(element, visited);
+//      return true;
+//    }; 
+//
+//    var f2 = function(key) /*: (Str) -> Bool */ {
+//      var $ = /*: [;l1,lArrPro,ld] */ objectGetOwnPropertyDescriptor(value, key);
+//      // Check every proprety of a plain object to verify that
+//      // it's neither getter nor setter, but a JSON value, that
+//      // has not been visited yet.
+//      return  ((!isObject($.value) || norToBool(arrayIndexOf(visited,$.value)))
+//          //TODO
+//          //&& !('get' in $) && !('set' in $) && isJSON_($.value, visited)
+//          );
+//    };
+//
+//
+//    var keys = /*: [;l1,lArrPro,lk1] */ objectKeys(value);
+//
+//    // If `value` is an atom return `true` cause it's valid JSON.
+//    var result = 
+//      isPrimitive(value) 
+//         // If `value` is an array of JSON values that has not been visited
+//         // yet.
+//    ||  ( isArray(value) && arrayEvery(value, f1) )
+//         // If `value` is a plain object containing properties with a JSON
+//         // values it's a valid JSON.
+//    //TODO
+//    //||  ( /*: [;l1,lArrPro,lROOT] */ isFlat(value) && (/*: [Str;lk1] */ arrayEvery)(keys,f2) ) 
+//    ;
+//    
+//    return result;
+//};
+//
 //exports.isJSON = function (value) {
 //  return isJSON(value);
 //};
@@ -557,307 +550,307 @@ var isJSON = function(value, visited) {
 
 
 
-/**
- * Function returns textual representation of a value passed to it. Function
- * takes additional `indent` argument that is used for indentation. Also
- * optional `limit` argument may be passed to limit amount of detail returned.
- * @param {Object} value
- * @param {String} [indent="    "]
- * @param {Number} [limit]
- */
-var source = function source_(value, indent, limit, offset, visited) 
-//BOTH WORK!!!
-/*: [;Lv,L1,Lvis0] (value:Ref(Lv), Str, Int, Str, Ref(Lvis0))
-    / (Lv: Arr(Top) > L1, Lvis0: Arr(Top) > lArrPro) -> Top / (Lv: sameType) */
-
-/* [;Lv,L1,Lvis0] (value:Ref(Lv), PStr, PInt, PStr, visited: Ref(Lvis0)) 
-    / (Lv: {      } > L1, Lvis0: Arr(Top) > lArrPro) -> Top / (Lv: sameType) */
-{
-
-  var result;
-  var names;
-  var nestingIndex;
-  var isCompact = !isUndefined(limit);
-
-  indent = indent || "    ";
-  offset = (offset || "");
-  result = "";
-
-  //PV: Original code begin
-  //visited = visited || /*: lArr Arr(Top) */ [];
-  //PV: Original code end
-
-  if (visited) {
-    /*: visited (~topArr, frzn) */ "#freeze";    
-  }
-  else {
-    visited = /*: lArr Arr(Top) */ []; 
-    /*: visited (~topArr, frzn) */ "#freeze";    
-  }
-
-  if (isUndefined(value)) {
-    result += "undefined";
-  }
-  else if (isNull(value)) {
-    result += "null";
-  }
-  else if (isString(value)) {
-    //PV: Original code begin
-    //result += '"' + value + '"';
-    //PV: Original code end
-
-    result += "qq" + value + "qq";
-  }
-  else if (isFunction(value)) {
-    //PV: Original code begin
-    //value = String(value).split("\n");
-    //PV: Original code end
-
-    var tmp0 = /*: [;lvs] */ stringSplit(toString(value), "\n");
-    if (isCompact && tmp0.length > 2) {
-      //PV: Original code begin
-      //value = value.splice(0, 2);
-      //PV: Original code end
-
-      tmp0 = /*: [Str;lvs,lvs1] */ arraySplice(tmp0, 0, 2);
-      //XXX: SLOW DOWN !!! + 17 sec
-      //tmp0.push("...}");
-      /*: tmp0 (~strArr, frzn) */ "#freeze";
-      value = tmp0;
-    }
-    else {
-      /*: tmp0 (~strArr, frzn) */ "#freeze";
-      value = tmp0;
-    }
-
-    //PV: Original code begin
-    //result += value.join("\n" + offset);
-    //PV: Original code end
-    
-    /*: value lval0 */ "#thaw";
-    result += /*: [Str; lval0] */ arrayJoin(value, "\n" + offset);
-    /*: value (~strArr, thwd lval0) */ "#freeze";
-    result += ("a\nb" + offset);
-  }
-  else if (isArray(value)) {
-    //PV: original code begin
-    //if ((nestingIndex = (visited.indexOf(value) + 1))) {
-    //  result = "#" + nestingIndex + "#";
-    //}
-    //PV: original code end
-
-    /*: visited lvis */ "#thaw";
-    nestingIndex = arrayIndexOf(visited, value) + 1;
-    /*: visited (~topArr, thwd lvis) */ "#freeze";    
-
-    if (nestingIndex) {
-      result = "#" + intToString(nestingIndex) + "#";
-    }
-    else {
-      //XXX: SLOW DOWN !!! + 25 sec
-      ///*: visited lvis */ "#thaw";
-      //visited.push(value);
-      ///*: visited (~topArr, thwd lvis) */ "#freeze";    
-
-      //PV: original code begin
-      //if (isCompact)
-      //  value = /*: [Top; Lv,L1,lsl1] */ arraySlice(value, 0, limit);
-      //PV: original code end
-      
-
-      var tmp2;
-      /*: (~locTopArr: Arr(Top) > L1) */ "#weak";
-
-      if(isCompact) {
-        tmp2 = /*: [Top;Lv,L1,lsl1] */ arraySlice(value, 0, limit);
-        /*: value (~locTopArr, frzn) */ "#freeze";    
-        /*: tmp2 (~locTopArr, frzn) */ "#freeze"; 
-      }
-      else {
-        /*: value (~locTopArr, frzn) */ "#freeze";    
-        tmp2 = value;
-      }
-      
-      /*: value Lv */ "#thaw";
-
-      //PV: Original code
-      //result += "[\n";
-      //result += value.map(function(value) {
-      //  return offset + indent + 
-      //    source_(value, indent, limit, offset + indent, visited);
-      //}).join(",\n");
-      //PV: orignial code end
-
-      result += "n";
-      var f1 = function(value_) /*: (Top) -> Str */ {
-        //TODO
-        return offset + indent /*+ source_(value, indent, limit, offset + indent, visited)*/;
-      };
-      var tmp1 = /*: [Top,Str; Lv,L1,lm] */ arrayMap(value, f1); 
-
-      //PV: orignial code begin
-      //result += arrayJoin(tmp1, ",\n");
-      //result += isCompact && value.length > limit ?
-      //          ",\n" + offset + "...]" : "\n" + offset + "]";
-      //PV: orignial code end
-      
-      result += /*: [Str;lm] */ arrayJoin(tmp1, ",n");
-      result += (isCompact && value.length > limit) ? "dummy" : "dummy";
-
-    }
-
-  }
-  else if (isObject(value)) {
-    //PV: Original code begin
-    //nestingIndex = (visited.indexOf(value) + 1);
-    //PV: Original code end
-
-    /*: visited lvis */ "#thaw";
-    nestingIndex = arrayIndexOf(visited, value) + 1;
-    /*: visited (~topArr, thwd lvis) */ "#freeze";    
-
-    if (nestingIndex) {
-      result = "#" + intToString(nestingIndex) + "#";
-    }
-    else {
-      //XXX: SLOW DOWN !!!
-      ///*: visited lvis */ "#thaw";
-      //visited.push(value);
-      ///*: visited (~topArr, thwd lvis) */ "#freeze";    
-
-      //PV: Original code begin
-      //names = Object.keys(value);
-      //PV: Original code end
-
-      names = /*: [;Lv,L1,lnames] */ objectKeys(value);
-     
-      //PV: Original code begin (Implicit coersion)
-      //result += "{ // " + value + "\n";
-      //PV: Original code end
-      result += objToString(value);
-      
-      //PV: Original code begin
-      //result += (isCompact ? names.slice(0, limit) : names).map(function(name) {
-      //PV: Original code end
-      
-      var tmp3;
-      if(isCompact) {
-        tmp3 = /*: [Str;lnames,lArrPro,lsl2] */ arraySlice(names, 0, limit);
-        /*: names (~strArr, frzn) */ "#freeze";    
-        /*: tmp3 (~strArr, frzn) */ "#freeze"; 
-      }
-      else {
-        /*: names (~strArr, frzn) */ "#freeze";    
-        tmp3 = names;
-      }     
-      
-
-      var f2 = function(name_) /*: (PStr) -> Str */ 
-      {
-        var _limit = isCompact ? limit - 1 : limit;
-        var descriptor = /*: [;Lv,L1,ld] */ objectGetOwnPropertyDescriptor(value, name_);
-        //PV: Original code begin
-        //var result = offset + indent + "// ";
-        //PV: Original code end
-        
-        var result_ = offset + indent;
-
-        var accessor = "";
-        if (0 <= name_.indexOf(" "))
-          name_ = '"' + name_ + '"';
-
-        if (descriptor.writable)
-          result_ += "writable ";
-        if (descriptor.configurable)
-          result_ += "configurable ";
-        if (descriptor.enumerable)
-          result_ += "enumerable ";
-
-        result_ += "\n";
-        
-        //PV: original code begin
-        //XXX: TODO: SLOW DOWN
-        //if ("value" in descriptor) {
-        //PV: original code end
-
-        if (randomBool()) {
-          result_ += offset + indent + name_ + ": ";
-          //TODO
-          //result += source_(descriptor.value, indent, _limit, indent + offset, visited);
-        }
-        else {
-          if (descriptor.get) {
-            result_ += offset + indent + "get " + name_ + " ";
-            //TODO
-            //accessor = source_(descriptor.get, indent, _limit, indent + offset,
-            //                  visited);
-            result_ += accessor.substr(accessor.indexOf("{"));
-          }
-
-          if (descriptor.set) {
-            result_ += offset + indent + "set " + name_ + " ";
-            //TODO
-            //accessor = source_(descriptor.set, indent, _limit, indent + offset,
-            //                  visited);
-            result_ += accessor.substr(accessor.indexOf("{"));
-          }
-        }
-        
-
-        return result_;
-      };
-
-      //PV: Original code begin
-      //result += tmp3.map(f2).join(",\n");
-      //PV: Original code end
-      
-      //PV: the definition of tmp4 needs to be here (before the thawing)
-      var tmp4;
-      /*: tmp3 ltmp3 */ "#thaw";
-      tmp4 = /*: [Str,Str; ltmp3,lArrPro, lr] */ arrayMap(tmp3,f2);
-      result += arrayJoin(tmp4, ",n");
-      /*: tmp3 (~strArr, thwd ltmp3) */ "#freeze";    
-      
-
-      if (isCompact) {
-        /*: names lnewnames */ "#thaw";
-        if (names.length > limit && limit > 0) {
-          result += ",\n" + offset  + indent + "//...";
-        }
-        /*: names (~strArr, thwd lnewnames) */ "#freeze";
-      }
-      else {
-        /*: names lnewnames */ "#thaw";
-        if (names.length)
-          result += ",";
-        /*: names (~strArr, thwd lnewnames) */ "#freeze";
-
-        result += "\n" + offset + indent + '"__proto__": ';
-        
-        //PV: Original code begin
-        //result += source(Object.getPrototypeOf(value), indent, 0,
-        //                   offset + indent);
-        //PV: Original code end
-        
-        var tmp5 = /*: [;Lv, L1] */ objectGetPrototypeOf(value);
-        //TODO
-        //result +=  /*: [;L1,lObjPro,lvis] */ source_(tmp5, indent, 0, offset + indent, visited);
-      }
-      result += "\n" + offset + "}";
-    }
-  } 
-  else {
-    //PV: Original code begin
-    //result += String(value);  
-    //PV: Original code end
-    
-    result += toString(value);
-  }
-
-  return result;
-
-};
-
+///**
+// * Function returns textual representation of a value passed to it. Function
+// * takes additional `indent` argument that is used for indentation. Also
+// * optional `limit` argument may be passed to limit amount of detail returned.
+// * @param {Object} value
+// * @param {String} [indent="    "]
+// * @param {Number} [limit]
+// */
+//var source = function source_(value, indent, limit, offset, visited) 
+////BOTH WORK!!!
+///*: [;Lv,L1,Lvis0] (value:Ref(Lv), Str, Int, Str, Ref(Lvis0))
+//    / (Lv: Arr(Top) > L1, Lvis0: Arr(Top) > lArrPro) -> Top / (Lv: sameType) */
+//
+///* [;Lv,L1,Lvis0] (value:Ref(Lv), PStr, PInt, PStr, visited: Ref(Lvis0)) 
+//    / (Lv: {      } > L1, Lvis0: Arr(Top) > lArrPro) -> Top / (Lv: sameType) */
+//{
+//
+//  var result;
+//  var names;
+//  var nestingIndex;
+//  var isCompact = !isUndefined(limit);
+//
+//  indent = indent || "    ";
+//  offset = (offset || "");
+//  result = "";
+//
+//  //PV: Original code begin
+//  //visited = visited || /*: lArr Arr(Top) */ [];
+//  //PV: Original code end
+//
+//  if (visited) {
+//    /*: visited (~topArr, frzn) */ "#freeze";    
+//  }
+//  else {
+//    visited = /*: lArr Arr(Top) */ []; 
+//    /*: visited (~topArr, frzn) */ "#freeze";    
+//  }
+//
+//  if (isUndefined(value)) {
+//    result += "undefined";
+//  }
+//  else if (isNull(value)) {
+//    result += "null";
+//  }
+//  else if (isString(value)) {
+//    //PV: Original code begin
+//    //result += '"' + value + '"';
+//    //PV: Original code end
+//
+//    result += "qq" + value + "qq";
+//  }
+//  else if (isFunction(value)) {
+//    //PV: Original code begin
+//    //value = String(value).split("\n");
+//    //PV: Original code end
+//
+//    var tmp0 = /*: [;lvs] */ stringSplit(toString(value), "\n");
+//    if (isCompact && tmp0.length > 2) {
+//      //PV: Original code begin
+//      //value = value.splice(0, 2);
+//      //PV: Original code end
+//
+//      tmp0 = /*: [Str;lvs,lvs1] */ arraySplice(tmp0, 0, 2);
+//      //XXX: SLOW DOWN !!! + 17 sec
+//      //tmp0.push("...}");
+//      /*: tmp0 (~strArr, frzn) */ "#freeze";
+//      value = tmp0;
+//    }
+//    else {
+//      /*: tmp0 (~strArr, frzn) */ "#freeze";
+//      value = tmp0;
+//    }
+//
+//    //PV: Original code begin
+//    //result += value.join("\n" + offset);
+//    //PV: Original code end
+//    
+//    /*: value lval0 */ "#thaw";
+//    result += /*: [Str; lval0] */ arrayJoin(value, "\n" + offset);
+//    /*: value (~strArr, thwd lval0) */ "#freeze";
+//    result += ("a\nb" + offset);
+//  }
+//  else if (isArray(value)) {
+//    //PV: original code begin
+//    //if ((nestingIndex = (visited.indexOf(value) + 1))) {
+//    //  result = "#" + nestingIndex + "#";
+//    //}
+//    //PV: original code end
+//
+//    /*: visited lvis */ "#thaw";
+//    nestingIndex = arrayIndexOf(visited, value) + 1;
+//    /*: visited (~topArr, thwd lvis) */ "#freeze";    
+//
+//    if (nestingIndex) {
+//      result = "#" + intToString(nestingIndex) + "#";
+//    }
+//    else {
+//      //XXX: SLOW DOWN !!! + 25 sec
+//      ///*: visited lvis */ "#thaw";
+//      //visited.push(value);
+//      ///*: visited (~topArr, thwd lvis) */ "#freeze";    
+//
+//      //PV: original code begin
+//      //if (isCompact)
+//      //  value = /*: [Top; Lv,L1,lsl1] */ arraySlice(value, 0, limit);
+//      //PV: original code end
+//      
+//
+//      var tmp2;
+//      /*: (~locTopArr: Arr(Top) > L1) */ "#weak";
+//
+//      if(isCompact) {
+//        tmp2 = /*: [Top;Lv,L1,lsl1] */ arraySlice(value, 0, limit);
+//        /*: value (~locTopArr, frzn) */ "#freeze";    
+//        /*: tmp2 (~locTopArr, frzn) */ "#freeze"; 
+//      }
+//      else {
+//        /*: value (~locTopArr, frzn) */ "#freeze";    
+//        tmp2 = value;
+//      }
+//      
+//      /*: value Lv */ "#thaw";
+//
+//      //PV: Original code
+//      //result += "[\n";
+//      //result += value.map(function(value) {
+//      //  return offset + indent + 
+//      //    source_(value, indent, limit, offset + indent, visited);
+//      //}).join(",\n");
+//      //PV: orignial code end
+//
+//      result += "n";
+//      var f1 = function(value_) /*: (Top) -> Str */ {
+//        //TODO
+//        return offset + indent /*+ source_(value, indent, limit, offset + indent, visited)*/;
+//      };
+//      var tmp1 = /*: [Top,Str; Lv,L1,lm] */ arrayMap(value, f1); 
+//
+//      //PV: orignial code begin
+//      //result += arrayJoin(tmp1, ",\n");
+//      //result += isCompact && value.length > limit ?
+//      //          ",\n" + offset + "...]" : "\n" + offset + "]";
+//      //PV: orignial code end
+//      
+//      result += /*: [Str;lm] */ arrayJoin(tmp1, ",n");
+//      result += (isCompact && value.length > limit) ? "dummy" : "dummy";
+//
+//    }
+//
+//  }
+//  else if (isObject(value)) {
+//    //PV: Original code begin
+//    //nestingIndex = (visited.indexOf(value) + 1);
+//    //PV: Original code end
+//
+//    /*: visited lvis */ "#thaw";
+//    nestingIndex = arrayIndexOf(visited, value) + 1;
+//    /*: visited (~topArr, thwd lvis) */ "#freeze";    
+//
+//    if (nestingIndex) {
+//      result = "#" + intToString(nestingIndex) + "#";
+//    }
+//    else {
+//      //XXX: SLOW DOWN !!!
+//      ///*: visited lvis */ "#thaw";
+//      //visited.push(value);
+//      ///*: visited (~topArr, thwd lvis) */ "#freeze";    
+//
+//      //PV: Original code begin
+//      //names = Object.keys(value);
+//      //PV: Original code end
+//
+//      names = /*: [;Lv,L1,lnames] */ objectKeys(value);
+//     
+//      //PV: Original code begin (Implicit coersion)
+//      //result += "{ // " + value + "\n";
+//      //PV: Original code end
+//      result += objToString(value);
+//      
+//      //PV: Original code begin
+//      //result += (isCompact ? names.slice(0, limit) : names).map(function(name) {
+//      //PV: Original code end
+//      
+//      var tmp3;
+//      if(isCompact) {
+//        tmp3 = /*: [Str;lnames,lArrPro,lsl2] */ arraySlice(names, 0, limit);
+//        /*: names (~strArr, frzn) */ "#freeze";    
+//        /*: tmp3 (~strArr, frzn) */ "#freeze"; 
+//      }
+//      else {
+//        /*: names (~strArr, frzn) */ "#freeze";    
+//        tmp3 = names;
+//      }     
+//      
+//
+//      var f2 = function(name_) /*: (PStr) -> Str */ 
+//      {
+//        var _limit = isCompact ? limit - 1 : limit;
+//        var descriptor = /*: [;Lv,L1,ld] */ objectGetOwnPropertyDescriptor(value, name_);
+//        //PV: Original code begin
+//        //var result = offset + indent + "// ";
+//        //PV: Original code end
+//        
+//        var result_ = offset + indent;
+//
+//        var accessor = "";
+//        if (0 <= name_.indexOf(" "))
+//          name_ = '"' + name_ + '"';
+//
+//        if (descriptor.writable)
+//          result_ += "writable ";
+//        if (descriptor.configurable)
+//          result_ += "configurable ";
+//        if (descriptor.enumerable)
+//          result_ += "enumerable ";
+//
+//        result_ += "\n";
+//        
+//        //PV: original code begin
+//        //XXX: TODO: SLOW DOWN
+//        //if ("value" in descriptor) {
+//        //PV: original code end
+//
+//        if (randomBool()) {
+//          result_ += offset + indent + name_ + ": ";
+//          //TODO
+//          //result += source_(descriptor.value, indent, _limit, indent + offset, visited);
+//        }
+//        else {
+//          if (descriptor.get) {
+//            result_ += offset + indent + "get " + name_ + " ";
+//            //TODO
+//            //accessor = source_(descriptor.get, indent, _limit, indent + offset,
+//            //                  visited);
+//            result_ += accessor.substr(accessor.indexOf("{"));
+//          }
+//
+//          if (descriptor.set) {
+//            result_ += offset + indent + "set " + name_ + " ";
+//            //TODO
+//            //accessor = source_(descriptor.set, indent, _limit, indent + offset,
+//            //                  visited);
+//            result_ += accessor.substr(accessor.indexOf("{"));
+//          }
+//        }
+//        
+//
+//        return result_;
+//      };
+//
+//      //PV: Original code begin
+//      //result += tmp3.map(f2).join(",\n");
+//      //PV: Original code end
+//      
+//      //PV: the definition of tmp4 needs to be here (before the thawing)
+//      var tmp4;
+//      /*: tmp3 ltmp3 */ "#thaw";
+//      tmp4 = /*: [Str,Str; ltmp3,lArrPro, lr] */ arrayMap(tmp3,f2);
+//      result += arrayJoin(tmp4, ",n");
+//      /*: tmp3 (~strArr, thwd ltmp3) */ "#freeze";    
+//      
+//
+//      if (isCompact) {
+//        /*: names lnewnames */ "#thaw";
+//        if (names.length > limit && limit > 0) {
+//          result += ",\n" + offset  + indent + "//...";
+//        }
+//        /*: names (~strArr, thwd lnewnames) */ "#freeze";
+//      }
+//      else {
+//        /*: names lnewnames */ "#thaw";
+//        if (names.length)
+//          result += ",";
+//        /*: names (~strArr, thwd lnewnames) */ "#freeze";
+//
+//        result += "\n" + offset + indent + '"__proto__": ';
+//        
+//        //PV: Original code begin
+//        //result += source(Object.getPrototypeOf(value), indent, 0,
+//        //                   offset + indent);
+//        //PV: Original code end
+//        
+//        var tmp5 = /*: [;Lv, L1] */ objectGetPrototypeOf(value);
+//        //TODO
+//        //result +=  /*: [;L1,lObjPro,lvis] */ source_(tmp5, indent, 0, offset + indent, visited);
+//      }
+//      result += "\n" + offset + "}";
+//    }
+//  } 
+//  else {
+//    //PV: Original code begin
+//    //result += String(value);  
+//    //PV: Original code end
+//    
+//    result += toString(value);
+//  }
+//
+//  return result;
+//
+//};
+//
 //exports.source = function (value, indentation, limit) {
 //  return source(value, indentation, limit);
 //};
