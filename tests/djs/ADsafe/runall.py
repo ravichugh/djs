@@ -64,6 +64,10 @@ parser.add_option("--no-color",
                   action="store_false", dest="color", default=True,
                   help="don't print color messages to stdout")
 
+parser.add_option("--hackSubArrows",
+                  action="store_true", dest="hackSubArrows", default=False,
+                  help="don't check arrow subtyping")
+
 (options, args) = parser.parse_args()
 
 timeout = int(options.timeout)
@@ -154,7 +158,12 @@ for i in file_range:
   (f,t) = files[i]
   result_queue = Queue(1)
   if timeout > 0:
-    p = Process(target=timeout_command, args=(com + ["-timeout", str(t)] + ["-djs", f], result_queue, ))
+    if options.hackSubArrows:
+      args=(com + ["-timeout", str(t)] + ["-djs", f] + ["-hackSubArrows"], result_queue, )
+    else:
+      args=(com + ["-timeout", str(t)] + ["-djs", f], result_queue, )
+    print(args)
+    p = Process(target=timeout_command, args=args )
     start_time = time.time()
     p.start()
     try:
@@ -167,8 +176,13 @@ for i in file_range:
       output = None
   else:
     start_time = time.time()
-    output = command(com + ["-timeout", str(t)] + ["-djs", f])
-
+    if options.hackSubArrows:
+      args=(com + ["-timeout", str(t), "-hackSubArrows", "-djs", f])
+    else:
+      args=(com + ["-timeout", str(t)] + ["-djs", f])
+    print(args)
+    output = command(args)
+  
   elapsed_time = float(time.time() - start_time)
   tot_time = tot_time + elapsed_time
   process(f, output, elapsed_time)
@@ -176,4 +190,4 @@ for i in file_range:
 print "-------------------------------------------------------------"
 print bc.BOLD + "Total Time    : %.3f sec" % tot_time + bcolors.ENDC
 print bc.BOLD + "Total queries : %d" % tot_queries + bcolors.ENDC
-print bc.BOLD + "Total todos   : %d" % tot_todos + bcolors.ENDC
+print bc.BOLD + "Total TODOs   : %d" % tot_todos + bcolors.ENDC

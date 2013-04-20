@@ -1,9 +1,23 @@
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
 //TODO: we shouldn't have to add all these location to the signature.
+//works with hackSubArrows
+ 
 var walkTheDOM = 
-/*: (this:Top, Ref(~lNode)) / (~lNodes: frzn, ~lChecked: frzn, ~lClassNames: frzn, ~lADsafeMarks: frzn, ~lNames: frzn, ~lPackedValues: frzn, ~lValues: frzn, ~lOffsetHeights: frzn, ~lOffsetWidths: frzn, ~lKeys: frzn, ~lStyles: frzn, ~lEvent: frzn, ~lEventTarget: frzn, ~lSelector: frzn, ~lRange: frzn, ~lQuery: frzn, ~lBunches: frzn, ~lBunch: frzn, ~lStyle: frzn, ~lSelection: frzn, ~lNode: frzn, ~lDocument: frzn, ~lDom: frzn, ~lF: frzn, ~lId: frzn, ~lLib: frzn) -> Top / (~lNodes: frzn, ~lChecked: frzn, ~lClassNames: frzn, ~lADsafeMarks: frzn, ~lNames: frzn, ~lPackedValues: frzn, ~lValues: frzn, ~lOffsetHeights: frzn, ~lOffsetWidths: frzn, ~lKeys: frzn, ~lStyles: frzn, ~lEvent: frzn, ~lEventTarget: frzn, ~lSelector: frzn, ~lRange: frzn, ~lQuery: frzn, ~lBunches: frzn, ~lBunch: frzn, ~lStyle: frzn, ~lSelection: frzn, ~lNode: frzn, ~lDocument: frzn, ~lDom: frzn, ~lF: frzn, ~lId: frzn, ~lLib: frzn) */
+/* (this:Top, Ref(~lNode)) / (~lNodes: frzn, ~lChecked: frzn, ~lClassNames:
+   frzn, ~lADsafeMarks: frzn, ~lNames: frzn, ~lPackedValues: frzn, ~lValues:
+   frzn, ~lOffsetHeights: frzn, ~lOffsetWidths: frzn, ~lKeys: frzn, ~lStyles:
+   frzn, ~lEvent: frzn, ~lEventTarget: frzn, ~lSelector: frzn, ~lRange: frzn,
+   ~lQuery: frzn, ~lBunches: frzn, ~lBunch: frzn, ~lStyle: frzn, ~lSelection:
+   frzn, ~lNode: frzn, ~lDocument: frzn, ~lDom: frzn, ~lF: frzn, ~lId: frzn,
+   ~lLib: frzn) -> Top / (~lNodes: frzn, ~lChecked: frzn, ~lClassNames: frzn,
+   ~lADsafeMarks: frzn, ~lNames: frzn, ~lPackedValues: frzn, ~lValues: frzn,
+   ~lOffsetHeights: frzn, ~lOffsetWidths: frzn, ~lKeys: frzn, ~lStyles: frzn,
+   ~lEvent: frzn, ~lEventTarget: frzn, ~lSelector: frzn, ~lRange: frzn, ~lQuery:
+   frzn, ~lBunches: frzn, ~lBunch: frzn, ~lStyle: frzn, ~lSelection: frzn,
+   ~lNode: frzn, ~lDocument: frzn, ~lDom: frzn, ~lF: frzn, ~lId: frzn, ~lLib:
+   frzn) */
 
-/* ( node: Ref(~lNode), func:(Ref(~lNode)) -> Top, skip: Bool) -> Top */ "#extern";
+/*: ( node: Ref(~lNode), func:(Ref(~lNode)) -> Top, skip: Bool) -> Top */ "#extern";
 
 var purge_event_handlers = function(node) /*: (node: Ref(~lNode)) -> Top */
 {
