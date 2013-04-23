@@ -109,7 +109,7 @@ weak (~lNode: {
     firstChild           : Ref(~lNode),
     focus                : () -> Top,   
     getComputedStyle     : (this: Ref(~lNode), node : Ref(~lNode), str  : Str) -> Ref(~lStyle),
-    getElementsByTagName : [;L;] (this: Ref(~lNode), name : Str) / () -> Ref(L) / (L: {Arr(Ref(~lNode))|(packed v)} > lArrPro),
+    getElementsByTagName : [;L] (this: Ref(~lNode), name : Str) / () -> Ref(L) / (L: {Arr(Ref(~lNode))|(packed v)} > lArrPro),
     getParent            : (this: Ref(~lNode)) -> Ref(~lNode),
     insertBefore         : (this: Ref(~lNode), Ref(~lNode), Ref(~lNode)) -> Top,
     name                 : Str,

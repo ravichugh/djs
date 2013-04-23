@@ -5,7 +5,11 @@ var error = /*: {( and (v::(Str) -> { FLS }) (v:: () -> { FLS }))} */ "#extern";
         (dom v {"empty_"}) ((sel v "empty_")::(Ref(~lNode)) -> Top)
     )} */ "#define";
 
+
 var hunter /*: Ref tySimpleHunter */ = {}; //"#extern";
+
+
+
 /*: tyPecker {
     dot        : (Ref(~lNode)) -> Bool ,
     amber      : (Ref(~lNode)) -> Bool ,
@@ -30,10 +34,11 @@ var hunter /*: Ref tySimpleHunter */ = {}; //"#extern";
     text       : (Ref(~lNode)) -> Bool ,
     trim       : (Ref(~lNode)) -> Bool ,
     unchecked  : (Ref(~lNode)) -> Top  ,
-    visible    : (Ref(~lNode)) -> Top
+    visible    : (Ref(~lNode)) -> Top ,
+    _: Bot
   } */ "#define"; 
 
-var pecker /*: Ref tyPecker */  = {}; //"#extern";
+//var pecker /*: Ref tyPecker */  = {}; //"#extern";
 
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
 
@@ -44,7 +49,12 @@ var value  /*: {(or (Str v) (= v undefined))} */ = "#extern";
 var flipflop /*: Bool */ = "#extern";
 
 var quest = function(query, nodes) 
-  /*: (Ref(~lQuery), Ref(~lNodes)) -> Ref(~lNodes) */
+/*: (query:Ref, Ref(~lNodes)) / (query: {Arr(Ref(~lSelector))|(packed v)} > query.pro) 
+    -> Ref(~lNodes) / (query: sameExact) */
+/* (query:Ref, nodes:Ref) / (
+      query: {Arr(Ref(~lSelector))|(packed v)} > query.pro,
+      nodes: {Arr(Ref(~lNode))|(packed v)} > nodes.pro) 
+    -> Ref(~lNodes) / (query: sameExact) */
 {
   var selector /*: Ref(~lSelector) */ = null;
 
@@ -56,15 +66,9 @@ var quest = function(query, nodes)
 
   // Step through each selector.
 
-  /*: query lQuery */ "#thaw";
-  query.length;
-
-  /*: ( &nodes: Ref(~lNodes),
-        &query: Ref(lQuery), lQuery: {Arr(Ref(~lSelector))|(packed v)} > lArrPro
-      )
-      -> sameType  */
+  /*: ( &nodes: Ref(~lNodes) ) -> sameType  */
   for (i = 0; i < query.length; i += 1) {
-    selector = query[0];
+    selector = query[i];
     /*: selector lSelector */ "#thaw";
     name = selector.name;
     var func = hunter[selector.op];
@@ -76,34 +80,35 @@ var quest = function(query, nodes)
     // Accumulate all the nodes it finds.
 
     if (typeof func === 'function') {
-//
-//      if (star) {
-//        error("ADsafe: Query violation: *" + selector.op +
-//            (selector.name || ''));
-//      }
-//
-//      /*: result lResult */ "#thaw";
-//      result = /*: lResultEmpty {Arr(Ref(~lNode))|(packed v)} */ [];
-//      /*: result (~lNodes, thwd lResult) */ "#freeze";
-//      
-//      /*:  nodes  lNodes */ "#thaw";
-//      cond = i < nodes.length; 
-//      /*: nodes (~lNodes, thwd lNodes) */ "#freeze";
-//
-//      /*: ( &nodes: Ref(~lNodes)) -> sameType */
-//      for (j = 0; cond; j += 1) {
-//        /*: nodes lNodes */ "#thaw";
-//        cond = j < nodes.length;
-//        if (j < nodes.length) {
-//          var nn = nodes[j];
-//          /*: nodes (~lNodes, thwd lNodes) */ "#freeze";
-////TODO:           
-////          func(nn);
-//        }
-//        else {
-//          /*: nodes (~lNodes, thwd lNodes) */ "#freeze";
-//        }
-//      }
+
+      if (star) {
+        error("ADsafe: Query violation: *" + selector.op +
+            (selector.name || ''));
+      }
+
+      /*: result lResult */ "#thaw";
+      result = /*: lResultEmpty {Arr(Ref(~lNode))|(packed v)} */ [];
+      /*: result (~lNodes, thwd lResult) */ "#freeze";
+      
+      /*:  nodes  lNodes */ "#thaw";
+      cond = i < nodes.length; 
+      /*: nodes (~lNodes, thwd lNodes) */ "#freeze";
+
+      /*: ( &nodes: Ref(~lNodes)) -> sameType */
+      for (j = 0; cond; j += 1) {
+        /*: nodes lNodes */ "#thaw";
+        cond = j < nodes.length;
+        if (j < nodes.length) {
+          var nn = nodes[j];
+          /*: nodes (~lNodes, thwd lNodes) */ "#freeze";
+//TODO:           
+//          func(nn);
+        }
+        else {
+          /*: nodes (~lNodes, thwd lNodes) */ "#freeze";
+        }
+      }
+    
     }
     else {
 
@@ -123,7 +128,9 @@ var quest = function(query, nodes)
 //        switch (selector.op) {
 //          case ':first':
 //              assume(nodes != null);
+//              /*: nodes lNodes */ "#thaw";
 //              result = nodes.slice(0, 1);
+//              /*: nodes (~lNodes, thwd lNodes) */ "#freeze"; 
 //              break;
 //          case ':rest':
 //              /*: nodes lNodes */ "#thaw";
@@ -132,7 +139,7 @@ var quest = function(query, nodes)
 //              /*: nodes (~lNodes, thwd lNodes) */ "#freeze"; 
 //              break;
 //          default:
-//              error('ADsafe: Query violation: :' + selector.op);
+              error('ADsafe: Query violation: :' + selector.op);
 //        }
       }
       else {
@@ -170,6 +177,5 @@ var quest = function(query, nodes)
     }
     nodes = result;
   }
-  /*: query (~lQuery, thwd lQuery) */ "#freeze";
   return result;
 };
