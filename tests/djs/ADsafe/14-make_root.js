@@ -5,20 +5,23 @@ var error = /*: (message: Str)  -> { FLS } */ "#extern";
 
 var int_to_string = /*: (Int) -> Str */ "#extern";
 
+var stringFromCharCode = /*: (Int) -> Str */ "#extern";
+
+
 var star          /*: Bool */ = "#extern";
 var value         /*: Str */  = "#extern";       
 var event         /*: Ref(~lEvent) */ = "#extern";
 
 var the_range /*: Ref(~lRange) */  = null;
     
-var has_focus /*: Ref(~lNode) */ = "#extern";
+var has_focus /*: Ref(~htmlElt) */ = "#extern";
 
 var the_event /*: Ref(~lEvent) */ = "#extern";
 
 var ephemeral /*: {(or (= v null) (v:: Ref(~lBunch)))} */ = "#extern";
 
 var make_root = function(root, id) 
-  /*: [;L;] (root:Ref(~lNode) , id:Str) / () -> 
+  /* [;L;] (root:Ref(~htmlElt) , id:Str) / () -> 
       Ref(L) / (L: {Arr(Top) | 
                         (and 
                            (packed v) 
@@ -26,10 +29,12 @@ var make_root = function(root, id)
                            ({(v::Ref(~lDom))} (sel v 0))
                            ({(v::Ref(lBunchProto))} (sel v 1))
                         )} > lArrPro) */
-  /* [;L;] (root:Ref(~lNode) , id:Str) ->  Top */
+  /*: [;L;] (root:Ref(~htmlElt) , id:Str) ->  Top */
 
 {
-//TODO: slow 
+//TODO: SLOW DOWN !!! ~ 11 sec
+//  /*: root lhtmlElt */ "#thaw";
+//  assume(root != null);
 //  if (id) {
 //    if (root.tagName !== 'DIV') {
 //      error('ADsafe: Bad node.');
@@ -39,17 +44,18 @@ var make_root = function(root, id)
 //      error('ADsafe: Bad node.');
 //    }
 //  };
+//  /*: root (~htmlElt, thwd lhtmlElt) */ "#freeze";
 
   // A Bunch is a container that holds zero or more dom nodes.
   // It has many useful methods.
 
   function Bunch(nodes)
-    /*: new (this:Ref, nodes: Ref(~lNodes)) / (this: Empty > lBunchProto) -> Ref(~lBunch) / () */
+    /*: new (this:Ref, nodes: Ref(~htmlElts)) / (this: Empty > lBunchProto) -> Ref(~lBunch) / () */
   {
     this.___nodes___ = nodes;
-    /*: nodes lNodes */ "#thaw";
+    /*: nodes htmlElts */ "#thaw";
     this.___star___ = star && nodes.length > 1;
-    /*: nodes (~lNodes, thwd lNodes) */ "#freeze";
+    /*: nodes (~htmlElts, thwd htmlElts) */ "#freeze";
     star = false;
     var self = this;
     /*: self (~lBunch,frzn) */ "#freeze";
@@ -181,59 +187,59 @@ var make_root = function(root, id)
 //    )}*/ "#extern";
 //
 
-//PV: changed the structure considerably
-Bunch.prototype.append = append;
-//TODO: Commenting rest of the functions to scale  
-//Bunch.prototype.blur = blur;
-//Bunch.prototype.check = check;
-//Bunch.prototype['class'] = class_;
-//Bunch.prototype.clone = clone;
-//Bunch.prototype.count = count;
-//Bunch.prototype.each = each;
-//Bunch.prototype.empty = empty;
-//Bunch.prototype.enable = enable;
-//Bunch.prototype.ephemeral_ = ephemeral_;
-//Bunch.prototype.explode = explode;
-Bunch.prototype.fire = fire;
-//Bunch.prototype.focus = focus;
-//Bunch.prototype.fragment = fragment;
-//Bunch.prototype.getCheck = getCheck; 
-//Bunch.prototype.getClass = getClass;
-//Bunch.prototype.getClasses = getClasses;
-//Bunch.prototype.getMark = getMark;
-//Bunch.prototype.getMarks = getMarks;
-//Bunch.prototype.getName = getName;
-//Bunch.prototype.getNames = getNames;
-//Bunch.prototype.getOffsetHeight = getOffsetHeight;
-//Bunch.prototype.getOffsetHeights = getOffsetHeights; 
-//Bunch.prototype.getOffsetWidth = getOffsetWidth;
-//Bunch.prototype.getOffsetWidths = getOffsetWidths;
-//Bunch.prototype.getParent = getParent;
-//Bunch.prototype.getSelection = getSelection;
-//Bunch.prototype.getStyle = getStyle;
-//Bunch.prototype.getStyles = getStyles;
-//Bunch.prototype.getTagName = getTagName;
-//Bunch.prototype.getTagNames = getTagNames;
-//Bunch.prototype.getTitle = getTitle;
-//Bunch.prototype.getTitles = getTitles;
-//Bunch.prototype.getValue = getValue;
-//Bunch.prototype.getValues = getValues;
-//Bunch.prototype.klass = klass;
-//Bunch.prototype.mark = mark;
-//Bunch.prototype.off = off;
-//Bunch.prototype.on = on;
-//Bunch.prototype.protect = protect;
-//Bunch.prototype.q = q;
-Bunch.prototype.remove = remove;
-//Bunch.prototype.replace = replace;  //TODO
-//Bunch.prototype.select = select;
-//Bunch.prototype.selection = selection;
-//Bunch.prototype.style = style;
-//Bunch.prototype.tag = tag;
-//Bunch.prototype.text = text;
-//Bunch.prototype.title = title;
-//Bunch.prototype.value = value_;
-
+//  PV: changed the structure considerably
+//  Bunch.prototype.append = append;
+//  TODO: Commenting rest of the functions to scale  
+//  Bunch.prototype.blur = blur;
+//  Bunch.prototype.check = check;
+//  Bunch.prototype['class'] = class_;
+//  Bunch.prototype.clone = clone;
+//  Bunch.prototype.count = count;
+//  Bunch.prototype.each = each;
+//  Bunch.prototype.empty = empty;
+//  Bunch.prototype.enable = enable;
+//  Bunch.prototype.ephemeral_ = ephemeral_;
+//  Bunch.prototype.explode = explode;
+  Bunch.prototype.fire = fire;
+//  Bunch.prototype.focus = focus;
+//  Bunch.prototype.fragment = fragment;
+//  Bunch.prototype.getCheck = getCheck; 
+//  Bunch.prototype.getClass = getClass;
+//  Bunch.prototype.getClasses = getClasses;
+//  Bunch.prototype.getMark = getMark;
+//  Bunch.prototype.getMarks = getMarks;
+//  Bunch.prototype.getName = getName;
+//  Bunch.prototype.getNames = getNames;
+//  Bunch.prototype.getOffsetHeight = getOffsetHeight;
+//  Bunch.prototype.getOffsetHeights = getOffsetHeights; 
+//  Bunch.prototype.getOffsetWidth = getOffsetWidth;
+//  Bunch.prototype.getOffsetWidths = getOffsetWidths;
+//  Bunch.prototype.getParent = getParent;
+//  Bunch.prototype.getSelection = getSelection;
+//  Bunch.prototype.getStyle = getStyle;
+//  Bunch.prototype.getStyles = getStyles;
+//  Bunch.prototype.getTagName = getTagName;
+//  Bunch.prototype.getTagNames = getTagNames;
+//  Bunch.prototype.getTitle = getTitle;
+//  Bunch.prototype.getTitles = getTitles;
+//  Bunch.prototype.getValue = getValue;
+//  Bunch.prototype.getValues = getValues;
+//  Bunch.prototype.klass = klass;
+//  Bunch.prototype.mark = mark;
+//  Bunch.prototype.off = off;
+//  Bunch.prototype.on = on;
+//  Bunch.prototype.protect = protect;
+//  Bunch.prototype.q = q;
+//  Bunch.prototype.remove = remove;
+//  Bunch.prototype.replace = replace;  //TODO
+//  Bunch.prototype.select = select;
+//  Bunch.prototype.selection = selection;
+//  Bunch.prototype.style = style;
+//  Bunch.prototype.tag = tag;
+//  Bunch.prototype.text = text;
+//  Bunch.prototype.title = title;
+//  Bunch.prototype.value = value_;
+//
   
 //-------------------------------------------------------------------
 // Moving the definition of dom_event after the definition of Bunch.proto
@@ -242,19 +248,29 @@ Bunch.prototype.remove = remove;
   var allow_focus /*: Bool */ = true,
       dom /*: Ref(~lDom) */ = null,
 
-      dom_event = function (e) 
-      /*: (Ref(~lEvent)) -> Top */
+      dom_event = function (e) /*: (Ref(~lEvent)) -> Top */
       {
         var key /*: Str */ = "";
-        var the_actual_event = e || event;
+        var the_actual_event /*: Ref(~lEvent) */ = e || event;
+
+        ///XXX: thawing here does a big difference in performance.
+        /*: the_actual_event lEvent */ "#thaw";
+        assume(the_actual_event != null);
         var type = the_actual_event.type_;
+        assume(type != undefined);
+
 
         // Get the target node and wrap it in a bunch.
 
-        var the_target /*: Ref(~lNode) */ = the_actual_event.target || the_actual_event.srcElement;
+        var the_target = the_actual_event.target || the_actual_event.srcElement;
+        /*: the_actual_event (~lEvent, thwd lEvent) */ "#freeze";
 
-        var tt = /*: lTT Arr(Ref(~lNode)) */ [the_target];
-        /*: tt (~lNodes, frzn) */ "#freeze";
+        //PV: can either keep this or change the type of event to 
+        //definitely contain these fields.
+        assume(the_target != undefined);
+
+        var tt = /*: lTT {Arr(Ref(~htmlElt))|(packed v)} */ [the_target];
+        /*: tt (~htmlElts, frzn) */ "#freeze";
 
         var target = new Bunch(tt);
         var that /*: Ref(~lBunch) */ = target;
@@ -262,7 +278,7 @@ Bunch.prototype.remove = remove;
         // Use the PPK hack to make focus bubbly on IE.
         // When a widget has focus, it can use the focus method.
 
-//TODO: replaced switch with if statement below
+//PV: Original code begin
 //        switch (type) {
 //          case 'mousedown':
 //            allow_focus = true;
@@ -305,8 +321,9 @@ Bunch.prototype.remove = remove;
 //            allow_focus = true;
 //            break;
 //        }
+//PV: Original code end
 
-//TODO: if statements slow it down
+
 //        if (type == 'mousedown') {
 //          allow_focus = true;
 //          if (document.selection) {
@@ -316,54 +333,131 @@ Bunch.prototype.remove = remove;
 //        else if(type == 'focus' || type == 'focusin') {
 //            allow_focus = true;
 //            has_focus = the_target;
-//            the_actual_event.cancelBubble = false;
+////XXX: SLOW DOWN !!! ~ 11 sec            
+////            /*: the_actual_event lEvent */ "#thaw";
+////            the_actual_event.cancelBubble = false;
+////            /*: the_actual_event (~lEvent, thwd lEvent) */ "#freeze";
 //            type = 'focus';
 //        }
 //        else if (type == 'blur' || type == 'focusout') {
 //          allow_focus = false;
-////TODO          
-////          has_focus = null;
+//          has_focus = null;
 //          type = 'blur';
 //        }
 //        else if (type == 'keypress') {
 //          allow_focus = true;
 //          has_focus = the_target;
-////TODO: Add String.fromCharCode to prims                        
-////          key = String.fromCharCode(the_actual_event.charCode || the_actual_event.keyCode);
-////          switch (key) {
-////            case '\u000d':
-////            case '\u000a':
-////              type = 'enterkey';
-////              break;
-////            case '\u001b':
-////              type = 'escapekey';
-////              break;
-////          }
+//          //PV: original code begin
+//          //key = String.fromCharCode(the_actual_event.charCode || the_actual_event.keyCode);
+//          //PV: original code end
+//
+////XXX: SLOW DOWN !!! ~ 9 sec
+////          /*: the_actual_event lEvent */ "#thaw";
+////          var tmp = the_actual_event.charCode || the_actual_event.keyCode;
+////          key = stringFromCharCode(tmp);
+////          /*: the_actual_event (~lEvent, thwd lEvent) */ "#freeze";
+//          
+//          if (key == '\u000d' || key == '\u000a') {
+//            type = 'enterkey';
+//          }
+//          else if (key == '\u001b') {
+//            type = 'escapekey';
+//          }
 //        } 
 //        // This is a workaround for Safari.
 //        else if(type == 'click') {
 //          allow_focus = true;
 //        }
-//
-//
+
+
+//XXX: SLOW DOWN !!! ~ 55 sec 
+//        /*: the_actual_event lEvent */ "#thaw";
 //        if (the_actual_event.cancelBubble &&
 //            the_actual_event.stopPropagation) {
 //              the_actual_event.stopPropagation();
 //            }
+//        /*: the_actual_event (~lEvent, thwd lEvent) */ "#freeze";
 
         // Make the event object.
-        
-//PV: included file 30-the_event.js
+//
+//        /*: the_actual_event le */ "#thaw";
+//        assume(the_actual_event != null);
+//
+//        var tmp_event = {
+//          altKey: the_actual_event.altKey,
+//          ctrlKey: the_actual_event.ctrlKey,
+//          bubble: function () /*: () -> Top */
+//          {
+//
+//      //TODO: try-catch, self-reference
+//      //      // Bubble up. Get the parent of that node. It becomes the new that.
+//      //      // getParent throws when bubbling is not possible.
+//      //
+//      //      try {
+//      //        var parent = that.getParent();
+//      //        b = parent.___nodes___[0];
+//      //        that = parent;
+//      //        the_event.that = that;
+//      //  
+//      //        // If that node has an event handler, fire it. Otherwise, bubble up.
+//      //  
+//      //        if (b['___ on ___'] &&
+//      //            b['___ on ___'][type]) {
+//      //              that.fire(the_event);
+//      //            } else {
+//      //              the_event.bubble();
+//      //            }
+//      //      } catch (e) {
+//      //        error(e);
+//      //      }
+//          },
+//          key: key,
+//          //PV: question: what gets added in the place of ~lEvent if we do not specify
+//          //it ??
+//          preventDefault: function () /*: () / (~lEvent:frzn) -> Top / sameType */
+//          {
+//            /*: the_actual_event le1 */ "#thaw";
+//            assume(the_actual_event != null);
+//            if (the_actual_event.preventDefault) {
+//              the_actual_event.preventDefault();
+//            }
+//            the_actual_event.returnValue = false;
+//            /*: the_actual_event (~lEvent, thwd le1) */ "#freeze";
+//          },
+//          shiftKey: the_actual_event.shiftKey,
+////XXX Cannot TC because target and that should be htmlElements but get assigned 
+////Bunches instead
+////          target: target,
+////          that: that,
+//          type: type,
+//          x: the_actual_event.clientX,
+//          y: the_actual_event.clientY
+//        };
+//
+//        /*: the_actual_event (~lEvent, thwd le) */ "#freeze";
+//
+//        /*: tmp_event (~lEvent, frzn) */ "#freeze";
+//        the_event = tmp_event;
+
         
         // if the target has event handlers, then fire them. otherwise, bubble up.
 
-//        if (the_target['___ on ___'] &&
-////TODO            
-////            the_target['___ on ___'][the_event.type])  //PV: original code - not TCing 
-//            the_target['___ on ___']["a"]) 
-//        {
-//          target.fire(the_event);
-//        } 
+        /*: the_target elt1 */ "#thaw";
+        assume(the_target != null);
+        assert(/*: Ref(~lEvent) */ (the_event));
+        /*: the_event ev1 */ "#thaw";
+        assume(the_event != null);
+            
+        if (the_target['___ on ___'] 
+//TODO            
+//            the_target['___ on ___'][the_event.type_])  //PV: original code - not TCing 
+//            the_target['___ on ___']["a"]
+              ) 
+        {
+          target.fire(the_event);
+        } 
+        /*: the_event (~lEvent, thwd ev1) */ "#freeze";
+        /*: the_target (~htmlElt, thwd elt1) */ "#freeze";
 //        else {
 //          var brk /*: Bool */ = false;
 //          for (;!brk;) {
@@ -376,8 +470,8 @@ Bunch.prototype.remove = remove;
 ////                the_target['___ on ___'][the_event.type]) 
 //                the_target['___ on ___']["a"]) 
 //            {
-//              var tt1 = /*: lTT Arr(Ref(~lNode)) */ [the_target];
-//              /*: tt1 (~lNodes, frzn) */ "#freeze";
+//              var tt1 = /*: lTT Arr(Ref(~htmlElt)) */ [the_target];
+//              /*: tt1 (~htmlElts, frzn) */ "#freeze";
 //              that = new Bunch(tt1);
 //              /*: the_event lEvent */ "#thaw";
 //              the_event.that = that;
@@ -426,19 +520,19 @@ Bunch.prototype.remove = remove;
 //
 //      var dom_q = 
 //        /*: [;L;] (text: Str) /  ( &hunter: Ref(L), L: {
-//          empty_  : (Ref(~lNode)) -> Top ,
-//          plus    : (Ref(~lNode)) -> Top ,
-//          greater : (Ref(~lNode)) -> Top ,
-//          pound   : (Ref(~lNode)) -> Top ,
-//          slash   : (Ref(~lNode)) -> Top ,
-//          star    : (Ref(~lNode)) -> Top ,
+//          empty_  : (Ref(~htmlElt)) -> Top ,
+//          plus    : (Ref(~htmlElt)) -> Top ,
+//          greater : (Ref(~htmlElt)) -> Top ,
+//          pound   : (Ref(~htmlElt)) -> Top ,
+//          slash   : (Ref(~htmlElt)) -> Top ,
+//          star    : (Ref(~htmlElt)) -> Top ,
 //          _       : Bot
 //          } > lObjPro)  
 //          -> Ref(~lBunch) / sameType */ "#extern";
 //
 //        var dom_remove = /*: () -> Top */ "#extern";
 //
-//      var dom_row = /*: (values: Ref(~lNodes)) -> Ref(~lBunch) */ "#extern";
+//      var dom_row = /*: (values: Ref(~htmlElts)) -> Ref(~lBunch) */ "#extern";
 //
 //      var dom_tag = /*: (tag_: Str, type_: Str, name: Str) -> Ref(~lBunch) */ "#extern";
 //
@@ -486,6 +580,6 @@ Bunch.prototype.remove = remove;
 
 
 
-      return /*: L {Arr(Top)|(and  (packed v)  (= (len v) 2)  ({(v::Ref(~lDom))} (sel v 0))   ({(v::Ref(lBunchProto))} (sel v 1))) } */ [dom, Bunch.prototype];
+//      return /*: L {Arr(Top)|(and  (packed v)  (= (len v) 2)  ({(v::Ref(~lDom))} (sel v 0))   ({(v::Ref(lBunchProto))} (sel v 1))) } */ [dom, Bunch.prototype];
 //      return [dom, Bunch.prototype];
 };

@@ -1,4 +1,4 @@
-weak (~lNodes         : { Arr(Ref(~lNode)) | (packed v)} > lArrPro)
+weak (~htmlElts       : { Arr(Ref(~htmlElt)) | (packed v)} > lArrPro)
 weak (~lChecked       : { Arr(Bool)         | (packed v)} > lArrPro)
 weak (~lClassNames    : { Arr(Str)          | (packed v)} > lArrPro)
 weak (~lADsafeMarks   : { Arr(Str)          | (packed v)} > lArrPro)
@@ -12,19 +12,20 @@ weak (~lStyles        : Arr(Str) > lArrPro)
 
 weak (~lEvent     : { Dict | 
   (and 
-    (* Needed to keep this type for the functions cause they are also objects *)
-    (implies (has v "altKey")           (Bool (sel v "altKey")))
-    (implies (has v "bubble")           (Bool (sel v "bubble")))
-    (implies (has v "cancelBubble")     ({(and (v:: (Ref(~lEvent)) -> Top) (= (tag v) "function"))} (sel v "cancelBubble")))
-    (implies (has v "ctrlKey")          (Bool (sel v "ctrlKey")))
-    (implies (has v "key")              (Bool (sel v "key")))
-    (implies (has v "preventDefault")   (Str (sel v "preventDefault")))
-    (implies (has v "shiftKey")         ({(or (v:: (Ref(~lEvent)) -> Top) (v::Null))} (sel v "shiftKey")))
-    (implies (has v "srcElement")       (Bool (sel v "srcElement")))
-    (implies (has v "stopPropagation")  ({(and (v::Ref(~lNode)) (= (tag v) "function"))} (sel v "stopPropagation")))
-    (implies (has v "target")           ({(and (v:: (Ref(~lEvent)) -> Top) (= (tag v) "function"))} (sel v "target")))
-    (implies (has v "that")             ({(or (v::Ref(~lNode)) (v::Null))} (sel v "that")))
-    (implies (has v "type_")            ({Str|(= v "__farray__")} (sel v "type_")))
+    (*(and (has v "altKey")           (Bool (sel v "altKey")))*)
+    (*(and (has v "bubble")           ((sel v "bubble") :: () -> Top))*)
+    (implies (has v "cancelBubble")     (Bool (sel v "cancelBubble")))
+    (*(implies (has v "ctrlKey")          (Bool (sel v "ctrlKey")))*)
+    (implies (has v "key")              (Str (sel v "key")))
+    (implies (has v "preventDefault")   ((sel v "preventDefault") :: () -> Top))
+    (*(implies (has v "shiftKey")         (Bool (sel v "shiftKey")))*)
+    (implies (has v "srcElement")       ((sel v "srcElement") :: Ref(~htmlElt)))
+    (implies (has v "stopPropagation")  ((sel v "stopPropagation") :: () -> Top))
+    (implies (has v "target")           ((sel v "target") :: Ref(~htmlElt)))
+    (implies (has v "that")             ((sel v "that") :: Ref(~lBunch)))
+    (and (has v "type_")            (Str (sel v "type_")))
+    (implies (has v "charCode")         (Int (sel v "charCode")))
+    (implies (has v "keyCode")          (Int (sel v "keyCode")))
     (* TODO: giving a restricted type here *)
     (implies (has v "__farray__")        ({(= (tag v) "function")} (sel v "__farray__")))
   )} > lObjPro)
@@ -36,9 +37,9 @@ weak (~lEvent     : { Dict |
   key             : Str, 
   preventDefault  : (this: Ref(~lEvent)) -> Top,
   shiftKey        : Bool,
-  srcElement      : Ref(~lNode),
+  srcElement      : Ref(~htmlElt),
   stopPropagation : (this: Ref(~lEvent))-> Top,
-  target          : Ref(~lNode),    (* could also be Ref(~lEventTarget) *)
+  target          : Ref(~htmlElt),    (* could also be Ref(~lEventTarget) *)
   that            : Ref(~lBunch),
   type_           : Str,
   _               : Bot                         
@@ -74,7 +75,7 @@ weak (~lQuery: { Arr(Ref(~lSelector)) | (packed v) } > lArrPro)
 weak (~lBunches: {Arr(Ref(~lBunch))|(packed v)} > lArrPro)
 
 weak (~lBunch    : {
-  "___nodes___"  : Ref(~lNodes),
+  "___nodes___"  : Ref(~htmlElts),
   "___star___"   : Bool,
   _              : Bot    (* Needed to inherit fields from prototype *)
 } > lBunchProto)
@@ -88,43 +89,43 @@ weak (~lStyle : {
 weak (~lSelection: { createRange: () -> Ref(~lRange) }  > lObjPro) 
 
 
-weak (~lNode: {
+weak (~htmlElt: {
     "___ on ___"         : Ref(~lEvent),
     "___adsafe root___"  : Str,
     "_adsafe mark_"      : Str,
-    addEventListener     : (this: Ref(~lNode), Str, (Ref(~lEvent)) -> Top, Bool) -> Top,
-    appendChild          : (this: Ref(~lNode), Ref(~lNode)) -> Top,
+    addEventListener     : (this: Ref(~htmlElt), Str, (Ref(~lEvent)) -> Top, Bool) -> Top,
+    appendChild          : (this: Ref(~htmlElt), Ref(~htmlElt)) -> Top,
     autocomplete         : Str,
-    blur                 : (this: Ref(~lNode)) -> Top,
+    blur                 : (this: Ref(~htmlElt)) -> Top,
     change               : Ref(~lEvent),
     checked              : Bool,
-    childNodes           : Ref(~lNodes),
+    childNodes           : Ref(~htmlElts),
     className            : Str,
-    cloneNode            : (this: Ref(~lNode), deep:Bool) -> Ref(~lNode),
+    cloneNode            : (this: Ref(~htmlElt), deep:Bool) -> Ref(~htmlElt),
     createTextRange      : () -> Ref(~lRange), 
     currentStyle         : Ref(~lStyle),
     disabled             : Bool,
-    document             : Ref(~lNode),
+    document             : Ref(~htmlElt),
     fire                 : (NotUndef) -> Top,
-    firstChild           : Ref(~lNode),
+    firstChild           : Ref(~htmlElt),
     focus                : () -> Top,   
-    getComputedStyle     : (this: Ref(~lNode), node : Ref(~lNode), str  : Str) -> Ref(~lStyle),
-    getElementsByTagName : [;L] (this: Ref(~lNode), name : Str) / () -> Ref(L) / (L: {Arr(Ref(~lNode))|(packed v)} > lArrPro),
-    getParent            : (this: Ref(~lNode)) -> Ref(~lNode),
-    insertBefore         : (this: Ref(~lNode), Ref(~lNode), Ref(~lNode)) -> Top,
+    getComputedStyle     : (this: Ref(~htmlElt), node : Ref(~htmlElt), str  : Str) -> Ref(~lStyle),
+    getElementsByTagName : [;L] (this: Ref(~htmlElt), name : Str) / () -> Ref(L) / (L: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro),
+    getParent            : (this: Ref(~htmlElt)) -> Ref(~htmlElt),
+    insertBefore         : (this: Ref(~htmlElt), Ref(~htmlElt), Ref(~htmlElt)) -> Top,
     name                 : Str,
-    nextSibling          : Ref(~lNode),
+    nextSibling          : Ref(~htmlElt),
     nodeName             : Str,
     nodeValue            : Str,
     offsetHeight         : Num,
     offsetWidth          : Num,
     onchange             : (this:Ref(~lEvent), Ref(~lEvent)) -> Top,
-    parent               : Ref(~lNode),
-    parentNode           : Ref(~lNode),
-    removeChild          : (this: Ref(~lNode), Ref(~lNode)) -> Top,
-    removeElement        : (this: Ref(~lNode), Ref(~lNode)) -> Top,
-    replaceChild         : (this: Ref(~lNode), Ref(~lNode), Ref(~lNode)) -> Top,
-    select               : (this: Ref(~lNode)) -> Top,   
+    parent               : Ref(~htmlElt),
+    parentNode           : Ref(~htmlElt),
+    removeChild          : (this: Ref(~htmlElt), Ref(~htmlElt)) -> Top,
+    removeElement        : (this: Ref(~htmlElt), Ref(~htmlElt)) -> Top,
+    replaceChild         : (this: Ref(~htmlElt), Ref(~htmlElt), Ref(~htmlElt)) -> Top,
+    select               : (this: Ref(~htmlElt)) -> Top,   
     selectionEnd         : Int,
     selectionStart       : Int,
     style                : Ref(~lStyle),
@@ -134,11 +135,11 @@ weak (~lNode: {
   } > lObjPro)
 
 weak (~lDocument   : {
-    createDocumentFragment : (this:Ref(~lDocument)) -> Ref(~lNode),
-    createElement  : (this: Ref(~lDocument), s: Str) -> Ref(~lNode),
-    createTextNode : (this: Ref(~lDocument), s: Str) -> Ref(~lNode),
-    defaultView    : Ref(~lNode),
-    getElementById : (this: Ref(~lDocument), s : Str) -> Ref(~lNode),
+    createDocumentFragment : (this:Ref(~lDocument)) -> Ref(~htmlElt),
+    createElement  : (this: Ref(~lDocument), s: Str) -> Ref(~htmlElt),
+    createTextNode : (this: Ref(~lDocument), s: Str) -> Ref(~htmlElt),
+    defaultView    : Ref(~htmlElt),
+    getElementById : (this: Ref(~lDocument), s : Str) -> Ref(~htmlElt),
     selection      : Ref(~lSelection)
   } > lObjPro)
 

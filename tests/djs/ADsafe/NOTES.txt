@@ -60,8 +60,6 @@ PENDING
 
 - Regular expresions
 
-- Array slice
-
 - Higher-order functions:  
   need to restore Sub.checkArrows
 
@@ -78,4 +76,19 @@ QUESTIONS
   }
   Is this location a single one?
 
-- For Bunch.prototype.{empty, enable, fire} how general should the type annotation for value be?
+- The following is not allowed, because r is considered
+thawed in the body of foo. Can this be relaxed?
+
+  thaw r;
+
+  var foo = function() {
+
+    thaw r;
+    r.a ... 
+    freeze r;
+
+  }
+
+  freeze r;
+
+  see 30-the_event.js
