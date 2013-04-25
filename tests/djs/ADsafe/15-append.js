@@ -16,87 +16,105 @@ var foo = function(a)
 
 
 var append = function (appendage) 
-/*: {(and
-    (v :: (this: Ref(~lBunch), appendage: Ref(lArr)) / (lArr: { Arr(Ref(~lBunch)) | (packed v) }  > lArrPro) -> Ref(~lBunch) / sameType)
-    (v :: (this: Ref(~lBunch), appendage: Ref(lBunchObj)) / (lBunchObj: {"___nodes___": Ref(~lNodes) } > lObjPro, lArr: { Arr(Ref(~lBunch)) | (packed v) }  > lArrPro ) -> Ref(~lBunch) /sameType) 
-    )} */
+//TODO: this should work with an intersection type
+/* (this: Ref(~lBunch), appendage: Ref(lArr)) 
+    / (lArr: { Arr(Ref(~lBunch)) | (packed v) }  > lArrPro) 
+    -> Ref(~lBunch) / sameType */ 
+
+/*: (this: Ref(~lBunch), appendage: Ref(lBunchObj)) 
+    / ( lBunchObj: {"___nodes___": Ref(~htmlElts) } > lObjPro) 
+    -> Ref(~lBunch) /sameType */
 {
   /*: this lBunch */ "#thaw";
   assume(this != null);
   reject_global(this);
   /*: this (~lBunch, thwd lBunch) */ "#freeze";
 
-  var b /* Ref(~lNodes) */ = this.___nodes___,
+  var b /* Ref(~htmlElts) */ = this.___nodes___,
       flag /*: Bool */ = false,
       i /*: {Int | (>= v 0)}*/ = 0 ,
       j /*: {Int | (>= v 0)}*/ = 0 ,
-      node /*: Ref(~lNode) */ = null,
-      rep /*: Ref(~lNodes) */ = null;
+      node /*: Ref(~htmlElt) */ = null,
+      rep /*: Ref(~htmlElts) */ = null;
 
-  var cond_0 /*: Bool */ = true;
-  var cond_1 /*: Bool */ = true;
-  var cond_2 /*: Bool */ = true;
+  var cond /*: Bool */ = true;
 
-  /*: b lNodes */ "#thaw";
-  cond_0 = b.length === 0;
-  /*: b (~lNodes, thwd lNodes) */ "#freeze";
-  if (cond_0 || !appendage) {
+  /*: b htmlElts */ "#thaw";
+  cond = b.length === 0;
+  /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
+  if (cond || !appendage) {
     return this;
   }
 
 
   if (isArray(appendage)) {
-    assert(isArray(appendage));
-    /*: b lNodes */ "#thaw";
+//    /*: b htmlElts */ "#thaw";
 //    if (appendage.length !== b.length) {
-//      error('ADsafe: Array length: ... ');
-////TODO      
-////      error('ADsafe: Array length: ' + int_to_string(b.length) + '-' + int_to_string(value.length));
+//      error('ADsafe: Array length: ' + int_to_string(b.length) + '-' + int_to_string(value.length));
 //    }
-    cond_1 = i < b.length && i < appendage.length; 
-    /*: b (~lNodes, thwd lNodes) */ "#freeze";
-    
-
-//TODO: if-false
-//    /*: ( (*&b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(and (packed v) )} > lArrPro,*)
-//          &appendage: Ref(lArr), lArr: {Arr(Ref(~lBunch))|(packed v)} > lArrPro
-//        ) -> sameExact */
-//    for (i = 0; cond_1 ; i += 1) {
+//    cond = i < b.length && i < appendage.length; 
+//    /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
+//
+//    /*: (&b: Ref(~htmlElts), lArr: {Arr(Ref(~lBunch))|(packed v)} > lArrPro) -> sameType */
+//    for (i = 0; cond ; i += 1) {
 //      
-//      /*: b lNodes */ "#thaw";
+//      /*: b htmlElts */ "#thaw";
 //      if (i < b.length && i < appendage.length) {
-//        cond_1 = i < b.length && i < appendage.length;
-//        /*: b (~lNodes, thwd lNodes) */ "#freeze";
+//        cond = i < b.length && i < appendage.length;
+//        var bi = b[i];
+//        /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
 //        
-////        var bch = appendage[i];
-////        rep = bch.___nodes___;
-////        
-////        /*: rep lNodes */ "#thaw";
-////        cond_1 = j < rep.length;
-////        /*: rep (~lNodes, thwd lNodes) */ "#freeze";
-////
-////        for (j = 0; cond_1; j += 1) {
-////          b[i].appendChild(rep[j]);
-////        }
+//        var bch = appendage[i];
+//        rep = bch.___nodes___;
+//        
+//        /*: rep htmlElts */ "#thaw";
+//        assume(rep != null);
+//        /*: ( &rep: Ref(htmlElts), 
+//              htmlElts: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro) 
+//            -> sameType */
+//        for (j = 0; j < rep.length; j += 1) {
+//          bi.appendChild(rep[j]);
+//        }
+//        /*: rep (~htmlElts, thwd htmlElts) */ "#freeze";
+//      }
+//      else {
+//        /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
 //      }
 //    }
   }
-//  else {
-//    rep = appendage.___nodes___;
-//    assert(/*: Ref(lNodes) */ (b));
-//    assert(/*: Ref(~lNodes) */ (rep));
-//    /*: (lNodes: {Arr(Ref(~lNode)) | (packed v)} > lArrPro) -> sameType */ 
-//    for (i = 0; i < b.length; i += 1) {
-//      node = b[i];
-//      //TODO: Will have to have rep and b thawed to make the assignment
-//      //for (j = 0; j < rep.length; j += 1) {
-//      //  node.appendChild(flag
-//      //      ? rep[j].cloneNode(true)
-//      //      : rep[j]);
-//      //}
-//      flag = true;
-//    }
-//  }
+  else {
+
+    /*: b htmlElts */ "#thaw";
+    cond = i < b.length; 
+    /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
+
+    rep = appendage.___nodes___;
+    /*: (&b: Ref(~htmlElts)) -> sameType */
+    for (i = 0; cond; i += 1) {
+      /*: b htmlElts */ "#thaw";
+      if (i < b.length) {
+        cond = i < b.length;
+        node = b[i];
+        /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
+
+        /*: rep htmlElts */ "#thaw";
+        assume(rep != null);
+        /*: ( &rep: Ref(htmlElts), 
+              htmlElts: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro) 
+            -> sameType */
+        for (j = 0; j < rep.length; j += 1) {
+          node.appendChild(flag
+              ? rep[j].cloneNode(true)
+              : rep[j]);
+        }
+        /*: rep (~htmlElts, thwd htmlElts) */ "#freeze";
+        flag = true;
+      }
+      else {
+        /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
+      }
+    }
+  }
         
 
   return this;
