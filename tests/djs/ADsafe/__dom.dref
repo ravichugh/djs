@@ -103,6 +103,8 @@ weak (~htmlElt: {
     checked              : Bool,
     childNodes           : Ref(~htmlElts),
     className            : Str,
+    (* Not sure if clone(boolean) should be added her *)
+    clone                : (this: Ref(~htmlElt), Bool) -> Ref(~htmlElt),
     cloneNode            : (this: Ref(~htmlElt), deep:Bool) -> Ref(~htmlElt),
     createTextRange      : () -> Ref(~lRange), 
     currentStyle         : Ref(~lStyle),

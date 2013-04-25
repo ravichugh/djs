@@ -9,12 +9,8 @@ Properties:
   4 widgets on the same page cannot communicate
 
 - Blacklist field names:
-  * "__proto__"
+  * "__proto__", ...
   * "__nodes__", "__star__": private fields
-
-- Proto: there are several safe prototypes
-
-- Ban guest scripts from accessing specific member names, denoted as "banned".
 
 
 ====================================================
@@ -27,32 +23,14 @@ From trying to typecheck the code:
   * Array.prototype.slice.call(nodelist, 0);
   * concat, ...
 
-- 09,11 has similar behavior to func04.js
-
 - 10 SLOW !!!
   if (query.length > 0 || match[5].length <= id.length ||
       match[5].slice(0, id.length) !== id) { ... } 
 
-- Add array.concat to fast path.
+- Intersection type signatures. Eg:
+  22, 24
 
-- it would be quite convenient to add define in included files.
-
-- Cannot assing to: 
-  var foo = /*: Ref(~lWeak) */ "#extern";
-
-  foo = null;
-
-  Had to change to:
-  var foo /*: Ref(~lWeak) */ = null;
-
-- arguments: Array-like object corresponding to the arguments passed to a
-  function.
-
-- Model the window object 
-  * Add fields like: console
-
-- Add concatenation ('+') for strings in logic
-
+  
 
 ====================================================
 PENDING
@@ -64,6 +42,8 @@ PENDING
   need to restore Sub.checkArrows
 
 - Exception throwing/handling
+
+- Concatenation ('+') for strings in logic
 
 
 ====================================================
@@ -77,7 +57,7 @@ QUESTIONS
   Is this location a single one?
 
 - The following is not allowed, because r is considered
-thawed in the body of foo. Can this be relaxed?
+  thawed in the body of foo. Can this be relaxed?
 
   thaw r;
 

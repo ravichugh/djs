@@ -146,7 +146,7 @@ var off = function (type_) /*: (this: Ref(~lBunch), type_:Top) -> Ref(~lBunch) *
   return this;
 };
 
-var on = function (type_, func) 
+var on = function (type_, func)
 /*: (this: Ref(~lBunch), type_:Top, func: Top) -> Ref(~lBunch) */ {
   reject_global(this);
   if (typeof type_ !== 'string' || typeof func !== 'function') {
@@ -167,19 +167,19 @@ var on = function (type_, func)
   for (i = 0; i < b.length; i += 1) {
     node = b[i];
 
-//PV: Slow Down !!! ~ 45 sec
-    // The change event does not propogate, so we must put the handler on the
-    // instance.
-    if (type_ === 'change') {
-      ontype = 'on' + type_;
-      assume(ontype === 'onchange');
-      /*: node htmlElt */ "#thaw";
-      assume(node != null);
-      if (node[ontype] !== dom_event) {
-        node[ontype] = dom_event;
-      }
-      /*: node (~htmlElt, thwd htmlElt) */ "#freeze";
-    }
+////XXX: Slow Down !!! ~ 45 sec
+//    // The change event does not propogate, so we must put the handler on the
+//    // instance.
+//    if (type_ === 'change') {
+//      ontype = 'on' + type_;
+//      assume(ontype === 'onchange');
+//      /*: node htmlElt */ "#thaw";
+//      assume(node != null);
+//      if (node[ontype] !== dom_event) {
+//        node[ontype] = dom_event;
+//      }
+//      /*: node (~htmlElt, thwd htmlElt) */ "#freeze";
+//    }
 
     // Register an event. Put the function in a handler array, making one if it
     // doesn't yet exist for this type_ on this node.
@@ -194,18 +194,18 @@ var on = function (type_, func)
     
     /*: on lEvent */ "#thaw";
     assume(on != null);
-    //TODO    
+//TODO    
     if (owns(on, type_)) {
       assert(type_ in on);
       //assume(typeof on === 'object');
       //assume(isArray(on[type_]));
       //on[type_].push(func);
     }
-    else {
-      //TODO
-      assume(type_ === "nonexisting_field");
-      on[type_] = [func];
-    }
+//XXX: SLOW DOWN !!! ~ 40 sec     
+//    else {
+//      assume(type_ === "nonexisting_field");
+//      on[type_] = [func];
+//    }
     /*: on (~lEvent, thwd lEvent) */ "#freeze";
   }
   /*: b (~htmlElts, thwd htmlElts) */ "#freeze";

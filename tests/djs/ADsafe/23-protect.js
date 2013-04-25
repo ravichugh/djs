@@ -9,13 +9,13 @@ var reject_global =
     )} */ "#extern";
 
 function Bunch(nodes)
-  /*: new (this:Ref, nodes: Ref(~lNodes)) / (this: Empty > lBunchProto, ~lBunch: frzn) ->
+  /*: new (this:Ref, nodes: Ref(~htmlElts)) / (this: Empty > lBunchProto, ~lBunch: frzn) ->
     Ref(~lBunch) / (~lBunch: frzn) */
 {
   this.___nodes___ = nodes;
-  /*: nodes lNodes */ "#thaw";
+  /*: nodes htmlElts */ "#thaw";
   this.___star___ = star && nodes.length > 1;
-  /*: nodes (~lNodes, thwd lNodes) */ "#freeze";
+  /*: nodes (~htmlElts, thwd htmlElts) */ "#freeze";
   star = false;
   var self = this;
   /*: self (~lBunch,frzn) */ "#freeze";
@@ -30,7 +30,7 @@ var replace = /*: {(and
 Bunch.prototype.replace = replace;
 
 
-var quest = /*: (Ref(~lQuery), Ref(~lNodes)) -> Ref(~lNodes) */ "#extern";
+var quest = /*: (Ref(~lQuery), Ref(~htmlElts)) -> Ref(~htmlElts) */ "#extern";
 
 var parse_query = /*: (text: Str, id: Str) -> Ref(~lQuery) */ "#extern";
 
@@ -49,15 +49,15 @@ var protect = function ()
 {
   reject_global(this);
   var b = this.___nodes___;
-  /*: b lNodes */ "#thaw";
+  /*: b htmlElts */ "#thaw";
   var i /*: { Int | (>= v 0)} */ = 0;
   b.l;
-  /*: ( &i:i0:{Int|(>= v 0)}, &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
+  /*: ( &i:i0:{Int|(>= v 0)}, &b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro)
       -> sameType */ 
   for (i = 0; i < b.length; i += 1) {
     b[i]['___adsafe root___'] = '___adsafe root___';
   }
-  /*: b (~lNodes, thwd lNodes) */ "#freeze";
+  /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   return this;
 };
 
