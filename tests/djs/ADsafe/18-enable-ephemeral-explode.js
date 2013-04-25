@@ -1,8 +1,10 @@
-
-var error = /*: {( and (v::(Str) -> { FLS }) (v:: () -> { FLS }))} */ "#extern";
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
 
-/*: tyArr {Arr(Ref(~lNode))|(packed v)} > lArrPro */ "#define";
+var error = /*: {( and (v::(Str) -> { FLS }) (v:: () -> { FLS }))} */ "#extern";
+
+var int_to_string /*: (Int) -> Str */ = "#extern";
+
+/*: tyArr {Arr(Ref(~htmlElt))|(packed v)} > lArrPro */ "#define";
 
 var ephemeral /*: Ref(~lBunch) */ = "#extern";
 var star    /*: Bool */         = "#extern";
@@ -11,13 +13,13 @@ var star    /*: Bool */         = "#extern";
 // It has many useful methods.
 
 function Bunch(nodes)
-  /*: new (this:Ref, nodes: Ref(~lNodes)) / (this: Empty > lBunchProto, ~lBunch: frzn) ->
+  /*: new (this:Ref, nodes: Ref(~htmlElts)) / (this: Empty > lBunchProto, ~lBunch: frzn) ->
     Ref(~lBunch) / (~lBunch: frzn) */
 {
   this.___nodes___ = nodes;
-  /*: nodes lNodes */ "#thaw";
+  /*: nodes htmlElts */ "#thaw";
   this.___star___ = star && nodes.length > 1;
-  /*: nodes (~lNodes, thwd lNodes) */ "#freeze";
+  /*: nodes (~htmlElts, thwd htmlElts) */ "#freeze";
   star = false;
   var self = this;
   /*: self (~lBunch,frzn) */ "#freeze";
@@ -36,9 +38,12 @@ var reject_global = /*: {(and
 // -----------------------------------------------------------------------------------
 
 var enable = function (enable) 
-/*: {(and
-    (v :: (this: Ref(~lBunch), enable: Ref(lArr)) / (lArr: { Arr(Str) | (packed v) }  > lArrPro) -> Ref(~lBunch) / sameType)
-    (v :: (this: Ref(~lBunch), enable: Ref(lObj)) / (lObj: { }  > lObjPro) -> Ref(~lBunch) / sameType))} */
+//TODO
+/* {(and
+    (v :: (this: Ref(~lBunch), enable: Ref) / (enable: { Arr(Str) | (packed v) }  > lArrPro) -> Ref(~lBunch) / sameType)
+    (v :: (this: Ref(~lBunch), enable: Ref) / (enable: { }  > lObjPro) -> Ref(~lBunch) / sameType))} */
+/*: (this: Ref(~lBunch), enable: Ref) / (enable: { Arr(Str) | (packed v) }  > lArrPro) -> Ref(~lBunch) / sameType */
+/* (this: Ref(~lBunch), enable: Ref) / (enable: { }  > lObjPro) -> Ref(~lBunch) / sameType */ 
 {
   reject_global(this);
  
@@ -46,39 +51,48 @@ var enable = function (enable)
   var b = this.___nodes___;
   /*: this (~lBunch, thwd lBunch) */ "#freeze";
   var i /*: { Int | (>= v 0)} */ = 0,
-      node /*: Ref(~lNode) */ = null;
+      node /*: Ref(~htmlElt) */ = null;
+  
+  //PV: ugly hack to allow b.length as param to int_to_string
+  var tmp_bl;
 
   if (isArray(enable)) {
-    /*: b lNodes */ "#thaw";
-    if (enable.length !== b.length) {
-//TODO      
-      error('ADsafe: Array length: ... ' );
-      //error('ADsafe: Array length: ' + b.length + '-' +
-      //    enable.length);
-    }
-    /*: (&b: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) | (packed v)} > lArrPro) -> sameType */
+//    /*: b htmlElts */ "#thaw";
+//    tmp_bl = b.length;
+//    /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
+//    if (enable.length !== tmp_bl) {
+//      //error('ADsafe: Array length: ... ' );
+//      error('ADsafe: Array length: ' + int_to_string(tmp_bl) + '-' +
+//          int_to_string(enable.length));
+//    }
+    
+    /*: b htmlElts */ "#thaw";
+    assume(b != null);
+    /*: (&b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt)) | (packed v)} > lArrPro) -> sameType */
     for (i = 0; i < b.length; i += 1) {
       node = b[i];
-      /*: node lNode */ "#thaw";
+      /*: node htmlElt */ "#thaw";
+      assume(node != null);
       if (node.tagName) {
         node.disabled = !enable[i];
       }
-      /*: node (~lNode, thwd lNode) */ "#freeze";
+      /*: node (~htmlElt, thwd htmlElt) */ "#freeze";
     }
-    /*: b (~lNodes, thwd lNodes) */ "#freeze";
-  } else {
-    /*: b lNodes */ "#thaw";
-    b.length;
-    /*: (&b: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) | (packed v)} > lArrPro) -> sameType */
-    for (i = 0; i < b.length; i += 1) {
-      node = b[i];
-      /*: node lNode */ "#thaw";
-      if (node.tagName) {
-        node.disabled = !enable;
-      }
-      /*: node (~lNode, thwd lNode) */ "#freeze";
-    }
-    /*: b (~lNodes, thwd lNodes) */ "#freeze";
+    /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
+  } 
+  else {
+//    /*: b htmlElts */ "#thaw";
+//    assume(b != null);
+//    /*: (&b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt)) | (packed v)} > lArrPro) -> sameExact */
+//    for (i = 0; i < b.length; i += 1) {      
+//      node = b[i];
+//      /*: node htmlElt */ "#thaw";
+//      if (node.tagName) {
+//        node.disabled = !enable;
+//      }
+//      /*: node (~htmlElt, thwd htmlElt) */ "#freeze";
+//    }
+//    /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   }
   return this;
 };
@@ -106,17 +120,17 @@ var explode = function ()
   /*: this (~lBunch, thwd lBunch) */ "#freeze";
   var i /*: { Int | (>= v 0)} */ = 0;
 
-  /*: (&b: Ref(~lNodes), &a: Ref(L), L: Arr(Ref(~lBunch)) > lArrPro) -> sameType */
+  /*: (&b: Ref(~htmlElts), &a: Ref(L), L: Arr(Ref(~lBunch)) > lArrPro) -> sameType */
   for (i = 0; true; i += 1) {
-    /*: b lNodes */ "#thaw";
+    /*: b htmlElts */ "#thaw";
     if (i < b.length) {
-      var bArr = /*: lBArr {Arr(Ref(~lNode))|(packed v)} */  [b[i]];
-      /*: b (~lNodes, thwd lNodes) */ "#freeze";
-      /*: bArr (~lNodes, frzn) */ "#freeze";
+      var bArr = /*: lBArr {Arr(Ref(~htmlElt))|(packed v)} */  [b[i]];
+      /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
+      /*: bArr (~htmlElts, frzn) */ "#freeze";
       a[i] =  new Bunch(bArr);
     }
     else{
-      /*: b (~lNodes, thwd lNodes) */ "#freeze";
+      /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
     }
   }
   return a;

@@ -5,13 +5,13 @@ var star    /*: Bool */         = "#extern";
 var the_range /*: Ref(~lRange) */  = "#extern";
 
 function Bunch(nodes)
-  /*: new (this:Ref, nodes: Ref(~lNodes)) / (this: Empty > lBunchProto, ~lBunch: frzn) ->
+  /*: new (this:Ref, nodes: Ref(~htmlElts)) / (this: Empty > lBunchProto, ~lBunch: frzn) ->
     Ref(~lBunch) / (~lBunch: frzn) */
 {
   this.___nodes___ = nodes;
-  /*: nodes lNodes */ "#thaw";
+  /*: nodes htmlElts */ "#thaw";
   this.___star___ = star && nodes.length > 1;
-  /*: nodes (~lNodes, thwd lNodes) */ "#freeze";
+  /*: nodes (~htmlElts, thwd htmlElts) */ "#freeze";
   star = false;
   var self = this;
   /*: self (~lBunch,frzn) */ "#freeze";
@@ -29,7 +29,7 @@ var reject_name = /*: (Str) -> Bool */ "#extern";
 
 var error = /*: (message: Str)  -> { FLS } */ "#extern";
 
-var getStyleObject = /*: (node: Ref(~lNode)) -> Ref(~lStyle) */ "#extern";
+var getStyleObject = /*: (node: Ref(~htmlElt)) -> Ref(~lStyle) */ "#extern";
 
 // -----------------------------------------------------------------------------------
 
@@ -40,15 +40,15 @@ Bunch.prototype.getChecks = function () /*: (this: Ref(~lBunch)) -> Ref(~lChecke
   var b = this.___nodes___;
   var i = 0;
 
-  /*: b lNodes */ "#thaw";
-  b.l;
+  /*: b htmlElts */ "#thaw";
+  assume(b != null);
   /*: ( &i:i0:{Int|(>= v 0)}, lA:{Arr(Bool)|(and (packed v) (= (len v) i0))} > lArrPro,
-        &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
-      -> ( &i: sameType, lA: {Arr(Bool)|(packed v)} > lArrPro, &b: sameType, lNodes: sameType) */ 
+        &b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro)
+      -> ( &i: sameType, lA: {Arr(Bool)|(packed v)} > lArrPro, &b: sameType, htmlElts: sameType) */ 
   for (i = 0; i < b.length; i += 1) {
     a[i] = b[i].checked;
   }
-  /*: b (~lNodes, thwd lNodes) */ "#freeze";
+  /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   /*: a (~lChecked, frzn) */ "#freeze";
   return a;
 };
@@ -59,16 +59,16 @@ Bunch.prototype.getClasses =  function () /*: (this: Ref(~lBunch)) -> Ref(~lClas
   var b = this.___nodes___;
   var i /*: { Int | (>= v 0)} */ = 0;
 
-  /*: b lNodes */ "#thaw";
-  b.l;
+  /*: b htmlElts */ "#thaw";
+  assume(b != null);
 
   /*: ( &i:i0:{Int|(>= v 0)}, lA:{Arr(Str)|(and (packed v) (= (len v) i0))} > lArrPro,
-        &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
-      -> ( &i: sameType, lA: {Arr(Str)|(packed v)} > lArrPro, &b: sameType, lNodes: sameType) */ 
+        &b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro)
+      -> ( &i: sameType, lA: {Arr(Str)|(packed v)} > lArrPro, &b: sameType, htmlElts: sameType) */ 
   for (i = 0; i < b.length; i += 1) {
     a[i] = b[i].className;
   }
-  /*: b (~lNodes, thwd lNodes) */ "#freeze";
+  /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   /*: a (~lClassNames, frzn) */ "#freeze";
   return a;
 };
@@ -79,15 +79,15 @@ Bunch.prototype.getMarks = function () /*: (this: Ref(~lBunch)) -> Ref(~lADsafeM
   var b = this.___nodes___;
   var i /*: { Int | (>= v 0)} */ = 0;
 
-  /*: b lNodes */ "#thaw";
-  b.l;
+  /*: b htmlElts */ "#thaw";
+  assume(b != null);
   /*: ( &i:i0:{Int|(>= v 0)}, lA:{Arr(Str)|(and (packed v) (= (len v) i0))} > lArrPro,
-        &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
-      -> ( &i: sameType, lA: {Arr(Str)|(packed v)} > lArrPro, &b: sameType, lNodes: sameType) */ 
+        &b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro)
+      -> ( &i: sameType, lA: {Arr(Str)|(packed v)} > lArrPro, &b: sameType, htmlElts: sameType) */ 
   for (i = 0; i < b.length; i += 1) {
     a[i] = b[i]['_adsafe mark_'];
   }
-  /*: b (~lNodes, thwd lNodes) */ "#freeze";
+  /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   /*: a (~lADsafeMarks, frzn) */ "#freeze";
   return a;
 };
@@ -97,15 +97,15 @@ Bunch.prototype.getNames = function () /*: (this: Ref(~lBunch)) -> Ref(~lNames) 
   var a = /*: lA {Arr(Str)|(packed v)} */ [];
   var b = this.___nodes___;
   var i /*: { Int | (>= v 0)} */ = 0;
-  /*: b lNodes */ "#thaw";
-  b.l;
+  /*: b htmlElts */ "#thaw";
+  assume(b != null);
   /*: ( &i:i0:{Int|(>= v 0)}, lA:{Arr(Str)|(and (packed v) (= (len v) i0))} > lArrPro,
-        &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
-      -> ( &i: sameType, lA: {Arr(Str)|(packed v)} > lArrPro, &b: sameType, lNodes: sameType) */ 
+        &b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro)
+      -> ( &i: sameType, lA: {Arr(Str)|(packed v)} > lArrPro, &b: sameType, htmlElts: sameType) */ 
   for (i = 0; i < b.length; i += 1) {
     a[i] = b[i].name;
   }
-  /*: b (~lNodes, thwd lNodes) */ "#freeze";
+  /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   /*: a (~lNames, frzn) */ "#freeze";
   return a;
 };
@@ -115,15 +115,15 @@ Bunch.prototype.getOffsetHeights = function () /*: (this: Ref(~lBunch)) -> Ref(~
   var a = /*: lN {Arr(Num)|(packed v)} */ [];
   var b = this.___nodes___;
   var i /*: { Int | (>= v 0)} */ = 0;
-  /*: b lNodes */ "#thaw";
-  b.l;
+  /*: b htmlElts */ "#thaw";
+  assume(b != null);
   /*: ( &i:i0:{Int|(>= v 0)}, lN:{Arr(Num)|(and (packed v) (= (len v) i0))} > lArrPro,
-        &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
-      -> ( &i: sameType, lN: {Arr(Num)|(packed v)} > lArrPro, &b: sameType, lNodes: sameType) */ 
+        &b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro)
+      -> ( &i: sameType, lN: {Arr(Num)|(packed v)} > lArrPro, &b: sameType, htmlElts: sameType) */ 
   for (i = 0; i < b.length; i += 1) {
     a[i] = b[i].offsetHeight;
   }
-  /*: b (~lNodes, thwd lNodes) */ "#freeze";
+  /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   /*: a (~lOffsetHeights, frzn) */ "#freeze";
   return a;
 };
@@ -133,15 +133,15 @@ Bunch.prototype.getOffsetWidths = function () /*: (this: Ref(~lBunch)) -> Ref(~l
   var a = /*: lN {Arr(Num)|(packed v)} */ [];
   var b = this.___nodes___;
   var i /*: { Int | (>= v 0)} */ = 0;
-  /*: b lNodes */ "#thaw";
-  b.l;
+  /*: b htmlElts */ "#thaw";
+  assume(b != null);
   /*: ( &i:i0:{Int|(>= v 0)}, lN:{Arr(Num)|(and (packed v) (= (len v) i0))} > lArrPro,
-        &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
-      -> ( &i: sameType, lN: {Arr(Num)|(packed v)} > lArrPro, &b: sameType, lNodes: sameType) */ 
+        &b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro)
+      -> ( &i: sameType, lN: {Arr(Num)|(packed v)} > lArrPro, &b: sameType, htmlElts: sameType) */ 
   for (i = 0; i < b.length; i += 1) {
     a[i] = b[i].offsetWidth;
   }
-  /*: b (~lNodes, thwd lNodes) */ "#freeze";
+  /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   /*: a (~lOffsetWidths, frzn) */ "#freeze";
   return a;
 };
@@ -154,12 +154,12 @@ Bunch.prototype.getStyles = function (name) /*: (this: Ref(~lBunch), Str) -> Ref
   var a = /*: lA Arr(Str) */ [];
   var b = this.___nodes___;
   var i /*: { Int | (>= v 0)} */ = 0;
-  var node /*: Ref(~lNode) */ = null , s;
-  /*: b lNodes */ "#thaw";
-  b.l;
+  var node /*: Ref(~htmlElt) */ = null , s;
+  /*: b htmlElts */ "#thaw";
+  assume(b != null);
   /*: ( &i:i0:{Int|(>= v 0)}, lA:Arr(Str)  > lArrPro,
-        &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro, &s: Top)
-      -> ( &i: sameType, lA: Arr(Str) > lArrPro, &b: sameType, lNodes: sameType, &s: sameType) */ 
+        &b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro, &s: Top)
+      -> ( &i: sameType, lA: Arr(Str) > lArrPro, &b: sameType, htmlElts: sameType, &s: sameType) */ 
   for (i = 0; i < b.length; i += 1) {
     node = b[i];
     if (node.tagName) {
@@ -172,7 +172,7 @@ Bunch.prototype.getStyles = function (name) /*: (this: Ref(~lBunch), Str) -> Ref
       }
     }
   }
-  /*: b (~lNodes, thwd lNodes) */ "#freeze";
+  /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   /*: a (~lStyles, frzn) */ "#freeze";
   return a;
 };
@@ -182,17 +182,17 @@ Bunch.prototype.getTagNames = function () /*: (this: Ref(~lBunch)) -> Ref(~lName
   var a = /*: lA {Arr(Str)|(packed v)} */ [];
   var b = this.___nodes___;
   var i /*: { Int | (>= v 0)} */ = 0;
-  /*: b lNodes */ "#thaw";
-  b.l;
+  /*: b htmlElts */ "#thaw";
+  assume(b != null);
   var name /*: Str */ = "";
   /*: ( &i:i0:{Int|(>= v 0)}, lA:{Arr(Str)|(and (packed v) (= (len v) i0))} > lArrPro,
-        &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
-      -> ( &i: sameType, lA: {Arr(Str)|(packed v)} > lArrPro, &b: sameType, lNodes: sameType) */ 
+        &b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro)
+      -> ( &i: sameType, lA: {Arr(Str)|(packed v)} > lArrPro, &b: sameType, htmlElts: sameType) */ 
   for (i = 0; i < b.length; i += 1) {
     name = b[i].tagName;
     a[i] = typeof name === 'string' ? name.toLowerCase() : name;
   }
-  /*: b (~lNodes, thwd lNodes) */ "#freeze";
+  /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   /*: a (~lNames, frzn) */ "#freeze";
   return a;
 };
@@ -202,15 +202,15 @@ Bunch.prototype.getTitles = function () /*: (this: Ref(~lBunch)) -> Ref(~lNames)
   var a = /*: lA {Arr(Str)|(packed v)} */ [];
   var b = this.___nodes___;
   var i /*: { Int | (>= v 0)} */ = 0;
-  /*: b lNodes */ "#thaw";
-  b.l;
+  /*: b htmlElts */ "#thaw";
+  assume(b != null);
   /*: ( &i:i0:{Int|(>= v 0)}, lA:{Arr(Str)|(and (packed v) (= (len v) i0))} > lArrPro,
-        &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
-      -> ( &i: sameType, lA: {Arr(Str)|(packed v)} > lArrPro, &b: sameType, lNodes: sameType) */ 
+        &b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro)
+      -> ( &i: sameType, lA: {Arr(Str)|(packed v)} > lArrPro, &b: sameType, htmlElts: sameType) */ 
   for (i = 0; i < b.length; i += 1) {
     a[i] = b[i].title;
   }
-  /*: b (~lNodes, thwd lNodes) */ "#freeze";
+  /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   /*: a (~lNames, frzn) */ "#freeze";
   return a;
 };
@@ -220,12 +220,12 @@ Bunch.prototype.getValues = function () /*: (this: Ref(~lBunch)) -> Ref(~lValues
   var a = /*: lA Arr(Str) */ [];
   var b = this.___nodes___;
   var i /*: { Int | (>= v 0)} */ = 0;
-  var node /*: Ref(~lNode) */ = null;
-  /*: b lNodes */ "#thaw";
-  b.l;
+  var node /*: Ref(~htmlElt) */ = null;
+  /*: b htmlElts */ "#thaw";
+  assume(b != null);
   /*: ( &i:i0:{Int|(>= v 0)}, lA:Arr(Str)  > lArrPro,
-        &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
-      -> ( &i: sameType, lA: Arr(Str) > lArrPro, &b: sameType, lNodes: sameType) */ 
+        &b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro)
+      -> ( &i: sameType, lA: Arr(Str) > lArrPro, &b: sameType, htmlElts: sameType) */ 
   for (i = 0; i < b.length; i += 1) {
     node = b[i];
     if (node.nodeName === '#text') {
@@ -238,7 +238,7 @@ Bunch.prototype.getValues = function () /*: (this: Ref(~lBunch)) -> Ref(~lValues
           }
     }
   }
-  /*: b (~lNodes, thwd lNodes) */ "#freeze";
+  /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   /*: a (~lValues, frzn) */ "#freeze";
   return a;
 };
@@ -299,15 +299,15 @@ var getOffsetWidth = function () /*: (this: Ref(~lBunch)) -> {?(Num)|TRU} */ {
 
 var getParent = function () /*: (this: Ref(~lBunch)) -> Ref(~lBunch) */ {
   reject_global(this);
-  var a = /*: lA {Arr(Ref(~lNode))|(packed v)} */ [];
+  var a = /*: lA {Arr(Ref(~htmlElt))|(packed v)} */ [];
   var b = this.___nodes___;
   var i /*: { Int | (>= v 0)} */ = 0;
-  var n /*: Ref(~lNode) */ = null;
-  /*: b lNodes */ "#thaw";
-  b.l;
-  /*: ( &i:i0:{Int|(>= v 0)},  &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro, 
-        lA:{Arr(Ref(~lNode))|(and (packed v) (= (len v) i0))} > lArrPro)
-      -> (&i: sameType, &b: sameType, lA: {Arr(Ref(~lNode))|(packed v)} > lArrPro,lNodes: sameType) */ 
+  var n /*: Ref(~htmlElt) */ = null;
+  /*: b htmlElts */ "#thaw";
+  assume(b != null);
+  /*: ( &i:i0:{Int|(>= v 0)},  &b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro, 
+        lA:{Arr(Ref(~htmlElt))|(and (packed v) (= (len v) i0))} > lArrPro)
+      -> (&i: sameType, &b: sameType, lA: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro,htmlElts: sameType) */ 
   for (i = 0; i < b.length; i += 1) {
     n = b[i].parentNode;
     if (n['___adsafe root___']) {
@@ -315,8 +315,8 @@ var getParent = function () /*: (this: Ref(~lBunch)) -> Ref(~lBunch) */ {
     }
     a[i] = n;
   }
-  /*: b (~lNodes, thwd lNodes) */ "#freeze";
-  /*: a (~lNodes, frzn) */ "#freeze";
+  /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
+  /*: a (~htmlElts, frzn) */ "#freeze";
   return new Bunch(a);
 };
 
@@ -328,10 +328,10 @@ var getSelection = function ()
   var b = this.___nodes___;
   var end, node, start, range;
   var str;  //PV 
-  /*: b lNodes */ "#thaw";
+  /*: b htmlElts */ "#thaw";
   if (b.length === 1 && allow_focus) {
     node = b[0];
-    /*: b (~lNodes, thwd lNodes) */ "#freeze";
+    /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
     if (typeof node.selectionStart === 'number') {
       start = node.selectionStart;
       end = node.selectionEnd;
@@ -350,7 +350,7 @@ var getSelection = function ()
     }
   }
   else {
-    /*: b (~lNodes, thwd lNodes) */ "#freeze";
+    /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   }
   return null;
 };

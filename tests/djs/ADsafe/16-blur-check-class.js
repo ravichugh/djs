@@ -1,4 +1,7 @@
 var error = /*: {( and (v::(Str) -> { FLS }) (v:: () -> { FLS }))} */ "#extern";
+var intToString = /*: (Int) -> Str */ "#extern";
+ 
+
 
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
 
@@ -20,19 +23,19 @@ var blur = function () /*: (this: Ref(~lBunch)) -> Ref(~lBunch) */
   /*: this (~lBunch, thwd lBunch) */ "#freeze";
 
   var i /*: {Int | (>= v 0)}*/ = 0,
-      node /*: Ref(~lNode) */ = null,       
-      has_focus /*: Ref(~lNode) */ = null;
+      node /*: Ref(~htmlElt) */ = null,       
+      has_focus /*: Ref(~htmlElt) */ = null;
 
-  /*: b lNodes */ "#thaw";
+  /*: b htmlElts */ "#thaw";
   b.l;
-  /*: (&b: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) | (packed v)} > lArrPro) -> sameType */
+  /*: (&b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt)) | (packed v)} > lArrPro) -> sameType */
   for (i = 0; i < b.length; i += 1) {
     node = b[i];
     if (node.blur) {
       node.blur();
     }
   }
-  /*: b (~lNodes, thwd lNodes) */ "#freeze";
+  /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
 
   return this;
 };
@@ -41,7 +44,7 @@ var blur = function () /*: (this: Ref(~lBunch)) -> Ref(~lBunch) */
 //Q: why does it not work with value: Ref(lArr?)
 var check  = function (value)
 /*: {(and
-    (v :: (this: Ref(~lBunch), value: Ref(lArr)) / (lArr: { Arr(NotUndef) | (packed v) }  > lArrPro) -> Ref(~lBunch) / sameType)
+    (v :: (this: Ref(~lBunch), value: Ref) / (value: { Arr(NotUndef) | (packed v) }  > lArrPro) -> Ref(~lBunch) / sameType)
     (v :: (this: Ref(~lBunch), value: Ref) / (value: {} > lObjPro) -> Ref(~lBunch) / sameType)
     )} */
 {
@@ -49,37 +52,35 @@ var check  = function (value)
   /*: this lBunch */ "#thaw";
   var b = this.___nodes___;
   var i /*: {Int | (>= v 0)} */ = 0,
-      node /*: Ref(~lNode) */ = null;
+      node /*: Ref(~htmlElt) */ = null;
   if (isArray(value)) {
-    /*: b lNodes */ "#thaw";
+    /*: b htmlElts */ "#thaw";
     if (value.length !== b.length) {
-      error('ADsafe: Array length: ... ');
-      //TODO
-      //error('ADsafe: Array length: ' + b.length + '-' +
-      //    value.length);
+      //PV: added calls to intToString
+      error('ADsafe: Array length: ' + intToString(b.length) + '-' + intToString(value.length));
     }
-    /*: (&b: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) | (packed v)} > lArrPro) -> sameType */
+    /*: (&b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt)) | (packed v)} > lArrPro) -> sameType */
     for (i = 0; i < b.length; i += 1) {
       node = b[i];
-      /*: node lNode */ "#thaw";
+      /*: node htmlElt */ "#thaw";
       if (node.tagName) {
         node.checked = !!value[i];
       }
-      /*: node (~lNode, thwd lNode) */ "#freeze";
+      /*: node (~htmlElt, thwd htmlElt) */ "#freeze";
     }
-    /*: b (~lNodes, thwd lNodes) */ "#freeze";
+    /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   }
   else {
-    /*: b lNodes */ "#thaw";
+    /*: b htmlElts */ "#thaw";
     b.length;
-    /*: (&b: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) | (packed v)} > lArrPro) -> sameType */
+    /*: (&b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt)) | (packed v)} > lArrPro) -> sameType */
     for (i = 0; i < b.length; i += 1) {
       node = b[i];
       if (node.tagName) {
         node.checked = !!value;
       }
     }
-    /*: b (~lNodes, thwd lNodes) */ "#freeze";
+    /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   }
   /*: this (~lBunch, thwd lBunch) */ "#freeze";
   return this;
@@ -88,7 +89,7 @@ var check  = function (value)
 
 var class_fun = function (value) 
 /*: {(and
-    (v :: (this: Ref(~lBunch), value: Ref(lArr)) / (lArr: { Arr(Str) | (packed v) }  > lArrPro) -> Ref(~lBunch) / sameType)
+    (v :: (this: Ref(~lBunch), value: Ref) / (value: { Arr(Str) | (packed v) }  > lArrPro) -> Ref(~lBunch) / sameType)
     (v :: (this: Ref(~lBunch), value: Str) -> Ref(~lBunch) )
     )} */
 {
@@ -96,46 +97,46 @@ var class_fun = function (value)
   /*: this lBunch */ "#thaw";
   var b = this.___nodes___; 
   var i /*: {Int | (>= v 0)} */ = 0,
-      node /*: Ref(~lNode) */ = null;
+      node /*: Ref(~htmlElt) */ = null;
   if (isArray(value)) {
-    /*: b lNodes */ "#thaw";
+    /*: b htmlElts */ "#thaw";
     if (value.length !== b.length) {
     //  error('ADsafe: Array length: ' + b.length + '-' +
     //       value.length);
     }
-    /*: (&b: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) | (packed v)} > lArrPro) -> sameType */
+    /*: (&b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt)) | (packed v)} > lArrPro) -> sameType */
     for (i = 0; i < b.length; i += 1) {
 //      //TODO: RegEx support needed      
 //      if (/url/i.test(string_check(value[i]))) {
 //        error('ADsafe error.');
 //      }
       node = b[i];
-      /*: node lNode */ "#thaw";
+      /*: node htmlElt */ "#thaw";
       if (node.tagName) {
         if (value[i])     //XXX: Would be cool if I didn't have to add this
         node.className = value[i];
       }
-      /*: node (~lNode, thwd lNode) */ "#freeze";
+      /*: node (~htmlElt, thwd htmlElt) */ "#freeze";
     }
-    /*: b (~lNodes, thwd lNodes) */ "#freeze";
+    /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   }
   else {
 //    //TODO: RegEx support needed      
 //    if (/url/i.test(string_check(value))) {
 //      error('ADsafe error.');
 //    }
-    /*: b lNodes */ "#thaw";
+    /*: b htmlElts */ "#thaw";
     b.l;
-    /*: (&b: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) | (packed v)} > lArrPro) -> sameType */
+    /*: (&b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt)) | (packed v)} > lArrPro) -> sameType */
     for (i = 0; i < b.length; i += 1) {
       node = b[i];
-      /*: node lNode */ "#thaw";
+      /*: node htmlElt */ "#thaw";
       if (node.tagName) {
         node.className = value;
       }
-      /*: node (~lNode, thwd lNode) */ "#freeze";
+      /*: node (~htmlElt, thwd htmlElt) */ "#freeze";
     }
-    /*: b (~lNodes, thwd lNodes) */ "#freeze";
+    /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   }
   /*: this (~lBunch, thwd lBunch) */ "#freeze";
   return this;

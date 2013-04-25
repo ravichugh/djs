@@ -4,11 +4,9 @@ var error = /*: {( and
               )} */ "#extern";
 var dom_event = /*: (this: Ref(~lEvent), Ref(~lEvent))-> Top */ "#extern";
 
-//TODO: Using an imprecise type for "owns"
 var owns = 
-/* (object: Ref, string: Str) / (object: d: Dict (* {Dict|(not (has v "hasOwnProperty"))} *) > lObjPro) -> 
-    { (implies (= v true) (has d {string}))} / sameType */ 
-/*: (object: Top, string: Str) -> Bool */ "#extern";
+/*: (object: Ref, string: Str) / (object: d: Dict > object.pro) -> 
+      {Bool|(and  (iff (= v false) (not (has d string)))  (iff (= v true) (has d string)))} / sameExact */ "#extern";
 
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
 
@@ -20,9 +18,9 @@ var owns =
   key             : Str, 
   preventDefault  : (this: Ref(~lEvent)) -> Top,
   shiftKey        : Bool,
-  srcElement      : Ref(~lNode),
+  srcElement      : Ref(~htmlElt),
   stopPropagation : (this: Ref(~lEvent))-> Top,
-  target          : Ref(~lNode),    (* could also be Ref(~lEventTarget) *)
+  target          : Ref(~htmlElt),    (* could also be Ref(~lEventTarget) *)
   that            : Ref(~lBunch),
   type_           : Str,
   _               : Bot
@@ -36,13 +34,13 @@ var star    /*: Bool */         = "#extern";
 var the_range /*: Ref(~lRange) */  = "#extern";
 
 function Bunch(nodes)
-  /*: new (this:Ref, nodes: Ref(~lNodes)) / (this: Empty > lBunchProto, ~lBunch: frzn) ->
+  /*: new (this:Ref, nodes: Ref(~htmlElts)) / (this: Empty > lBunchProto, ~lBunch: frzn) ->
     Ref(~lBunch) / (~lBunch: frzn) */
 {
   this.___nodes___ = nodes;
-  /*: nodes lNodes */ "#thaw";
+  /*: nodes htmlElts */ "#thaw";
   this.___star___ = star && nodes.length > 1;
-  /*: nodes (~lNodes, thwd lNodes) */ "#freeze";
+  /*: nodes (~htmlElts, thwd htmlElts) */ "#freeze";
   star = false;
   var self = this;
   /*: self (~lBunch,frzn) */ "#freeze";
@@ -79,38 +77,38 @@ var mark = function (value)
     (v :: (this: Ref(~lBunch), value: Str) -> Ref(~lBunch)) )} */
 {
   reject_global(this);
-  var b = this.___nodes___, node /*: Ref(~lNode) */ = null;
+  var b = this.___nodes___, node /*: Ref(~htmlElt) */ = null;
   var i /*: {Int | (>= v 0)}*/ = 0;
   if (isArray(value)) {
-    /*: b lNodes */ "#thaw";
+    /*: b htmlElts */ "#thaw";
     if (value.length !== b.length) {
       error('ADsafe: Array length: ' /*+ int_to_string(b.length) + '-' +
          int_to_string(value.length)*/);
     }
-    /*: (&b: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) | (packed v)} > lArrPro) -> sameType */
+    /*: (&b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt)) | (packed v)} > lArrPro) -> sameType */
     for (i = 0; i < b.length; i += 1) {
       node = b[i];
-      /*: node lNode */ "#thaw";
+      /*: node htmlElt */ "#thaw";
       if (node.tagName) {
         node['_adsafe mark_'] = String(value[i]);
       }
-      /*: node (~lNode, thwd lNode) */ "#freeze";
+      /*: node (~htmlElt, thwd htmlElt) */ "#freeze";
     }
-    /*: b (~lNodes, thwd lNodes) */ "#freeze";
+    /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   } 
   else {
-    /*: b lNodes */ "#thaw";
+    /*: b htmlElts */ "#thaw";
     b.l;
-    /*: (&b: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) | (packed v)} > lArrPro) -> sameType */
+    /*: (&b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt)) | (packed v)} > lArrPro) -> sameType */
     for (i = 0; i < b.length; i += 1) {
       node = b[i];
-      /*: node lNode */ "#thaw";
+      /*: node htmlElt */ "#thaw";
       if (node.tagName) {
         node['_adsafe mark_'] = String(value);
       }
-      /*: node (~lNode, thwd lNode) */ "#freeze";
+      /*: node (~htmlElt, thwd htmlElt) */ "#freeze";
     }
-    /*: b (~lNodes, thwd lNodes) */ "#freeze";
+    /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   }
   return this;
 };
@@ -118,24 +116,33 @@ var mark = function (value)
 var off = function (type_) /*: (this: Ref(~lBunch), type_:Top) -> Ref(~lBunch) */ {
   reject_global(this);
   var b = this.___nodes___, 
-      node /*: Ref(~lNode) */ = null;
+      node /*: Ref(~htmlElt) */ = null;
   var i /*: {Int | (>= v 0)}*/ = 0;
-  /*: b lNodes */ "#thaw";
-  b.l;
-  /*: (&b: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) | (packed v)} > lArrPro) -> sameType */
+  /*: b htmlElts */ "#thaw";
+  assume(b != null);
+  /*: (&b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt)) | (packed v)} > lArrPro) -> sameType */
   for (i = 0; i < b.length; i += 1) {
     node = b[i];
+    /*: node htmlElt */ "#thaw";
+    assume(node != null);
     if (typeof type_ === 'string') {
       var e = node['___ on ___'];
+      /*: e lEvent */ "#thaw";
+      assume(e != null);
       if (typeof e) {
-        assume(typeof e[type_] === 'object');
+        //PV: will have to use this here cause we might be overwriting 
+        //an existing field with an incompatible type.
+        assume(type_ === "nonexisting_string");
         e[type_] = null;
       }
+      /*: e (~lEvent, thwd lEvent) */ "#freeze";
     } else {
-      node['___ on ___'] = null;
+      //TODO
+      //node['___ on ___'] = null;
     }
+    /*: node (~htmlElt, thwd htmlElt) */ "#freeze";
   }
-  /*: b (~lNodes, thwd lNodes) */ "#freeze";
+  /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   return this;
 };
 
@@ -148,53 +155,59 @@ var on = function (type_, func)
   assert(/*: {(= (tag v) "function")} */ (func));
 
   var b = this.___nodes___, 
-      node /*: Ref(~lNode) */ = null, 
+      node /*: Ref(~htmlElt) */ = null, 
       on /*: Ref(~lEvent) */ = null, 
       ontype /*: Str */ = "";
   var i /*: {Int | (>= v 0)}*/ = 0;
 
-  /*: b lNodes */ "#thaw";
+  /*: b htmlElts */ "#thaw";
   assume(b != null);
-  /*: ( &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) | (packed v)} > lArrPro) -> 
+  /*: ( &b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt)) | (packed v)} > lArrPro) -> 
       sameType */
   for (i = 0; i < b.length; i += 1) {
     node = b[i];
 
-//PV: slow-down
-//    // The change event does not propogate, so we must put the handler on the
-//    // instance.
-//    if (type_ === 'change') {
-//      ontype = 'on' + type_;
-//      assume(ontype === 'onchange');
-//      if (node[ontype] !== dom_event) {
-//        node[ontype] = dom_event;
-//      }
-//    }
-//
-//    // Register an event. Put the function in a handler array, making one if it
-//    // doesn't yet exist for this type_ on this node.
-//
-//    on = node['___ on ___'];
-//    if (!on) {
-//      var empty_ = /*: lEmpty Dict */ {};
-//      /*: empty_ (~lEvent, frzn) */ "#freeze";
-//      on = empty_;
-//      node['___ on ___'] = on;
-//    }
+//PV: Slow Down !!! ~ 45 sec
+    // The change event does not propogate, so we must put the handler on the
+    // instance.
+    if (type_ === 'change') {
+      ontype = 'on' + type_;
+      assume(ontype === 'onchange');
+      /*: node htmlElt */ "#thaw";
+      assume(node != null);
+      if (node[ontype] !== dom_event) {
+        node[ontype] = dom_event;
+      }
+      /*: node (~htmlElt, thwd htmlElt) */ "#freeze";
+    }
+
+    // Register an event. Put the function in a handler array, making one if it
+    // doesn't yet exist for this type_ on this node.
+
+    on = node['___ on ___'];
+    if (!on) {
+      var empty_ = /*: lEmpty Dict */ { type_: "" };  //PV: meh...
+      /*: empty_ (~lEvent, frzn) */ "#freeze";
+      on = empty_;
+      node['___ on ___'] = on;
+    }
     
     /*: on lEvent */ "#thaw";
     assume(on != null);
-//TODO    
+    //TODO    
     if (owns(on, type_)) {
-      assume(typeof on === 'object');
-      assume(isArray(on[type_]));
-      on[type_].push(func);
+      assert(type_ in on);
+      //assume(typeof on === 'object');
+      //assume(isArray(on[type_]));
+      //on[type_].push(func);
     }
     else {
+      //TODO
+      assume(type_ === "nonexisting_field");
       on[type_] = [func];
     }
     /*: on (~lEvent, thwd lEvent) */ "#freeze";
   }
-  /*: b (~lNodes, thwd lNodes) */ "#freeze";
+  /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   return this;
 };

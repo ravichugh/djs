@@ -24,7 +24,7 @@ weak (~lEvent     : { Dict |
     (implies (has v "stopPropagation")  ((sel v "stopPropagation") :: () -> Top))
     (implies (has v "target")           ((sel v "target") :: Ref(~htmlElt)))
     (implies (has v "that")             ((sel v "that") :: Ref(~lBunch)))
-    (and (has v "type_")            (Str (sel v "type_")))
+    (and (has v "type_")                (Str (sel v "type_")))
     (implies (has v "charCode")         (Int (sel v "charCode")))
     (implies (has v "keyCode")          (Int (sel v "keyCode")))
     
