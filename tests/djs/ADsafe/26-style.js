@@ -26,6 +26,7 @@ var style = function (name, value)
     / (lA: {Arr(Str)|(packed v)} > lArrPro) -> Ref(~lBunch) / sameType)
 )}*/
 
+//TODO: both work for the right part of the code but not the intersection type
 /*: (this: Ref(~lBunch), name: Str, value: Str) -> Ref(~lBunch) */
 /* (this: Ref(~lBunch), name: Str, value: Ref)
     / (value: {Arr(Str)|(packed v)} > lArrPro) -> Ref(~lBunch) / sameType */
@@ -48,44 +49,42 @@ var style = function (name, value)
   var tmp_bl;
 
   if (isArray(value)) {
-    /*: b htmlElts */ "#thaw";
-    assume(b != null);
-    if (value.length !== b.length) {
-      tmp_bl = b.length;
-      /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
-      error("ADsafe: Array length: " + int_to_string(tmp_bl)
-        + "-" + int_to_string(value.length)); //PV: conversion
-    }
-    else {
-      /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
-    }
-    /*: b htmlElts */ "#thaw";
-
-    /*: ( &b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro) 
-         -> sameType */ 
-    for (i = 0; i < b.length && i < value.length; i += 1) { //PV: added i < len(value)
-      node = b[i];
-      /*: node htmlElt */ "#thaw";
-      v = string_check(value[i]);
-//TODO: RegEx
-//      if (/url/i.test(v)) {
-//        error();
+//    /*: b htmlElts */ "#thaw";
+//    if (value.length !== b.length) {
+//      tmp_bl = b.length;
+//      /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
+//      error("ADsafe: Array length: " + int_to_string(tmp_bl)
+//        + "-" + int_to_string(value.length)); //PV: conversion
+//    }
+//    else {
+//      /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
+//    }
+//    /*: b htmlElts */ "#thaw";
+//
+//    /*: ( &b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro) 
+//         -> sameType */ 
+//    for (i = 0; i < b.length && i < value.length; i += 1) { //PV: added i < len(value)
+//      node = b[i];
+//      /*: node htmlElt */ "#thaw";
+//      v = string_check(value[i]);
+//////TODO: RegEx
+//////      if (/url/i.test(v)) {
+//////        error();
+//////      }
+//      if (node.tagName) {
+//        style = node.style;
+//        /*: style lStyle */ "#thaw";
+//        if (name !== "float") {
+//          style[name] = v;
+//        } 
+//        else {
+//          style.cssFloat = style.styleFloat = v;
+//        }
+//        /*: style (~lStyle, thwd lStyle) */ "#freeze";
 //      }
-      if (node.tagName) {
-        style = node.style;
-        /*: style lStyle */ "#thaw";
-        assume(style != null);
-        if (name !== "float") {
-          style[name] = v;
-        } 
-        else {
-          style.cssFloat = style.styleFloat = v;
-        }
-        /*: style (~lStyle, thwd lStyle) */ "#freeze";
-      }
-      /*: node (~htmlElt, thwd htmlElt) */ "#freeze";
-    }
-    /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
+//      /*: node (~htmlElt, thwd htmlElt) */ "#freeze";
+//    }
+//    /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   }
   else {
     v = string_check(value);
@@ -102,15 +101,14 @@ var style = function (name, value)
       /*: node htmlElt */ "#thaw";
       assume(node != null);
       if (node.tagName) {
-//TODO: same as above        
-//        style = node.style;
-//        /*: style lStyle */ "#thaw";
-//        if (name !== "float") {
-//          style[name] = v;
-//        } else {
-//          style.cssFloat = style.styleFloat = v;
-//        }
-//        /*: style (~lStyle, thwd lStyle) */ "#freeze";
+        style = node.style;
+        /*: style lStyle */ "#thaw";
+        if (name !== "float") {
+          style[name] = v;
+        } else {
+          style.cssFloat = style.styleFloat = v;
+        }
+        /*: style (~lStyle, thwd lStyle) */ "#freeze";
       }
       /*: node (~htmlElt, thwd htmlElt) */ "#freeze";
     }

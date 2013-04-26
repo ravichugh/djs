@@ -101,13 +101,13 @@ var star    /*: Bool */         = "#extern";
 var the_range /*: Ref(~lRange) */  = "#extern";
 
 function Bunch(nodes)
-  /*: new (this:Ref, nodes: Ref(~lNodes)) / (this: Empty > lBunchProto, ~lBunch: frzn) ->
+  /*: new (this:Ref, nodes: Ref(~htmlElts)) / (this: Empty > lBunchProto, ~lBunch: frzn) ->
     Ref(~lBunch) / (~lBunch: frzn) */
 {
   this.___nodes___ = nodes;
-  /*: nodes lNodes */ "#thaw";
+  /*: nodes htmlElts */ "#thaw";
   this.___star___ = star && nodes.length > 1;
-  /*: nodes (~lNodes, thwd lNodes) */ "#freeze";
+  /*: nodes (~htmlElts, thwd htmlElts) */ "#freeze";
   star = false;
   var self = this;
   /*: self (~lBunch,frzn) */ "#freeze";
@@ -117,11 +117,10 @@ function Bunch(nodes)
 
 
 var tag = function (tag_, type_, name) 
-/* (this: Ref(~lBunch), tag_: Str, type_: Str, name: Str)-> Ref(~lBunch)  */
 /*: (this: Ref(~lBunch), tag_: Str, type_: Str, name: Str)-> Top */
 {
   reject_global(this);
-  var node /*: Ref(~lNode) */ = null;
+  var node;
   if (typeof tag_ !== 'string') {
     error("default");   //PV: adding arg
   }
@@ -129,87 +128,103 @@ var tag = function (tag_, type_, name)
     error('ADsafe: Bad tag: ' + tag_);
   }
   node = document.createElement(tag_);
-  if (name) {
-//TODO: slowdown    
-    node.autocomplete = 'off';
-    node.name = string_check(name);
-  }
-  if (type_) {
-    node.type = string_check(type_);
-  }
-  //var nodeArg = /*: lN {Arr(Ref(~lNode))|(packed v)} */ [node];
-  ///*: nodeArg (~lNodes,frzn) */ "#freeze";
-  //return new Bunch(nodeArg);
+
+  assert(/*: Ref(~htmlElt) */ (node));
+
+  //XXX: SLOW DOWN !!! ~ 80 sec (with return statement)
+//  /*: node htmlElt */ "#thaw";
+//  assume(node != null);
+//  if (name) {
+//    node.autocomplete = 'off';
+//    node.name = string_check(name);
+//  }
+//  if (type_) {
+//    node.type = string_check(type_);
+//  }
+//  /*: node (~htmlElt, thwd htmlElt) */ "#freeze";
+  var nodeArg = /*: lN {Arr(Ref(~htmlElt))|(packed v)} */ [node];
+  /*: nodeArg (~htmlElts,frzn) */ "#freeze";
+  
+  return new Bunch(nodeArg);
 };
 
-//var text = function (text) 
-///*: {( and 
-//    (v:: (this: Ref(~lBunch), text: Str) / (lT: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType)
-//    (v:: (this: Ref(~lBunch), text: Ref(lT)) / (lT: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType)
-//)}*/
-//{
-//  reject_global(this);
-//  var a, i;
-//  if (isArray(text)) {
-//    a = /*: lA {Arr(Ref(~lNode))|(packed v)} */ [];
-//    /*: ( &i:i0:{Int|(>= v 0)}, lA:{Arr(Ref(~lNode))|(and (packed v) (= (len v) i0))} > lArrPro,
-//          &text: Ref(lT), lT: {Arr(Str)|(packed v)} > lArrPro)
-//        -> ( &i: sameType, lA: {Arr(Ref(~lNode))|(packed v)} > lArrPro, &text: sameType, lT: sameType) */ 
-//    for (i = 0; i < text.length; i += 1) {
-//      a[i] = document.createTextNode(string_check(text[i]));
-//    }
-//    /*: a (~lNodes, frzn) */ "#freeze";
-//    return new Bunch(a);
-//  }
-//  else {  //PV: added else
-//    var arg = /*: lArg {Arr(Ref(~lNode))|(packed v)} */ [document.createTextNode(string_check(text))];
-//    /*: arg (~lNodes, frzn) */ "#freeze";
-//    return new Bunch(arg);
-//  }
-//};
-//
-//var title = function (value) 
-///*: {( and 
-//    (v:: (this: Ref(~lBunch), value: Str) / (lT: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType)
-//    (v:: (this: Ref(~lBunch), value: Ref(lT)) / (lT: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType)
-//)}*/
-//{
-//  reject_global(this);
-//  var b = this.___nodes___, i /*: {Int|(>= v 0)} */ = 0, node /*: Ref(~lNode) */ = null;
-//  if (isArray(value)) {
-//    /*: b lNodes */ "#thaw";
-//    b.l;
-//    if (value.length !== b.length) {
-////TODO: Exp frozen state      
-////      error('ADsafe: Array length: ' + int_to_string(b.length) +
-////          '-' + int_to_string(value.length));
-//    }
-//    /*: ( &value: Ref(lT), lT:{Arr(Str)|(packed v)} > lArrPro,
-//          &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
-//        -> ( &value: sameType, lT: sameType, &b: sameType, lNodes: sameType) */ 
-//    for (i = 0; i < b.length && i > value.length; i += 1) { //PV: Added value.length
-//      node = b[i];
-//      var val = value[i];
-//      if (node.tagName) {
-//        node.title = string_check(val);
-//      }
-//    }
-//    /*: b (~lNodes, thwd lNodes) */ "#freeze";
-//  }
-//  else {
-//    string_check(value);
-//    /*: b lNodes */ "#thaw";
-//    b.l;
-//    /*: ( &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
-//        -> ( &b: sameType, lNodes: sameType) */ 
-//    for (i = 0; i < b.length; i += 1) {
-//      node = b[i];
-//      if (node.tagName) {
-//        node.title = value;
-//      }
-//    }
-//    /*: b (~lNodes, thwd lNodes) */ "#freeze";
-//  }
-//  return this;
-//};
-//
+var text = function (text) 
+/*: {( and 
+    (v:: (this: Ref(~lBunch), text: Str) / (lT: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType)
+    (v:: (this: Ref(~lBunch), text: Ref(lT)) / (lT: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType)
+)}*/
+{
+  reject_global(this);
+  var a, i;
+  if (isArray(text)) {
+    a = /*: lA {Arr(Ref(~htmlElt))|(packed v)} */ [];
+    /*: ( &i:i0:{Int|(>= v 0)}, lA:{Arr(Ref(~htmlElt))|(and (packed v) (= (len v) i0))} > lArrPro,
+          &text: Ref(lT), lT: {Arr(Str)|(packed v)} > lArrPro)
+        -> ( &i: sameType, lA: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro, &text: sameType, lT: sameType) */ 
+    for (i = 0; i < text.length; i += 1) {
+      a[i] = document.createTextNode(string_check(text[i]));
+    }
+    /*: a (~htmlElts, frzn) */ "#freeze";
+    return new Bunch(a);
+  }
+  else {  //PV: added else
+    var arg = /*: lArg {Arr(Ref(~htmlElt))|(packed v)} */ [document.createTextNode(string_check(text))];
+    /*: arg (~htmlElts, frzn) */ "#freeze";
+    return new Bunch(arg);
+  }
+};
+
+var title = function (value) 
+//TODO: intesection type fix
+/* {( and 
+    (v:: (this: Ref(~lBunch), value: Str) -> Top)
+    (v:: (this: Ref(~lBunch), value: Ref(lT)) / (lT: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType)
+)}*/
+
+/* (this: Ref(~lBunch), value: Str) -> Top */
+/*: (this: Ref(~lBunch), value: Ref(lT)) / (lT: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType */
+{
+  reject_global(this);
+  var b = this.___nodes___, i /*: {Int|(>= v 0)} */ = 0, node /*: Ref(~htmlElt) */ = null;
+  var tmp_bl;
+  if (isArray(value)) {
+    /*: b htmlElts */ "#thaw";
+    tmp_bl = b.length;
+    /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
+
+    if (value.length !== tmp_bl) {
+      error('ADsafe: Array length: ' + int_to_string(tmp_bl) +
+         '-' + int_to_string(value.length));
+    }
+
+    /*: b htmlElts */ "#thaw";
+    assume(b != null);
+    /*: ( &value: Ref(lT), lT:{Arr(Str)|(packed v)} > lArrPro,
+          &b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro)
+        -> sameType */ 
+    for (i = 0; i < b.length && i > value.length; i += 1) { //PV: Added value.length
+      node = b[i];
+      var val = value[i];
+      if (node.tagName) {
+        node.title = string_check(val);
+      }
+    }
+    /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
+  }
+  else {
+    string_check(value);
+    /*: b htmlElts */ "#thaw";
+    assume(b != null);
+    /*: ( &b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro)
+        -> ( &b: sameType, htmlElts: sameType) */ 
+    for (i = 0; i < b.length; i += 1) {
+      node = b[i];
+      if (node.tagName) {
+        node.title = value;
+      }
+    }
+    /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
+  }
+  return this;
+};
+
