@@ -22,13 +22,13 @@ var select = function ()
 {
   reject_global(this);
   var b = this.___nodes___;
-  /*: b lNodes */ "#thaw";
+  /*: b htmlElts */ "#thaw";
   if (b.length < 1 || !allow_focus) {
     error("default");   //PV: adding arg
   }
   b[0].focus();
   b[0].select();
-  /*: b (~lNodes, thwd lNodes) */ "#freeze";
+  /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   return this;
 };
 
@@ -37,25 +37,25 @@ var selection = function (string)
 {
   reject_global(this);
   string_check(string);
-  var b     /*: Ref(~lNodes) */ = this.___nodes___, 
+  var b     /*: Ref(~htmlElts) */ = this.___nodes___, 
       end   /*: Int */ = 0, 
-      node  /*: Ref(~lNode) */ = null,
+      node  /*: Ref(~htmlElt) */ = null,
       old   /*: Str */ = "" ,
       start /*: Int */ = 0,
       range /*: Ref(~lRange) */ = null;
 
-  /*: b lNodes */ "#thaw";
+  /*: b htmlElts */ "#thaw";
   if (b.length === 1 && allow_focus) {
     node = b[0];
-    /*: node lNode */ "#thaw";
+    /*: node htmlElt */ "#thaw";
     if (typeof node.selectionStart === 'number') {
       start = node.selectionStart;
       end = node.selectionEnd;
       old = node.value;
-//TODO: this slows it down a lot
-//      node.value = old.slice(0, start) + string + old.slice(end, 0);  //PV added second argument
-//      node.selectionStart = node.selectionEnd = start +
-//        string.length;
+      assert(/*: Str */ (old));
+//XXX: SLOW DOWN !!! ~ 12 sec
+//      node.value = old.slice(0, start) /* + string  */ + old.slice(end, 0);  //PV added second argument
+//      node.selectionStart = node.selectionEnd = start + string.length;
       node.focus();
     } 
     else {
@@ -67,9 +67,9 @@ var selection = function (string)
         the_range.select();
       }
     }
-    /*: node (~lNode, thwd lNode) */ "#freeze";
+    /*: node (~htmlElt, thwd htmlElt) */ "#freeze";
   }
-  /*: b (~lNodes, thwd lNodes) */ "#freeze";
+  /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   return this;
 };
 

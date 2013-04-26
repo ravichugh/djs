@@ -20,11 +20,15 @@ var string_check =
 var int_to_string /*: (Int) -> Str */ = "#extern";
 
 var style = function (name, value) 
-/*: {( and 
+/* {( and 
     (v:: (this: Ref(~lBunch), name: Str, value: Str) -> Ref(~lBunch))
     (v:: (this: Ref(~lBunch), name: Str, value: Ref(lA)) 
     / (lA: {Arr(Str)|(packed v)} > lArrPro) -> Ref(~lBunch) / sameType)
 )}*/
+
+/*: (this: Ref(~lBunch), name: Str, value: Str) -> Ref(~lBunch) */
+/* (this: Ref(~lBunch), name: Str, value: Ref)
+    / (value: {Arr(Str)|(packed v)} > lArrPro) -> Ref(~lBunch) / sameType */
 {
   reject_global(this);
   if (reject_name(name)) {
@@ -36,41 +40,52 @@ var style = function (name, value)
 //  }
   var b = this.___nodes___,
       i /*: {Int|(>= v 0)}*/ = 0,
-      node /*: Ref(~lNode) */ = null,
+      node /*: Ref(~htmlElt) */ = null,
       v /*: Str */ = "";
+  
   var style /*: Ref(~lStyle) */ = null;     //PV: added this
+
+  var tmp_bl;
+
   if (isArray(value)) {
-    /*: b lNodes */ "#thaw";
+    /*: b htmlElts */ "#thaw";
+    assume(b != null);
     if (value.length !== b.length) {
-//TODO: proto links differ       
-//      error("ADsafe: Array length: " +
-//          int_to_string(b.length) + "-" + int_to_string(value.length)); //PV: conversion
+      tmp_bl = b.length;
+      /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
+      error("ADsafe: Array length: " + int_to_string(tmp_bl)
+        + "-" + int_to_string(value.length)); //PV: conversion
     }
-    /*: ( &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro) 
+    else {
+      /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
+    }
+    /*: b htmlElts */ "#thaw";
+
+    /*: ( &b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro) 
          -> sameType */ 
     for (i = 0; i < b.length && i < value.length; i += 1) { //PV: added i < len(value)
       node = b[i];
-      /*: node lNode */ "#thaw";
+      /*: node htmlElt */ "#thaw";
       v = string_check(value[i]);
 //TODO: RegEx
 //      if (/url/i.test(v)) {
 //        error();
 //      }
       if (node.tagName) {
-//TODO: this will be hard to TC without knowing what v is         
-//        style = node.style;
-//        /*: style lStyle */ "#thaw";
-//        if (name !== "float") {
-//          style[name] = v;
-//        } 
-//        else {
-//          style.cssFloat = style.styleFloat = v;
-//        }
-//        /*: style (~lStyle, thwd lStyle) */ "#freeze";
+        style = node.style;
+        /*: style lStyle */ "#thaw";
+        assume(style != null);
+        if (name !== "float") {
+          style[name] = v;
+        } 
+        else {
+          style.cssFloat = style.styleFloat = v;
+        }
+        /*: style (~lStyle, thwd lStyle) */ "#freeze";
       }
-      /*: node (~lNode, thwd lNode) */ "#freeze";
+      /*: node (~htmlElt, thwd htmlElt) */ "#freeze";
     }
-    /*: b (~lNodes, thwd lNodes) */ "#freeze";
+    /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   }
   else {
     v = string_check(value);
@@ -78,13 +93,14 @@ var style = function (name, value)
 //    if (/url/i.test(v)) {
 //      error();
 //    }
-    /*: b lNodes */ "#thaw";
-    b.l;
-    /*: ( &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro) 
+    /*: b htmlElts */ "#thaw";
+    assume(b != null);
+    /*: ( &b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro) 
          -> sameType */ 
     for (i = 0; i < b.length; i += 1) {
       node = b[i];
-      /*: node lNode */ "#thaw";
+      /*: node htmlElt */ "#thaw";
+      assume(node != null);
       if (node.tagName) {
 //TODO: same as above        
 //        style = node.style;
@@ -96,9 +112,9 @@ var style = function (name, value)
 //        }
 //        /*: style (~lStyle, thwd lStyle) */ "#freeze";
       }
-      /*: node (~lNode, thwd lNode) */ "#freeze";
+      /*: node (~htmlElt, thwd htmlElt) */ "#freeze";
     }
-    /*: b (~lNodes, thwd lNodes) */ "#freeze";
+    /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   }
   return this;
 };
