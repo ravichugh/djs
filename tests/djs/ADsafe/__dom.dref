@@ -135,7 +135,7 @@ weak (~htmlElt: {
     style                : Ref(~lStyle),
     tagName              : Str,
     title                : Str,
-    value                : Str     (*XXX: This might break stuff *)
+    value                : Top     (*XXX: This might break stuff *)
   } > lObjPro)
 
 weak (~lDocument   : {

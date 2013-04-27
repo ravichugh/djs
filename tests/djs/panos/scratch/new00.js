@@ -7,10 +7,10 @@ var foo = function(a)
 sameType */ {};
 
 var fun = function(b, n) 
-/*: (b: Ref(lNodes), n: Ref(~lNode)) / (lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro) -> Top / sameType*/ 
+/*: (b: Ref(htmlElts), n: Ref(~lNode)) / (htmlElts: {Arr(Ref(~lNode))|(packed v)} > lArrPro) -> Top / sameType*/ 
 {
   var i /*: { Int | (>= v 0)} */ = 0;
-  /*: (&b: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) | (packed v)} > lArrPro) -> sameType */
+  /*: (&b: Ref(htmlElts), htmlElts: {Arr(Ref(~lNode)) | (packed v)} > lArrPro) -> sameType */
   for (i = 0; i < b.length; i += 1) {
     var bArr = /*: lBArr Arr(Ref(~lNode)) */  [n];
     /*: [;lBArr;] */ foo(bArr);
@@ -26,20 +26,20 @@ var explode = function ()
   /*: this (~lBunch, thwd lBunch) */ "#freeze";
   var i /*: { Int | (>= v 0)} */ = 0;
 
-  /*: b lNodes */ "#thaw";
+  /*: b htmlElts */ "#thaw";
   b.length;
-  /*: (&b: Ref(lNodes), lNodes: {Arr(Ref(~lNode)) | (packed v)} > lArrPro,
+  /*: (&b: Ref(htmlElts), htmlElts: {Arr(Ref(~lNode)) | (packed v)} > lArrPro,
        &a: Ref(lA), lA: Arr(Ref(~lBunch)) > lArrPro
       ) -> sameType */
   for (i = 0; i < b.length; i += 1) {
     var bArr = /*: lBArr Arr(Ref(~lNode)) */  [b[i]];
-    /*: b (~lNodes, thwd lNodes) */ "#freeze";
+    /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
     /*: [;lBArr;] */ foo(bArr);
 
 //    a[i] =  (new /*: lBch [;lBArr] */ Bunch)(bArr);
-    /*: b lNodes */ "#thaw";
+    /*: b htmlElts */ "#thaw";
   }
-  /*: b (~lNodes, thwd lNodes) */ "#freeze";
+  /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   return a;
 };
 

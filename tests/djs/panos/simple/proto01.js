@@ -1,7 +1,7 @@
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
 
 function Bunch(nodes)
-/*: new (this:Ref, nodes: Ref(~lNodes)) / (this: Empty > lBunchProto, ~lBunch: frzn) ->
+/*: new (this:Ref, nodes: Ref(~htmlElts)) / (this: Empty > lBunchProto, ~lBunch: frzn) ->
   Ref(~lBunch) / (~lBunch: frzn) */ {
   this.___nodes___ = nodes;
   this.___star___ = true;

@@ -2,7 +2,7 @@
 //Array check
 
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
-/*: tyBunchObj { "___nodes___": Ref(~lNodes), "___star___": Bool} > lObjPro */ "#define";
+/*: tyBunchObj { "___nodes___": Ref(~htmlElts), "___star___": Bool} > lObjPro */ "#define";
 /*: tyBunchArr { Arr(Ref(~lBunch))|(packed v)} > lArrPro */ "#define";
 
 
@@ -13,9 +13,9 @@ var replace = function (replacement)
 {
   var b = this.___nodes___;
   if (isArray(replacement)) {
-    /*: b lNodes */ "#thaw";
+    /*: b htmlElts */ "#thaw";
     b.length;
     var cond = true;
-    /*: b (~lNodes, thwd lNodes) */ "#freeze";
+    /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   }
 };

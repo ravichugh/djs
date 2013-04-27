@@ -1,12 +1,16 @@
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
 
+
+//TODO: replace all "newBunch" with "newBunch"
+var newBunch = /*: (Ref(~htmlElts)) -> Ref(~lBunch) */ "#extern";
+
 var document  = /*: Ref(~lDocument) */ "#extern";
 
 var String =  /*: (Top) -> Str */ "#extern";
 
 var error = /*: (message: Str)  -> { FLS } */ "#extern";
 
-var root /*: Ref(~lNode) */ = null;
+var root /*: Ref(~htmlElt) */ = null;
 
 var dom = /*: Ref(~lDom) */ "#extern";
 
@@ -20,17 +24,14 @@ var ephemeral_ /*: Ref(~lBunch) */ = "#extern";
 
 var parse_query = /*: (text: Str, id: Str) -> Ref(~lQuery) */ "#extern";
 
-var quest = /*: (Ref(~lQuery), Ref(~lNodes)) -> Ref(~lNodes) */ "#extern";
+var quest = /*: (Ref(~lQuery), Ref(~htmlElts)) -> Ref(~htmlElts) */ "#extern";
 
 var selector_to_string = /*: (Ref(~lSelector)) -> Str */ "#extern";
 
-var purge_event_handlers = /*: (node: Ref(~lNode)) -> Top */ "#extern";
+var purge_event_handlers = /*: (node: Ref(~htmlElt)) -> Top */ "#extern";
 
-//var concat = /* [A] (a: Ref(lA), b: Ref(lB)) / (lA: a0: Arr(A) > lArrPro, lB: b0: Arr(A) > lArrPro)
-//              -> Ref(lA) / (lA: {Arr(A)|(= (len v) (+ (len a0) (len b0)))} > lArrPro) */  "#extern";
-
-//TODO: PV: might need to do this more general
-var concat = /*: (a: Ref(~lNodes), b: Ref(~lNodes)) -> Ref(~lNodes) */  "#extern";
+//XXX: might become more general after abstraction over weak locations
+var arrayConcat = /*: (a: Ref(~htmlElts), b: Ref(~htmlElts)) -> Ref(~htmlElts) */  "#extern";
 
 var hunter =  "#extern";
 
@@ -118,29 +119,30 @@ var makeableTagName = {
 };
 
 
-function Bunch(nodes)
-  /*: new (this:Ref, nodes: Ref(~lNodes)) / (this: Empty > lBunchProto, ~lBunch: frzn) ->
-    Ref(~lBunch) / (~lBunch: frzn) */
-{
-  this.___nodes___ = nodes;
-  /*: nodes lNodes */ "#thaw";
-  this.___star___ = star && nodes.length > 1;
-  /*: nodes (~lNodes, thwd lNodes) */ "#freeze";
-  star = false;
-  var self = this;
-  /*: self (~lBunch,frzn) */ "#freeze";
-  return self;      //PV: added return
-};
+////TODO: include when including newBunch
+//function Bunch(nodes)
+//  /*: new (this:Ref, nodes: Ref(~htmlElts)) / (this: Empty > lBunchProto, ~lBunch: frzn) ->
+//    Ref(~lBunch) / (~lBunch: frzn) */
+//{
+//  this.___nodes___ = nodes;
+//  /*: nodes htmlElts */ "#thaw";
+//  this.___star___ = star && nodes.length > 1;
+//  /*: nodes (~htmlElts, thwd htmlElts) */ "#freeze";
+//  star = false;
+//  var self = this;
+//  /*: self (~lBunch,frzn) */ "#freeze";
+//  return self;      //PV: added return
+//};
 
 
 
 var append = function (bunch) 
   /*: (Ref(~lBunch)) -> Ref(~lDom) */ 
 {
-  var b = bunch.___nodes___, i /*: {Int|(>= v 0)} */ = 0, n /*: Ref(~lNode) */ = null;
-  /*: b lNodes */ "#thaw";
+  var b = bunch.___nodes___, i /*: {Int|(>= v 0)} */ = 0, n /*: Ref(~htmlElt) */ = null;
+  /*: b htmlElts */ "#thaw";
   b.l;
-  /*: ( &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro) -> sameType */ 
+  /*: ( &b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro) -> sameType */ 
   for (i = 0; i < b.length; i += 1) {
     n = b[i];
     if (typeof n === 'string' || typeof n === 'number') {
@@ -148,7 +150,7 @@ var append = function (bunch)
     }
     root.appendChild(n);
   }
-  /*: b (~lNodes, thwd lNodes) */ "#freeze";
+  /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   return dom;
 };
 
@@ -162,17 +164,18 @@ var combine =  function (array)
   }
   else {
     var bch = array[0];
-    var b /*: Ref(~lNodes) */ = bch.___nodes___, i /*: {Int|(>= v 0)} */ = 0;
+    var b /*: Ref(~htmlElts) */ = bch.___nodes___, i /*: {Int|(>= v 0)} */ = 0;
 
     /*: ( &bch: Ref(~lBunch),
           &array: Ref(lBunches), lBunches: {Arr(Ref(~lBunch))|(packed v)} > lArrPro) -> sameType */
     for (i = 0; i < array.length; i += 1) {
-//TODO      
-//      b = b.concat(array[i].___nodes___);   //PV: original code
-      b = concat(b, array[i].___nodes___);
+//PV: original code begin
+//      b = b.concat(array[i].___nodes___);
+//PV: original code end
+      b = arrayConcat(b, array[i].___nodes___);
     }
     /*: array (~lBunches, thwd lBunches) */ "#freeze";
-    return new Bunch(b);
+    return newBunch(b);
   }
 };
 
@@ -196,57 +199,48 @@ var ephemeral = function (bunch)
 var fragment = function () 
 /*: () -> Ref(~lBunch) */
 {
-  var a = /*: lA {Arr(Ref(~lNode))|(packed v)} */ [document.createDocumentFragment()];
-  /*: a (~lNodes, frzn) */ "#freeze";
-  return new Bunch(a);
+  var a = /*: lA {Arr(Ref(~htmlElt))|(packed v)} */ [document.createDocumentFragment()];
+  /*: a (~htmlElts, frzn) */ "#freeze";
+  return newBunch(a);
 };
 
 var prepend = function (bunch) 
 /*: (Ref(~lBunch)) -> Ref(~lDom) */
 {
   var b = bunch.___nodes___, i /*: {Int|(>= v 0)} */ = 0;
-  /*: b lNodes */ "#thaw";
+  /*: b htmlElts */ "#thaw";
   b.l;
-  /*: (&b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro) -> sameType */
+  /*: (&b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro) -> sameType */
   for (i = 0; i < b.length; i += 1) {
     root.insertBefore(b[i], root.firstChild);
   }
-  /*: b (~lNodes, thwd lNodes) */ "#freeze";
+  /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   return dom;
 };
 
-var q = function (text) 
-//TODO: is there another way to define hunter?  
-/*: [;L;] (text: Str) /  ( &hunter: Ref(L), L: {
-        empty_  : (Ref(~lNode)) -> Top ,
-        plus    : (Ref(~lNode)) -> Top ,
-        greater : (Ref(~lNode)) -> Top ,
-        pound   : (Ref(~lNode)) -> Top ,
-        slash   : (Ref(~lNode)) -> Top ,
-        star    : (Ref(~lNode)) -> Top ,
-        _       : Bot
-      } > lObjPro)  
-    -> Ref(~lBunch) / sameType */
-{
-  star = false;
-  var query = parse_query(text, id);
-  /*: query lQuery */ "#thaw";
-  query.l;
-  if (query.length > 0) {
-    var s = query[0];
-    hunter[s.op];
-    if (typeof hunter[s.op] !== 'function') {
-      error('ADsafe: Bad query: ' + selector_to_string(query[0]));  //PV: added conversion to string
-    }
-  }
-
-  /*: query (~lQuery, thwd lQuery) */ "#freeze";
-
-  var r =  /*: lR {Arr(Ref(~lNode))|(packed v)} */ [root];
-  /*: r (~lNodes, frzn) */ "#freeze";
-  return new Bunch(quest(query, r));
-};
-
+//
+//var q = function (text) 
+///*: [;L] (text: Str) / (&hunter: Ref(L), L: Dict > lObjPro) -> Top / sameType */
+//
+//{
+//  star = false;
+//  var query = parse_query(text, id);
+//  /*: query lQuery */ "#thaw";
+//  var s = query[0];
+//  assume(s != undefined);
+//  assume(s.op != undefined);
+//
+//  if (typeof hunter[s.op] !== 'function') {
+//    error('ADsafe: Bad query: ' + selector_to_string(query[0]));  //PV: added conversion to string
+//  }
+//
+//  /*: query (~lQuery, thwd lQuery) */ "#freeze";
+//
+//  var r =  /*: lR {Arr(Ref(~htmlElt))|(packed v)} */ [root];
+//  /*: r (~htmlElts, frzn) */ "#freeze";
+//  return newBunch(quest(query, r));
+//};
+//
 
 var remove = function () 
 /*: () -> Top */
@@ -257,24 +251,24 @@ var remove = function ()
 };
 
 var row = function (values) 
-/*: (values: Ref(~lNodes)) -> Ref(~lBunch) */
+/*: (values: Ref(~htmlElts)) -> Ref(~lBunch) */
 {
   var tr = document.createElement('tr'),
-      td /*: Ref(~lNode) */ = null,
+      td /*: Ref(~htmlElt) */ = null,
       i /*: {Int|(>= v 0)} */ = 0;
-  /*: values lNodes */ "#thaw";
+  /*: values htmlElts */ "#thaw";
   values.l;
-  /*: ( &values: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
+  /*: ( &values: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro)
       -> sameType */ 
   for (i = 0; i < values.length; i += 1) {
     td = document.createElement('td');
     td.appendChild(document.createTextNode(String(values[i])));
     tr.appendChild(td);
   }
-  /*: values (~lNodes, thwd lNodes) */ "#freeze";
-  var trArr = /*: lTr {Arr(Ref(~lNode))|(packed v)} */ [tr];
-  /*: trArr (~lNodes, frzn) */ "#freeze";
-  return new Bunch(trArr);
+  /*: values (~htmlElts, thwd htmlElts) */ "#freeze";
+  var trArr = /*: lTr {Arr(Ref(~htmlElt))|(packed v)} */ [tr];
+  /*: trArr (~htmlElts, frzn) */ "#freeze";
+  return newBunch(trArr);
 };
 
 var tag = function (tag_, type_, name) 
@@ -295,9 +289,9 @@ var tag = function (tag_, type_, name)
   if (type_) {
     node.type = type_;
   }
-  var nodeArg = /*: lN {Arr(Ref(~lNode))|(packed v)} */ [node];
-  /*: nodeArg (~lNodes,frzn) */ "#freeze";
-  return new Bunch(nodeArg);
+  var nodeArg = /*: lN {Arr(Ref(~htmlElt))|(packed v)} */ [node];
+  /*: nodeArg (~htmlElts,frzn) */ "#freeze";
+  return newBunch(nodeArg);
 };
 
 var text = function (text) 
@@ -308,19 +302,19 @@ var text = function (text)
 {
   var a, i;
   if (isArray(text)) {
-    a = /*: lA {Arr(Ref(~lNode))|(packed v)} */ [];
-    /*: ( &i:i0:{Int|(>= v 0)}, lA:{Arr(Ref(~lNode))|(and (packed v) (= (len v) i0))} > lArrPro,
+    a = /*: lA {Arr(Ref(~htmlElt))|(packed v)} */ [];
+    /*: ( &i:i0:{Int|(>= v 0)}, lA:{Arr(Ref(~htmlElt))|(and (packed v) (= (len v) i0))} > lArrPro,
           &text: Ref(lT), lT: {Arr(Str)|(packed v)} > lArrPro)
-        -> ( &i: sameType, lA: {Arr(Ref(~lNode))|(packed v)} > lArrPro, &text: sameType, lT: sameType) */ 
+        -> ( &i: sameType, lA: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro, &text: sameType, lT: sameType) */ 
     for (i = 0; i < text.length; i += 1) {
       a[i] = document.createTextNode(string_check(text[i]));
     }
-    /*: a (~lNodes, frzn) */ "#freeze";
-    return new Bunch(a);
+    /*: a (~htmlElts, frzn) */ "#freeze";
+    return newBunch(a);
   }
   else {    //PV added this
-    var arg = /*: lArg {Arr(Ref(~lNode))|(packed v)} */ [document.createTextNode(string_check(text))];
-    /*: arg (~lNodes, frzn) */ "#freeze";
-    return new Bunch(arg);
+    var arg = /*: lArg {Arr(Ref(~htmlElt))|(packed v)} */ [document.createTextNode(string_check(text))];
+    /*: arg (~htmlElts, frzn) */ "#freeze";
+    return newBunch(arg);
   }
 };

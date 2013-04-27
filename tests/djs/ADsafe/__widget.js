@@ -26,6 +26,7 @@
     (implies (has v "arguments")   (bad (sel v "arguments")))
     (implies (has v "valueOf")     (bad (sel v "valueOf")))
     (implies (has v "toString")    (bad (sel v "toString")))
+
     (*(forall (d s) 
       (implies (and (has d s) (not (or  (= s "___nodes___")
                                         (= s "___star___")

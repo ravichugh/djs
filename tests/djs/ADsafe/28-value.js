@@ -17,92 +17,97 @@ var reject_global =
 
 var String =  /*: (Top) -> Str */ "#extern";
 
-var purge_event_handlers = /*: (node: Ref(~lNode)) -> Top */ "#extern";
+var purge_event_handlers = /*: (node: Ref(~htmlElt)) -> Top */ "#extern";
 
 var value = function (value) 
-/*: {( and 
-    (v:: (this: Ref(~lBunch), value: {(= (tag v) "string")}) -> Top)
-    (v:: (this: Ref(~lBunch), value: Ref(lT)) / (lT: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType)
+//TODO: intersection type
+/* {( and 
+    (v:: (this: Ref(~lBunch), value: {(= (tag v) "string")}) / (lValue: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType) 
+    (v:: (this: Ref(~lBunch), value: Ref(lValue)) / (lValue: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType) 
 )}*/
+  
+/* (this: Ref(~lBunch), value: Str) -> Top */
+/*:  (this: Ref(~lBunch), value: Ref(lValue)) / (lValue: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType */
 {
   reject_global(this);
   if (value === undefined) {
     error("default");     //PV: added this
   }
-  var b /*: Ref(~lNodes) */   = this.___nodes___, 
+  var b /*: Ref(~htmlElts) */   = this.___nodes___, 
       i /*: {Int|(>= v 0)} */ = 0, 
-      node /*: Ref(~lNode) */ = null;
+      node /*: Ref(~htmlElt) */ = null;
 
   var cond /*: Bool */ = true;
 
   if (isArray(value)) {
-    /*: b lNodes */ "#thaw";
+    /*: b htmlElts */ "#thaw";
     //PV: added extra if check for lengths
     if (b.length === value.length) {
 
       cond = i < b.length; 
-      /*: b (~lNodes, thwd lNodes) */ "#freeze";
-      /*: ( &value: {(ite (= (tag v) "array") (v::Ref(~lPackedValues)) (Top v))}) -> sameType*/
+      /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
+
+      /*: ( &value: Ref(lValue), lValue: {Arr(Str)|(packed v)} > lArrPro ) -> sameType*/
       for (i = 0; cond; i += 1) {
-        /*: b lNodes */ "#thaw";
+        /*: b htmlElts */ "#thaw";
         if (i < b.length) {
           node = b[i];
-          /*: b (~lNodes, thwd lNodes) */ "#freeze";
+          /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
 
           if (node.tagName) {
             if (node.type !== 'password') {
               if (typeof node.value === 'string') {
-                /*: node lNode */ "#thaw";
+                /*: node htmlElt */ "#thaw";
                 node.value = value[i];
-                /*: node (~lNode, thwd lNode) */ "#freeze";
+                /*: node (~htmlElt, thwd htmlElt) */ "#freeze";
               } 
               else {
-                /*: (&node: Ref(~lNode)) -> sameType */
+                /*: (&node: Ref(~htmlElt)) -> sameType */
                 while (node.firstChild) {
                   purge_event_handlers(node.firstChild);
                   node.removeChild(node.firstChild);
                 }
-//                node.appendChild(document.createTextNode(String(value[i])));
+                node.appendChild(document.createTextNode(String(value[i])));
               }
             }
           } else if (node.nodeName === '#text') {
-//            node.nodeValue = String(value[i]);
+            node.nodeValue = String(value[i]);
           }
         }
         else {
-          /*: b (~lNodes, thwd lNodes) */ "#freeze";
+          /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
         }
       }
     }
     else {
-      /*: b (~lNodes, thwd lNodes) */ "#freeze";
+      /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
     }
   } 
   else {
-//    value = String(value);
-//    /*: b lNodes */ "#thaw";
-//    b.l;
-//    /*: ( &b: Ref(lNodes), lNodes: {Arr(Ref(~lNode))|(packed v)} > lArrPro)
-//        -> ( &b: sameType, lNodes: sameType) */ 
-//    for (i = 0; i < b.length; i += 1) {
-//      node = b[i];
-//      if (node.tagName) {
-//        if (node.tagName !== 'BUTTON' &&
-//            typeof node.value === 'string') {
-//              node.value = value;
-//            } else {
-//              /*: (&node: Ref(~lNode)) -> sameType */
-//              while (node.firstChild) {
-//                purge_event_handlers(node.firstChild);
-//                node.removeChild(node.firstChild);
-//              }
-//              node.appendChild(document.createTextNode(value));
-//            }
-//      } else if (node.nodeName === '#text') {
-//        node.nodeValue = value;
-//      }
-//    }
-//    /*: b (~lNodes, thwd lNodes) */ "#freeze";
+    value = String(value);
+    /*: b htmlElts */ "#thaw";
+    b.l;
+    /*: ( &b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro)
+        -> ( &b: sameType, htmlElts: sameType) */ 
+    for (i = 0; i < b.length; i += 1) {
+      node = b[i];
+      if (node.tagName) {
+        if (node.tagName !== 'BUTTON' &&
+            typeof node.value === 'string') {
+              node.value = value;
+            } else {
+              /*: (&node: Ref(~htmlElt)) -> sameType */
+              while (node.firstChild) {
+                purge_event_handlers(node.firstChild);
+                node.removeChild(node.firstChild);
+              }
+              node.appendChild(document.createTextNode(value));
+            }
+      } else if (node.nodeName === '#text') {
+        node.nodeValue = value;
+      }
+    }
+    /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   }
   return this;
 };
