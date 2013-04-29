@@ -15,7 +15,7 @@ var reject_global =
     )} */ "#extern";
 
 var make_root = 
-  /*: [;L;] (root:Ref(~lNode) , id:Str) / () -> 
+  /*: [;L;] (root:Ref(~htmlElt) , id:Str) / () -> 
       Ref(L) / (L: {Arr(Top) | 
                         (and 
                            (packed v) 
@@ -48,7 +48,7 @@ var go = function (id, f) /*: (id: Str, f: (Ref(~lDom), Ref(~lLib))-> Top ) -> T
 
   root = document.getElementById(id);
 
-  /*: root lNode */ "#thaw";
+  /*: root htmlElt */ "#thaw";
 
   if (root.tagName !== 'DIV') {
     error();
@@ -61,14 +61,14 @@ var go = function (id, f) /*: (id: Str, f: (Ref(~lDom), Ref(~lLib))-> Top ) -> T
   //  document.getElementById function.
 
   var fn = root.getElementsByTagName;
-  /*: root (~lNode, thwd lNode) */ "#freeze";
+  /*: root (~htmlElt, thwd htmlElt) */ "#freeze";
   scripts = (/*: [;lScripts;] */ fn)('script');
   i = scripts.length - 1;
   if (i < 0) {
     error();
   }
   /*: (&i:i0:{Int|(and (>= v 0) (< v (len arr)))}, 
-       lScripts: arr:{Arr(Ref(~lNode))|(and (packed v))} > lArrPro)
+       lScripts: arr:{Arr(Ref(~htmlElt))|(and (packed v))} > lArrPro)
         -> (&i: {Int|(< v 0)}, lScripts: sameType) */
    do {
     assert(/*: NotUndef */ (scripts[i]));

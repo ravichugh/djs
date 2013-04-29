@@ -22,7 +22,8 @@ var parse_query = function (textarg, id) /*: (Str, Str) -> Ref(~lQuery) */
 
   var match /*: Ref(lm?) */ = null,           // A match array 
       query /*: Ref  { Arr(Ref(~lSelector))|(packed v)} */ =  [],   // The resulting query array
-      selector  /*: Ref(~lSelector) */ = null;                     //PV: added "null"
+      //selector  /*: Ref(~lSelector) */ = null;                     //PV: added "null"
+      selector /*: Ref(~lSelector) */ = null;                     //PV: added "null"
 
   var text /*: Str */ = "a";
 
@@ -33,7 +34,8 @@ var parse_query = function (textarg, id) /*: (Str, Str) -> Ref(~lQuery) */
 
   // Loop over all of the selectors in the text.
 
-  /*: ( ) -> () */ 
+  /* ( &selector: Ref(~lSelector)) -> ( &selector: Ref(~lSelector) ) */ 
+  /*: () -> ( ) */ 
   do {
 
     // The qx teases the components of one selector out of the text, ignoring
@@ -63,9 +65,8 @@ var parse_query = function (textarg, id) /*: (Str, Str) -> Ref(~lQuery) */
     if (match[1]) {
 
 //    The selector is * or /
-      var tmp1 = { op: match[1] };
-      /*: tmp1 (~lSelector, frzn) */ "#freeze";
-      selector = tmp1;
+      selector = { op: match[1] };
+      /*: selector (~lSelector, frzn) */ "#freeze";
 
     } 
     else if (match[2]) {
@@ -73,67 +74,63 @@ var parse_query = function (textarg, id) /*: (Str, Str) -> Ref(~lQuery) */
       // The selector is in brackets.
 
       if (match[3]) {
-        var tmp3 = {
+        selector = {
           op: '[' + match[3],
           name: match[2],
           value: match[4]
         };
-        /*: tmp3 (~lSelector, frzn) */ "#freeze";
-        selector = tmp3;
+        /*: selector (~lSelector, frzn) */ "#freeze";
 
       }    
       else {
-        var tmp2 = {
+        selector = {
           op: '[',
           name: match[2]
         };
-        /*: tmp2 (~lSelector, frzn) */ "#freeze";
-        selector = tmp2;
+        /*: selector (~lSelector, frzn) */ "#freeze";
       }
     } 
     else if (match[5]) {
 
       // The selector is an id.
 
-      if (query.length > 0 || match[5].length <= id.length ||
-          match[5].slice(0, id.length) !== id) {
-        error("ADsafe: Bad query: " + text);
-      }
+      //XXX: SLOW DOWN !!! ~ 8 sec
+//      if (query.length > 0 || match[5].length <= id.length ||
+//          match[5].slice(0, id.length) !== id) {
+//        error("ADsafe: Bad query: " + text);
+//      }
 
-      var tmp5 = {
+      selector = {
         op: '#',
         name: match[5]
       };
-      /*: tmp5 (~lSelector, frzn) */ "#freeze";
-      selector = tmp5;
+      /*: selector (~lSelector, frzn) */ "#freeze";
 
       // The selector is a colon.
 
     } 
     else if (match[6]) {
-      var tmp6 = {
+      selector = {
         op: ':' + match[6]
       };
-      /*: tmp6 (~lSelector, frzn) */ "#freeze";
-      selector = tmp6;
+      /*: selector (~lSelector, frzn) */ "#freeze";
       // The selector is one of > + . & _ or a naked tag name
     }
     else {
-    //assume((typeof match[7] === 'string'));     //PV
 
-      var tmp7 = {
+      selector = {
         op: match[7],
         name: match[8]
       };
-      /*: tmp7 (~lSelector, frzn) */ "#freeze";
-      selector = tmp7;
+      /*: selector (~lSelector, frzn) */ "#freeze";
     }
 
+    //XXX: SLOW DOWN !!! ~ A lot ! 
     // Add the selector to the query.
-    query.push(selector);
+    //query.push(selector);
 
     // Remove the selector from the text. If there is more text, have another go.
-    text = text.slice(match[0].length, 0);    //PV: added 2nd argument to slice 
+    //text = text.slice(match[0].length, 0);    //PV: added 2nd argument to slice 
 
   } while (text);
   

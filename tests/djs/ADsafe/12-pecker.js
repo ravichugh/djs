@@ -3,49 +3,49 @@
 
 var document  = /*: Ref(~lDocument) */ "#extern";
 var name /*: Str */ = "#extern";
-var result /*: Ref(~lNodes) */ = "#extern";
+var result /*: Ref(~htmlElts) */ = "#extern";
 var star    /*: Bool */         = "#extern";
 var value     /*: Str */              = "#extern";       
-var has_focus /*: Ref(~lNode) */ = "#extern";
+var has_focus /*: Ref(~htmlElt) */ = "#extern";
 var flipflop /*: Bool */ = "#extern"; // Used in :even/:odd processing
 
-var getStyleObject = /*: (node: Ref(~lNode)) -> Ref(~lStyle) */ "#extern";
+var getStyleObject = /*: (node: Ref(~htmlElt)) -> Ref(~lStyle) */ "#extern";
 
 var pecker = {
-    '.': function (node) /*: (Ref(~lNode)) -> Bool */ 
+    '.': function (node) /*: (Ref(~htmlElt)) -> Bool */ 
     {
       return (' ' + node.className + ' ').indexOf(' ' + name + ' ') >= 0;
     }
     ,
     '&': function (node) 
-      /*: (Ref(~lNode)) -> Bool */          
+      /*: (Ref(~htmlElt)) -> Bool */          
     {
       return node.name === name;
     },
     '_': function (node) 
-      /*: (Ref(~lNode)) -> Bool */
+      /*: (Ref(~htmlElt)) -> Bool */
     {
       return node.type === name;
     },
     '[': function (node)
-      /*: (Ref(~lNode)) -> Bool */
+      /*: (Ref(~htmlElt)) -> Bool */
     {
       return typeof node[name] === 'string';
     },
     '[=': function (node) 
-      /*: (Ref(~lNode)) -> Bool */          
+      /*: (Ref(~htmlElt)) -> Bool */          
     {
       var member = node[name];
       return typeof member === 'string' && member === value;
     },
     '[!=': function (node)
-      /*: (Ref(~lNode)) -> Bool */          
+      /*: (Ref(~htmlElt)) -> Bool */          
     {
       var member = node[name];
       return typeof member === 'string' && member !== value;
     },
     '[^=': function (node) 
-      /*: (Ref(~lNode)) -> Bool */
+      /*: (Ref(~htmlElt)) -> Bool */
     {
       var member = node[name];
       //Applying a refactoring to allow the use of slice (applied
@@ -58,7 +58,7 @@ var pecker = {
       return false;
     },
     '[$=': function (node)
-      /*: (Ref(~lNode)) -> Bool */
+      /*: (Ref(~htmlElt)) -> Bool */
     {
       var member = node[name];
       if (typeof member === 'string')
@@ -66,7 +66,7 @@ var pecker = {
       return false;
     },
     '[*=': function (node)
-      /*: (Ref(~lNode)) -> Bool */
+      /*: (Ref(~htmlElt)) -> Bool */
     {
       var member = node[name];
       if (typeof member === 'string')
@@ -74,7 +74,7 @@ var pecker = {
       return false;
     },
     '[~=': function (node) 
-      /*: (Ref(~lNode)) -> Bool */
+      /*: (Ref(~htmlElt)) -> Bool */
     {
       var member = node[name];
       if (typeof member === 'string')                  
@@ -82,7 +82,7 @@ var pecker = {
       return false;
     },
     '[|=': function (node) 
-      /*: (Ref(~lNode)) -> Bool */
+      /*: (Ref(~htmlElt)) -> Bool */
     {
       var member = node[name];
       if (typeof member === 'string')
@@ -91,28 +91,28 @@ var pecker = {
     }
   ,
     ':blur': function (node)
-      /*: (Ref(~lNode)) -> Bool */
+      /*: (Ref(~htmlElt)) -> Bool */
     {
       return node !== has_focus;
     },
     ':checked': function (node)
-      /*: (Ref(~lNode)) -> Bool */
+      /*: (Ref(~htmlElt)) -> Bool */
     {
       return node.checked;
     },
     ':disabled': function (node)
-      /*: (Ref(~lNode)) -> Top */
+      /*: (Ref(~htmlElt)) -> Top */
     {
       return node.tagName && node.disabled;
     },
     ':enabled': function (node) 
-      /*: (Ref(~lNode)) -> Top */
+      /*: (Ref(~htmlElt)) -> Top */
     {
       return node.tagName && !node.disabled;
     }
   ,
     ':even': function (node) 
-      /*: (Ref(~lNode)) -> Bool */
+      /*: (Ref(~htmlElt)) -> Bool */
     {
       var f;
       if (node.tagName) {
@@ -124,18 +124,18 @@ var pecker = {
     }
   ,
     ':focus': function (node) 
-      /*: (Ref(~lNode)) -> Bool */
+      /*: (Ref(~htmlElt)) -> Bool */
     {
       return node === has_focus;
     },
     ':hidden': function (node) 
-      /*: (Ref(~lNode)) -> Top */
+      /*: (Ref(~htmlElt)) -> Top */
     {
       return node.tagName && getStyleObject(node).visibility !== 'visible';
     }
   ,
     ':odd': function (node) 
-      /*: (Ref(~lNode)) -> Bool */
+      /*: (Ref(~htmlElt)) -> Bool */
     {
       if (node.tagName) {
         flipflop = !flipflop;
@@ -144,29 +144,29 @@ var pecker = {
       return false;
     },
     ':tag': function (node) 
-      /*: (Ref(~lNode)) -> Str */
+      /*: (Ref(~htmlElt)) -> Str */
     {
       return node.tagName;
     },
     ':text': function (node)
-      /*: (Ref(~lNode)) -> Bool */
+      /*: (Ref(~htmlElt)) -> Bool */
     {
       return node.nodeName === '#text';
     },
     ':trim': function (node)
-      /*: (Ref(~lNode)) -> Bool */
+      /*: (Ref(~htmlElt)) -> Bool */
     {
       //TODO: regex support
       //    return node.nodeName !== '#text' || /\W/.test(node.nodeValue);  
       return false;
     },
     ':unchecked': function (node)
-      /*: (Ref(~lNode)) -> Top */
+      /*: (Ref(~htmlElt)) -> Top */
     {
       return node.tagName && !node.checked;
     },
     ':visible': function (node)
-      /*: (Ref(~lNode)) -> Top */
+      /*: (Ref(~htmlElt)) -> Top */
     {
       return node.tagName && getStyleObject(node).visibility === 'visible';
     }

@@ -85,12 +85,12 @@ var adsafe_id,      // The id of the current widget
     },
 
     cache_style_object /*: Ref(~lStyle) */ = null,
-    cache_style_node /*: Ref(~lNode) */ = null,
+    cache_style_node /*: Ref(~htmlElt) */ = null,
     defaultView = document.defaultView,
     ephemeral /*: Ref(~lBunch) */ = null;
     var flipflop /*: Bool */ = "#extern"; // Used in :even/:odd processing
     
-    var has_focus /*: Ref(~lNode) */ = "#extern";
+    var has_focus /*: Ref(~htmlElt) */ = "#extern";
 
 //    hunter,         // Set of hunter patterns
     var interceptors = [],
@@ -177,7 +177,7 @@ var adsafe_id,      // The id of the current widget
   var name /*: Str */ = "#extern";
 
 //  var pecker;   // set of pecker patterns
-  var result  /*: Ref(~lNodes) */ = "#extern";
+  var result  /*: Ref(~htmlElts) */ = "#extern";
   var star    /*: Bool */         = "#extern";
   var the_range /*: Ref(~lRange) */  = null;
   var value     /*: Str */              = "#extern";       
@@ -220,61 +220,61 @@ var reject_global =
 /*: [;L1,L2;] (that: Ref(L1)) / (L1:d:Dict > L2, ~lBunch: thwd lBunch) 
     -> {(implies (truthy (objsel d "window" cur L2)) FLS)} / sameExact */ "#extern";
 
-var getStyleObject = /*: (node: Ref(~lNode)) -> Ref(~lStyle) */ "#extern";
+var getStyleObject = /*: (node: Ref(~htmlElt)) -> Ref(~lStyle) */ "#extern";
 
 
-var walkTheDOM = /*: ( node: Ref(~lNode), func:(Ref(~lNode)) -> Top, skip: Bool)
+var walkTheDOM = /*: ( node: Ref(~htmlElt), func:(Ref(~htmlElt)) -> Top, skip: Bool)
                    -> Top */ "#extern";
 
-var purge_event_handlers = /*: (node: Ref(~lNode)) -> Top */ "#extern";
+var purge_event_handlers = /*: (node: Ref(~htmlElt)) -> Top */ "#extern";
 
 var parse_query = /*: (text: Str, id: Str) -> Ref(~lQuery) */ "#extern";
 
 //TODO: changed names because string literals could not be parsed
 var hunter = 
 /*: {
-  empty_  : (node       : Ref(~lNode)) / (&name   : Str) -> Top / sameExact,
-  plus    : (node       : Ref(~lNode)) / (&name   : Str) -> Top / sameType,
-  greater : (node       : Ref(~lNode)) / (&name   : Str) -> Top / sameType,
+  empty_  : (node       : Ref(~htmlElt)) / (&name   : Str) -> Top / sameExact,
+  plus    : (node       : Ref(~htmlElt)) / (&name   : Str) -> Top / sameType,
+  greater : (node       : Ref(~htmlElt)) / (&name   : Str) -> Top / sameType,
   pound   : () / (&name : Str) -> Top / sameType,
-  slash   : (node       : Ref(~lNode)) -> Top,
-  star    : (node       : Ref(~lNode)) / (&star   : Bool) -> Top / sameType
+  slash   : (node       : Ref(~htmlElt)) -> Top,
+  star    : (node       : Ref(~htmlElt)) / (&star   : Bool) -> Top / sameType
   } */ "#extern";
 
 
 var pecker = 
   /*: {
-    dot        : (Ref(~lNode)) -> Bool ,
-    amber      : (Ref(~lNode)) -> Bool ,
-    underscore : (Ref(~lNode)) -> Bool ,
-    lbrack     : (Ref(~lNode)) -> Bool ,
-    lbrackeq   : (Ref(~lNode)) -> Bool ,
-    s1         : (Ref(~lNode)) -> Bool ,
-    s2         : (Ref(~lNode)) -> Bool ,
-    s3         : (Ref(~lNode)) -> Bool ,
-    s4         : (Ref(~lNode)) -> Bool ,
-    s5         : (Ref(~lNode)) -> Bool ,
-    s6         : (Ref(~lNode)) -> Bool ,
-    blur       : (Ref(~lNode)) -> Bool ,
-    checked    : (Ref(~lNode)) -> Bool ,
-    disabled   : (Ref(~lNode)) -> Top  ,
-    enabled    : (Ref(~lNode)) -> Top  ,
-    even       : (Ref(~lNode)) -> Bool ,
-    focus      : (Ref(~lNode)) -> Bool ,
-    hidden     : (Ref(~lNode)) -> Top  ,
-    odd        : (Ref(~lNode)) -> Bool ,
-    tag_       : (Ref(~lNode)) -> Str  ,
-    text       : (Ref(~lNode)) -> Bool ,
-    trim       : (Ref(~lNode)) -> Bool ,
-    unchecked  : (Ref(~lNode)) -> Top  ,
-    visible    : (Ref(~lNode)) -> Top
+    dot        : (Ref(~htmlElt)) -> Bool ,
+    amber      : (Ref(~htmlElt)) -> Bool ,
+    underscore : (Ref(~htmlElt)) -> Bool ,
+    lbrack     : (Ref(~htmlElt)) -> Bool ,
+    lbrackeq   : (Ref(~htmlElt)) -> Bool ,
+    s1         : (Ref(~htmlElt)) -> Bool ,
+    s2         : (Ref(~htmlElt)) -> Bool ,
+    s3         : (Ref(~htmlElt)) -> Bool ,
+    s4         : (Ref(~htmlElt)) -> Bool ,
+    s5         : (Ref(~htmlElt)) -> Bool ,
+    s6         : (Ref(~htmlElt)) -> Bool ,
+    blur       : (Ref(~htmlElt)) -> Bool ,
+    checked    : (Ref(~htmlElt)) -> Bool ,
+    disabled   : (Ref(~htmlElt)) -> Top  ,
+    enabled    : (Ref(~htmlElt)) -> Top  ,
+    even       : (Ref(~htmlElt)) -> Bool ,
+    focus      : (Ref(~htmlElt)) -> Bool ,
+    hidden     : (Ref(~htmlElt)) -> Top  ,
+    odd        : (Ref(~htmlElt)) -> Bool ,
+    tag_       : (Ref(~htmlElt)) -> Str  ,
+    text       : (Ref(~htmlElt)) -> Bool ,
+    trim       : (Ref(~htmlElt)) -> Bool ,
+    unchecked  : (Ref(~htmlElt)) -> Top  ,
+    visible    : (Ref(~htmlElt)) -> Top
   } */ "#extern";
 
 
-var quest = /*: (Ref(~lQuery), Ref(~lNodes)) -> Ref(~lNodes) */ "#extern";
+var quest = /*: (Ref(~lQuery), Ref(~htmlElts)) -> Ref(~htmlElts) */ "#extern";
           
 var make_root = 
-  /*: [;L;] (root:Ref(~lNode) , id:Str) / () -> 
+  /*: [;L;] (root:Ref(~htmlElt) , id:Str) / () -> 
       Ref(L) / (L: {Arr(Top) | 
                         (and 
                            (packed v) 

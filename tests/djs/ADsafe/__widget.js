@@ -12,7 +12,7 @@
             )} */ "#define";
 
 /*: (~widget: { Dict | (and 
-    (implies (has v "___nodes___") (or ((sel v "___nodes___")::Ref(~lNodes)) (= (sel v "___nodes___") undefined)))
+    (implies (has v "___nodes___") (or ((sel v "___nodes___")::Ref(~htmlElts)) (= (sel v "___nodes___") undefined)))
     (implies (has v "___star___") (or (Bool (sel v "___star___")) (= (sel v "___star___") undefined)))
 
     (implies (has v "caller")      (bad (sel v "caller")))

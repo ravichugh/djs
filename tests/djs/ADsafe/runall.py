@@ -19,7 +19,7 @@ files = [
  ("07-getStyleObject.js", 0),
  ("08-walkTheDOM.js", 0),
  ("09-purge_event_handlers.js", 0),
- ("10-parse_query.js", 100),
+ ("10-parse_query.js", 1000),
  ("11-hunter.js", 0),
  ("12-pecker.js", 0),
  ("13-quest.js", 0),
@@ -162,7 +162,7 @@ for i in file_range:
       args=(com + ["-timeout", str(t)] + ["-djs", f] + ["-hackSubArrows"], result_queue, )
     else:
       args=(com + ["-timeout", str(t)] + ["-djs", f], result_queue, )
-    print(args)
+    #print(args)
     p = Process(target=timeout_command, args=args )
     start_time = time.time()
     p.start()
@@ -180,7 +180,7 @@ for i in file_range:
       args=(com + ["-timeout", str(t), "-hackSubArrows", "-djs", f])
     else:
       args=(com + ["-timeout", str(t)] + ["-djs", f])
-    print(args)
+    #print(args)
     output = command(args)
   
   elapsed_time = float(time.time() - start_time)

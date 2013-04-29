@@ -4,12 +4,12 @@ var error = /*: {( and (v::(Str) -> { FLS }) (v:: () -> { FLS }))} */ "#extern";
 
 var star          /*: Bool */ = "#extern";
 function Bunch(nodes)
-  /*: new (this:Ref, nodes: Ref(~lNodes)) / (this: Empty > lBunchProto) -> Ref(~lBunch) / () */
+  /*: new (this:Ref, nodes: Ref(~htmlElts)) / (this: Empty > lBunchProto) -> Ref(~lBunch) / () */
 {
   this.___nodes___ = nodes;
-  /*: nodes lNodes */ "#thaw";
+  /*: nodes htmlElts */ "#thaw";
   this.___star___ = star && nodes.length > 1;
-  /*: nodes (~lNodes, thwd lNodes) */ "#freeze";
+  /*: nodes (~htmlElts, thwd htmlElts) */ "#freeze";
   star = false;
   var self = this;
   /*: self (~lBunch,frzn) */ "#freeze";
