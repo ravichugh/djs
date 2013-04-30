@@ -7,13 +7,22 @@
           (= v null) */ "#define";
  
 /*: tWidget {(or  pPrim 
-                  (v:: Ref(~widget))
-                  (* (v:: (Global) -> tWidget) (* Of course recursive type does not work here *) *)
+                (v:: Ref(~widget))
+
+                (* How would recursive types work here? *)
+                (* (v:: (Global) -> tWidget) *)
+
             )} */ "#define";
 
 /*: (~widget: { Dict | (and 
-    (implies (has v "___nodes___") (or ((sel v "___nodes___")::Ref(~htmlElts)) (= (sel v "___nodes___") undefined)))
-    (implies (has v "___star___") (or (Bool (sel v "___star___")) (= (sel v "___star___") undefined)))
+    (implies  (has v "___nodes___") 
+              (or 
+                ((sel v "___nodes___")::Ref(~htmlElts)) 
+                (= (sel v "___nodes___") undefined)))
+    (implies  (has v "___star___")
+              (or 
+                (Bool (sel v "___star___")) 
+                (= (sel v "___star___") undefined)))
 
     (implies (has v "caller")      (bad (sel v "caller")))
     (implies (has v "callee")      (bad (sel v "callee")))

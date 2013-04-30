@@ -19,6 +19,40 @@ var reject_global =
               (has v "prototype") (Dict (sel v "prototype"))
             )} > lObjPro */ "#define";
 
+var banned = /*: lBanned */ {
+      'arguments'     : true,
+      callee          : true,
+      caller          : true,
+      constructor     : true,
+      'eval'          : true,
+      prototype       : true,
+      stack           : true,
+      unwatch         : true,
+      valueOf         : true,
+      watch           : true
+    };
+
+var reject_property = 
+  /*: (object: Top, name_: Str) -> 
+      { 
+        (implies  
+          (falsy v)
+          (and 
+            (= (tag object) "object")
+            (not (= name_ "arguments"   ))
+            (not (= name_ "callee"      ))
+            (not (= name_ "caller"      ))
+            (not (= name_ "constructor" ))
+            (not (= name_ "prototype"   ))
+            (not (= name_ "stack"       ))
+            (not (= name_ "eval"        ))
+            (not (= name_ "unwatch"     ))
+            (not (= name_ "valueOf"     ))
+            (not (= name_ "watch"       ))
+          )
+        )
+      } */ "#extern";
+
 //--------------------------------------------------------
 
 
@@ -98,10 +132,12 @@ var create = function (o)  /*: [;L,Lp] (o: Ref) / (o: Top > lObjPro, l: Top > lO
 //  ADSAFE.get retrieves a value from an object.
 
 var get = function (object, name) 
-/*: (object: Ref(~lO), name: Str) -> Top  */ 
+/*: (object: Ref, name: Str) / (object: Dict > object.pro) -> Top / sameExact */ 
 {
-  reject_global(object);
-//TODO
+  //PV: adding this:
+  var arguments_ = /*: largs [|Ref(Lobject), Str|] */  [object, name];
+
+//  reject_global(object);
 //  if (arguments.length === 2 && !reject_property(object, name)) {
 //    return object[name];
 //  }

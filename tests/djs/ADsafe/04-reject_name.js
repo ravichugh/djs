@@ -12,28 +12,28 @@ var banned = /*: lBanned */ {
     };
 
 
-var reject_name = function (name1) 
-  /*: (name1: Str) -> { (implies  (falsy v)
+var reject_name = function (name_) 
+  /*: (name_: Str) -> { (implies  (falsy v)
                           (and 
-                             (not (= name1 "arguments"))
-                             (not (= name1 "callee"))
-                             (not (= name1 "caller"))
-                             (not (= name1 "constructor"))
-                             (not (= name1 "prototype"))
-                             (not (= name1 "stack"))
-                             (not (= name1 "eval"))
-                             (not (= name1 "unwatch"))
-                             (not (= name1 "valueOf"))
-                             (not (= name1 "watch"))
-                             )) }  */
+                             (not (= name_ "arguments"   ))
+                             (not (= name_ "callee"      ))
+                             (not (= name_ "caller"      ))
+                             (not (= name_ "constructor" ))
+                             (not (= name_ "prototype"   ))
+                             (not (= name_ "stack"       ))
+                             (not (= name_ "eval"        ))
+                             (not (= name_ "unwatch"     ))
+                             (not (= name_ "valueOf"     ))
+                             (not (= name_ "watch"       ))
+                          )) }  */
 {  
   return 
-    typeof name1 !== 'number' 
+    typeof name_ !== 'number' 
     && (
-        typeof name1 !== 'string' 
-        || banned[name1] 
-        || name1.charAt(0) === '_' 
-        || name1.slice(-1, 0) === '_' //PV: added 2nd argument to slice
+        typeof name_ !== 'string' 
+        || banned[name_] 
+        || name_.charAt(0) === '_' 
+        || name_.slice(-1, 0) === '_' //PV: added 2nd argument to slice
        );
 };
 

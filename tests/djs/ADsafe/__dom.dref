@@ -1,14 +1,14 @@
 weak (~htmlElts       : { Arr(Ref(~htmlElt)) | (packed v)} > lArrPro)
-weak (~lChecked       : { Arr(Bool)         | (packed v)} > lArrPro)
-weak (~lClassNames    : { Arr(Str)          | (packed v)} > lArrPro)
-weak (~lADsafeMarks   : { Arr(Str)          | (packed v)} > lArrPro)
-weak (~lNames         : { Arr(Str)          | (packed v)} > lArrPro)
-weak (~lPackedValues  : { Arr(Str)          | (packed v)} > lArrPro)
-weak (~lValues        : Arr(Str)  > lArrPro)
-weak (~lOffsetHeights : { Arr(Num)          | (packed v)} > lArrPro)
-weak (~lOffsetWidths  : { Arr(Num)          | (packed v)} > lArrPro)
-weak (~lKeys          : { Arr(Str)          | (packed v)} > lArrPro)
-weak (~lStyles        : Arr(Str) > lArrPro)
+weak (~lChecked       : { Arr(Bool)          | (packed v)} > lArrPro)
+weak (~lClassNames    : { Arr(Str)           | (packed v)} > lArrPro)
+weak (~lADsafeMarks   : { Arr(Str)           | (packed v)} > lArrPro)
+weak (~lNames         : { Arr(Str)           | (packed v)} > lArrPro)
+weak (~lPackedValues  : { Arr(Str)           | (packed v)} > lArrPro)
+weak (~lValues        :   Arr(Top)                         > lArrPro)
+weak (~lOffsetHeights : { Arr(Num)           | (packed v)} > lArrPro)
+weak (~lOffsetWidths  : { Arr(Num)           | (packed v)} > lArrPro)
+weak (~lKeys          : { Arr(Str)           | (packed v)} > lArrPro)
+weak (~lStyles        :   Arr(Str)                         > lArrPro)
 
 weak (~lEvent     : { Dict | 
   (and 
@@ -79,7 +79,7 @@ weak (~lBunches: {Arr(Ref(~lBunch))|(packed v)} > lArrPro)
 weak (~lBunch    : {
   "___nodes___"  : Ref(~htmlElts),
   "___star___"   : Bool,
-  _              : Bot    (* Needed to inherit fields from prototype *)
+  _              : Bot
 } > lBunchProto)
 
 weak (~lStyle : {
@@ -136,7 +136,7 @@ weak (~htmlElt: {
     style                : Ref(~lStyle),
     tagName              : Str,
     title                : Str,
-    value                : Top     (*XXX: This might break stuff *)
+    value                : Top
   } > lObjPro)
 
 weak (~lDocument   : {

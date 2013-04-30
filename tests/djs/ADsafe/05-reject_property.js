@@ -29,20 +29,24 @@ var reject_name = /*: (name_: Str) -> { (implies  (falsy v)
 
 var reject_property = function(object, name_) 
   /*: (object: Top, name_: Str) -> 
-     { (implies  (falsy v)
-     (and 
-       (not (= name_ "arguments"))
-       (not (= name_ "callee"))
-       (not (= name_ "caller"))
-       (not (= name_ "constructor"))
-       (not (= name_ "prototype"))
-       (not (= name_ "stack"))
-       (not (= name_ "eval"))
-       (not (= name_ "unwatch"))
-       (not (= name_ "valueOf"))
-       (not (= name_ "watch"))
-     )) } */
-  /* (object: Top, name_: Str) / (lBanned:Dict > lObjPro) -> Top / sameExact */
+      { 
+        (implies  
+          (falsy v)
+          (and 
+            (= (tag object) "object")
+            (not (= name_ "arguments"   ))
+            (not (= name_ "callee"      ))
+            (not (= name_ "caller"      ))
+            (not (= name_ "constructor" ))
+            (not (= name_ "prototype"   ))
+            (not (= name_ "stack"       ))
+            (not (= name_ "eval"        ))
+            (not (= name_ "unwatch"     ))
+            (not (= name_ "valueOf"     ))
+            (not (= name_ "watch"       ))
+          )
+        )
+      } */
 {
   return typeof object !== 'object' || reject_name(name_);
 };

@@ -1,5 +1,8 @@
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
 
+//TODO: replace all "newBunch" with "newBunch"
+var newBunch = /*: (Ref(~htmlElts)) -> Ref(~lBunch) */ "#extern";
+
 var allow_focus /*: Bool */ = "#extern";
 var star    /*: Bool */         = "#extern";
 var the_range /*: Ref(~lRange) */  = "#extern";
@@ -34,7 +37,7 @@ var getStyleObject = /*: (node: Ref(~htmlElt)) -> Ref(~lStyle) */ "#extern";
 // -----------------------------------------------------------------------------------
 
 
-Bunch.prototype.getChecks = function () /*: (this: Ref(~lBunch)) -> Ref(~lChecked) */ {
+var getChecks = function () /*: (this: Ref(~lBunch)) -> Ref(~lChecked) */ {
   reject_global(this);
   var a = /*: lA {Arr(Bool)|(packed v)} */ [];
   var b = this.___nodes___;
@@ -52,6 +55,8 @@ Bunch.prototype.getChecks = function () /*: (this: Ref(~lBunch)) -> Ref(~lChecke
   /*: a (~lChecked, frzn) */ "#freeze";
   return a;
 };
+
+Bunch.prototype.getChecks = getChecks;
 
 Bunch.prototype.getClasses =  function () /*: (this: Ref(~lBunch)) -> Ref(~lClassNames) */ {
   reject_global(this);
@@ -217,15 +222,15 @@ Bunch.prototype.getTitles = function () /*: (this: Ref(~lBunch)) -> Ref(~lNames)
 
 Bunch.prototype.getValues = function () /*: (this: Ref(~lBunch)) -> Ref(~lValues) */ {
   reject_global(this);
-  var a = /*: lA Arr(Str) */ [];
+  var a = /*: lA Arr(Top) */ [];
   var b = this.___nodes___;
   var i /*: { Int | (>= v 0)} */ = 0;
   var node /*: Ref(~htmlElt) */ = null;
   /*: b htmlElts */ "#thaw";
   assume(b != null);
-  /*: ( &i:i0:{Int|(>= v 0)}, lA:Arr(Str)  > lArrPro,
+  /*: ( &i:i0:{Int|(>= v 0)}, lA:Arr(Top)  > lArrPro,
         &b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro)
-      -> ( &i: sameType, lA: Arr(Str) > lArrPro, &b: sameType, htmlElts: sameType) */ 
+      -> ( &i: sameType, lA: Arr(Top) > lArrPro, &b: sameType, htmlElts: sameType) */ 
   for (i = 0; i < b.length; i += 1) {
     node = b[i];
     if (node.nodeName === '#text') {
@@ -243,6 +248,7 @@ Bunch.prototype.getValues = function () /*: (this: Ref(~lBunch)) -> Ref(~lValues
   return a;
 };
 
+//TODO: these should TC as assignments to Bunch.prototype
 var getCheck = function () /*: (this: Ref(~lBunch)) -> {?(Bool)|TRU} */ {
 //  return this.getChecks()[0];   //PV: original code
   var elts = this.getChecks();
@@ -251,6 +257,7 @@ var getCheck = function () /*: (this: Ref(~lBunch)) -> {?(Bool)|TRU} */ {
   /*: elts (~lChecked, thwd lElts) */ "#freeze";
   return ret;
 };
+
 
 var getClass = function () /*: (this: Ref(~lBunch)) ->  {?(Str)|TRU} */ {
 //  return this.getClasses()[0]; //PV: original code
@@ -317,7 +324,7 @@ var getParent = function () /*: (this: Ref(~lBunch)) -> Ref(~lBunch) */ {
   }
   /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   /*: a (~htmlElts, frzn) */ "#freeze";
-  return new Bunch(a);
+  return newBunch(a);
 };
 
 
@@ -336,6 +343,7 @@ var getSelection = function ()
       start = node.selectionStart;
       end = node.selectionEnd;
       str = node.value;
+      assume(typeof str === 'string');
       return str.slice(start, end);
     }
     else {
@@ -382,7 +390,7 @@ var getTitle = function () /*: (this: Ref(~lBunch)) -> {?(Str)|TRU} */ {
   return ret;
 };
 
-var getValue = function () /*: (this: Ref(~lBunch)) -> {?(Str)|TRU} */ {
+var getValue = function () /*: (this: Ref(~lBunch)) -> {?(Top)|TRU} */ {
 //  return this.getValues()[0];
   var elts = this.getValues();
   /*: elts lElts */ "#thaw";
