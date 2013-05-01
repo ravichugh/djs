@@ -1,3 +1,5 @@
+
+
 weak (~htmlElts       : { Arr(Ref(~htmlElt)) | (packed v)} > lArrPro)
 weak (~lChecked       : { Arr(Bool)          | (packed v)} > lArrPro)
 weak (~lClassNames    : { Arr(Str)           | (packed v)} > lArrPro)
@@ -10,6 +12,8 @@ weak (~lOffsetWidths  : { Arr(Num)           | (packed v)} > lArrPro)
 weak (~lKeys          : { Arr(Str)           | (packed v)} > lArrPro)
 weak (~lStyles        :   Arr(Str)                         > lArrPro)
 
+weak (~lFuncs         : { Arr((Top,Top)-> Top)| (packed v)} > lArrPro)
+
 weak (~lEvent     : { Dict | 
   (and 
     (*(and (has v "altKey")           (Bool (sel v "altKey")))*)
@@ -19,14 +23,17 @@ weak (~lEvent     : { Dict |
     
     (implies (has v "cancelBubble")     (Bool (sel v "cancelBubble")))
     (implies (has v "key")              (Str (sel v "key")))
-    (implies (has v "preventDefault")   ((sel v "preventDefault") :: () -> Top))
-    (implies (has v "srcElement")       ((sel v "srcElement") :: Ref(~htmlElt)))
+    (implies (has v "preventDefault")   ((sel v "preventDefault")  :: () -> Top))
+    (implies (has v "srcElement")       ((sel v "srcElement")      :: Ref(~htmlElt)))
     (implies (has v "stopPropagation")  ((sel v "stopPropagation") :: () -> Top))
-    (implies (has v "target")           ((sel v "target") :: Ref(~htmlElt)))
-    (implies (has v "that")             ((sel v "that") :: Ref(~lBunch)))
-    (and (has v "type_")                (Str (sel v "type_")))
+    (implies (has v "target")           ((sel v "target")          :: Ref(~htmlElt)))
+    (implies (has v "that")             ((sel v "that")            :: Ref(~lBunch)))
+    (and     (has v "type_")            (Str (sel v "type_")))
     (implies (has v "charCode")         (Int (sel v "charCode")))
     (implies (has v "keyCode")          (Int (sel v "keyCode")))
+
+    (* Hacking this in as an asssumption *)
+    (implies (has v "array")            ((sel v "array") :: Ref (~lFuncs)))
     
     (* TODO: giving a restricted type here *)
     (implies (has v "__farray__")        ({(= (tag v) "function")} (sel v "__farray__")))
@@ -140,24 +147,24 @@ weak (~htmlElt: {
   } > lObjPro)
 
 weak (~lDocument   : {
-    createDocumentFragment : (this:Ref(~lDocument)) -> Ref(~htmlElt),
-    createElement  : (this: Ref(~lDocument), s: Str) -> Ref(~htmlElt),
-    createTextNode : (this: Ref(~lDocument), s: Str) -> Ref(~htmlElt),
-    defaultView    : Ref(~htmlElt),
-    getElementById : (this: Ref(~lDocument), s : Str) -> Ref(~htmlElt),
-    selection      : Ref(~lSelection)
+    createDocumentFragment : (this: Ref(~lDocument)) -> Ref(~htmlElt),
+    createElement          : (this: Ref(~lDocument), s: Str) -> Ref(~htmlElt),
+    createTextNode         : (this: Ref(~lDocument), s: Str) -> Ref(~htmlElt),
+    defaultView            : Ref(~htmlElt),
+    getElementById         : (this: Ref(~lDocument), s: Str) -> Ref(~htmlElt),
+    selection              : Ref(~lSelection)
   } > lObjPro)
 
 weak (~lDom: { 
-    append: (Ref(~lBunch)) -> Ref(~lDom),
-    combine: (Ref(~lBunches)) -> Ref(~lBunch),
-    count: () -> Int,
-    ephemeral: (Ref(~lBunch)) -> Ref(~lDom),
-    fragment: (Ref(~lBunch)) -> Ref(~lBunch),
-    prepend: (Ref(~lBunch)) -> Ref(~lDom), 
-    q: (Ref(text)) -> Ref(~lBunch),
-    remove: () -> Top,
-    row: (Top) -> Ref(~lBunch),
+    append    : (Ref(~lBunch))   -> Ref(~lDom),
+    combine   : (Ref(~lBunches)) -> Ref(~lBunch),
+    count     : ()               -> Int,
+    ephemeral : (Ref(~lBunch))   -> Ref(~lDom),
+    fragment  : (Ref(~lBunch))   -> Ref(~lBunch),
+    prepend   : (Ref(~lBunch))   -> Ref(~lDom),
+    q         : (Ref(text))      -> Ref(~lBunch),
+    remove    : ()               -> Top,
+    row       : (Top)            -> Ref(~lBunch),
     tag_: (tag_: Str, type_: Str, name: Str) -> Ref(~lBunch),
     text:{( and (v:: (text: Str) / (lT: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType) (v:: (text: Ref(lT)) / (lT: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType) )}
 }  > lObjPro) 

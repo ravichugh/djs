@@ -30,10 +30,28 @@ val getPropNum ::
 (**    [[ x[i]   ]] = getIdx  ([[x]],   i  )    where i is an int literal    **)
 (**    [[ x[k]   ]] = getElem ([[x]], [[k]])    where k is anything else     **)
 
-val getPropObj ::
-     (xx:Ref?, kk:Str) / (xx: dd:Dict > xx.pro)
-  -> {(and (not (= xx null))
-           (= v (objsel dd kk cur xx.pro)))} / same
+(*val getPropObj ::*)
+(*    (xx:Ref?, *)
+(*     kk:{Str|(or  (clearance xx)*)
+(*                  (and  (not (= v "arguments"   ))*)
+(*                        (not (= v "callee"      ))*)
+(*                        (not (= v "caller"      ))*)
+(*                        (not (= v "constructor" ))*)
+(*                        (not (= v "prototype"   ))*)
+(*                        (not (= v "stack"       ))*)
+(*                        (not (= v "eval"        ))*)
+(*                        (not (= v "unwatch"     ))*)
+(*                        (not (= v "valueOf"     ))*)
+(*                        (not (= v "watch"       ))))}*)
+(*      ) / (xx: dd:Dict > xx.pro)*)
+(*     -> { (and  (not (= xx null))*)
+(*                (= v (objsel dd kk cur xx.pro))) } / same*)
+    
+ val getPropObj ::
+    (xx:Ref?, kk:Str) / (xx: dd:Dict > xx.pro)
+    -> {(and (not (= xx null))
+               (= v (objsel dd kk cur xx.pro)))} / same
+
 (*
       (ite (objhas dd kk cur xx.pro)
            (= v (objsel dd kk cur xx.pro))
@@ -68,8 +86,25 @@ val getElem :: {(and (type getPropObj) (type getPropArr) (type getIdx))}
 (**    [[ x[i] = y ]] = setIdx  ([[x]],   i  , [[y]])                        **)
 (**    [[ x[k] = y ]] = setElem ([[x]], [[k]], [[y]])                        **)
 
+(*val setPropObj ::*)
+(*     (xx:Ref?, *)
+(*      yy: {Str|(or (clearance xx)*)
+(*                   (and (not (= v "arguments"   ))*)
+(*                        (not (= v "callee"      ))*)
+(*                        (not (= v "caller"      ))*)
+(*                        (not (= v "constructor" ))*)
+(*                        (not (= v "prototype"   ))*)
+(*                        (not (= v "stack"       ))*)
+(*                        (not (= v "eval"        ))*)
+(*                        (not (= v "unwatch"     ))*)
+(*                        (not (= v "valueOf"     ))*)
+(*                        (not (= v "watch"       ))))},*)
+(*      zz:Top) / (xx: dd:Dict > xx.pro)*)
+(*  -> {(and (not (= xx null)) (= v zz))}*)
+(*   / (xx: {(= v (upd dd yy zz))} > xx.pro)*)
+
 val setPropObj ::
-     (xx:Ref?, yy:Str, zz:Top) / (xx: dd:Dict > xx.pro)
+     (xx:Ref?, yy: Str, zz:Top) / (xx: dd:Dict > xx.pro)
   -> {(and (not (= xx null)) (= v zz))}
    / (xx: {(= v (upd dd yy zz))} > xx.pro)
 

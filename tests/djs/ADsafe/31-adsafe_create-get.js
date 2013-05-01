@@ -134,13 +134,16 @@ var create = function (o)  /*: [;L,Lp] (o: Ref) / (o: Top > lObjPro, l: Top > lO
 var get = function (object, name) 
 /*: (object: Ref, name: Str) / (object: Dict > object.pro) -> Top / sameExact */ 
 {
-  //PV: adding this:
-  var arguments_ = /*: largs [|Ref(Lobject), Str|] */  [object, name];
 
-//  reject_global(object);
-//  if (arguments.length === 2 && !reject_property(object, name)) {
-//    return object[name];
-//  }
+  //PV: adding this:
+  var arguments_ = /*: largs {Arr(Top)|(= (len v) 2)} */  [object,name];
+
+  reject_global(object);
+  if (arguments_.length === 2 && !reject_property(object, name)) {
+    return object[name];
+  }
   error();
 };
 
+var object = {};
+object["callee"] = 1;

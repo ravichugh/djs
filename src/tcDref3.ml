@@ -7,6 +7,25 @@ let oc_elim = open_out (Settings.out_dir ^ "elim.txt")
 let oc_local_inf = open_out (Settings.out_dir ^ "local-inf.txt")
 
 
+
+(**** ADsafe (04/30/13) *******************************************************)
+module StringSet = Set.Make(String)
+let banned = List.fold_right StringSet.add 
+  [ "arguments"   ;
+    "callee"      ;
+    "caller"      ;
+    "constructor" ;
+    "prototype"   ;
+    "stack"       ;
+    "eval"        ;
+    "unwatch"     ;
+    "valueOf"     ;
+    "watch"       
+  ] StringSet.empty 
+
+
+
+
 (**** Misc ********************************************************************)
 
 let checkBinder cap g x =
@@ -1761,6 +1780,12 @@ and tsAppQuick g h (poly,vFun,vArg) = match (poly,vFun,vArg) with
       let cap = spr "TS-App-SetPropObj: setPropObj (%s)" (strVal vArg) in
       if List.length vs <> 3 then err [cap; "wrong number of arguments"];
       let (v1,v2,v3) = threeVals cap vs in
+      (*Printf.printf "###################\n";*)
+      (*Printf.printf "v1: %s\n" (strVal v1);*)
+      (*Printf.printf "v2: %s\n" (strVal v2);*)
+      (*Printf.printf "v3: %s\n" (strVal v3);*)
+      (*Printf.printf "###################\n";*)
+
       let (t1,t2) = (tsVal g h v1, tsVal g h v2) in
       let l1 = getNextMaybeRef cap g t1 in
       match findAndRemoveCell l1 h with

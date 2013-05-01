@@ -53,6 +53,8 @@
 (declare-fun isPrivileged (DVal) Bool)
 (declare-fun public (DVal) Bool)
 
+(declare-fun clearance (DVal) Bool)
+
 
 ;;;;; End SIF Predicates
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
