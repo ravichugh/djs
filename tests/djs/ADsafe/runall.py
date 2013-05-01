@@ -116,6 +116,9 @@ rePError = re.compile(r'PARSE ERROR!')
 reFError = re.compile(r'Fatal error')
 tot_queries = 0
 tot_todos = 0
+tot_xxxs = 0
+tot_asserts = 0
+tot_pvs = 0
 tot_time = 0
 
 
@@ -127,30 +130,71 @@ def todoStr(todo):
   else:
     return "#TODOS: %2d" % todo
 
+def xxxStr(xxx):
+  global tot_xxxs
+  tot_xxxs = tot_xxxs + xxx
+  if xxx > 0:
+    return bc.WARNING + "#xxx: %2d" % xxx + bcolors.ENDC
+  else:
+    return "#xxx: %2d" % xxx
+
+def assertStr(asrt):
+  global tot_asserts
+  tot_asserts = tot_asserts + asrt
+  if asrt > 0:
+    return bc.WARNING + "#assert: %2d" % asrt + bcolors.ENDC
+  else:
+    return "#assert: %2d" % asrt
+
+def pvStr(pv):
+  global tot_pvs
+  tot_pvs = tot_pvs + pv
+  if pv > 0:
+    return bc.WARNING + "#pv: %2d" % pv + bcolors.ENDC
+  else:
+    return "#pv: %2d" % pv
+
+
+
+
+def printLine(f, elapsed_time, todos, pvs, xxxs, asserts, msg):
+  print "%30s (ET: %7.3f sec, %s, %s, %s, %s, %s) " % \
+      (f, elapsed_time, todoStr(todos), pvStr(pvs), xxxStr(xxxs), \
+      assertStr(asserts), msg)
+
+
 def process(fname, output, elapsed_time):
   global tot_queries
   todos = string.count(open(fname).read(), "TODO")
+  xxxs = string.count(open(fname).read(), "XXX")
+  asserts = string.count(open(fname).read(), "assert")
+  pvs = string.count(open(fname).read(), "PV")
   if output:
     matchOK = reOK.search(output)
     if matchOK:
       groupOK = matchOK.group
       q = int(groupOK(1))
       tot_queries = tot_queries + q
-      print  "%30s (ET: %7.3f sec, %s) " % (f, elapsed_time, todoStr(todos)) + bc.OKGREEN + "OK! %s queries" % q + bc.ENDC
+      printLine(fname, elapsed_time, todos, pvs, xxxs, asserts, bc.OKGREEN \
+          + "OK! %s queries" % q + bc.ENDC)
     
     matchFail = reFail.search(output)
     if matchFail:
-      print "%30s (ET: %7.3f sec, %s) " % (f, elapsed_time, todoStr(todos)) + bc.FAIL + "TC Fail" + bcolors.ENDC
+      printLine(fname, elapsed_time, todos, pvs, xxxs, asserts, bc.OKGREEN \
+        + bc.FAIL + "TC Fail" + bcolors.ENDC)
 
     matchPError = rePError.search(output)
     if matchPError:
-      print "%30s (ET: %7.3f sec, %s) " % (f, elapsed_time, todoStr(todos)) + bc.FAIL + "Parse Error" + bcolors.ENDC
+      printLine(fname, elapsed_time, todos, pvs, xxxs, asserts, bc.OKGREEN \
+          + bc.FAIL + "Parse Error" + bcolors.ENDC)
     
     matchFError = reFError.search(output)
     if matchFError:
-      print "%30s (ET: %7.3f sec, %s) " % (f, elapsed_time, todoStr(todos)) + bc.FAIL + "Fatal Error" + bcolors.ENDC
+      printLine(fname, elapsed_time, todos, pvs, xxxs, asserts, bc.OKGREEN \
+          + bc.FAIL + "Fatal Error" + bcolors.ENDC)
   else:
-    print "%30s (ET: %7.3f sec, %s) " % (f, elapsed_time, todoStr(todos)) + bc.WARNING + "Timed out" + bcolors.ENDC
+    printLine(fname, elapsed_time, todos, pvs, xxxs, asserts, bc.OKGREEN \
+        + bc.WARNING + "Timed out" + bcolors.ENDC)
 
 
 for i in file_range:
@@ -158,7 +202,8 @@ for i in file_range:
   result_queue = Queue(1)
   if timeout > 0:
     if options.hackSubArrows:
-      args=(com + ["-timeout", str(t)] + ["-djs", f] + ["-hackSubArrows"], result_queue, )
+      args=(com + ["-timeout", str(t)] + ["-djs", f] + \
+          ["-hackSubArrows"], result_queue, )
     else:
       args=(com + ["-timeout", str(t)] + ["-djs", f], result_queue, )
     #print(args)
@@ -190,3 +235,6 @@ print "-------------------------------------------------------------"
 print bc.BOLD + "Total Time    : %.3f sec" % tot_time + bcolors.ENDC
 print bc.BOLD + "Total queries : %d" % tot_queries + bcolors.ENDC
 print bc.BOLD + "Total TODOs   : %d" % tot_todos + bcolors.ENDC
+print bc.BOLD + "Total XXXs    : %d" % tot_xxxs + bcolors.ENDC
+print bc.BOLD + "Total asserts : %d" % tot_asserts + bcolors.ENDC
+print bc.BOLD + "Total PVs     : %d" % tot_pvs + bcolors.ENDC
