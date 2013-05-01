@@ -22,7 +22,7 @@ var fire = function (event)
     )} */
   
 /* (this: Ref(~lBunch), event: Str) -> Ref(~lBunch) */ 
-/*: (this: Ref(~lBunch), event: {(and (= (tag v) "object") (v::Ref(~lEvent)))}) -> Ref(~lBunch) */
+/*: (this: Ref(~lBunch), event: Ref(~lEvent)) -> Ref(~lBunch) */
 
 {
   // Fire an event on an object. The event can be either
@@ -38,13 +38,11 @@ var fire = function (event)
   var 
       b,      
       i /*: { Int | (>= v 0)} */ = 0,
-      j,
+      j /*: { Int | (>= v 0)} */ = 0,
       n,
       node /*: Ref(~htmlElt) */ = null,
       on /*: Ref(~lEvent) */ = null,
       type /*: Str */ = "";
-
-//  assert(/*: {(implies (Str v) (= v "__farray__"))} */ (event));
 
   if (typeof event === 'string') {
     type = event;
@@ -75,16 +73,34 @@ var fire = function (event)
     /*: on lEvent */ "#thaw";
     assume(on != null);
     if (/*: [;lEvent] */ owns(on, type)) {
+      assert(type in on);
+      assume(type === "array");
       var array = on[type];
-//TODO: no way this is gonna be an array...      
-//      for (j = 0; j < array.length; j += 1) {
-//
-//        // Invoke a handler. Pass the event object.
-//
-//        array[j].call(this, event);
-//      }
+      /*: on (~lEvent, thwd lEvent) */ "#freeze";
+      
+      assert(/*: Ref(~lFuncs) */ (array));
+      /*: array lArray */ "#thaw";
+      assume(array != null);
+      //XXX: SUPER UGLY: figure out how to TC without this monstrosity 
+      /*: ( &array: Ref(lArray), 
+            lArray: {Arr( (Top,Top) / (&array: Ref(lArray),
+                          lArray: {Arr((Top,Top)-> Top)|(packed v)} > lArrPro) -> Top / sameExact 
+                        )|(packed v)} > lArrPro)
+          -> sameExact */
+      for (j = 0; j < array.length; j += 1) {
+
+        // Invoke a handler. Pass the event object.        
+    
+        //PV: original code begin
+        //array[j].call(this, event);
+        //PV: original code end
+        array[j](this, event);
+      }
+    /*: array (~lFuncs, thwd lArray) */ "#freeze";
     }
-    /*: on (~lEvent, thwd lEvent) */ "#freeze";
+    else {
+      /*: on (~lEvent, thwd lEvent) */ "#freeze";
+    }
   }
   /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   return this;
