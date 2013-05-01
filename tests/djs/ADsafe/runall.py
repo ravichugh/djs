@@ -117,7 +117,7 @@ reFError = re.compile(r'Fatal error')
 tot_queries = 0
 tot_todos = 0
 tot_xxxs = 0
-tot_asserts = 0
+tot_assumes = 0
 tot_pvs = 0
 tot_time = 0
 
@@ -138,13 +138,13 @@ def xxxStr(xxx):
   else:
     return "#xxx: %2d" % xxx
 
-def assertStr(asrt):
-  global tot_asserts
-  tot_asserts = tot_asserts + asrt
+def assumeStr(asrt):
+  global tot_assumes
+  tot_assumes = tot_assumes + asrt
   if asrt > 0:
-    return bc.WARNING + "#assert: %2d" % asrt + bcolors.ENDC
+    return bc.WARNING + "#assume: %2d" % asrt + bcolors.ENDC
   else:
-    return "#assert: %2d" % asrt
+    return "#assume: %2d" % asrt
 
 def pvStr(pv):
   global tot_pvs
@@ -157,17 +157,17 @@ def pvStr(pv):
 
 
 
-def printLine(f, elapsed_time, todos, pvs, xxxs, asserts, msg):
-  print "%30s (ET: %7.3f sec, %s, %s, %s, %s, %s) " % \
+def printLine(f, elapsed_time, todos, pvs, xxxs, assumes, msg):
+  print "%30s: ET: %7.3f sec, %s, %s, %s, %s, %s" % \
       (f, elapsed_time, todoStr(todos), pvStr(pvs), xxxStr(xxxs), \
-      assertStr(asserts), msg)
+      assumeStr(assumes), msg)
 
 
 def process(fname, output, elapsed_time):
   global tot_queries
   todos = string.count(open(fname).read(), "TODO")
   xxxs = string.count(open(fname).read(), "XXX")
-  asserts = string.count(open(fname).read(), "assert")
+  assumes = string.count(open(fname).read(), "assume")
   pvs = string.count(open(fname).read(), "PV")
   if output:
     matchOK = reOK.search(output)
@@ -175,25 +175,25 @@ def process(fname, output, elapsed_time):
       groupOK = matchOK.group
       q = int(groupOK(1))
       tot_queries = tot_queries + q
-      printLine(fname, elapsed_time, todos, pvs, xxxs, asserts, bc.OKGREEN \
+      printLine(fname, elapsed_time, todos, pvs, xxxs, assumes, bc.OKGREEN \
           + "OK! %s queries" % q + bc.ENDC)
     
     matchFail = reFail.search(output)
     if matchFail:
-      printLine(fname, elapsed_time, todos, pvs, xxxs, asserts, bc.OKGREEN \
+      printLine(fname, elapsed_time, todos, pvs, xxxs, assumes, bc.OKGREEN \
         + bc.FAIL + "TC Fail" + bcolors.ENDC)
 
     matchPError = rePError.search(output)
     if matchPError:
-      printLine(fname, elapsed_time, todos, pvs, xxxs, asserts, bc.OKGREEN \
+      printLine(fname, elapsed_time, todos, pvs, xxxs, assumes, bc.OKGREEN \
           + bc.FAIL + "Parse Error" + bcolors.ENDC)
     
     matchFError = reFError.search(output)
     if matchFError:
-      printLine(fname, elapsed_time, todos, pvs, xxxs, asserts, bc.OKGREEN \
+      printLine(fname, elapsed_time, todos, pvs, xxxs, assumes, bc.OKGREEN \
           + bc.FAIL + "Fatal Error" + bcolors.ENDC)
   else:
-    printLine(fname, elapsed_time, todos, pvs, xxxs, asserts, bc.OKGREEN \
+    printLine(fname, elapsed_time, todos, pvs, xxxs, assumes, bc.OKGREEN \
         + bc.WARNING + "Timed out" + bcolors.ENDC)
 
 
@@ -236,5 +236,5 @@ print bc.BOLD + "Total Time    : %.3f sec" % tot_time + bcolors.ENDC
 print bc.BOLD + "Total queries : %d" % tot_queries + bcolors.ENDC
 print bc.BOLD + "Total TODOs   : %d" % tot_todos + bcolors.ENDC
 print bc.BOLD + "Total XXXs    : %d" % tot_xxxs + bcolors.ENDC
-print bc.BOLD + "Total asserts : %d" % tot_asserts + bcolors.ENDC
+print bc.BOLD + "Total assumes : %d" % tot_assumes + bcolors.ENDC
 print bc.BOLD + "Total PVs     : %d" % tot_pvs + bcolors.ENDC

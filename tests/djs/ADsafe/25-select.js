@@ -40,7 +40,7 @@ var selection = function (string)
   var b     /*: Ref(~htmlElts) */ = this.___nodes___, 
       end   /*: Int */ = 0, 
       node  /*: Ref(~htmlElt) */ = null,
-      old   /*: Str */ = "" ,
+      old   = "" ,
       start /*: Int */ = 0,
       range /*: Ref(~lRange) */ = null;
 
@@ -48,14 +48,16 @@ var selection = function (string)
   if (b.length === 1 && allow_focus) {
     node = b[0];
     /*: node htmlElt */ "#thaw";
+    assume(node != null);
     if (typeof node.selectionStart === 'number') {
       start = node.selectionStart;
       end = node.selectionEnd;
       old = node.value;
-      assert(/*: Str */ (old));
-//XXX: SLOW DOWN !!! ~ 12 sec
-//      node.value = old.slice(0, start) /* + string  */ + old.slice(end, 0);  //PV added second argument
-//      node.selectionStart = node.selectionEnd = start + string.length;
+      assume(typeof old === "string");
+//XXX: SLOW DOWN !!! ~ 21 sec
+      node.value = old.slice(0, start) /* + string  */ + old.slice(end, 0);  //PV added second argument
+//XXX: SLOW DOWN !!! infinite sec !!!
+      //node.selectionStart = node.selectionEnd = start + string.length;
       node.focus();
     } 
     else {
