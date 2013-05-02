@@ -5,9 +5,9 @@ var error = /*: {( and (v::(Str) -> { FLS }) (v:: () -> { FLS }))} */ "#extern";
 var star   /*: Bool */         = "#extern";
 var name   /*: Str */ = "#extern";
 var result /*: Ref(~htmlElts) */ = "#extern";
-var value  /*: Str  */ = "#extern";
+var value /*: Str */ = "#extern";
 var flipflop /*: Bool */ = "#extern";
-
+var has_focus /*: Ref(~htmlElt) */ = "#extern";
 
 // <<<<<<<<<< 11-hunter.js <<<<<<<<<<<<<<<<<
 
@@ -29,8 +29,23 @@ frzn, ~htmlElt: frzn, ~lDocument: frzn, ~lDom: frzn, ~lF: frzn, ~lId: frzn,
     "times"   : (Ref(~htmlElt)) -> Top,
     _         : Bot } */ "#define";
 
-
-
+/*: tySelector { Dict |
+  (and 
+    (has v "op") (Str (sel v "op"))
+  (* Don't need this. In function quest. If the field of hunter is a function
+    * this should imply that we have one of the following cases. But this won't
+    * work for the population of selectors at parse_query. *)
+  (*(and 
+    (has v "op") ({(or  (= v "empty_") 
+                        (= v "plus")
+                        (= v "greater") 
+                        (= v "pound") 
+                        (= v "slash") 
+                        (= v "star"))
+                  } (sel v "op") )*)
+    (implies (has v "name") (Str (sel v "name"  )))
+    (implies (has v "value") (Str (sel v "value")))
+  )} */ "#define";
 
 var walkTheDOM = 
 /*: ( node: Ref(~htmlElt), func:(Ref(~htmlElt)) -> Top, skip: Bool) -> Top */ "#extern";
@@ -41,7 +56,7 @@ var arraySlice =
   /*: [A;La,Lapro,Lr] (Ref(La), Int, Int) / (La:a:Arr(A) > Lapro) 
       -> Ref(Lr) / (La: sameExact, Lr: {Arr(A)|(implies (packed a) (packed v))} > Lapro) */ "#extern";
 
-//TODO: this is very restrictive - but will change with polymorphism on weak
+//XXX: this is very restrictive - but will change with polymorphism on weak
 //locations
 var sliceHtmlElts = 
   /*: (Ref(~htmlElts), Int, Int) -> Ref(~htmlElts) */ "#extern";
@@ -57,7 +72,7 @@ var arrayConcat =
 
 
 
-var hunter = /*: lHunter tyHunter */ {
+var hunter = {
 
   // These functions implement the hunter behaviors.
 
@@ -108,7 +123,7 @@ var hunter = /*: lHunter tyHunter */ {
           assume(nodelist != null);
           tmp1 = nodelist[i];
           /*: nodelist (~htmlElts, thwd lnodelist) */ "#freeze";
-//XXX: SLOW DOWN !!! ~ 8 sec
+//          //XXX: SLOW DOWN !!! ~ 8 sec
 //          /*: result lResult */ "#thaw";
 //          assume(result != null);
 //          assume(tmp1 != undefined);
@@ -127,7 +142,7 @@ var hunter = /*: lHunter tyHunter */ {
       node = node.nextSibling;
     }
     if (node && node.tagName === name) {
-//XXX: SLOW DOWN !!! ~ 8 sec
+//      //XXX: SLOW DOWN !!! ~ 8 sec
 //      /*: result lResult */ "#thaw";
 //      result.push(node);
 //      /*: result (~htmlElts, thwd lResult) */ "#freeze";
@@ -141,7 +156,7 @@ var hunter = /*: lHunter tyHunter */ {
     /*: (&node: Ref(~htmlElt)) -> sameType  */
     while (node) {
       if (node.tagName === name) {
-//XXX: SLOW DOWN !!! ~ 8 sec
+//        //XXX: SLOW DOWN !!! ~ 8 sec
 //        /*: result lResult */ "#thaw";
 //        result.push(node);
 //        /*: result (~htmlElts, thwd lResult) */ "#freeze";
@@ -155,7 +170,7 @@ var hunter = /*: lHunter tyHunter */ {
   {
     var n = document.getElementById(name);
     if (n.tagName) {
-//XXX: SLOW DOWN !!! ~ 8 sec
+//      //XXX: SLOW DOWN !!! ~ 8 sec
 //      /*: result lResult */ "#thaw";
 //      result.push(n);
 //      /*: result (~htmlElts, thwd lResult) */ "#freeze";
@@ -178,7 +193,7 @@ var hunter = /*: lHunter tyHunter */ {
       if (i < nodes.length) {
         var curnode = nodes[i];
         /*: nodes (~htmlElts, thwd htmlElts) */ "#freeze";
-//XXX: SLOW DOWN !!! ~ 8 sec
+//        //XXX: SLOW DOWN !!! ~ 8 sec
 //        /*: result lResult */ "#thaw";
 //        result.push(curnode);
 //        /*: result (~htmlElts, thwd lResult) */ "#freeze";
@@ -195,7 +210,7 @@ var hunter = /*: lHunter tyHunter */ {
     star = true;
     walkTheDOM(
         node, function (_node) /*: (Ref(~htmlElt)) -> Top */ {
-//XXX: SLOW DOWN !!! ~ 8 sec
+//          //XXX: SLOW DOWN !!! ~ 8 sec
 //          /*: result lResult */ "#thaw";
 //          result.push(_node);
 //          /*: result (~htmlElts, thwd lResult) */ "#freeze";
@@ -206,41 +221,194 @@ var hunter = /*: lHunter tyHunter */ {
 
 // >>>>>>>>>> 11-hunter.js >>>>>>>>>>>>>>>>>
 
+// <<<<<<<<<< 12-pecker.js <<<<<<<<<<<<<<<<<
+
+var getStyleObject = /*: (node: Ref(~htmlElt)) -> Ref(~lStyle) */ "#extern";
+
+var pecker = {
+    ".": function (node) /*: (Ref(~htmlElt)) -> Bool */ 
+    {
+      return true;
+      //return (' ' + node.className + ' ').indexOf(' ' + name + ' ') >= 0;
+    }
+//    ,
+//    '&': function (node) 
+//      /*: (Ref(~htmlElt)) -> Bool */          
+//    {
+//      return node.name === name;
+//    },
+//    '_': function (node) 
+//      /*: (Ref(~htmlElt)) -> Bool */
+//    {
+//      return node.type === name;
+//    },
+//    '[': function (node)
+//      /*: (Ref(~htmlElt)) -> Bool */
+//    {
+//      return typeof node[name] === 'string';
+//    },
+//    '[=': function (node) 
+//      /*: (Ref(~htmlElt)) -> Bool */          
+//    {
+//      var member = node[name];
+//      return typeof member === 'string' && member === value;
+//    },
+//    '[!=': function (node)
+//      /*: (Ref(~htmlElt)) -> Bool */          
+//    {
+//      var member = node[name];
+//      return typeof member === 'string' && member !== value;
+//    },
+//    '[^=': function (node) 
+//      /*: (Ref(~htmlElt)) -> Bool */
+//    {
+//      var member = node[name];
+//      //Applying a refactoring to allow the use of slice (applied
+//      //later as well)
+//      //PV: Original code: 
+//      //return typeof member === 'string' &&
+//      //    member.slice(0, member.length) === value;
+//      if (typeof member === 'string') 
+//        return member.slice(0, member.length) === value;
+//      return false;
+//    },
+//    '[$=': function (node)
+//      /*: (Ref(~htmlElt)) -> Bool */
+//    {
+//      var member = node[name];
+//      if (typeof member === 'string')
+//        return member.slice(-member.length, 0) === value;  //PV: added 2nd argument to slice
+//      return false;
+//    },
+//    '[*=': function (node)
+//      /*: (Ref(~htmlElt)) -> Bool */
+//    {
+//      var member = node[name];
+//      if (typeof member === 'string')
+//        return member.indexOf(value) >= 0;
+//      return false;
+//    },
+//    '[~=': function (node) 
+//      /*: (Ref(~htmlElt)) -> Bool */
+//    {
+//      var member = node[name];
+//      if (typeof member === 'string')                  
+//        return (' ' + member + ' ').indexOf(' ' + value + ' ') >= 0;
+//      return false;
+//    },
+//    '[|=': function (node) 
+//      /*: (Ref(~htmlElt)) -> Bool */
+//    {
+//      var member = node[name];
+//      if (typeof member === 'string')
+//        return ('-' + member + '-').indexOf('-' + value + '-') >= 0;
+//      return false;
+//    }
+//  ,
+//    ':blur': function (node)
+//      /*: (Ref(~htmlElt)) -> Bool */
+//    {
+//      return node !== has_focus;
+//    },
+//    ':checked': function (node)
+//      /*: (Ref(~htmlElt)) -> Bool */
+//    {
+//      return node.checked;
+//    },
+//    ':disabled': function (node)
+//      /*: (Ref(~htmlElt)) -> Top */
+//    {
+//      return node.tagName && node.disabled;
+//    },
+//    ':enabled': function (node) 
+//      /*: (Ref(~htmlElt)) -> Top */
+//    {
+//      return node.tagName && !node.disabled;
+//    },
+//    ':even': function (node) 
+//      /*: (Ref(~htmlElt)) -> Bool */
+//    {
+//      var f;
+//      if (node.tagName) {
+//        f = flipflop;
+//        flipflop = !flipflop;
+//        return f;
+//      }
+//      return false;
+//    },
+//    ':focus': function (node) 
+//      /*: (Ref(~htmlElt)) -> Bool */
+//    {
+//      return node === has_focus;
+//    },
+//    ':hidden': function (node) 
+//      /*: (Ref(~htmlElt)) -> Top */
+//    {
+//      return node.tagName && getStyleObject(node).visibility !== 'visible';
+//    },
+//    ':odd': function (node) 
+//      /*: (Ref(~htmlElt)) -> Bool */
+//    {
+//      if (node.tagName) {
+//        flipflop = !flipflop;
+//        return flipflop;
+//      }
+//      return false;
+//    },
+//    ':tag': function (node) 
+//      /*: (Ref(~htmlElt)) -> Str */
+//    {
+//      return node.tagName;
+//    },
+//    ':text': function (node)
+//      /*: (Ref(~htmlElt)) -> Bool */
+//    {
+//      return node.nodeName === '#text';
+//    },
+//    ':trim': function (node)
+//      /*: (Ref(~htmlElt)) -> Bool */
+//    {
+//      //TODO: regex support
+//      //    return node.nodeName !== '#text' || /\W/.test(node.nodeValue);  
+//      return false;
+//    },
+//    ':unchecked': function (node)
+//      /*: (Ref(~htmlElt)) -> Top */
+//    {
+//      return node.tagName && !node.checked;
+//    },
+//    ':visible': function (node)
+//      /*: (Ref(~htmlElt)) -> Top */
+//    {
+//      return node.tagName && getStyleObject(node).visibility === 'visible';
+//    }
+};
+// >>>>>>>>>> 12-pecker.js >>>>>>>>>>>>>>>>>
 
 
 var quest = function(query, nodes) 
-/* (query:Ref, Ref(~htmlElts)) / (query: {Arr(Ref(~lSelector))|(packed v)} > query.pro) 
+/*: (query:Ref, nodes:Ref(~htmlElts)) / (query: {Arr(Ref(~lSelector))|(packed v)} > query.pro)
     -> Ref(~htmlElts) / (query: sameExact) */
-
-/*: (query:Ref, nodes:Ref) / (
-      query: {Arr(Ref(~lSelector))|(packed v)} > query.pro,
-      nodes: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro,
-      &hunter: Ref(lHunter),
-      lHunter: tyHunter > lObjPro) 
-
-    -> Ref(~htmlElts) / (query: sameExact, &hunter: sameType, lHunter: sameType) */
 {
   var selector /*: Ref(~lSelector) */ = null;
-
-  var elt  /*: Ref(~htmlElt) */ = null;
 
   var i /*: { Int | (>= v 0) } */ = 0,
       j /*: { Int | (>= v 0) } */ = 0;
 
   // Step through each selector.
 
+  /*: (&nodes: Ref(~htmlElts)) -> sameType */
   for (i = 0; i < query.length; i += 1) {
     selector = query[i];
+    var func;
+
     /*: selector lSelector */ "#thaw";
     assume(selector != null);
     assume(selector.name != undefined);
-    assume(selector.op != undefined);
+    assume(selector.op === "empty" || selector.op === "MISSING"); //to ensure the function we get has a 
     name = selector.name;
-  
-    var func = hunter[selector.op];
-
-
-    
+    assume(typeof name === "string");
+    func = hunter[selector.op];
     /*: selector (~lSelector, thwd lSelector) */ "#freeze";   
 
     // There are two kinds of selectors: hunters and peckers. If this is a hunter,
@@ -248,81 +416,80 @@ var quest = function(query, nodes)
     // Accumulate all the nodes it finds.
 
     if (typeof func === 'function') {
-    
-      assert(typeof func === 'function');
+//      if (star) {
+//        error("ADsafe: Query violation: *" + selector.op +
+//            (selector.name || ''));
+//      }
+      result = /*: lResultEmpty {Arr(Ref(~htmlElt))|(packed v)} */ [];
+      /*: result (~htmlElts, frzn) */ "#freeze";
 
-      if (star) {
-        error("ADsafe: Query violation: *" + selector.op +
-            (selector.name || ''));
-      }
-
-//      /*: result lResult */ "#thaw";
-//      result = /*: lResultEmpty {Arr(Ref(~htmlElt))|(packed v)} */ [];
-//      /*: result (~htmlElts, thwd lResult) */ "#freeze";
-
+      assert(/*: (Ref(~htmlElt)) -> Top */ (func));
+      /*: nodes htmlElts */ "#thaw";
+      assume(nodes!= null);
+      /*: (&nodes: Ref(htmlElts), htmlElts:  {Arr(Ref(~htmlElt))|(packed v)} >
+            lArrPro) -> sameType */ 
+      //TODO: this is the same ugly business with thawing and freezing before
+      //the loop so that func can be called with ~htmlElts frozen.
       for (j = 0; j < nodes.length; j += 1) {
-          var nn = nodes[j];
-          assert(/*: Ref(~htmlElt) */ (nn));
-          //TODO
-          //assert(/*: (Ref(~htmlElt)) -> Top */ (func));
-          //func(nn);
+        func(nodes[j]);
       }
-    
+      /*: nodes (~htmlElts, thwd htmlElts) */ "#freeze";
     }
     else {
 
       // If this is a pecker, get its function. There is a special case for
       // the :first and :rest selectors because they are so simple.
 
-      /*: selector lSelector */ "#thaw";
-      assume(selector != null);
-      assume(selector.value != undefined);
-      value = selector.value;
-      flipflop = false;
-//TODO
+//      /*: selector lSelector */ "#thaw";
+//      assume(selector != null);
+//      value = selector.value;
+//      assume(typeof value === "string");
+//
+//      flipflop = false;
+//      assume(selector.op === ".");
 //      func = pecker[selector.op];
-      /*: selector (~lSelector, thwd lSelector) */ "#freeze"; 
-      
-      if (typeof func !== 'function') {
-//TODO: switch
-//        switch (selector.op) {
-//          case ':first':
-//              //result = nodes.slice(0, 1);
-//              var tmpr1 = /*: [Ref(~htmlElt); Lnodes, lArrPro, lr] */ arraySlice(nodes, 0, 1);
-//              /*: tmpr1 (~htmlElts, frzn) */ "#freeze";
-//              result = tmpr1;
-//              break;
-//          case ':rest':
-////              result = nodes.slice(1, nodes.length);    //PV: added 2nd argument to slice
-//              var tmpr2 = /*: [Ref(~htmlElt); Lnodes, lArrPro, lr] */ arraySlice(nodes, 0, nodes.length);
-//              /*: tmpr2 (~htmlElts, frzn) */ "#freeze";
-//              result = tmpr2;
-//              break;
-//          default:
-//              error('ADsafe: Query violation: :' + selector.op);
-//        }
-      }
-      else {
-
-        // For the other selectors, make an array of nodes that are filtered by
-        // the pecker function.
-
-        /*: result lResult */ "#thaw";
+//      assert(/*: (Ref(~htmlElt)) -> Top */ (func));
+//      /*: selector (~lSelector, thwd lSelector) */ "#freeze"; 
+//      
+//      if (typeof func !== 'function') {
+////TODO: switch: needs some work on heap annotations
+////        switch (selector.op) {
+////          case ':first':
+////              //result = nodes.slice(0, 1);
+////              var tmpr1 = /*: [Ref(~htmlElt); Lnodes, lArrPro, lr] */ arraySlice(nodes, 0, 1);
+////              /*: tmpr1 (~htmlElts, frzn) */ "#freeze";
+////              result = tmpr1;
+////              break;
+////          case ':rest':
+////              //result = nodes.slice(1, nodes.length);    //PV: added 2nd argument to slice
+////              var tmpr2 = /*: [Ref(~htmlElt); Lnodes, lArrPro, lr] */ arraySlice(nodes, 0, nodes.length);
+////              /*: tmpr2 (~htmlElts, frzn) */ "#freeze";
+////              result = tmpr2;
+////              break;
+////          default:
+////              error('ADsafe: Query violation: :' + selector.op);
+////        }
+//      }
+//      else {
+//
+//        // For the other selectors, make an array of nodes that are filtered by
+//        // the pecker function.
+//
         result = /*: lResultEmpty {Arr(Ref(~htmlElt))|(packed v)} */ [];
-        /*: result (~htmlElts, thwd lResult) */ "#freeze";
-
-        for (j = 0; j < nodes.length; j += 1) {
-          elt = nodes[j];
-//TODO:
-//          if (func(elt)) {
+        /*: result (~htmlElts, frzn) */ "#freeze";
+//
+//        for (j = 0; j < nodes.length; j += 1) {
+//          assume(func != null);
+//          if (func(nodes[j])) {
 //            /*: result htmlElts */ "#thaw";
-//            result.push(elt);
+//            result.push(nodes[j]);
 //            /*: result (~htmlElts, thwd htmlElts) */ "#freeze";
 //            }
-        }
-      }
+//        }
+//      }
+//
     }
-//    nodes = result;
+    nodes = result;
   }
   return result;
 };
