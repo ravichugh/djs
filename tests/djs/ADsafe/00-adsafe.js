@@ -64,280 +64,311 @@
 var document  = /*: Ref(~lDocument) */ "#extern";
 ///////////////// DJS ////////////////////
 
+//PV: original code begin
+//var ADSAFE = (function () {
+//    "use strict";
+//    ...
+//    } () };
+//PV: original code end
 
-var adsafe_id,      // The id of the current widget
-    adsafe_lib,     // The script libraries loaded by the current widget
+/*: tyObject  
+      { Dict | (and
+              (not (has v "hasOwnProperty"))
+              (implies (has v "create") ((sel v "create")::(Top) -> Top))
+              (has v "prototype") (Dict (sel v "prototype"))
+            )} > lObjPro */ "#define";
 
-    // These member names are banned from guest scripts. The ADSAFE.get and
-    // ADSAFE.put methods will not allow access to these properties.
 
-    banned = /*: lBanned */ {
-      'arguments'     : true,
-      callee          : true,
-      caller          : true,
-      constructor     : true,
-      'eval'          : true,
-      prototype       : true,
-      stack           : true,
-      unwatch         : true,
-      valueOf         : true,
-      watch           : true
-    },
+/*: tyADSAFE {
+       create      :    (o:Ref, object: Ref) / (o: Dict > lObjPro, object: tyObject) -> Top / (),
+       get         :    (object: Ref, name: Str) / (object: Dict > lObjPro) -> Top / sameType,
+       go          :    (id: Str, f: (Ref(~lDom), Ref(~lLib))-> Top ) -> Top,
+       has_        :    (object: Ref, name: Str) / (object: d: {Dict|(not (has v "hasOwnProperty"))} > lObjPro) -> 
+                          {Bool|(iff (= v true) (has d {name}))} / sameType,
+       id          :    (id: Ref(~lId)) -> Top,
+       isArray_    :    (Top) -> Bool,
+       keys        :    (object:Ref) 
+                        / (object: {Dict|(not (has v "hasOwnProperty"))} > lObjPro) 
+                        -> Ref(~lKeys) / sameType,
+       later       :    (func: Top, timeout: Int) -> Top,
+       lib         :    (Str, (Ref(~lLib)) -> Top) -> Top,
+       log         :    (Str) -> Top,
+       remove      :    (object: Ref, name: Str) / (object: d: Dict > lObjPro) -> Top / sameType,
+       set         :    (object: Ref, name: Str, value: Str) 
+                        / (object: d: Dict > lObjPro, lArr: {Arr(Str)|(packed v)} > lArrPro) 
+                        -> Top / sameType,
+       intercept   :    ({(= (tag v) "function")}) -> Top
+    } */ "#define";
 
-    cache_style_object /*: Ref(~lStyle) */ = null,
-    cache_style_node /*: Ref(~htmlElt) */ = null,
-    defaultView = document.defaultView,
-    ephemeral /*: Ref(~lBunch) */ = null;
-    var flipflop /*: Bool */ = "#extern"; // Used in :even/:odd processing
+
+//XXX: checking for tyADSAFE as return value takes too long. 
+
+var adsafe = function () /*: () -> Top */ {
+
+  var adsafe_id,      // The id of the current widget
+      adsafe_lib,     // The script libraries loaded by the current widget
+
+      // These member names are banned from guest scripts. The ADSAFE.get and
+      // ADSAFE.put methods will not allow access to these properties.
+
+      banned = /*: lBanned */ {
+        'arguments'     : true,
+        callee          : true,
+        caller          : true,
+        constructor     : true,
+        'eval'          : true,
+        prototype       : true,
+        stack           : true,
+        unwatch         : true,
+        valueOf         : true,
+        watch           : true
+      },
+
+      cache_style_object /*: Ref(~lStyle) */ = null,
+      cache_style_node /*: Ref(~htmlElt) */ = null,
+      defaultView = document.defaultView,
+      ephemeral /*: Ref(~lBunch) */ = null;
+      var flipflop /*: Bool */ = "#extern"; // Used in :even/:odd processing
+      
+      var has_focus /*: Ref(~htmlElt) */ = "#extern";
+
+  //    hunter,         // Set of hunter patterns
+      var interceptors = [],
+
+      makeableTagName = {
+
+        // This is the whitelist of elements that may be created with the .tag(tagName)
+        // method.
+
+        a         : true,
+        abbr      : true,
+        acronym   : true,
+        address   : true,
+        area      : true,
+        b         : true,
+        bdo       : true,
+        big       : true,
+        blockquote: true,
+        br        : true,
+        button    : true,
+        canvas    : true,
+        caption   : true,
+        center    : true,
+        cite      : true,
+        code      : true,
+        col       : true,
+        colgroup  : true,
+        dd        : true,
+        del       : true,
+        dfn       : true,
+        dir       : true,
+        div       : true,
+        dl        : true,
+        dt        : true,
+        em        : true,
+        fieldset  : true,
+        font      : true,
+        form      : true,
+        h1        : true,
+        h2        : true,
+        h3        : true,
+        h4        : true,
+        h5        : true,
+        h6        : true,
+        hr        : true,
+        i         : true,
+        img       : true,
+        input     : true,
+        ins       : true,
+        kbd       : true,
+        label     : true,
+        legend    : true,
+        li        : true,
+        map       : true,
+        menu      : true,
+        object    : true,
+        ol        : true,
+        optgroup  : true,
+        option    : true,
+        p         : true,
+        pre       : true,
+        q         : true,
+        samp      : true,
+        select    : true,
+        small     : true,
+        span      : true,
+        strong    : true,
+        sub       : true,
+        sup       : true,
+        table     : true,
+        tbody     : true,
+        td        : true,
+        textarea  : true,
+        tfoot     : true,
+        th        : true,
+        thead     : true,
+        tr        : true,
+        tt        : true,
+        u         : true,
+        ul        : true,
+        'var'     : true
+      };
     
-    var has_focus /*: Ref(~htmlElt) */ = "#extern";
+    var name /*: Str */ = "#extern";
 
-//    hunter,         // Set of hunter patterns
-    var interceptors = [],
+  //  var pecker;   // set of pecker patterns
+    var result  /*: Ref(~htmlElts) */ = "#extern";
+    var star    /*: Bool */         = "#extern";
+    var the_range /*: Ref(~lRange) */  = null;
+    var value     /*: Str */              = "#extern";       
 
-    makeableTagName = {
-
-      // This is the whitelist of elements that may be created with the .tag(tagName)
-      // method.
-
-      a         : true,
-      abbr      : true,
-      acronym   : true,
-      address   : true,
-      area      : true,
-      b         : true,
-      bdo       : true,
-      big       : true,
-      blockquote: true,
-      br        : true,
-      button    : true,
-      canvas    : true,
-      caption   : true,
-      center    : true,
-      cite      : true,
-      code      : true,
-      col       : true,
-      colgroup  : true,
-      dd        : true,
-      del       : true,
-      dfn       : true,
-      dir       : true,
-      div       : true,
-      dl        : true,
-      dt        : true,
-      em        : true,
-      fieldset  : true,
-      font      : true,
-      form      : true,
-      h1        : true,
-      h2        : true,
-      h3        : true,
-      h4        : true,
-      h5        : true,
-      h6        : true,
-      hr        : true,
-      i         : true,
-      img       : true,
-      input     : true,
-      ins       : true,
-      kbd       : true,
-      label     : true,
-      legend    : true,
-      li        : true,
-      map       : true,
-      menu      : true,
-      object    : true,
-      ol        : true,
-      optgroup  : true,
-      option    : true,
-      p         : true,
-      pre       : true,
-      q         : true,
-      samp      : true,
-      select    : true,
-      small     : true,
-      span      : true,
-      strong    : true,
-      sub       : true,
-      sup       : true,
-      table     : true,
-      tbody     : true,
-      td        : true,
-      textarea  : true,
-      tfoot     : true,
-      th        : true,
-      thead     : true,
-      tr        : true,
-      tt        : true,
-      u         : true,
-      ul        : true,
-      'var'     : true
-    };
-  
-  var name /*: Str */ = "#extern";
-
-//  var pecker;   // set of pecker patterns
-  var result  /*: Ref(~htmlElts) */ = "#extern";
-  var star    /*: Bool */         = "#extern";
-  var the_range /*: Ref(~lRange) */  = null;
-  var value     /*: Str */              = "#extern";       
-
-//  The error function is called if there is a violation or confusion.
-//  It throws an exception.
+  //  The error function is called if there is a violation or confusion.
+  //  It throws an exception.
 
 
-var error = /*: (message: Str)  / () -> Top / sameType */ "#extern";
+  var error = /*: (message: Str)  / () -> Top / sameType */ "#extern";
 
-//    Some of JavaScript's implicit string conversions can grant extraordinary
-//    powers to untrusted code. So we use the string_check function to prevent
-//    such abuses.
+  //    Some of JavaScript's implicit string conversions can grant extraordinary
+  //    powers to untrusted code. So we use the string_check function to prevent
+  //    such abuses.
 
-var string_check = /*: {(and (v::(string: Str) -> {(= v string)})
-            (v::(string: {(not (Str v))}) -> {FLS})) } */  "#extern";
+  var string_check = /*: {(and (v::(string: Str) -> {(= v string)})
+              (v::(string: {(not (Str v))}) -> {FLS})) } */  "#extern";
 
-//    The object.hasOwnProperty method has a number of hazards. So we wrap it in
-//    the owns function.
+  //    The object.hasOwnProperty method has a number of hazards. So we wrap it in
+  //    the owns function.
 
-var owns = /*: (object: Ref, string: Str) 
-             / (object: d: {Dict|(not (has v "hasOwnProperty"))} > lObjPro) -> 
-    { (implies (= v true) (has d {string}))} / sameType */ "#extern";
-
-
-//  The reject functions enforce the restriction on property names.
-//  reject_property allows access only to objects and arrays. It does not allow
-//  use of the banned names, or names that are not strings and not numbers,
-//  or strings that start or end with _.
+  var owns = /*: (object: Ref, string: Str) 
+               / (object: d: {Dict|(not (has v "hasOwnProperty"))} > lObjPro) -> 
+      { (implies (= v true) (has d {string}))} / sameType */ "#extern";
 
 
-//TODO: reject_name can have a more expressive type
-var reject_name = /*: (name: Str) / (lBanned:Dict > lObjPro) -> Top / sameExact */ "#extern";
+  //  The reject functions enforce the restriction on property names.
+  //  reject_property allows access only to objects and arrays. It does not allow
+  //  use of the banned names, or names that are not strings and not numbers,
+  //  or strings that start or end with _.
 
 
-var reject_property = 
-/*: (object: Top, name1: Str) / (lBanned:Dict > lObjPro) -> Top / sameExact */ "#extern";
+  var reject_name = 
+  /*: (name: Str) / (lBanned:Dict > lObjPro) -> Top / sameExact */ "#extern";
 
-var reject_global =
-/*: [;L1,L2;] (that: Ref(L1)) / (L1:d:Dict > L2, ~lBunch: thwd lBunch) 
-    -> {(implies (truthy (objsel d "window" cur L2)) FLS)} / sameExact */ "#extern";
+  var reject_property = 
+  /*: (object: Top, name1: Str) / (lBanned:Dict > lObjPro) -> Top / sameExact */ "#extern";
 
-var getStyleObject = /*: (node: Ref(~htmlElt)) -> Ref(~lStyle) */ "#extern";
+  var reject_global =
+  /*: [;L1,L2;] (that: Ref(L1)) / (L1:d:Dict > L2, ~lBunch: thwd lBunch) 
+      -> {(implies (truthy (objsel d "window" cur L2)) FLS)} / sameExact */ "#extern";
 
-
-var walkTheDOM = /*: ( node: Ref(~htmlElt), func:(Ref(~htmlElt)) -> Top, skip: Bool)
-                   -> Top */ "#extern";
-
-var purge_event_handlers = /*: (node: Ref(~htmlElt)) -> Top */ "#extern";
-
-var parse_query = /*: (text: Str, id: Str) -> Ref(~lQuery) */ "#extern";
-
-//TODO: changed names because string literals could not be parsed
-var hunter = 
-/*: {
-  empty_  : (node       : Ref(~htmlElt)) / (&name   : Str) -> Top / sameExact,
-  plus    : (node       : Ref(~htmlElt)) / (&name   : Str) -> Top / sameType,
-  greater : (node       : Ref(~htmlElt)) / (&name   : Str) -> Top / sameType,
-  pound   : () / (&name : Str) -> Top / sameType,
-  slash   : (node       : Ref(~htmlElt)) -> Top,
-  star    : (node       : Ref(~htmlElt)) / (&star   : Bool) -> Top / sameType
-  } */ "#extern";
+  var getStyleObject = /*: (node: Ref(~htmlElt)) -> Ref(~lStyle) */ "#extern";
 
 
-var pecker = 
+  var walkTheDOM = /*: ( node: Ref(~htmlElt), func:(Ref(~htmlElt)) -> Top, skip: Bool)
+                     -> Top */ "#extern";
+
+  var purge_event_handlers = /*: (node: Ref(~htmlElt)) -> Top */ "#extern";
+
+  var parse_query = /*: (text: Str, id: Str) -> Ref(~lQuery) */ "#extern";
+
+  //TODO: changed names because string literals (e.g. "$") could not be parsed within types.
+  var hunter = 
   /*: {
-    dot        : (Ref(~htmlElt)) -> Bool ,
-    amber      : (Ref(~htmlElt)) -> Bool ,
-    underscore : (Ref(~htmlElt)) -> Bool ,
-    lbrack     : (Ref(~htmlElt)) -> Bool ,
-    lbrackeq   : (Ref(~htmlElt)) -> Bool ,
-    s1         : (Ref(~htmlElt)) -> Bool ,
-    s2         : (Ref(~htmlElt)) -> Bool ,
-    s3         : (Ref(~htmlElt)) -> Bool ,
-    s4         : (Ref(~htmlElt)) -> Bool ,
-    s5         : (Ref(~htmlElt)) -> Bool ,
-    s6         : (Ref(~htmlElt)) -> Bool ,
-    blur       : (Ref(~htmlElt)) -> Bool ,
-    checked    : (Ref(~htmlElt)) -> Bool ,
-    disabled   : (Ref(~htmlElt)) -> Top  ,
-    enabled    : (Ref(~htmlElt)) -> Top  ,
-    even       : (Ref(~htmlElt)) -> Bool ,
-    focus      : (Ref(~htmlElt)) -> Bool ,
-    hidden     : (Ref(~htmlElt)) -> Top  ,
-    odd        : (Ref(~htmlElt)) -> Bool ,
-    tag_       : (Ref(~htmlElt)) -> Str  ,
-    text       : (Ref(~htmlElt)) -> Bool ,
-    trim       : (Ref(~htmlElt)) -> Bool ,
-    unchecked  : (Ref(~htmlElt)) -> Top  ,
-    visible    : (Ref(~htmlElt)) -> Top
-  } */ "#extern";
+    empty_  : (node       : Ref(~htmlElt)) / (&name   : Str) -> Top / sameExact,
+    plus    : (node       : Ref(~htmlElt)) / (&name   : Str) -> Top / sameType,
+    greater : (node       : Ref(~htmlElt)) / (&name   : Str) -> Top / sameType,
+    pound   : () / (&name : Str) -> Top / sameType,
+    slash   : (node       : Ref(~htmlElt)) -> Top,
+    star    : (node       : Ref(~htmlElt)) / (&star   : Bool) -> Top / sameType
+    } */ "#extern";
 
 
-var quest = /*: (Ref(~lQuery), Ref(~htmlElts)) -> Ref(~htmlElts) */ "#extern";
-          
-var make_root = 
-  /*: [;L;] (root:Ref(~htmlElt) , id:Str) / () -> 
-      Ref(L) / (L: {Arr(Top) | 
-                        (and 
-                           (packed v) 
-                           (= (len v) 2)
-                           ({(v::Ref(~lDom))} (sel v 0))
-                           ({(v::Ref(~lBunch))} (sel v 1))
-                        )} > lArrPro) */ "#extern";
+  var pecker = 
+    /*: {
+      dot        : (Ref(~htmlElt)) -> Bool ,
+      amber      : (Ref(~htmlElt)) -> Bool ,
+      underscore : (Ref(~htmlElt)) -> Bool ,
+      lbrack     : (Ref(~htmlElt)) -> Bool ,
+      lbrackeq   : (Ref(~htmlElt)) -> Bool ,
+      s1         : (Ref(~htmlElt)) -> Bool ,
+      s2         : (Ref(~htmlElt)) -> Bool ,
+      s3         : (Ref(~htmlElt)) -> Bool ,
+      s4         : (Ref(~htmlElt)) -> Bool ,
+      s5         : (Ref(~htmlElt)) -> Bool ,
+      s6         : (Ref(~htmlElt)) -> Bool ,
+      blur       : (Ref(~htmlElt)) -> Bool ,
+      checked    : (Ref(~htmlElt)) -> Bool ,
+      disabled   : (Ref(~htmlElt)) -> Top  ,
+      enabled    : (Ref(~htmlElt)) -> Top  ,
+      even       : (Ref(~htmlElt)) -> Bool ,
+      focus      : (Ref(~htmlElt)) -> Bool ,
+      hidden     : (Ref(~htmlElt)) -> Top  ,
+      odd        : (Ref(~htmlElt)) -> Bool ,
+      tag_       : (Ref(~htmlElt)) -> Str  ,
+      text       : (Ref(~htmlElt)) -> Bool ,
+      trim       : (Ref(~htmlElt)) -> Bool ,
+      unchecked  : (Ref(~htmlElt)) -> Top  ,
+      visible    : (Ref(~htmlElt)) -> Top
+    } */ "#extern";
 
-var go = /*: (id: Str, f: (Ref(~lDom), Ref(~lLib))-> Top ) -> Top */ "#extern";
+
+  var quest = /*: (Ref(~lQuery), Ref(~htmlElts)) -> Ref(~htmlElts) */ "#extern";
+            
+  var make_root = 
+    /*: [;L;] (root:Ref(~htmlElt) , id:Str) / () -> 
+        Ref(L) / (L: {Arr(Top) | 
+                          (and 
+                             (packed v) 
+                             (= (len v) 2)
+                             ({(v::Ref(~lDom))} (sel v 0))
+                             ({(v::Ref(~lBunch))} (sel v 1))
+                          )} > lArrPro) */ "#extern";
 
 
 
-/* START OF ADSAFE */ 
-//TODO: Change "adsafe" to all capital.
-
-/*: adsafe = () -> Top  */ "#type";
-var adsafe = (function () {
-
-  "use strict";
-
- 
   function F() /*: (this:Ref) / (this: Empty > this.pro) -> Ref(this) / same */ {
-    //PV: added body
     return this;
   };
 
-  var create = /*: (o:Ref, object: Ref) / (o: Dict > lObjPro, object: tyObject) -> Top / () */ "#extern";
-  var get    = /*: (object: Ref, name: Str) / (object: Dict > lObjPro) -> Top / sameType */ "#extern";
-  var has_   = /*: (object: Ref, name: Str) 
-                 / (object: d: {Dict|(not (has v "hasOwnProperty"))} > lObjPro) -> 
-                  { (implies (= v true) (has d {name}))} / sameType */ "#extern";
-  var id     = /*: (id: Ref(~lId)) -> Top */ "#extern";
-  var isArray_ = /*: (Top) -> Bool */ "#extern";
-  var keys = /*: (object:Ref) 
-               / (object: {Dict|(not (has v "hasOwnProperty"))} > lObjPro) 
-               -> Ref(~lKeys) / sameType */ "#extern";
-  var later = /*: (func: Top, timeout: Int) -> Top */ "#extern";
-  var lib = /*: (Str, (Ref(~lLib)) -> Top) -> Top */ "#extern";
-  var log = /*: (Str) -> Top */ "#extern";
-  var remove = /*: (object: Ref, name: Str) / (object: d: Dict > lObjPro) -> Top / sameType */ "#extern";
-  var set = /*: (object: Ref, name: Str, value: Str) 
-    / (object: d: Dict > lObjPro, lArr: {Arr(Str)|(packed v)} > lArrPro) 
-    -> Top / sameType */ "#extern";
-  var _intercept = /*: (f: {(= (tag v) "function")}) -> Top */ "#extern";
+
+  var create    = /*: (o:Ref, object: Ref) / (o: Dict > lObjPro, object: tyObject) -> Top / () */ "#extern";
+  var get       = /*: (object: Ref, name: Str) / (object: Dict > lObjPro) -> Top / sameType */ "#extern";
+  var go        = /*: (id: Str, f: (Ref(~lDom), Ref(~lLib))-> Top ) -> Top */ "#extern";
+  var has_      = /*: (object: Ref, name: Str) 
+                       / (object: d: {Dict|(not (has v "hasOwnProperty"))} > lObjPro) -> 
+                         {Bool|(iff (= v true) (has d {name}))} / sameType */ "#extern";
+  var id        = /*: (id: Ref(~lId)) -> Top */ "#extern";
+  var isArray_  = /*: (Top) -> Bool */ "#extern";
+  var keys      = /*: (object:Ref) 
+                       / (object: {Dict|(not (has v "hasOwnProperty"))} > lObjPro) 
+                       -> Ref(~lKeys) / sameType */ "#extern";
+  var later     = /*: (func: Top, timeout: Int) -> Top */ "#extern";
+  var lib       = /*: (Str, (Ref(~lLib)) -> Top) -> Top */ "#extern";
+  var log       = /*: (Str) -> Top */ "#extern";
+  var remove    = /*: (object: Ref, name: Str) / (object: d: Dict > lObjPro) -> Top / sameType */ "#extern";
+  var set       = /*: (object: Ref, name: Str, value: Str) 
+                       / (object: d: Dict > lObjPro, lArr: {Arr(Str)|(packed v)} > lArrPro) 
+                      -> Top / sameType */ "#extern";
+  var intercept = /*: (f: {(= (tag v) "function")}) -> Top */ "#extern";
 
   var adsafe_ = {
-          create: create,
-          get: get,
-          go: go, 
-          has: has_,
-          id: id,
-          isArray: isArray_,
-          keys: keys,
-          later: later, 
-          lib: lib,
-          log: log,
-          remove: remove,
-          set: set,
-          _intercept: _intercept
+          create    : create,
+          get       : get,
+          go        : go,
+          has_      : has_,
+          id        : id,
+          isArray   : isArray_,
+          keys      : keys,
+          later     : later,
+          lib       : lib,
+          log       : log,
+          remove    : remove,
+          set       : set,
+          intercept : intercept
       };
 
   //  Return the ADSAFE object.
   
   return adsafe_;
 
-}/*()*/);
+};
+
+var ADSAFE = adsafe();

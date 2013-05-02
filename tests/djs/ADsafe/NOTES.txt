@@ -30,7 +30,9 @@ From trying to typecheck the code:
 - Intersection type signatures. Eg:
   22, 24
 
-  
+- Add heap annotations on switch automatically like 
+  for loops.
+
 
 ====================================================
 PENDING

@@ -20,7 +20,6 @@ files = [
  ("08-walkTheDOM.js", 0),
  ("09-purge_event_handlers.js", 0),
  ("10-parse_query.js", 1000),
- ("12-pecker.js", 0),
  ("13-quest.js", 0),
  ("14-make_root.js", 0),
  ("15-append.js", 0),
