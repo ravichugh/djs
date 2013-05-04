@@ -1,5 +1,3 @@
-
-
 weak (~htmlElts       : { Arr(Ref(~htmlElt)) | (packed v)} > lArrPro)
 weak (~lChecked       : { Arr(Bool)          | (packed v)} > lArrPro)
 weak (~lClassNames    : { Arr(Str)           | (packed v)} > lArrPro)
@@ -27,6 +25,32 @@ weak (~lEvent     : { Dict |
     (implies (has v "srcElement")       ((sel v "srcElement")      :: Ref(~htmlElt)))
     (implies (has v "stopPropagation")  ((sel v "stopPropagation") :: () -> Top))
     (implies (has v "target")           ((sel v "target")          :: Ref(~htmlElt)))
+    (implies (has v "that")             ((sel v "that")            :: Ref(~htmlElt)))
+    (and     (has v "type_")            (Str (sel v "type_")))
+    (implies (has v "charCode")         (Int (sel v "charCode")))
+    (implies (has v "keyCode")          (Int (sel v "keyCode")))
+
+    (* Hacking this in as an asssumption *)
+    (implies (has v "array")            ((sel v "array") :: Ref (~lFuncs)))
+    
+    (* TODO: giving a restricted type here *)
+    (implies (has v "__farray__")        ({(= (tag v) "function")} (sel v "__farray__")))
+  )} > lObjPro)
+
+
+weak (~lSafeEvent     : { Dict | 
+  (and 
+    (*(and (has v "altKey")           (Bool (sel v "altKey")))*)
+    (*(and (has v "bubble")           ((sel v "bubble") :: () -> Top))*)
+    (*(implies (has v "ctrlKey")          (Bool (sel v "ctrlKey")))*)
+    (*(implies (has v "shiftKey")         (Bool (sel v "shiftKey")))*)
+    
+    (implies (has v "cancelBubble")     (Bool (sel v "cancelBubble")))
+    (implies (has v "key")              (Str (sel v "key")))
+    (implies (has v "preventDefault")   ((sel v "preventDefault")  :: () -> Top))
+    (implies (has v "srcElement")       ((sel v "srcElement")      :: Ref(~lBunch)))
+    (implies (has v "stopPropagation")  ((sel v "stopPropagation") :: () -> Top))
+    (implies (has v "target")           ((sel v "target")          :: Ref(~lBunch)))
     (implies (has v "that")             ((sel v "that")            :: Ref(~lBunch)))
     (and     (has v "type_")            (Str (sel v "type_")))
     (implies (has v "charCode")         (Int (sel v "charCode")))
@@ -38,6 +62,8 @@ weak (~lEvent     : { Dict |
     (* TODO: giving a restricted type here *)
     (implies (has v "__farray__")        ({(= (tag v) "function")} (sel v "__farray__")))
   )} > lObjPro)
+
+
 
 (*  altKey          : Bool,
   bubble          : (this: Ref(~lEvent))-> Top,
@@ -59,7 +85,7 @@ weak (~lEventTarget: { } > lObjPro)
 weak (~lSelector : { Dict |
   (and 
     (has v "op") (Str (sel v "op"))
-  (* Don't need this. In function quest. If the field of hunter is a function
+   (* Don't need this. In function quest. If the field of hunter is a function
     * this should imply that we have one of the following cases. But this won't
     * work for the population of selectors at parse_query. *)
   (*(and 

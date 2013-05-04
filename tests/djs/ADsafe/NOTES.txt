@@ -33,6 +33,9 @@ From trying to typecheck the code:
 - Add heap annotations on switch automatically like 
   for loops.
 
+- tmp isn't a strong object when trying to define a 
+  variable whithin thaw and freeze of another one.
+
 
 ====================================================
 PENDING

@@ -1,35 +1,61 @@
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
 
+//TODO: replace all "newBunch" with "newBunch"
+var newBunch = /*: (Ref(~htmlElts)) -> Ref(~lBunch) */ "#extern";
+
+
+/*: tyDom { 
+    append    : (Ref(~lBunch))   -> Ref(~lDom),
+    combine   : (Ref(~lBunches)) -> Ref(~lBunch),
+    count     : ()               -> Int,
+    ephemeral : (Ref(~lBunch))   -> Ref(~lDom),
+    fragment  : (Ref(~lBunch))   -> Ref(~lBunch),
+    prepend   : (Ref(~lBunch))   -> Ref(~lDom),
+    q         : (Ref(text))      -> Ref(~lBunch),
+    remove    : ()               -> Top,
+    row       : (Top)            -> Ref(~lBunch),
+    tag_      : (tag_: Str, type_: Str, name: Str) -> Ref(~lBunch),
+    text      : {( and 
+                  (v:: (text: Str) / (lT: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType)
+                  (v:: (text: Ref(lT)) / (lT: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType) 
+                )}
+    } */ "#define";
+
+
+
+
 var document  = /*: Ref(~lDocument) */ "#extern";
 var error = /*: (message: Str)  -> { FLS } */ "#extern";
 var int_to_string = /*: (Int) -> Str */ "#extern";
-var stringFromCharCode = /*: (Int) -> Str */ "#extern";
+var stringFromCharCode = /*: (Str) -> Str */ "#extern";
 
-var star      /*: Bool */          = "#extern";
-var value     /*: Str */           = "#extern";
-var event     /*: Ref(~lEvent) */  = "#extern";
-var the_range /*: Ref(~lRange) */  = "#extern";
-var has_focus /*: Ref(~htmlElt) */ = "#extern";
-var the_event /*: Ref(~lEvent) */  = "#extern";
-var ephemeral /*: Ref(~lBunch) */  = "#extern";
+var star      /*: Bool */             = "#extern";
+var value     /*: Str */              = "#extern";
+var event     /*: Ref(~lEvent) */     = "#extern";
+var the_range /*: Ref(~lRange) */     = "#extern";
+var has_focus /*: Ref(~htmlElt) */    = "#extern";
+var the_event /*: Ref(~lSafeEvent) */ = "#extern";
+var ephemeral /*: Ref(~lBunch) */     = "#extern";
 
 var make_root = function(root, id) 
-  /*: [;L;] (root:Ref(~htmlElt) , id:Str) / () -> 
+  /* [;L;] (root:Ref(~htmlElt) , id:Str) / () -> 
       Ref(L) / (L: [| Ref(~lDom), Ref(lBunchProto) |] > lArrPro) */
+
+  /*: (root:Ref(~htmlElt) , id:Str) -> Top */
 {
-////TODO: SLOW DOWN !!! ~ 11 sec
-//  /*: root lhtmlElt */ "#thaw";
-//  assume(root != null);
-//  if (id) {
-//    if (root.tagName !== 'DIV') {
-//      error('ADsafe: Bad node.');
-//    }
-//  } else {
-//    if (root.tagName !== 'BODY') {
-//      error('ADsafe: Bad node.');
-//    }
-//  };
-//  /*: root (~htmlElt, thwd lhtmlElt) */ "#freeze";
+  //XXX: SLOW DOWN !!! ~ 11 sec
+  /*: root lhtmlElt */ "#thaw";
+  assume(root != null);
+  if (id) {
+    if (root.tagName !== 'DIV') {
+      error('ADsafe: Bad node.');
+    }
+  } else {
+    if (root.tagName !== 'BODY') {
+      error('ADsafe: Bad node.');
+    }
+  };
+  /*: root (~htmlElt, thwd lhtmlElt) */ "#freeze";
 
   // A Bunch is a container that holds zero or more dom nodes.
   // It has many useful methods.
@@ -92,7 +118,7 @@ var make_root = function(root, id)
   var fire = 
   /*: {(and
       (v :: (this: Ref(~lBunch), event: Str) -> Ref(~lBunch))
-      (v :: (this: Ref(~lBunch), event: Ref(~lEvent)) -> Ref(~lBunch)))} */ "#extern";
+      (v :: (this: Ref(~lBunch), event: Ref(~lSafeEvent)) -> Ref(~lBunch)))} */ "#extern";
 
 //  var focus            = /*: (this: Ref(~lBunch)) / (&has_focus: Top) -> Top / sameType*/ "#extern";
 //  var fragment         = /*: (this: Ref(~lBunch))      -> Ref(~lBunch) */ "#extern";
@@ -230,7 +256,7 @@ var make_root = function(root, id)
 //-------------------------------------------------------------------
 
   var allow_focus /*: Bool */ = true,
-      dom /*: Ref(~lDom) */ = null,
+      dom_ /*: Ref(~lDom) */ = null,
 
       dom_event = function (e) /*: (Ref(~lEvent)) -> Top */
       {
@@ -256,7 +282,7 @@ var make_root = function(root, id)
         var tt = /*: lTT {Arr(Ref(~htmlElt))|(packed v)} */ [the_target];
         /*: tt (~htmlElts, frzn) */ "#freeze";
 
-        var target = new Bunch(tt);
+        var target = newBunch(tt);
         var that /*: Ref(~lBunch) */ = target;
 
         // Use the PPK hack to make focus bubbly on IE.
@@ -317,10 +343,10 @@ var make_root = function(root, id)
         else if(type == 'focus' || type == 'focusin') {
             allow_focus = true;
             has_focus = the_target;
-//XXX: SLOW DOWN !!! ~ 11 sec            
-//            /*: the_actual_event lEvent */ "#thaw";
-//            the_actual_event.cancelBubble = false;
-//            /*: the_actual_event (~lEvent, thwd lEvent) */ "#freeze";
+            //XXX: SLOW DOWN !!! ~ 11 sec            
+            /*: the_actual_event lEvent */ "#thaw";
+            the_actual_event.cancelBubble = false;
+            /*: the_actual_event (~lEvent, thwd lEvent) */ "#freeze";
             type = 'focus';
         }
         else if (type == 'blur' || type == 'focusout') {
@@ -335,11 +361,13 @@ var make_root = function(root, id)
           //key = String.fromCharCode(the_actual_event.charCode || the_actual_event.keyCode);
           //PV: original code end
 
-//XXX: SLOW DOWN !!! ~ 9 sec
-//          /*: the_actual_event lEvent */ "#thaw";
-//          var tmp = the_actual_event.charCode || the_actual_event.keyCode;
-//          key = stringFromCharCode(tmp);
-//          /*: the_actual_event (~lEvent, thwd lEvent) */ "#freeze";
+          //XXX: SLOW DOWN !!! ~ 9 sec
+          var tmp;
+          /*: the_actual_event lEvent */ "#thaw";
+          tmp = the_actual_event.charCode || the_actual_event.keyCode;
+          /*: the_actual_event (~lEvent, thwd lEvent) */ "#freeze";
+          assume(typeof tmp === "string");
+          key = stringFromCharCode(tmp);
           
           if (key == '\u000d' || key == '\u000a') {
             type = 'enterkey';
@@ -354,7 +382,7 @@ var make_root = function(root, id)
         }
 
 
-//XXX: SLOW DOWN !!! ~ 55 sec 
+//        //XXX: SLOW DOWN !!! ~ 55 sec 
 //        /*: the_actual_event lEvent */ "#thaw";
 //        if (the_actual_event.cancelBubble &&
 //            the_actual_event.stopPropagation) {
@@ -367,38 +395,35 @@ var make_root = function(root, id)
         /*: the_actual_event le */ "#thaw";
         assume(the_actual_event != null);
 
-//XXX: SLOW DOWN !!! ~ 170 sec
+        ////XXX: SLOW DOWN !!! ~ 170 sec
         var tmp_event = {
           altKey: the_actual_event.altKey,
           ctrlKey: the_actual_event.ctrlKey,
           bubble: function () /*: () -> Top */
           {
 
-      //TODO: try-catch, self-reference
-      //      // Bubble up. Get the parent of that node. It becomes the new that.
-      //      // getParent throws when bubbling is not possible.
-      //
-      //      try {
-      //        var parent = that.getParent();
-      //        b = parent.___nodes___[0];
-      //        that = parent;
-      //        the_event.that = that;
-      //  
-      //        // If that node has an event handler, fire it. Otherwise, bubble up.
-      //  
-      //        if (b['___ on ___'] &&
-      //            b['___ on ___'][type]) {
-      //              that.fire(the_event);
-      //            } else {
-      //              the_event.bubble();
-      //            }
-      //      } catch (e) {
-      //        error(e);
-      //      }
+            ////TODO: try-catch, self-reference
+            //// Bubble up. Get the parent of that node. It becomes the new that.
+            //// getParent throws when bubbling is not possible.
+            //try {
+            //  var parent = that.getParent();
+            //  b = parent.___nodes___[0];
+            //  that = parent;
+            //  the_event.that = that;
+        
+            //  // If that node has an event handler, fire it. Otherwise, bubble up.
+        
+            //  if (b['___ on ___'] &&
+            //      b['___ on ___'][type]) {
+            //        that.fire(the_event);
+            //      } else {
+            //        the_event.bubble();
+            //      }
+            //} catch (e) {
+            //  error(e);
+            //}
           },
           key: key,
-          //PV: question: what gets added in the place of ~lEvent if we do not specify
-          //it ??
           preventDefault: function () /*: () / (~lEvent:frzn) -> Top / sameType */
           {
             /*: the_actual_event le1 */ "#thaw";
@@ -410,10 +435,8 @@ var make_root = function(root, id)
             /*: the_actual_event (~lEvent, thwd le1) */ "#freeze";
           },
           shiftKey: the_actual_event.shiftKey,
-//XXX Cannot TC because target and that should be htmlElements but get assigned 
-//Bunches instead
-//          target: target,
-//          that: that,
+          target: target,
+          that: that,
           type_: type,
           x: the_actual_event.clientX,
           y: the_actual_event.clientY
@@ -421,7 +444,8 @@ var make_root = function(root, id)
 
         /*: the_actual_event (~lEvent, thwd le) */ "#freeze";
 
-        /*: tmp_event (~lEvent, frzn) */ "#freeze";
+        //XXX: This check is SLOW
+        /*: tmp_event (~lSafeEvent, frzn) */ "#freeze";
         the_event = tmp_event;
 
         
@@ -447,8 +471,7 @@ var make_root = function(root, id)
             {
               var tt1 = /*: lTT {Arr(Ref(~htmlElt))|(packed v)} */ [the_target];
               /*: tt1 (~htmlElts, frzn) */ "#freeze";
-//XXX: SLOW DOWN !!! ~ 50 sec              
-//              that = new Bunch(tt1);
+              that = newBunch(tt1);
               the_event.that = that;
               that.fire(the_event);
               brk = true;             //PV: replaced break with this
@@ -473,7 +496,7 @@ var make_root = function(root, id)
       // Mark the node as a root. This prevents event bubbling from propagating
       // past it.
 
-//      root['___adsafe root___'] = '___adsafe root___';
+      root['___adsafe root___'] = '___adsafe root___';
 
 
 
@@ -481,76 +504,82 @@ var make_root = function(root, id)
 //    Dom object definitions
 //-------------------------------------------------------------------
 
-//      var dom_append = /*: (Ref(~lBunch)) -> Ref(~lDom) */ "#extern"; 
-//
-//      var dom_combine = /*: (Ref(~lBunches)) -> Ref(~lBunch) */ "#extern";
-//
-//      var dom_count = /*: () -> Int */ "#extern";
-//
-//      var dom_ephemeral = /*: (Ref(~lBunch)) -> Ref(~lDom) */ "#extern";
-//
-//      var dom_fragment = /*: () -> Ref(~lBunch) */ "#extern";
-//
-//      var dom_prepend = /*: (Ref(~lBunch)) -> Ref(~lDom) */ "#extern";
-//
-//      var dom_q = 
-//        /*: [;L;] (text: Str) /  ( &hunter: Ref(L), L: {
-//          empty_  : (Ref(~htmlElt)) -> Top ,
-//          plus    : (Ref(~htmlElt)) -> Top ,
-//          greater : (Ref(~htmlElt)) -> Top ,
-//          pound   : (Ref(~htmlElt)) -> Top ,
-//          slash   : (Ref(~htmlElt)) -> Top ,
-//          star    : (Ref(~htmlElt)) -> Top ,
-//          _       : Bot
-//          } > lObjPro)  
-//          -> Ref(~lBunch) / sameType */ "#extern";
-//
-//        var dom_remove = /*: () -> Top */ "#extern";
-//
-//      var dom_row = /*: (values: Ref(~htmlElts)) -> Ref(~lBunch) */ "#extern";
-//
-//      var dom_tag = /*: (tag_: Str, type_: Str, name: Str) -> Ref(~lBunch) */ "#extern";
-//
-//      var dom_text =
-//        /*: {( and
-//          (v:: (text: Str) / (lT: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType)
-//          (v:: (text: Ref(lT)) / (lT: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType)
-//          )}*/ "#extern";
-//
-//        // Return an ADsafe dom object.
-//
-//        dom = {
-//          append: dom_append,
-//          combine: dom_combine,
-//          count: dom_count, 
-//          ephemeral: dom_ephemeral,
-//          fragment: dom_fragment,
-//          prepend: dom_prepend,
-//          q: dom_q,
-//          remove: dom_remove,
-//          row: dom_row,
-//          tag: dom_tag,
-//          text: dom_text
-//        };
-//
-//
-//      if (typeof root.addEventListener === 'function') {
-//         root.addEventListener('focus', dom_event, true);
-//         root.addEventListener('blur', dom_event, true);
-//         root.addEventListener('mouseover', dom_event, true);
-//         root.addEventListener('mouseout', dom_event, true);
-//         root.addEventListener('mouseup', dom_event, true);
-//         root.addEventListener('mousedown', dom_event, true);
-//         root.addEventListener('mousemove', dom_event, true);
-//         root.addEventListener('click', dom_event, true);
-//         root.addEventListener('dblclick', dom_event, true);
-//         root.addEventListener('keypress', dom_event, true);
-//      } else {
-//         root.onfocusin       = root.onfocusout  = root.onmouseout  =
-//         root.onmousedown = root.onmousemove = root.onmouseup   =
-//         root.onmouseover = root.onclick     = root.ondblclick  =
-//         root.onkeypress  = dom_event;
-//      }
+      var dom_append = /*: (Ref(~lBunch)) -> Ref(~lDom) */ "#extern"; 
 
-      return /*: L [| Ref(~lDom), Ref(lBunchProto)|] */ [dom, Bunch.prototype];
+      var dom_combine = /*: (Ref(~lBunches)) -> Ref(~lBunch) */ "#extern";
+
+      var dom_count = /*: () -> Int */ "#extern";
+
+      var dom_ephemeral = /*: (Ref(~lBunch)) -> Ref(~lDom) */ "#extern";
+
+      var dom_fragment = /*: () -> Ref(~lBunch) */ "#extern";
+
+      var dom_prepend = /*: (Ref(~lBunch)) -> Ref(~lDom) */ "#extern";
+
+      var dom_q = 
+        /*: [;L;] (text: Str) /  ( &hunter: Ref(L), L: {
+          empty_  : (Ref(~htmlElt)) -> Top ,
+          plus    : (Ref(~htmlElt)) -> Top ,
+          greater : (Ref(~htmlElt)) -> Top ,
+          pound   : (Ref(~htmlElt)) -> Top ,
+          slash   : (Ref(~htmlElt)) -> Top ,
+          star    : (Ref(~htmlElt)) -> Top ,
+          _       : Bot
+          } > lObjPro)  
+          -> Ref(~lBunch) / sameType */ "#extern";
+
+      var dom_remove = /*: () -> Top */ "#extern";
+
+      var dom_row = /*: (values: Ref(~htmlElts)) -> Ref(~lBunch) */ "#extern";
+
+      var dom_tag = /*: (tag_: Str, type_: Str, name: Str) -> Ref(~lBunch) */ "#extern";
+
+      var dom_text =
+        /*: {( and
+          (v:: (text: Str) / (lT: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType)
+          (v:: (text: Ref(lT)) / (lT: {Arr(Str)|(packed v)} > lArrPro) -> Top / sameType)
+          )}*/ "#extern";
+
+      // Return an ADsafe dom object.
+
+      var tmp = /*: ldom tyDom */ {
+          append: dom_append,
+          combine: dom_combine,
+          count: dom_count, 
+          ephemeral: dom_ephemeral,
+          fragment: dom_fragment,
+          prepend: dom_prepend,
+          q: dom_q,
+          remove: dom_remove,
+          row: dom_row,
+          tag_: dom_tag,
+          text: dom_text
+        };
+
+      /*: tmp (~lDom, frzn) */ "#freeze";
+      dom_ = tmp;
+
+      if (typeof root.addEventListener === 'function') {
+         root.addEventListener('focus', dom_event, true);
+         root.addEventListener('blur', dom_event, true);
+         root.addEventListener('mouseover', dom_event, true);
+         root.addEventListener('mouseout', dom_event, true);
+         root.addEventListener('mouseup', dom_event, true);
+         root.addEventListener('mousedown', dom_event, true);
+         root.addEventListener('mousemove', dom_event, true);
+         root.addEventListener('click', dom_event, true);
+         root.addEventListener('dblclick', dom_event, true);
+         root.addEventListener('keypress', dom_event, true);
+      }
+      else {
+        /*: root lhtmlElt */ "#thaw";
+        assume(root != null);
+        root.onfocusin   = root.onfocusout  = root.onmouseout  =
+        root.onmousedown = root.onmousemove = root.onmouseup   =
+        root.onmouseover = root.onclick     = root.ondblclick  =
+        root.onkeypress  = dom_event;
+        /*: root (~htmlElt, thwd lhtmlElt) */ "#freeze";
+      }
+
+      return /* L [| Ref(~lDom), Ref(lBunchProto)|] */ [dom_, Bunch.prototype];
 };
