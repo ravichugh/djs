@@ -248,7 +248,9 @@ Bunch.prototype.getValues = function () /*: (this: Ref(~lBunch)) -> Ref(~lValues
   return a;
 };
 
-//TODO: these should TC as assignments to Bunch.prototype
+//TODO: All the following function are supposed to be assigned to the respective
+//fields of Bunch.prototype. This doesn't work due to the call to this.get... 
+
 var getCheck = function () /*: (this: Ref(~lBunch)) -> {?(Bool)|TRU} */ {
 //  return this.getChecks()[0];   //PV: original code
   var elts = this.getChecks();

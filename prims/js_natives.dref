@@ -75,6 +75,7 @@ val __isArray ::
         (v :: (this:Top, xx:Ref(~apndElts)) -> Bool)
         (v :: (this:Top, xx:Ref(~a       )) -> Bool)
         (v :: (this:Top, xx:Ref(~lBunch  )) -> Bool)
+        (v :: (this:Top, xx:Ref(~lValues )) -> Bool)
         (v :: (this:Top, xx:Ref(~en      )) -> Bool)
 
         (*(v :: (this:Top, xx:{Ref(~lBunches)|(not (= v null))}) -> Bool)*)

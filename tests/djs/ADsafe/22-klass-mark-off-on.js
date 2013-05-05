@@ -4,6 +4,8 @@ var error = /*: {( and
               )} */ "#extern";
 var dom_event = /*: (this: Ref(~lEvent), Ref(~lEvent))-> Top */ "#extern";
 
+var assumeArray   = /*: ()-> Ref(~lValues) */ "#extern";
+
 var owns = 
 /*: (object: Ref, string: Str) / (object: d: Dict > object.pro) -> 
       {Bool|(and  (iff (= v false) (not (has d string)))  (iff (= v true) (has d string)))} / sameExact */ "#extern";
@@ -71,21 +73,28 @@ var klass = function (value) /*: (this: Ref(~lBunch), value: Str) -> Ref(~lBunch
 };
 
 var mark = function (value)
+//TODO: this intersection type will not work with Top - in general Top will not
+//work with isArray. 
 /*: {(and
-    (v :: (this: Ref(~lBunch), value: Ref(lArr)) 
-      / (lArr: { Arr(Ref(~lBunch)) | (packed v) }  > lArrPro) -> Ref(~lBunch) / sameType)
-    (v :: (this: Ref(~lBunch), value: Str) -> Ref(~lBunch)) )} */
+      (v :: (this: Ref(~lBunch), value: Ref(~lValues)) -> Ref(~lBunch))
+(*      (v :: (this: Ref(~lBunch), value: Top) -> Ref(~lBunch))   *)
+    )} */
 {
   reject_global(this);
   var b = this.___nodes___, node /*: Ref(~htmlElt) */ = null;
   var i /*: {Int | (>= v 0)}*/ = 0;
+
   if (isArray(value)) {
+    value = assumeArray();
+
+    /*: value values */ "#thaw";
     /*: b htmlElts */ "#thaw";
     if (value.length !== b.length) {
       error('ADsafe: Array length: ' /*+ int_to_string(b.length) + '-' +
          int_to_string(value.length)*/);
     }
-    /*: (&b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt)) | (packed v)} > lArrPro) -> sameType */
+    /*: ( &b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt)) | (packed v)} > lArrPro, 
+          &value: Ref(values), values: {Arr(Top)|(packed v)} > lArrPro) -> sameType */
     for (i = 0; i < b.length; i += 1) {
       node = b[i];
       /*: node htmlElt */ "#thaw";
@@ -95,6 +104,7 @@ var mark = function (value)
       /*: node (~htmlElt, thwd htmlElt) */ "#freeze";
     }
     /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
+    /*: value (~lValues, thwd values) */ "#freeze";
   } 
   else {
     /*: b htmlElts */ "#thaw";
