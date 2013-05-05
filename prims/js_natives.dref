@@ -63,14 +63,27 @@ val __isArray ::
         (v :: (this:Top, {(or (= (tag v) "number") (= (tag v) "boolean")
                               (= (tag v) "string") (= (tag v) "undefined")
                               (= v null))})
-           -> {(= v false)})
+           -> Bool)
+(** Proving "false" causes weird behavior when TCing in the inconsistent
+ * environment, so until this is resolved we will have to loose a little 
+ * precision. *)
+           (*-> {(= v false)})*)
 
-(** Über ugly hack to get this check working for weak locations *)
+(** Über-ugly hack to get this check working for weak locations *)
         (v :: (this:Top, xx:Ref(~lBunches)) -> Bool)
-        (v :: (this:Top, xx:Ref(~htmlElts)) -> {(= v true)})
-        (v :: (this:Top, xx:Ref(~apndElts)) -> {(= v true)})
+        (v :: (this:Top, xx:Ref(~htmlElts)) -> Bool)
+        (v :: (this:Top, xx:Ref(~apndElts)) -> Bool)
         (v :: (this:Top, xx:Ref(~a       )) -> Bool)
         (v :: (this:Top, xx:Ref(~lBunch  )) -> Bool)
+        (v :: (this:Top, xx:Ref(~en      )) -> Bool)
+
+        (*(v :: (this:Top, xx:{Ref(~lBunches)|(not (= v null))}) -> Bool)*)
+        (*(v :: (this:Top, xx:{Ref(~htmlElts)|(not (= v null))}) -> Bool)*)
+        (*(v :: (this:Top, xx:{Ref(~apndElts)|(not (= v null))}) -> Bool)*)
+        (*(v :: (this:Top, xx:{Ref(~a       )|(not (= v null))}) -> Bool)*)
+        (*(v :: (this:Top, xx:{Ref(~lBunch  )|(not (= v null))}) -> Bool)*)
+        (*(v :: (this:Top, xx:{Ref(~en      )|(not (= v null))}) -> Bool)*)
+
   )}
 
 (* the Function.prototype dictionary *)

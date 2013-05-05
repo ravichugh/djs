@@ -1,8 +1,15 @@
+
+var int_to_string /*: (Int) -> Str */ = "#extern";
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
+
+//XXX: replace all "newBunch" with "newBunch"
+var newBunch = /*: (Ref(~htmlElts)) -> Ref(~lBunch) */ "#extern";
+
+var assumeArray   = /*: ()-> Ref(~en) */ "#extern";
+var assumeBool    = /*: ()-> Bool     */ "#extern";
 
 var error = /*: {( and (v::(Str) -> { FLS }) (v:: () -> { FLS }))} */ "#extern";
 
-var int_to_string /*: (Int) -> Str */ = "#extern";
 
 /*: tyArr {Arr(Ref(~htmlElt))|(packed v)} > lArrPro */ "#define";
 
@@ -37,13 +44,13 @@ var reject_global = /*: {(and
 
 // -----------------------------------------------------------------------------------
 
+/*: (~en: {Arr(Bool)|(packed v)} > lArrPro) */ "#weak";
+
 var enable = function (enable) 
-//TODO
-/* {(and
-    (v :: (this: Ref(~lBunch), enable: Ref) / (enable: { Arr(Str) | (packed v) }  > lArrPro) -> Ref(~lBunch) / sameType)
-    (v :: (this: Ref(~lBunch), enable: Ref) / (enable: { }  > lObjPro) -> Ref(~lBunch) / sameType))} */
-/*: (this: Ref(~lBunch), enable: Ref) / (enable: { Arr(Str) | (packed v) }  > lArrPro) -> Ref(~lBunch) / sameType */
-/* (this: Ref(~lBunch), enable: Ref) / (enable: { }  > lObjPro) -> Ref(~lBunch) / sameType */ 
+/*: {(and 
+        (v::(this: Ref(~lBunch), enable: Ref(~en)) -> Ref(~lBunch))  
+        (v::(this: Ref(~lBunch), enable: Bool) -> Ref(~lBunch))
+    )} */
 {
   reject_global(this);
  
@@ -53,22 +60,25 @@ var enable = function (enable)
   var i /*: { Int | (>= v 0)} */ = 0,
       node /*: Ref(~htmlElt) */ = null;
   
-  //PV: ugly hack to allow b.length as param to int_to_string
   var tmp_bl;
 
   if (isArray(enable)) {
-//    /*: b htmlElts */ "#thaw";
-//    tmp_bl = b.length;
-//    /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
-//    if (enable.length !== tmp_bl) {
-//      //error('ADsafe: Array length: ... ' );
-//      error('ADsafe: Array length: ' + int_to_string(tmp_bl) + '-' +
-//          int_to_string(enable.length));
-//    }
+    enable = assumeArray();
+    /*: enable lEnable */ "#thaw";
+    assume(enable != null);
+    /*: b htmlElts */ "#thaw";
+    tmp_bl = b.length;
+    /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
+    if (enable.length !== tmp_bl) {
+      //error('ADsafe: Array length: ... ' );
+      error('ADsafe: Array length: ' + int_to_string(tmp_bl) + '-' +
+          int_to_string(enable.length));
+    }
     
     /*: b htmlElts */ "#thaw";
     assume(b != null);
-    /*: (&b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt)) | (packed v)} > lArrPro) -> sameType */
+    /*: ( &b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt)) | (packed v)} > lArrPro,
+          &enable: Ref(lEnable), lEnable: {Arr(Bool)|(packed v)} > lArrPro) -> sameType */
     for (i = 0; i < b.length; i += 1) {
       node = b[i];
       /*: node htmlElt */ "#thaw";
@@ -79,20 +89,22 @@ var enable = function (enable)
       /*: node (~htmlElt, thwd htmlElt) */ "#freeze";
     }
     /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
+    /*: enable (~en, thwd lEnable) */ "#freeze";
   } 
   else {
-//    /*: b htmlElts */ "#thaw";
-//    assume(b != null);
-//    /*: (&b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt)) | (packed v)} > lArrPro) -> sameExact */
-//    for (i = 0; i < b.length; i += 1) {      
-//      node = b[i];
-//      /*: node htmlElt */ "#thaw";
-//      if (node.tagName) {
-//        node.disabled = !enable;
-//      }
-//      /*: node (~htmlElt, thwd htmlElt) */ "#freeze";
-//    }
-//    /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
+    enable = assumeBool();
+    /*: b htmlElts */ "#thaw";
+    assume(b != null);
+    /*: (&b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt)) | (packed v)} > lArrPro) -> sameExact */
+    for (i = 0; i < b.length; i += 1) {      
+      node = b[i];
+      /*: node htmlElt */ "#thaw";
+      if (node.tagName) {
+        node.disabled = !enable;
+      }
+      /*: node (~htmlElt, thwd htmlElt) */ "#freeze";
+    }
+    /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   }
   return this;
 };
@@ -127,7 +139,7 @@ var explode = function ()
       var bArr = /*: lBArr {Arr(Ref(~htmlElt))|(packed v)} */  [b[i]];
       /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
       /*: bArr (~htmlElts, frzn) */ "#freeze";
-      a[i] =  new Bunch(bArr);
+      a[i] =  newBunch(bArr);
     }
     else{
       /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
