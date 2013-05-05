@@ -1,29 +1,23 @@
 var error = /*: {( and (v::(Str) -> { FLS }) (v:: () -> { FLS }))} */ "#extern";
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
 
+//XXX: owns  calls string_check on string so we can pass anything as 2nd
+//argument
 var owns = 
-/*: (object: Ref, string: Str) / (object: d: Dict > lObjPro) 
-      -> {Bool|(iff (= v true) (has d string))} / sameExact */ "#extern";
+/*: (object: Ref, string: Top) / (object: d: Dict > lObjPro) 
+      -> {Bool|(iff (= v true) (and (Str string) (has d string)))} / sameExact */ "#extern";
 
 
 var reject_global = 
 /*: [;L1,L2;] (that: Ref(L1)) / (L1:d:Dict > L2, ~lBunch: thwd lBunch) 
     -> {(implies (truthy (objsel d "window" cur L2)) FLS)} / sameExact */ "#extern";
 
-
+var assumeObject = /*: [;L,Lp] () / () -> Ref(L) / (L: Dict > Lp) */ "#extern";
 // -----------------------------------------------------------------------------------
 
 
 var fire = function (event) 
-//TODO: intersection type won't work
-/* {(and
-    (v :: (this: Ref(~lBunch), event: {Str|(= v "__farray__")}) -> Ref(~lBunch)) 
-    (v :: (this: Ref(~lBunch), event: {(and (v::Ref(~lEvent)))}) -> Ref(~lBunch)) 
-    )} */
-  
-/* (this: Ref(~lBunch), event: Str) -> Ref(~lBunch) */ 
-/*: (this: Ref(~lBunch), event: Ref(~lEvent)) -> Ref(~lBunch) */
-
+/*: (this: Ref(~lBunch), event: Top) -> Ref(~lBunch) */ 
 {
   // Fire an event on an object. The event can be either
   // a string containing the name of the event, or an
@@ -42,18 +36,15 @@ var fire = function (event)
       n,
       node /*: Ref(~htmlElt) */ = null,
       on /*: Ref(~lEvent) */ = null,
-      type /*: Str */ = "";
+      type;
 
   if (typeof event === 'string') {
     type = event;
     event = {type_: type};
   }
   else if (typeof event === 'object') {
-    assert(/*: Ref(~lEvent) */ (event));
-    /*: event lEvent */ "#thaw";
-    assume(event != null);
+    event = /*: [;l1,l2] */ assumeObject();
     type = event.type_;
-    /*: event (~lEvent, thwd lEvent) */ "#freeze";
   }
   else {
     error();
@@ -74,6 +65,9 @@ var fire = function (event)
     assume(on != null);
     if (/*: [;lEvent] */ owns(on, type)) {
       assert(type in on);
+      //TODO: we avoided using intersection type by using Top as argument,
+      //but here there's nothing we can do, as there is no guarantee that 
+      //the field we retrieve from "on" is the desired one.
       assume(type === "array");
       var array = on[type];
       /*: on (~lEvent, thwd lEvent) */ "#freeze";
