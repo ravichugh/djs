@@ -192,7 +192,7 @@ class Command:
     import threading, sys, time 
     if not self.__done__:
       threading.Timer(0.01, self.__timeit__).start()
-      sys.stdout.write("\r%30s :: %s :: ET: %4.2f sec" % (self.input_file, str(self.stats), time.time() - self.__start_time__))
+      sys.stdout.write("\r%30s :: %s :: ET: %7.2f sec" % (self.input_file, str(self.stats), time.time() - self.__start_time__))
       sys.stdout.flush()
 
   def execute(self):
