@@ -1,6 +1,4 @@
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
-//TODO: we shouldn't have to add all these location to the signature.
-//works with hackSubArrows
  
 var walkTheDOM = 
 /* (this:Top, Ref(~htmlElt)) / (~htmlElts: frzn, ~lChecked: frzn, ~lClassNames:

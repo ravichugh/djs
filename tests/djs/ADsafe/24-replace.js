@@ -25,19 +25,20 @@ var object_check = function(a) /*: [;L;] (a: Ref(L)) / (L: tyBunchObj) -> Top / 
 
 var int_to_string = /*: (Int) -> Str */ "#extern";
 
+var assumeArray = /*: [A;L] () / () -> Ref(L) / (L: {Arr(A)|(packed v)} > lArrPro) */ "#extern"; 
+var assumeObject = /*: [;L] () / () -> Ref(L) / (L: tyBunchObj) */ "#extern"; 
 
 
 //--------------------------------------------------------------
 
 var replace = function (replacement)
-/* {(and
+/*: {(and
         (v:: (this: Ref(~lBunch), replacement: Ref(lA)) / (lA: tyBunchArr) -> Top / sameExact )
-        (v:: (this: Ref(~lBunch), replacement: Ref(lO)) / (lO: tyBunchObj) -> Top / sameExact )
     )} */
 
 //PV: both work if you disable the right part that should be dead code in each
 //case. 
-/*:  (this: Ref(~lBunch), replacement: Ref(lA)) / (lA: tyBunchArr) -> Top / sameExact */
+/* (this: Ref(~lBunch), replacement: Ref(lA)) / (lA: tyBunchArr) -> Top / sameExact */
 /* (this: Ref(~lBunch), replacement: Ref(lO)) / (lO: tyBunchObj) -> Top / sameExact */
 {
   reject_global(this);
@@ -70,10 +71,9 @@ var replace = function (replacement)
   /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
 
 
-  if (    !replacement 
-      ||  replacement.length === 0 
+  if (!replacement ||  replacement.length === 0
 //PV: original code had the following - moved it in an else-if branch
-/*    ||  (replacement.___nodes___ && replacement.___nodes___.length === 0) */
+//    ||  (replacement.___nodes___ && replacement.___nodes___.length === 0)
     )
   {
     /*: b htmlElts */ "#thaw";
@@ -89,86 +89,91 @@ var replace = function (replacement)
     /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   }
   else if (replacement.___nodes___) {
+    assert(false);
 
-    var rn /*: Ref(~htmlElts) */ = replacement.___nodes___;
-    /*: rn lRepNodes */ "#thaw";  
+    replacement = /*: [;lOO] */ assumeObject();
+
+    var rn = replacement.___nodes___;
+    assert(/*: Ref(~htmlElts) */ (rn));
+
+    /*: rn lb */ "#thaw";  
     if (rn.length === 0) {
-      /*: rn (~htmlElts, thwd lRepNodes) */ "#freeze";
+      /*: rn (~htmlElts, thwd lb) */ "#freeze";
 
       /*: b htmlElts */ "#thaw";
-      /*: ( &i:i0:{Int|(>= v 0)}, &b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro)
-        -> sameType */ 
-      for (i = 0; i < b.length; i += 1) {
-        node = b[i];
-        purge_event_handlers(node);
-        if (node.parentNode) {
-          node.parentNode.removeChild(node);
-        }
-      }
+      assume(b != null);
+//      /*: ( &b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro)
+//        -> sameType */ 
+//      for (i = 0; i < b.length; i += 1) {
+//        node = b[i];
+//        purge_event_handlers(node);
+//        if (node.parentNode) {
+//          node.parentNode.removeChild(node);
+//        }
+//      }
       /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
     }
     else {
-      /*: rn (~htmlElts, thwd lRepNodes) */ "#freeze";
+      /*: rn (~htmlElts, thwd lb) */ "#freeze";
     }
-
   }
-  else if (isArray(replacement)) {
-
-    /*: b htmlElts */ "#thaw";
-    if (replacement.length !== b.length) {
-      //TODO: these are supposed to be arguments in error(...) 
-      int_to_string(b.length);
-      int_to_string(value.length);
-      error('ADsafe: Array length: ');
-    }
-    else {
-    }
-
-    //PV: added extra condition - might be able to infer this
-    cond = i < b.length && i < replacement.length;
-    /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
-
-    /*: (&b: Ref(~htmlElts)) -> sameType */ 
-    for (i = 0; cond; i += 1) {
-      /*: b htmlElts */ "#thaw";
-      cond = i < b.length && i < replacement.length;
-      if (i < b.length) {
-        node = b[i];
-        /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
-      //  /*: node htmlElt */ "#thaw";
-        parent = node.parentNode;
-      //  /*: node (~htmlElt, thwd htmlElt) */ "#freeze";
-
-        purge_event_handlers(node);
-
-        if (parent) {
-          if (i < replacement.length) {
-            rep = replacement[i].___nodes___;
-            
-            /*: rep htmlElts */ "#thaw";
-            if (rep.length > 0) {
-              newnode = rep[0];
-              parent.replaceChild(newnode, node);
-              /*: (&rep: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro) -> sameExact */ 
-              for (j = 1; j < rep.length; j += 1) {
-                node = newnode;
-                newnode = rep[j];
-                parent.insertBefore(newnode, node.nextSibling);
-              }
-            }
-            /*: rep (~htmlElts, thwd htmlElts) */ "#freeze";
-          } else {
-            parent.removeChild(node);
-          }
-        }
-
-      }
-      else {
-        /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
-      }
-
-    }
-  } 
+//  else if (isArray(replacement)) {
+//
+//    /*: b htmlElts */ "#thaw";
+//    if (replacement.length !== b.length) {
+//      //TODO: these are supposed to be arguments in error(...) 
+//      int_to_string(b.length);
+//      int_to_string(value.length);
+//      error('ADsafe: Array length: ');
+//    }
+//    else {
+//    }
+//
+//    //PV: added extra condition - might be able to infer this
+//    cond = i < b.length && i < replacement.length;
+//    /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
+//
+//    /*: (&b: Ref(~htmlElts)) -> sameType */ 
+//    for (i = 0; cond; i += 1) {
+//      /*: b htmlElts */ "#thaw";
+//      cond = i < b.length && i < replacement.length;
+//      if (i < b.length) {
+//        node = b[i];
+//        /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
+//      //  /*: node htmlElt */ "#thaw";
+//        parent = node.parentNode;
+//      //  /*: node (~htmlElt, thwd htmlElt) */ "#freeze";
+//
+//        purge_event_handlers(node);
+//
+//        if (parent) {
+//          if (i < replacement.length) {
+//            rep = replacement[i].___nodes___;
+//            
+//            /*: rep htmlElts */ "#thaw";
+//            if (rep.length > 0) {
+//              newnode = rep[0];
+//              parent.replaceChild(newnode, node);
+//              /*: (&rep: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro) -> sameExact */ 
+//              for (j = 1; j < rep.length; j += 1) {
+//                node = newnode;
+//                newnode = rep[j];
+//                parent.insertBefore(newnode, node.nextSibling);
+//              }
+//            }
+//            /*: rep (~htmlElts, thwd htmlElts) */ "#freeze";
+//          } else {
+//            parent.removeChild(node);
+//          }
+//        }
+//
+//      }
+//      else {
+//        /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
+//      }
+//
+//    }
+//  } 
 //  else {
 //    rep = replacement.___nodes___;
 //    /*: b htmlElts */ "#thaw";
@@ -210,7 +215,6 @@ var replace = function (replacement)
 //      }
 //    }
 //  }
-//
   return this;
 };
 

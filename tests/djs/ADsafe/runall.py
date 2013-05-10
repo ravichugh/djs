@@ -9,39 +9,39 @@ from collections import Counter
 from optparse import OptionParser
 # filename, timeout for z3
 files = [    
- ("00-adsafe.js", 0),
- ("01-error.js", 0),
- ("02-string_check.js", 0),
- ("03-owns.js", 0),
- ("04-reject_name.js", 0),
- ("05-reject_property.js", 0),
- ("06-reject_global.js", 0),
- ("07-getStyleObject.js", 0),
- ("08-walkTheDOM.js", 0),
- ("09-purge_event_handlers.js", 0),
- ("10-parse_query.js", 1000),
- ("13-quest.js", 0),
- ("14-make_root.js", 0),
- ("15-append.js", 0),
- ("16-blur-check-class.js", 0),
- ("17-clone-empty.js", 0),
- ("18-enable-ephemeral-explode.js", 0),
- ("19-fire.js", 0),
- ("20-focus-fragment.js", 0),
- ("21-get.js", 0),
- ("22-klass-mark-off-on.js", 0),
- ("23-protect.js", 0),
- ("24-replace.js", 0),
- ("25-select.js", 0),
- ("26-style.js", 0),
- ("27-tag-text-title.js", 0),
- ("28-value.js", 0),
- ("29-dom.js", 0),
- ("30-the_event.js", 0),
- ("31-adsafe_create-get.js", 0),
- ("32-adsafe_go.js", 0),
- ("33-adsafe-has-later.js", 0),
- ("34-adsafe-lib-intercept.js", 0)
+ ("00-adsafe.js"                   , 100000) ,
+ ("01-error.js"                    , 100000) ,
+ ("02-string_check.js"             , 100000) ,
+ ("03-owns.js"                     , 100000) ,
+ ("04-reject_name.js"              , 100000) ,
+ ("05-reject_property.js"          , 100000) ,
+ ("06-reject_global.js"            , 100000) ,
+ ("07-getStyleObject.js"           , 100000) ,
+ ("08-walkTheDOM.js"               , 100000) ,
+ ("09-purge_event_handlers.js"     , 100000) ,
+ ("10-parse_query.js"              , 100000) ,
+ ("13-quest.js"                    , 100000) ,
+ ("14-make_root.js"                , 100000) ,
+ ("15-append.js"                   , 100000) ,
+ ("16-blur-check-class.js"         , 100000) ,
+ ("17-clone-empty.js"              , 100000) ,
+ ("18-enable-ephemeral-explode.js" , 100000) ,
+ ("19-fire.js"                     , 100000) ,
+ ("20-focus-fragment.js"           , 100000) ,
+ ("21-get.js"                      , 100000) ,
+ ("22-klass-mark-off-on.js"        , 100000) ,
+ ("23-protect.js"                  , 100000) ,
+ ("24-replace.js"                  , 100000) ,
+ ("25-select.js"                   , 100000) ,
+ ("26-style.js"                    , 100000) ,
+ ("27-tag-text-title.js"           , 100000) ,
+ ("28-value.js"                    , 100000) ,
+ ("29-dom.js"                      , 100000) ,
+ ("30-the_event.js"                , 100000) ,
+ ("31-adsafe_create-get.js"        , 100000) ,
+ ("32-adsafe_go.js"                , 100000) ,
+ ("33-adsafe-has-later.js"         , 100000) ,
+ ("34-adsafe-lib-intercept.js"     , 100000)
   ]
 
 """
@@ -57,10 +57,11 @@ parser.add_option(  "--stop",
                     dest="file_stop", 
                     default=str(len(files)),
                     help="give the number of the file to stop at")
-parser.add_option(  "-t", "--timeout",
-                    dest="timeout", 
-                    default="0",
-                    help="maximum number of seconds to verify")
+# TODO: Add optional time check
+#parser.add_option(  "-t", "--timeout",
+#                    dest="timeout", 
+#                    default="0",
+#                    help="maximum number of seconds to verify")
 parser.add_option("--no-color",
                   action="store_false", dest="color", default=True,
                   help="don't print color messages to stdout")
@@ -68,6 +69,10 @@ parser.add_option("--no-color",
 parser.add_option("--hackSubArrows",
                   action="store_true", dest="hackSubArrows", default=False,
                   help="don't check arrow subtyping")
+
+parser.add_option("--only-stats",
+                  action="store_true", dest="only_stats", default=False,
+                  help="only gather statistics about files")
 
 (options, args) = parser.parse_args()
 
@@ -107,11 +112,11 @@ class Project:
     self.files = files[a:z]
     
   def TC(self):
-    #TODO: ignoring time limitation atm
-    def foo((f,_)): 
-      s = Source(f)
+    def foo((f,t)): 
+      s = Source(f,t)
       return (f,s.stats,s.TC())
     return Results(map(foo, self.files))
+
 
 
 """
@@ -119,15 +124,14 @@ class Project:
 """
 class Source:
 
-  def __init__(self, f):
+  def __init__(self, f,t):
     self.filename = f
     self.stats = Stats(f)
+    self.timeout = t
 
   def TC(self):
-    cmd = Command(self.filename, self.stats, options.hackSubArrows)
-    r = cmd.execute()
-    #print("%30s :: %s :: %s" % (self.filename, self.stats, r))
-    return r
+    cmd = Command(self.filename, self.stats, options.hackSubArrows, self.timeout)
+    return cmd.execute()
 
 
 class Stats:
@@ -189,24 +193,27 @@ class Command:
   #  q.put(process.stdout.read() + process.stderr.read())    #just append stdout and stderr
 
   def __timeit__(self):
-    import threading, sys, time 
+    import threading, sys, time, os
     if not self.__done__:
+      dt = time.time() - self.__start_time__
+      sys.stdout.write("\r%30s :: %s :: ET: %7.2f sec" % (self.input_file,\
+        str(self.stats), dt))
       threading.Timer(0.01, self.__timeit__).start()
-      sys.stdout.write("\r%30s :: %s :: ET: %7.2f sec" % (self.input_file, str(self.stats), time.time() - self.__start_time__))
       sys.stdout.flush()
 
   def execute(self):
     import subprocess, datetime, os
     cmd = self.__prep__()
-    if self.timeout:
-      raise NotImplementedError
+    if options.only_stats:
+      print("%30s :: %s" % (self.input_file, str(self.stats)))
+      return Result()
     else:
       self.__start_time__ = time.time()
       self.__done__ = False
       self.__timeit__()
-      process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-      stdout = process.stdout.read()
-      stderr = process.stderr.read()
+      self.process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+      stdout = self.process.stdout.read()
+      stderr = self.process.stderr.read()
       self.__done__ = True
       duration = float(time.time() - self.__start_time__)
       r = Result(stdout + stderr, duration)
@@ -229,13 +236,16 @@ class Result:
   _rePError = re.compile(r'PARSE ERROR!')
   _reFError = re.compile(r'Fatal error')
 
-  def __init__(self, output, time):
+  def __init__(self, output=None, time=None):
     self.output       = output
     self.elapsed_time = time
     self.queries      = None
     self.message      = None
     self.success      = False
-    self.__process__()
+    if output:
+      self.__process__()
+    else:
+      self.message = ""
 
   def __str__(self):
     return self.message
@@ -278,13 +288,16 @@ class Results:
         self.counters[key] = self.counters[key] + count
       else:
         self.counters[key] = count
-    self.elapsed_time = self.elapsed_time + result.elapsed_time
-    self.queries = self.queries + result.queries
+    if result.elapsed_time:
+      self.elapsed_time = self.elapsed_time + result.elapsed_time
+    if result.queries:
+      self.queries = self.queries + result.queries
 
   def show(self):
     print "-------------------------------------------------------------"
-    print bc.BOLD + "Total Time    : %.3f sec" % self.elapsed_time + bc.ENDC
-    print bc.BOLD + "Total    Queries : %d" % self.queries + bc.ENDC
+    if self.elapsed_time:
+      print bc.BOLD + "Total       Time : %.2f sec" % self.elapsed_time + bc.ENDC
+      print bc.BOLD + "Total    Queries : %d" % self.queries + bc.ENDC
     for s in self.counters:
       print bc.BOLD + "Total %10s : %d" % (s, self.counters[s]) + bc.ENDC
 

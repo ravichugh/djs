@@ -61,8 +61,7 @@ var append = function (appendage)
     
     /*: b htmlElts */ "#thaw";
     assume(b != null);
-    tmp2 = b.lenght;
-    tmp2 = 0;
+    tmp2 = b.length;
     /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
 
     if (tmp1 !== tmp2) {

@@ -65,7 +65,7 @@ val __isArray ::
                               (= v null))})
            -> Bool)
 (** Proving "false" causes weird behavior when TCing in the inconsistent
- * environment, so until this is resolved we will have to loose a little 
+ * environment, so until this is resolved we will have to lose a little 
  * precision. *)
            (*-> {(= v false)})*)
 
@@ -76,6 +76,7 @@ val __isArray ::
         (v :: (this:Top, xx:Ref(~a       )) -> Bool)
         (v :: (this:Top, xx:Ref(~lBunch  )) -> Bool)
         (v :: (this:Top, xx:Ref(~lValues )) -> Bool)
+        (v :: (this:Top, xx:Ref(~lNames  )) -> Bool)
         (v :: (this:Top, xx:Ref(~en      )) -> Bool)
 
         (*(v :: (this:Top, xx:{Ref(~lBunches)|(not (= v null))}) -> Bool)*)

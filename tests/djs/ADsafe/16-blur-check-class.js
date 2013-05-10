@@ -1,13 +1,16 @@
 var error = /*: {( and (v::(Str) -> { FLS }) (v:: () -> { FLS }))} */ "#extern";
 var intToString = /*: (Int) -> Str */ "#extern";
  
+var assumeArray = /*: () -> Ref(~lNames) */ "#extern";
+var int_to_string /*: (Int) -> Str */ = "#extern";
 
 
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
 
 var reject_global = 
-/*: [;L1,L2;] (that: Ref(L1)) / (L1:d:Dict > L2, ~lBunch: thwd lBunch) 
-    -> {(implies (truthy (objsel d "window" cur L2)) FLS)} / sameExact */ "#extern";
+/*: {(and (v:: [;L1,L2;] (that: Ref(L1)) / (L1:d:Dict > L2, ~lBunch: thwd lBunch) 
+    -> {(implies (truthy (objsel d "window" cur L2)) FLS)} / sameExact)
+    (v:: (Top) -> Top) )}  */ "#extern";
 
 var star /*: Bool */ = "#extern";
 
@@ -89,52 +92,93 @@ var check  = function (value)
 
 var class_fun = function (value) 
 /*: {(and
-    (v :: (this: Ref(~lBunch), value: Ref) / (value: { Arr(Str) | (packed v) }  > lArrPro) -> Ref(~lBunch) / sameType)
+    (v :: (this: Ref(~lBunch), value: Ref(~lNames)) -> Ref(~lBunch) )
     (v :: (this: Ref(~lBunch), value: Str) -> Ref(~lBunch) )
     )} */
 {
-  //reject_global(this);
+  reject_global(this);
   /*: this lBunch */ "#thaw";
-  var b = this.___nodes___; 
-  var i /*: {Int | (>= v 0)} */ = 0,
+  var b  /*: Ref(~htmlElts) */ = this.___nodes___, i /*: {Int | (>= v 0)} */ = 0,
       node /*: Ref(~htmlElt) */ = null;
+
+  var tmp1 /*: Int */ = 0;
+  var tmp2 /*: Int */ = 0;
+  var cond /*: Bool */ = true;
+
   if (isArray(value)) {
+    value = assumeArray();
+    
+    ////PV: original code begin
+    //if (value.length !== b.length) {
+    //   error('ADsafe: Array length: ' + b.length + '-' +
+    //      value.length);
+    //        }
+    ////PV: original code end
+
+    /*: value lNames */ "#thaw";
+    assume(value != null);
+    tmp1 = value.length;
+    /*: value (~lNames, thwd lNames) */ "#freeze";
+    
     /*: b htmlElts */ "#thaw";
-    if (value.length !== b.length) {
-    //  error('ADsafe: Array length: ' + b.length + '-' +
-    //       value.length);
-    }
-    /*: (&b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt)) | (packed v)} > lArrPro) -> sameType */
-    for (i = 0; i < b.length; i += 1) {
-//      //TODO: RegEx support needed      
-//      if (/url/i.test(string_check(value[i]))) {
-//        error('ADsafe error.');
-//      }
+    assume(b != null);
+    tmp2 = b.length;
+    /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
+
+    ////XXX: SLOW DOWN !!!
+    //if (tmp1 !== tmp2) {
+    //  error('ADsafe: Array length: ' + int_to_string(tmp2) + '-' + int_to_string(tmp1));
+    //}
+    
+    cond = i < tmp2; 
+    
+    assume(b != undefined);
+
+    /*: (&value: Ref(~lNames)) -> sameType */ 
+    for (i = 0; cond; i += 1) {
+      ////TODO: RegEx support needed      
+      //if (/url/i.test(string_check(value[i]))) {
+      //  error('ADsafe error.');
+      //}
+      
+      ////PV: original code begin 
+      //node = b[i];
+      //if (node.tagName) {
+      //    node.className = value[i];
+      //}
+      ////PV: original code end
+             
+      /*: b htmlElts */ "#thaw";
+      assume(b != null);
+      assume(i < b.length);
       node = b[i];
-      /*: node htmlElt */ "#thaw";
+      cond = i < b.length;
+      /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
+
+      /*: value lNames2 */ "#thaw";
+      assume(value != null);
+      assume(i < value.length);
       if (node.tagName) {
-        if (value[i])     //XXX: Would be cool if I didn't have to add this
         node.className = value[i];
       }
-      /*: node (~htmlElt, thwd htmlElt) */ "#freeze";
+      /*: value (~lNames, thwd lNames2) */ "#freeze";
     }
-    /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   }
   else {
-//    //TODO: RegEx support needed      
-//    if (/url/i.test(string_check(value))) {
-//      error('ADsafe error.');
-//    }
+    ////TODO: RegEx support needed      
+    //if (/url/i.test(string_check(value))) {
+    //  error('ADsafe error.');
+    //}
+    assume(typeof value === "string");
+
     /*: b htmlElts */ "#thaw";
-    b.l;
+    assume(b != null);
     /*: (&b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt)) | (packed v)} > lArrPro) -> sameType */
     for (i = 0; i < b.length; i += 1) {
       node = b[i];
-      /*: node htmlElt */ "#thaw";
       if (node.tagName) {
         node.className = value;
       }
-      /*: node (~htmlElt, thwd htmlElt) */ "#freeze";
     }
     /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
   }

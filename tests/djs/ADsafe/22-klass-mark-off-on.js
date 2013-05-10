@@ -64,7 +64,7 @@ var reject_global =
       (v:: (that: Ref(~lBunch)) ->  Top)
     )} */ "#extern";
 
-var int_to_string /*: (Int) -> Str */ = "#extern";
+var to_string /*: (Top) -> Str */ = "#extern";
 
 // -----------------------------------------------------------------------------------
 
@@ -84,15 +84,32 @@ var mark = function (value)
   var b = this.___nodes___, node /*: Ref(~htmlElt) */ = null;
   var i /*: {Int | (>= v 0)}*/ = 0;
 
+
+
   if (isArray(value)) {
     value = assumeArray();
 
+    var s0;
+    var s1;
     /*: value values */ "#thaw";
     /*: b htmlElts */ "#thaw";
+    assume(value != null);
+    assume(b != null);
     if (value.length !== b.length) {
-      error('ADsafe: Array length: ' /*+ int_to_string(b.length) + '-' +
-         int_to_string(value.length)*/);
+      s0 = b.length;
+      s1 = value.lenght;
+      /*: value (~lValues, thwd values) */ "#freeze";
+      /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
+//XXX: SLOW DOWN ~ 7 sec
+//      error('ADsafe: Array length: ' + to_string(s0) + '-' + to_string(s1));
     }
+    else {
+      /*: value (~lValues, thwd values) */ "#freeze";
+      /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
+    }
+
+    /*: b htmlElts */ "#thaw";
+    /*: value values */ "#thaw";
     /*: ( &b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt)) | (packed v)} > lArrPro, 
           &value: Ref(values), values: {Arr(Top)|(packed v)} > lArrPro) -> sameType */
     for (i = 0; i < b.length; i += 1) {
@@ -206,10 +223,9 @@ var on = function (type_, func)
     assume(on != null);
 //TODO    
     if (owns(on, type_)) {
-      assert(type_ in on);
-      //assume(typeof on === 'object');
-      //assume(isArray(on[type_]));
-      //on[type_].push(func);
+
+      assume(isArray(on[type_]));
+      on[type_].push(func);
     }
 //XXX: SLOW DOWN !!! ~ 40 sec     
 //    else {

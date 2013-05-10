@@ -65,7 +65,7 @@ var fire = function (event)
     assume(on != null);
     if (/*: [;lEvent] */ owns(on, type)) {
       assert(type in on);
-      //TODO: we avoided using intersection type by using Top as argument,
+      //XXX: we avoided using intersection type by using Top as argument,
       //but here there's nothing we can do, as there is no guarantee that 
       //the field we retrieve from "on" is the desired one.
       assume(type === "array");
