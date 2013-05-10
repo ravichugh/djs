@@ -44,6 +44,9 @@ files = [
  ("34-adsafe-lib-intercept.js", 0)
   ]
 
+"""
+  Options
+"""
 parser = OptionParser(usage='usage: %prog [options] ')
 
 parser.add_option(  "--start",
@@ -68,172 +71,228 @@ parser.add_option("--hackSubArrows",
 
 (options, args) = parser.parse_args()
 
-timeout = int(options.timeout)
 
-
-com = ["../../../src/system-dref"]
-
-class bcolors:
-  HEADER = '\033[95m'
-  OKBLUE = '\033[94m'
+"""
+  Colors
+"""
+class Colors:
+  HEADER  = '\033[95m'
+  OKBLUE  = '\033[94m'
   OKGREEN = '\033[32m'
   WARNING = '\033[33m'
-  FAIL = '\033[31m'
-  BOLD = '\033[1m'
-  ENDC = '\033[0m'
+  FAIL    = '\033[31m'
+  BOLD    = '\033[1m'
+  ENDC    = '\033[0m'
 
-  def disable(self):
-    self.HEADER = ''
-    self.OKBLUE = ''
-    self.OKGREEN = ''
-    self.WARNING = ''
-    self.FAIL = ''
-    self.ENDC = ''
+  def __init__(self):
+    if not options.color:
+      self.HEADER  = ''
+      self.OKBLUE  = ''
+      self.OKGREEN = ''
+      self.WARNING = ''
+      self.FAIL    = ''
+      self.ENDC    = ''
 
-
-bc = bcolors()
-if not options.color:
-  bcolors.disable(bc)
+bc = Colors()
 
 
+"""
+  Entire project
+"""
+class Project:
 
-def timeout_command(command, q):
-  import subprocess, datetime, os, time, signal
-  process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-  q.put(process.stdout.read() + process.stderr.read())    #just append stdout and stderr
-
-def command(command):
-  import subprocess, datetime, os, time, signal
-  process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-  return process.stdout.read() + process.stderr.read()
-
-file_range = range(int(options.file_start), int(options.file_stop))
-
-reOK = re.compile(r'OK! (\d*)')
-reFail = re.compile(r'TC ERROR!')
-rePError = re.compile(r'PARSE ERROR!')
-reFError = re.compile(r'Fatal error')
-tot_queries = 0
-tot_todos = 0
-tot_xxxs = 0
-tot_assumes = 0
-tot_pvs = 0
-tot_time = 0
-
-
-def todoStr(todo):
-  global tot_todos
-  tot_todos = tot_todos + todo
-  if todo > 0:
-    return bc.WARNING + "#TODOS: %2d" % todo + bcolors.ENDC
-  else:
-    return "#TODOS: %2d" % todo
-
-def xxxStr(xxx):
-  global tot_xxxs
-  tot_xxxs = tot_xxxs + xxx
-  if xxx > 0:
-    return bc.WARNING + "#xxx: %2d" % xxx + bcolors.ENDC
-  else:
-    return "#xxx: %2d" % xxx
-
-def assumeStr(asrt):
-  global tot_assumes
-  tot_assumes = tot_assumes + asrt
-  if asrt > 0:
-    return bc.WARNING + "#assume: %2d" % asrt + bcolors.ENDC
-  else:
-    return "#assume: %2d" % asrt
-
-def pvStr(pv):
-  global tot_pvs
-  tot_pvs = tot_pvs + pv
-  if pv > 0:
-    return bc.WARNING + "#pv: %2d" % pv + bcolors.ENDC
-  else:
-    return "#pv: %2d" % pv
-
-
-
-
-def printLine(f, elapsed_time, todos, pvs, xxxs, assumes, msg):
-  print "%30s: ET: %7.3f sec, %s, %s, %s, %s, %s" % \
-      (f, elapsed_time, todoStr(todos), pvStr(pvs), xxxStr(xxxs), \
-      assumeStr(assumes), msg)
-
-
-def process(fname, output, elapsed_time):
-  global tot_queries
-  todos = string.count(open(fname).read(), "TODO")
-  xxxs = string.count(open(fname).read(), "XXX")
-  assumes = string.count(open(fname).read(), "assume")
-  pvs = string.count(open(fname).read(), "PV")
-  if output:
-    matchOK = reOK.search(output)
-    if matchOK:
-      groupOK = matchOK.group
-      q = int(groupOK(1))
-      tot_queries = tot_queries + q
-      printLine(fname, elapsed_time, todos, pvs, xxxs, assumes, bc.OKGREEN \
-          + "OK! %s queries" % q + bc.ENDC)
+  def __init__(self):
+    a = int(options.file_start) 
+    z = int(options.file_stop) 
+    self.files = files[a:z]
     
-    matchFail = reFail.search(output)
-    if matchFail:
-      printLine(fname, elapsed_time, todos, pvs, xxxs, assumes, bc.OKGREEN \
-        + bc.FAIL + "TC Fail" + bcolors.ENDC)
-
-    matchPError = rePError.search(output)
-    if matchPError:
-      printLine(fname, elapsed_time, todos, pvs, xxxs, assumes, bc.OKGREEN \
-          + bc.FAIL + "Parse Error" + bcolors.ENDC)
-    
-    matchFError = reFError.search(output)
-    if matchFError:
-      printLine(fname, elapsed_time, todos, pvs, xxxs, assumes, bc.OKGREEN \
-          + bc.FAIL + "Fatal Error" + bcolors.ENDC)
-  else:
-    printLine(fname, elapsed_time, todos, pvs, xxxs, assumes, bc.OKGREEN \
-        + bc.WARNING + "Timed out" + bcolors.ENDC)
+  def TC(self):
+    #TODO: ignoring time limitation atm
+    def foo((f,_)): 
+      s = Source(f)
+      return (f,s.stats,s.TC())
+    return Results(map(foo, self.files))
 
 
-for i in file_range:
-  (f,t) = files[i]
-  result_queue = Queue(1)
-  if timeout > 0:
-    if options.hackSubArrows:
-      args=(com + ["-timeout", str(t)] + ["-djs", f] + \
-          ["-hackSubArrows"], result_queue, )
-    else:
-      args=(com + ["-timeout", str(t)] + ["-djs", f], result_queue, )
-    #print(args)
-    p = Process(target=timeout_command, args=args )
-    start_time = time.time()
-    p.start()
-    try:
-      output = result_queue.get(True, timeout)
-      p.terminate()
-      p.join()
-    except Empty:
-      p.terminate()
-      p.join()
-      output = None
-  else:
-    start_time = time.time()
-    if options.hackSubArrows:
-      args=(com + ["-timeout", str(t), "-hackSubArrows", "-djs", f])
-    else:
-      args=(com + ["-timeout", str(t)] + ["-djs", f])
-    #print(args)
-    output = command(args)
+"""
+  Single source file
+"""
+class Source:
+
+  def __init__(self, f):
+    self.filename = f
+    self.stats = Stats(f)
+
+  def TC(self):
+    cmd = Command(self.filename, self.stats, options.hackSubArrows)
+    r = cmd.execute()
+    #print("%30s :: %s :: %s" % (self.filename, self.stats, r))
+    return r
+
+
+class Stats:
+
+  _keywords = ["TODO", "XXX", "assume", "PV"]
+
+  def __init__(self, f):
+    self.filename = f
+    self.st = self.__preprocess__()
+
+  def __preprocess__(self):
+    def foo(key):
+      count = string.count(open(self.filename).read(), key)
+      if count > 0:
+        msg = bc.WARNING + "#"+ key + ": %2d" % count + bc.ENDC
+      else:
+        msg = "#" + key + ": %2d" % count
+      return (key,count,msg)
+    return map(foo, self._keywords)
+
+  def __iter__(self):
+    return iter(self.st)
+
+  def __str__(self):
+    def g2(m): return m[2]
+    return ", ".join(map(g2,self.st))
+
+
+"""
+  Command class exports:
+   - execution of the command
+"""
+class Command:
+
+  _command   = ["../../../src/system-dref"]
+  _std_flags = ["-djs"]
+
+  def __init__(self, input_file, stats, hack_sub_arrows = False, timeout = None):
+    self.input_file = input_file
+    self.stats = stats
+    self.hack_sub_arrows = hack_sub_arrows
+    self.timeout = timeout
+
+  def __str__(self):
+    return str(args)
+
+  def __prep__(self):
+    args = self._command + self._std_flags
+    if self.timeout:
+      args = args + ["-timeout", str(self.timeout)]
+    if self.hack_sub_arrows:
+      args = args + ["-hackSubArrows"]
+    args = (args + [self.input_file])
+    return args
   
-  elapsed_time = float(time.time() - start_time)
-  tot_time = tot_time + elapsed_time
-  process(f, output, elapsed_time)
+  #def timeout_command(command, q):
+  #  import subprocess, datetime, os, time, signal
+  #  process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+  #  q.put(process.stdout.read() + process.stderr.read())    #just append stdout and stderr
 
-print "-------------------------------------------------------------"
-print bc.BOLD + "Total Time    : %.3f sec" % tot_time + bcolors.ENDC
-print bc.BOLD + "Total queries : %d" % tot_queries + bcolors.ENDC
-print bc.BOLD + "Total TODOs   : %d" % tot_todos + bcolors.ENDC
-print bc.BOLD + "Total XXXs    : %d" % tot_xxxs + bcolors.ENDC
-print bc.BOLD + "Total assumes : %d" % tot_assumes + bcolors.ENDC
-print bc.BOLD + "Total PVs     : %d" % tot_pvs + bcolors.ENDC
+  def __timeit__(self):
+    import threading, sys, time 
+    if not self.__done__:
+      threading.Timer(0.01, self.__timeit__).start()
+      sys.stdout.write("\r%30s :: %s :: ET: %4.2f sec" % (self.input_file, str(self.stats), time.time() - self.__start_time__))
+      sys.stdout.flush()
+
+  def execute(self):
+    import subprocess, datetime, os
+    cmd = self.__prep__()
+    if self.timeout:
+      raise NotImplementedError
+    else:
+      self.__start_time__ = time.time()
+      self.__done__ = False
+      self.__timeit__()
+      process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+      stdout = process.stdout.read()
+      stderr = process.stderr.read()
+      self.__done__ = True
+      duration = float(time.time() - self.__start_time__)
+      r = Result(stdout + stderr, duration)
+      print(" :: %s" % str(r))
+      return r
+
+
+"""
+  Class Result exports:
+   - Elapsed time
+   - Success status 
+   - Message
+   - Number of queries (makes sense only if successful)
+   - An str() function
+"""
+class Result:
+
+  _reOK     = re.compile(r'OK! (\d*)')
+  _reFail   = re.compile(r'TC ERROR!')
+  _rePError = re.compile(r'PARSE ERROR!')
+  _reFError = re.compile(r'Fatal error')
+
+  def __init__(self, output, time):
+    self.output       = output
+    self.elapsed_time = time
+    self.queries      = None
+    self.message      = None
+    self.success      = False
+    self.__process__()
+
+  def __str__(self):
+    return self.message
+
+  def __process__(self):
+    if self.output:
+      matchOK = self._reOK.search(self.output)
+      if matchOK:
+        self.success = True
+        self.queries = int(matchOK.group(1))
+        self.message = bc.OKGREEN + "OK! %s queries" % self.queries + bc.ENDC
+      elif self._reFail.search(self.output):
+        self.message = bc.OKGREEN + bc.FAIL + "TC Fail" + bc.ENDC
+      elif self._rePError.search(self.output):
+        self.message = bc.FAIL + "Parse Error" + bc.ENDC
+      elif self._reFError.search(self.output):
+        self.message = bc.FAIL + "Fatal Error" + bc.ENDC
+      else: 
+        self.message = bc.WARNING + "Timed out" + bc.ENDC
+
+
+"""
+  Final results
+    Constructor arguments:
+     - List that contains tripplets of:
+       (filename, stats, result)
+"""
+class Results:
+
+  def __init__(self, l):
+    self.counters     = {}
+    self.elapsed_time = 0
+    self.queries      = 0
+    for (f,s,r) in l:
+      self.__update__(s,r)
+
+  def __update__(self, stats, result):
+    for (key,count,_) in stats:
+      if key in self.counters:
+        self.counters[key] = self.counters[key] + count
+      else:
+        self.counters[key] = count
+    self.elapsed_time = self.elapsed_time + result.elapsed_time
+    self.queries = self.queries + result.queries
+
+  def show(self):
+    print "-------------------------------------------------------------"
+    print bc.BOLD + "Total Time    : %.3f sec" % self.elapsed_time + bc.ENDC
+    print bc.BOLD + "Total    Queries : %d" % self.queries + bc.ENDC
+    for s in self.counters:
+      print bc.BOLD + "Total %10s : %d" % (s, self.counters[s]) + bc.ENDC
+
+
+def main():
+  p = Project()
+  r = p.TC()
+  r.show()
+
+if __name__ == '__main__':
+  main()
