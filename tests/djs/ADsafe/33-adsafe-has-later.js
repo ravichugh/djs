@@ -1,7 +1,7 @@
 /*: "tests/djs/ADsafe/__dom.dref" */ "#use";
 
 var adsafe_id /*: Ref(~lId) */ = "#extern";
-var adsafe_lib /*: Ref(~lLib) */ = "#extern";
+var adsafe_lib  =  "#extern";
 
 var document  = /*: Ref(~lDocument) */ "#extern";
 
@@ -33,7 +33,7 @@ var has = function (object, name)
   //  ADsafe approved libraries.
 
 var id = function (id) 
-/*: (id: Ref(~lId)) -> Top */ 
+/*: (id: Ref(~lId)) / ()-> Top / (&adsafe_lib: Ref(llib2), llib2: {} > lObjPro)*/ 
 {
 
   //  Calls to ADSAFE.id must be balanced with calls to ADSAFE.go.
@@ -43,10 +43,7 @@ var id = function (id)
     error();
   }
   adsafe_id = id;
-  
-  var tmp = /*: ltmp {} */ {};
-  /*: tmp (~lLib, frzn) */ "#freeze";
-  adsafe_lib = tmp;
+  adsafe_lib = /*: llib2 {} */ {};
 };
 
 

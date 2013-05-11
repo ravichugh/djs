@@ -36,6 +36,9 @@ From trying to typecheck the code:
 - tmp isn't a strong object when trying to define a 
   variable whithin thaw and freeze of another one.
 
+- Function definitions need to specify some times that 
+  they do not alter some locations that have been 
+  defined earlier. E.g. 32-...
 
 ====================================================
 PENDING
