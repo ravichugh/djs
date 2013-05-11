@@ -8,41 +8,6 @@ from collections import Counter
 
 from optparse import OptionParser
 # filename, timeout for z3
-files = [    
- ("00-adsafe.js"                   , 100000) ,
- ("01-error.js"                    , 100000) ,
- ("02-string_check.js"             , 100000) ,
- ("03-owns.js"                     , 100000) ,
- ("04-reject_name.js"              , 100000) ,
- ("05-reject_property.js"          , 100000) ,
- ("06-reject_global.js"            , 100000) ,
- ("07-getStyleObject.js"           , 100000) ,
- ("08-walkTheDOM.js"               , 100000) ,
- ("09-purge_event_handlers.js"     , 100000) ,
- ("10-parse_query.js"              , 100000) ,
- ("13-quest.js"                    , 100000) ,
- ("14-make_root.js"                , 100000) ,
- ("15-append.js"                   , 100000) ,
- ("16-blur-check-class.js"         , 100000) ,
- ("17-clone-empty.js"              , 100000) ,
- ("18-enable-ephemeral-explode.js" , 100000) ,
- ("19-fire.js"                     , 100000) ,
- ("20-focus-fragment.js"           , 100000) ,
- ("21-get.js"                      , 100000) ,
- ("22-klass-mark-off-on.js"        , 100000) ,
- ("23-protect.js"                  , 100000) ,
- ("24-replace.js"                  , 100000) ,
- ("25-select.js"                   , 100000) ,
- ("26-style.js"                    , 100000) ,
- ("27-tag-text-title.js"           , 100000) ,
- ("28-value.js"                    , 100000) ,
- ("29-dom.js"                      , 100000) ,
- ("30-the_event.js"                , 100000) ,
- ("31-adsafe_create-get.js"        , 100000) ,
- ("32-adsafe_go.js"                , 250000) ,
- ("33-adsafe-has-later.js"         , 100000) ,
- ("34-adsafe-lib-intercept.js"     , 100000)
-  ]
 
 """
   Options
@@ -55,18 +20,21 @@ parser.add_option(  "--start",
                     help="give the number of the file to start from")
 parser.add_option(  "--stop",
                     dest="file_stop", 
-                    default=str(len(files)),
+                    default="-1",
                     help="give the number of the file to stop at")
-# TODO: Add optional time check
-#parser.add_option(  "-t", "--timeout",
-#                    dest="timeout", 
-#                    default="0",
-#                    help="maximum number of seconds to verify")
+parser.add_option(  "-i", "--input",
+                    dest="input_file", 
+                    default="input.txt",
+                    help="give the file that contains the JS sources \
+                    (optionally 2nd element will be maximum query time)")
+parser.add_option("-t", "--timeout",
+                  action="store_true", dest="timeout", default=False,
+                  help="enforce the time limits specified in the input file")
 parser.add_option("--no-color",
                   action="store_false", dest="color", default=True,
                   help="don't print color messages to stdout")
 
-parser.add_option("--hackSubArrows",
+parser.add_option("-s", "--hackSubArrows",
                   action="store_true", dest="hackSubArrows", default=False,
                   help="don't check arrow subtyping")
 
@@ -107,10 +75,29 @@ bc = Colors()
 class Project:
 
   def __init__(self):
+    files = list(self.__read_files__())
     a = int(options.file_start) 
-    z = int(options.file_stop) 
+    if int(options.file_stop) < 0:
+      z = len(files)
+    else:
+      z = int(options.file_stop)
     self.files = files[a:z]
+    print "Running DJS on %d files..." % len(self.files) 
+    if options.hackSubArrows:
+      print "Using hackSubArrows"
+    if options.timeout:
+      print "Using timeout"
+    print "---------------------------------------------\n"
     
+  def __read_files__(self):
+    for l in open(options.input_file,"r").readlines():
+      ll = l.split()
+      if not options.timeout:
+        ll = ll[:1] + ["0"]
+      if len(ll) == 1:
+        ll = ll + ["0"]     # timeout 0 means ignore
+      yield ll
+
   def TC(self):
     def foo((f,t)): 
       s = Source(f,t)
