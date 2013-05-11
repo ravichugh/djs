@@ -24,14 +24,20 @@ var make_root =
                            ({(v::Ref(lBunchProto))} (sel v 1))
                         )} > lArrPro) */ "#extern";
 
-/*: tyInterceptor {Arr((Ref(~lId), Ref(~lDom), Ref(~lLib), Ref(~lBunch)) -> Top)|(and (packed v))} */ 
+//XXX: UGLY!!!
+/*: tyInterceptor {Arr(
+                    (Top, Top, Top, Top) / (&interceptors: Ref(lIC), 
+                                            lIC: {Arr((Top, Top, Top, Top) -> Top)|(packed v)} > lArrPro)
+                                        -> Top / sameExact
+                      )|(and (packed v))} */
 "#define";
 
 var interceptors = /*: lIC tyInterceptor */ [];
-// --------------------------------------------------------------------------
 
 
-var go = function (id, f) /*: (id: Str, f: (Ref(~lDom), Ref(~lLib))-> Top ) -> Top */
+var go = function (id, f) 
+  /*: (id: Str, f: (Ref(~lDom), Ref(~lLib)) / (&interceptors: Ref(lIC), lIC: tyInterceptor > lArrPro) -> Top / sameExact ) 
+      / (&interceptors: Ref(lIC), lIC: tyInterceptor > lArrPro) -> Top / sameType */
 {
   var dom, 
       fun /*: Top */ = null, root, i /*: {Int|(>= v 0)} */ = 0, scripts;
@@ -48,7 +54,7 @@ var go = function (id, f) /*: (id: Str, f: (Ref(~lDom), Ref(~lLib))-> Top ) -> T
 
   root = document.getElementById(id);
 
-  /*: root htmlElt */ "#thaw";
+//  /*: root htmlElt */ "#thaw";
 
   if (root.tagName !== 'DIV') {
     error();
@@ -60,21 +66,23 @@ var go = function (id, f) /*: (id: Str, f: (Ref(~lDom), Ref(~lLib))-> Top ) -> T
   //  This provides some protection against mishaps due to weakness in the
   //  document.getElementById function.
 
-  var fn = root.getElementsByTagName;
-  /*: root (~htmlElt, thwd htmlElt) */ "#freeze";
-  scripts = (/*: [;lScripts;] */ fn)('script');
+  scripts = root.getElementsByTagName('script');
+
+  /*: scripts lScript */ "#thaw";
   i = scripts.length - 1;
   if (i < 0) {
     error();
   }
-  /*: (&i:i0:{Int|(and (>= v 0) (< v (len arr)))}, 
-       lScripts: arr:{Arr(Ref(~htmlElt))|(and (packed v))} > lArrPro)
-        -> (&i: {Int|(< v 0)}, lScripts: sameType) */
+  
+  /*: ( &scripts: Ref(lScript), lScript:arr:{Arr(Ref(~htmlElt))|(packed v)} > lArrPro, 
+        &i:i0:{Int|(and (>= v 0) (< v (len arr)))})
+   -> ( &scripts: Ref(lScript), lScript: sameType, &i: {Int|(< v 0)}) */
    do {
-    assert(/*: NotUndef */ (scripts[i]));
     root.removeChild(scripts[i]);
     i = i - 1;
   } while (i >= 0);
+
+  /*: scripts (~htmlElts, thwd lScript) */ "#freeze";
   root = (/*: [;lRoot;] */ make_root)(root, id);
   dom /* Ref(~lDom) */ = root[0];
   assert(/*: Ref(~lDom) */ (dom));
@@ -82,27 +90,30 @@ var go = function (id, f) /*: (id: Str, f: (Ref(~lDom), Ref(~lLib))-> Top ) -> T
 
   // If the page has registered interceptors, call then.
 
-  /* (&interceptors: Ref(lIC), lIC: tyInterceptor > lArrPro) -> sameType */
+  assert(/*: Ref(lIC) */ (interceptors));
+  assert(/*: Int */ (interceptors.length));
+
+  /*: (&interceptors: Ref(lIC), lIC: tyInterceptor > lArrPro) -> sameExact */ 
   for (i = 0; i < interceptors.length; i += 1) {
     fun = interceptors[i];
     if (typeof fun === 'function') {
-//TODO: arrow subtyping, exceptions 
-//      try {
-//        assert(/*: (Ref(~lId), Ref(~lDom), Ref(~lLib), Ref(~lBunch)) -> Top */ (fun));
-//        fun(id, dom, adsafe_lib, root[1]);
-//      } catch (e1) {
-//        ADSAFE.log(e1);
-//      }
+      //TODO: arrow subtyping, exceptions 
+      //try {
+        fun(id, dom, adsafe_lib, root[1]);
+      //} catch (e1) {
+      //  ADSAFE.log(e1);
+      //}
     }
   }
 
   //  Call the supplied function.
 
-//  try {
+  //TODO: TRY - CATCH
+  //try {
     f(dom, adsafe_lib);
-//  } catch (e2) {
-//    ADSAFE.log(e2);
-//  }
+  //} catch (e2) {
+  //  ADSAFE.log(e2);
+  //}
   root = null;
   adsafe_lib = null;
 };

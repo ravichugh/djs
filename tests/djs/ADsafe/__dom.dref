@@ -147,7 +147,6 @@ weak (~htmlElt: {
     firstChild           : Ref(~htmlElt),
     focus                : () -> Top,   
     getComputedStyle     : (this: Ref(~htmlElt), node : Ref(~htmlElt), str  : Str) -> Ref(~lStyle),
-    (*getElementsByTagName : [;L] (this: Ref(~htmlElt), name : Str) / () -> Ref(L) / (L: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro),*)
     getElementsByTagName : (this: Ref(~htmlElt), name : Str) -> Ref(~htmlElts),
     getParent            : (this: Ref(~htmlElt)) -> Ref(~htmlElt),
     insertBefore         : (this: Ref(~htmlElt), Ref(~htmlElt), Ref(~htmlElt)) -> Top,

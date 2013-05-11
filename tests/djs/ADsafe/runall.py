@@ -39,7 +39,7 @@ files = [
  ("29-dom.js"                      , 100000) ,
  ("30-the_event.js"                , 100000) ,
  ("31-adsafe_create-get.js"        , 100000) ,
- ("32-adsafe_go.js"                , 100000) ,
+ ("32-adsafe_go.js"                , 250000) ,
  ("33-adsafe-has-later.js"         , 100000) ,
  ("34-adsafe-lib-intercept.js"     , 100000)
   ]
