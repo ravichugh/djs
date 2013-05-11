@@ -228,14 +228,15 @@ Bunch.prototype.getValues = function () /*: (this: Ref(~lBunch)) -> Ref(~lValues
   var node /*: Ref(~htmlElt) */ = null;
   /*: b htmlElts */ "#thaw";
   assume(b != null);
-  /*: ( &i:i0:{Int|(>= v 0)}, lA:Arr(Top)  > lArrPro,
-        &b: Ref(htmlElts), htmlElts: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro)
-      -> ( &i: sameType, lA: Arr(Top) > lArrPro, &b: sameType, htmlElts: sameType) */ 
+  /*: ( lA:Arr(Top) > lArrPro,
+        htmlElts: {Arr(Ref(~htmlElt))|(packed v)} > lArrPro)
+      -> ( lA: Arr(Top) > lArrPro, htmlElts: sameType) */ 
   for (i = 0; i < b.length; i += 1) {
     node = b[i];
     if (node.nodeName === '#text') {
       a[i] = node.nodeValue;
-    } else if (node.tagName && node.type !== 'password') {
+    } 
+    else if (node.tagName && node.type !== 'password') {
       a[i] = node.value;
       if (!a[i] && node.firstChild &&
           node.firstChild.nodeName === '#text') {
