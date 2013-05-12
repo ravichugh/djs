@@ -173,12 +173,8 @@ class Command:
       args = args + ["-hackSubArrows"]
     args = (args + [self.input_file])
     return args
-  
-  #def timeout_command(command, q):
-  #  import subprocess, datetime, os, time, signal
-  #  process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-  #  q.put(process.stdout.read() + process.stderr.read())    #just append stdout and stderr
 
+  #TODO: clean this up ...
   def __timeit__(self):
     import threading, sys, time, os
     if not self.__done__:
