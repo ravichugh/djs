@@ -97,7 +97,7 @@ var mark = function (value)
     assume(b != null);
     if (value.length !== b.length) {
       s0 = b.length;
-      s1 = value.lenght;
+      s1 = value.length;
       /*: value (~lValues, thwd values) */ "#freeze";
       /*: b (~htmlElts, thwd htmlElts) */ "#freeze";
 //XXX: SLOW DOWN ~ 7 sec

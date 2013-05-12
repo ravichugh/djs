@@ -12,7 +12,7 @@
 13-quest.js                     100000 
 14-make_root.js                 100000 
 15-append.js                    100000 
-16-blur-check-class.js          100000 
+16-blur-check-class.js          200000 
 17-clone-empty.js               100000 
 18-enable-ephemeral-explode.js  100000 
 19-fire.js                      100000 
