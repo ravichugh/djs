@@ -487,6 +487,9 @@ var make_root = function(root, id)
               /*: the_event (~lSafeEvent, thwd ev1) */ "#freeze";
               brk = true;             //PV: replaced break with this
             }
+            else {
+              /*: the_event (~lSafeEvent, thwd ev1) */ "#freeze";
+            }
           }
         };
 //

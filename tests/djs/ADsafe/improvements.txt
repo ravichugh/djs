@@ -1,0 +1,48 @@
+ARRAYS
+------
+
+- var tt = /*: lArr {Arr(A)|(packed v)} */ [elt1, elt2, ... , eltn];
+  Packedness could be inferred here. It is usually needed to do iterations
+  later.
+
+
+
+
+FUNCTIONS
+---------
+
+
+
+
+
+WEAK LOC. / THAWING / FREEZING
+------------------------------
+
+- Thawing a weak location returns a reference to a strong location or null. So
+  this fails: 
+
+  /*: a l */ "#thaw";
+  /*: a (~w, thwd l) */ "#freeze";
+
+  because at the freeze point a could be null.
+
+  This however TCs because a.l implies that a is not null.
+  /*: a l */ "#thaw";
+  a.l; //equivalent to assume(a != null)
+  /*: a (~w, thwd l) */ "#freeze";
+
+  Thawing and freezing could be consistent, in the sense that freezing could
+  succeed for the case of null.
+
+  This would remove a series of assumptions. 
+
+  THIS IS DONE WITH: Ref(~w!) !!!
+
+
+- Assume a function "foo" that expects to be called with a frozen location "a". 
+  If called with a thawed, this raises an error. This causes the programmer to
+  have to freeze before the call.
+
+
+- Retrieving fields from frozen locations is much slower than thawing first and
+  then retrieving, which makes thaw/freeze more appealing. 

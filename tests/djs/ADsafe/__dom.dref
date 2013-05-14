@@ -3,7 +3,7 @@ weak (~lChecked       : { Arr(Bool)          | (packed v)} > lArrPro)
 weak (~lClassNames    : { Arr(Str)           | (packed v)} > lArrPro)
 weak (~lADsafeMarks   : { Arr(Str)           | (packed v)} > lArrPro)
 weak (~lNames         : { Arr(Str)           | (packed v)} > lArrPro)
-weak (~lPackedValues  : { Arr(Str)           | (packed v)} > lArrPro)
+weak (~lPackedValues  : { Arr(Top)           | (packed v)} > lArrPro)
 (* Keep the lValues unpacked because it's hard to prove packedness at creation *)
 weak (~lValues        :   Arr(Top)                         > lArrPro)
 weak (~lOffsetHeights : { Arr(Num)           | (packed v)} > lArrPro)
@@ -108,10 +108,10 @@ weak (~lRange : {
   
 weak (~lQuery: { Arr(Ref(~lSelector)) | (packed v) } > lArrPro)
 
-weak (~lBunches: {Arr(Ref(~lBunch))|(packed v)} > lArrPro)
+weak (~lBunches: {Arr(Ref(~lBunch!))|(packed v)} > lArrPro)
 
 weak (~lBunch    : {
-  "___nodes___"  : Ref(~htmlElts),
+  "___nodes___"  : {(and (v::Ref(~htmlElts)) (not (= v null)))},
   "___star___"   : Bool,
   _              : Bot
 } > lBunchProto)
